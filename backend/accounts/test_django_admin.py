@@ -7,7 +7,7 @@ screen, fill the add form, save, and have that account sign in to BulanTanom.
 """
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -90,6 +90,17 @@ class LguOfficerCreationTests(TestCase):
         self.assertTrue(officer.is_active)
         self.assertTrue(officer.can_sign_in)
 
+    # The suite runs under a deliberately cheap hasher for speed (see
+    # config/test_runner.py). This test is about the real one, so it pins
+    # PBKDF2 as *preferred*, which is what set_password will then use.
+    # MD5 stays in the list because users built in setUp were hashed with
+    # it, and dropping it would lock them out of their own login helper.
+    @override_settings(
+        PASSWORD_HASHERS=[
+            "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+            "django.contrib.auth.hashers.MD5PasswordHasher",
+        ]
+    )
     def test_password_is_hashed_never_stored_in_plain_text(self):
         self.client.post(LGU_ADD_URL, NEW_OFFICER, follow=True)
         officer = User.objects.get(email="test.officer@layuan.gov.ph")

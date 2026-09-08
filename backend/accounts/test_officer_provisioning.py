@@ -6,6 +6,7 @@ exist is an Admin creating one. These tests pin that: who may create, what is
 rejected, and that the password never leaves Django in a readable form.
 """
 
+from django.test import override_settings
 from django.urls import get_resolver
 from rest_framework import status
 from rest_framework.test import APITestCase, APITransactionTestCase
@@ -118,6 +119,17 @@ class OfficerCreationTests(OfficerSetupMixin, APITestCase):
 
     # -------------------------------------------------------------- password
 
+    # The suite runs under a deliberately cheap hasher for speed (see
+    # config/test_runner.py). This test is about the real one, so it pins
+    # PBKDF2 as *preferred*, which is what set_password will then use.
+    # MD5 stays in the list because users built in setUp were hashed with
+    # it, and dropping it would lock them out of their own login helper.
+    @override_settings(
+        PASSWORD_HASHERS=[
+            "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+            "django.contrib.auth.hashers.MD5PasswordHasher",
+        ]
+    )
     def test_password_is_hashed_not_stored_in_plaintext(self):
         self.create()
         created = User.objects.get(email=NEW_OFFICER["email"])

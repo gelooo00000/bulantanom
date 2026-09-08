@@ -179,6 +179,11 @@ ALLOWED_EVIDENCE_CONTENT_TYPES = ("image/jpeg", "image/png")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
+# Swaps in a cheap password hasher for the duration of a test run; see the
+# module for why. Production hashing is untouched.
+TEST_RUNNER = "config.test_runner.FastTestRunner"
+
+
 # Django REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
