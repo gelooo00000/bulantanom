@@ -1,0 +1,18 @@
+{% extends "emails/_base.html" %}
+{% block content %}
+<p style="margin:0 0 14px;font-size:16px;">Hello {{ name }},</p>
+<p style="margin:0 0 18px;font-size:15px;line-height:1.6;">
+  Your BulanTanom {{ role_label }} account has been suspended by an administrator.
+  You will not be able to sign in while the account is suspended.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;background:#f7e5e1;border-radius:8px;">
+  <tr><td style="padding:12px 16px;font-size:14px;">
+    <strong>Account Status:</strong> Suspended<br>
+    <strong>Role:</strong> {{ role_label }}
+  </td></tr>
+</table>
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6;">
+  Your records are kept and nothing has been deleted. If you believe this is a
+  mistake, contact your farm administrator, who can restore access.
+</p>
+{% endblock %}

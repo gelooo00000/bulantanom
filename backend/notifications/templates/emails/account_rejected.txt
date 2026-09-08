@@ -1,0 +1,12 @@
+Hello {{ name }},
+
+Thank you for registering with BulanTanom. After review, your {{ role_label }}
+registration was not approved at this time.
+
+Account Status: Not approved
+
+If you believe this was a mistake, please contact your farm administrator,
+who can review the decision.
+
+--
+BulanTanom will never ask you for your password by email.

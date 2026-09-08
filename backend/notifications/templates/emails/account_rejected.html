@@ -1,0 +1,17 @@
+{% extends "emails/_base.html" %}
+{% block content %}
+<p style="margin:0 0 14px;font-size:16px;">Hello {{ name }},</p>
+<p style="margin:0 0 18px;font-size:15px;line-height:1.6;">
+  Thank you for registering with BulanTanom. After review, your {{ role_label }}
+  registration was not approved at this time.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;background:#f8eeda;border-radius:8px;">
+  <tr><td style="padding:12px 16px;font-size:14px;">
+    <strong>Account Status:</strong> Not approved
+  </td></tr>
+</table>
+<p style="margin:0;font-size:15px;line-height:1.6;">
+  If you believe this was a mistake, please contact your farm administrator,
+  who can review the decision.
+</p>
+{% endblock %}

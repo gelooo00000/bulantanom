@@ -1,0 +1,16 @@
+Hello {{ name }},
+
+Your BulanTanom {{ role_label }} account has been approved by an administrator.
+
+Account Status: Approved
+Role: {{ role_label }}
+
+You can now sign in and use:
+{% for feature in features %}  - {{ feature }}
+{% endfor %}
+Log in: {{ login_url }}
+
+Thank you for being part of BulanTanom.
+
+--
+BulanTanom will never ask you for your password by email.

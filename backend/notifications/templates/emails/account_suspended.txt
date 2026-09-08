@@ -1,0 +1,13 @@
+Hello {{ name }},
+
+Your BulanTanom {{ role_label }} account has been suspended by an administrator.
+You will not be able to sign in while the account is suspended.
+
+Account Status: Suspended
+Role: {{ role_label }}
+
+Your records are kept and nothing has been deleted. If you believe this is a
+mistake, contact your farm administrator, who can restore access.
+
+--
+BulanTanom will never ask you for your password by email.

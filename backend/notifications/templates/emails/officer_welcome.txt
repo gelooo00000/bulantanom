@@ -1,0 +1,18 @@
+Hello {{ name }},
+
+Your BulanTanom LGU Officer account has been created by an administrator.
+LGU Officer accounts are provisioned rather than self-registered.
+
+Role: {{ role_label }}
+Account Status: Active
+
+From the LGU Officer dashboard you can review:
+{% for feature in features %}  - {{ feature }}
+{% endfor %}
+Log in: {{ login_url }}
+
+Your administrator will give you your password separately. For your security,
+it is never sent by email.
+
+--
+BulanTanom will never ask you for your password by email.

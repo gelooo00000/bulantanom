@@ -1,0 +1,14 @@
+Hello {{ name }},
+
+Your BulanTanom {{ role_label }} account has been reactivated. You can sign in again.
+
+Account Status: Active
+Role: {{ role_label }}
+
+Your access includes:
+{% for feature in features %}  - {{ feature }}
+{% endfor %}
+Log in: {{ login_url }}
+
+--
+BulanTanom will never ask you for your password by email.
