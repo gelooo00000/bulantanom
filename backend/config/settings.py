@@ -155,7 +155,13 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "default": {
+        "BACKEND": (
+            "storages.backends.s3.S3Storage"
+            if os.environ.get("AWS_STORAGE_BUCKET_NAME", "").strip()
+            else "django.core.files.storage.FileSystemStorage"
+        ),
+    },
     "staticfiles": {
         # The manifest backend requires collectstatic to have run, so it is
         # only used where that is true. Development keeps the plain backend.
@@ -167,10 +173,49 @@ STORAGES = {
     },
 }
 
-# Uploaded plant-condition evidence. Images live on disk under MEDIA_ROOT;
-# only the relative path is stored in MySQL (never the binary).
+# Uploaded plant-condition evidence. Only the relative path is stored in
+# MySQL (never the binary).
+#
+# MEDIA_URL is never routed - evidence is private and is streamed by
+# plants.views.AssessmentEvidenceView after the caller is authorized. These
+# two settings only tell Django where the bytes live.
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Object storage for evidence photos.
+#
+# Local disk is correct for development and wrong for most deployments: on a
+# host with an ephemeral filesystem the container is rebuilt on every deploy
+# and every uploaded photo is gone, while the Assessment rows that reference
+# them survive. The result is a database full of evidence that 404s.
+#
+# Setting AWS_STORAGE_BUCKET_NAME switches uploads to any S3-compatible
+# bucket (AWS S3, Cloudflare R2, Backblaze B2, DigitalOcean Spaces, Supabase
+# Storage, MinIO) via AWS_S3_ENDPOINT_URL. Leave it unset and nothing changes:
+# the filesystem backend is used exactly as before, which is what the test
+# suite's override_settings(MEDIA_ROOT=...) relies on.
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "").strip()
+USE_S3_MEDIA = bool(AWS_STORAGE_BUCKET_NAME)
+
+if USE_S3_MEDIA:
+    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "").strip()
+    AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "").strip()
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "").strip() or None
+    # Required by every S3-compatible provider that is not AWS itself.
+    AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL", "").strip() or None
+
+    # The bucket must stay private. Evidence reaches a browser only through
+    # the authorized view, which streams the object server-side.
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = False
+
+    # Deliberately unsigned. Nothing in this project calls .url on an
+    # evidence file - the serializer returns the authorized endpoint instead
+    # (see plants.serializers.get_evidence_image_url). Signed URLs would mean
+    # any future .url call silently minted a working, shareable link that
+    # bypasses authorization. Unsigned, such a call fails against the private
+    # bucket, so the mistake surfaces instead of leaking a photo.
+    AWS_QUERYSTRING_AUTH = False
 
 # Hard cap on evidence uploads, enforced in the serializer as well.
 MAX_EVIDENCE_IMAGE_BYTES = int(os.environ.get("MAX_EVIDENCE_IMAGE_BYTES", 5 * 1024 * 1024))
