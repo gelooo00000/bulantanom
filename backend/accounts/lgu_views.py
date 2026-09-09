@@ -18,7 +18,8 @@ open or approaching, never yield.
 """
 
 from django.db.models import Count, Q
-from rest_framework import generics
+from django.http import HttpResponse
+from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
@@ -452,3 +453,73 @@ def lgu_plants(request):
         payload.append(data)
 
     return Response(payload)
+
+
+# --------------------------------------------------------------------------
+# Detailed Reports
+#
+# Guarded by IsLguOfficer like every other route in this module, so the
+# authorization is enforced by the server and not by the frontend route.
+# --------------------------------------------------------------------------
+
+
+@api_view(["GET"])
+@permission_classes([IsLguOfficer])
+def lgu_report_catalog(request):
+    """GET /api/lgu/reports/ - available reports plus real filter choices."""
+    from . import lgu_reports
+
+    return Response(
+        {"reports": lgu_reports.catalog(), "filters": lgu_reports.filter_options()}
+    )
+
+
+def _report_from_request(request, slug):
+    """Shared parsing for the detail and PDF routes."""
+    from . import lgu_reports
+
+    period = lgu_reports.resolve_period(
+        request.query_params.get("period", "all_time"),
+        request.query_params.get("date_from", ""),
+        request.query_params.get("date_to", ""),
+    )
+    filters = lgu_reports.parse_filters(request.query_params)
+    return lgu_reports.build(slug, period, filters)
+
+
+@api_view(["GET"])
+@permission_classes([IsLguOfficer])
+def lgu_report_detail(request, slug):
+    """GET /api/lgu/reports/<slug>/ - the report, built from live MySQL rows."""
+    from .lgu_reports import ReportError
+
+    try:
+        return Response(_report_from_request(request, slug))
+    except ReportError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+@permission_classes([IsLguOfficer])
+def lgu_report_pdf(request, slug):
+    """
+    GET /api/lgu/reports/<slug>/pdf/ - the same report as a real PDF.
+
+    Rendered server-side from the stored rows, so it never depends on the
+    browser's theme and contains selectable text rather than a screenshot.
+    """
+    from . import report_pdf
+    from .lgu_reports import ReportError
+
+    try:
+        report = _report_from_request(request, slug)
+    except ReportError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    pdf = report_pdf.render(report)
+    filename = f"bulantanom-{slug}-{report['period']['key']}.pdf"
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    # A report is a snapshot of the moment it was asked for.
+    response["Cache-Control"] = "private, max-age=0, no-store"
+    return response

@@ -320,3 +320,85 @@
   mask-composite: exclude;
   pointer-events: none;
 }
+/* --------------------------------------------------------------------------
+   Print / PDF-via-browser styling for LGU Detailed Reports.
+
+   The browser print path only ever has to produce the report sheet: the
+   dashboard shell, sidebar, filters and buttons are removed rather than
+   hidden behind a page break. Colours are forced light because a report is
+   printed on white paper, so Dark Mode must not carry into the output.
+   -------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  /* Browser print stays portrait A4. Landscape for wide tables is handled
+     by the server-rendered PDF, which can commit to one orientation per
+     document; mixing orientations mid-document via a named @page is
+     unreliable across browsers and was not worth the inconsistency. */
+
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  /* Dashboard chrome: sidebar, sticky header, bottom nav, filters, actions. */
+  aside,
+  header,
+  nav,
+  .print-hide {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Neutralise the themed surfaces so nothing prints as dark-on-dark. */
+  .report-sheet,
+  .report-sheet * {
+    background: transparent !important;
+    color: #111 !important;
+    box-shadow: none !important;
+  }
+
+  .report-sheet {
+    border: none !important;
+  }
+
+  .report-sheet table {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: collapse !important;
+    font-size: 8pt !important;
+  }
+
+  /* Let a long table flow across pages, but never split a single row, and
+     repeat the header on each new page. */
+  .report-sheet thead {
+    display: table-header-group;
+  }
+  .report-sheet tr {
+    page-break-inside: avoid;
+  }
+  .report-sheet th,
+  .report-sheet td {
+    border: 0.5pt solid #bbb !important;
+    padding: 3pt 4pt !important;
+  }
+
+  /* The on-screen scroll frame must not clip the printed table. */
+  .report-sheet .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  .report-sheet h2,
+  .report-sheet h3 {
+    page-break-after: avoid;
+  }
+}
