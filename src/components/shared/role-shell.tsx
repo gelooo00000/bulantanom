@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { EllipsisVertical, Leaf, LogOut, MapPin, Sun } from "lucide-react";
+import { EllipsisVertical, LogOut, MapPin, Sun } from "lucide-react";
 import type { ElementType, ReactNode } from "react";
 
 import { Avatar } from "@/components/shared/avatar";
+import { Logo } from "@/components/shared/logo";
 import { NotificationBell } from "@/components/shared/notification-bell";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import type { NotificationScope } from "@/lib/api/notifications-api";
@@ -47,9 +48,7 @@ export function RoleShell({
     <div className="bg-background text-foreground flex min-h-screen">
       <aside className="border-border bg-card/60 sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r px-4 py-6 lg:flex">
         <Link href={homeHref} className="flex items-center gap-2 px-2 font-medium tracking-tight">
-          <span className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-md">
-            <Leaf className="size-4" />
-          </span>
+          <Logo className="size-8" px={32} />
           BulanTanom
         </Link>
 

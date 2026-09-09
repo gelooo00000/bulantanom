@@ -1,16 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Leaf } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 function BrandMark() {
   return (
     <Link href="/" className="relative z-10 flex items-center gap-2 font-medium tracking-tight">
-      <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
-        <Leaf className="size-4" />
-      </span>
+      <Logo className="size-9" px={36} />
       BulanTanom
     </Link>
   );
