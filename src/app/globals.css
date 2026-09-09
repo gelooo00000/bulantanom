@@ -339,10 +339,18 @@
      document; mixing orientations mid-document via a named @page is
      unreliable across browsers and was not worth the inconsistency. */
 
+  /* Force a light canvas. Setting html/body alone is not enough: the role
+     shell paints its own surface on a wrapper div, so in Dark Mode the
+     report printed as near-black text on a near-black background. Every
+     descendant background is cleared rather than guessed at. */
   html,
   body {
     background: #fff !important;
-    color: #111 !important;
+  }
+
+  body * {
+    background-color: transparent !important;
+    box-shadow: none !important;
   }
 
   /* Dashboard chrome: sidebar, sticky header, bottom nav, filters, actions. */
@@ -359,16 +367,34 @@
     margin: 0 !important;
   }
 
-  /* Neutralise the themed surfaces so nothing prints as dark-on-dark. */
+  /* The two-column layout still reserves a track for the hidden Available
+     Reports column, which printed the report into a narrow strip down the
+     left of the page. */
+  main .grid {
+    display: block !important;
+  }
+
   .report-sheet,
   .report-sheet * {
-    background: transparent !important;
     color: #111 !important;
-    box-shadow: none !important;
+    border-color: #bbb !important;
   }
 
   .report-sheet {
     border: none !important;
+  }
+
+  /* Risk levels are information, not decoration. Flattening them to black
+     would cost an officer the fastest signal on the page, so they are
+     re-stated in print-safe inks. */
+  .report-sheet .text-risk-high {
+    color: #9b2c2c !important;
+  }
+  .report-sheet .text-risk-medium {
+    color: #8a5a00 !important;
+  }
+  .report-sheet .text-risk-low {
+    color: #1f5a32 !important;
   }
 
   .report-sheet table {
