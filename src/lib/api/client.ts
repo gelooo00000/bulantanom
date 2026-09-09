@@ -54,8 +54,63 @@ function extractError(body: unknown, fallback: string): { message: string; field
  * five parallel queries must produce one refresh, not five. Five would rotate
  * the token five times and, with BLACKLIST_AFTER_ROTATION, invalidate each
  * other.
+ *
+ * That guard is per-document, which was not far enough. Two tabs are two
+ * documents, so each refreshed independently, both presenting the same cookie:
+ * the first rotated it, the second arrived with a blacklisted token and got a
+ * 401, and the officer was signed out of a session that was perfectly valid.
+ * Opening the dashboard in a second tab was enough to do it. `withRefreshLock`
+ * below extends the same one-refresh-at-a-time guarantee across documents.
  */
 let refreshInFlight: Promise<string | null> | null = null;
+
+/** Web Locks are per-origin, so this name is shared by every tab. */
+const REFRESH_LOCK = "bulantanom:auth-refresh";
+
+/** How long to wait for another tab before refreshing unserialised. */
+const REFRESH_LOCK_TIMEOUT_MS = 5000;
+
+/**
+ * Serialises refreshes across every tab on this origin.
+ *
+ * Once the holder finishes, the waiter's request carries the cookie the
+ * holder was just issued, so it rotates cleanly instead of presenting a
+ * blacklisted token.
+ *
+ * Web Locks are unavailable in some older browsers and in non-browser
+ * rendering contexts. There the call runs unserialised, exactly as it did
+ * before, so the fallback can never be worse than the old behaviour.
+ */
+async function withRefreshLock<T>(run: () => Promise<T>): Promise<T> {
+  if (typeof navigator === "undefined" || !navigator.locks?.request) {
+    return run();
+  }
+
+  // A tab whose refresh is wedged - a stalled network, a suspended
+  // background tab - would otherwise hold this lock and leave every other
+  // tab unable to refresh at all. Waiting is only ever an optimisation, so
+  // give up on the wait rather than on the refresh.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REFRESH_LOCK_TIMEOUT_MS);
+  try {
+    // lib.dom types the granted callback as returning T rather than a
+    // promise, so a promise-returning callback makes the declared result
+    // Promise<Promise<T>>. The runtime awaits the callback before releasing
+    // the lock; awaiting here reconciles the type with that behaviour
+    // instead of casting past it.
+    return await navigator.locks.request(REFRESH_LOCK, { signal: controller.signal }, run);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      // Falls back to the pre-lock behaviour: at worst two tabs race, which
+      // is what happened before this lock existed. Better than a session
+      // that cannot refresh.
+      return run();
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 const sessionExpiredListeners = new Set<() => void>();
 
@@ -89,17 +144,19 @@ function notifySessionExpired(): void {
 export async function refreshAccessToken(): Promise<string | null> {
   refreshInFlight ??= (async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) return null;
+      return await withRefreshLock(async () => {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) return null;
 
-      const data = (await response.json()) as { access?: unknown };
-      const access = typeof data.access === "string" ? data.access : null;
-      if (access) setAccessToken(access);
-      return access;
+        const data = (await response.json()) as { access?: unknown };
+        const access = typeof data.access === "string" ? data.access : null;
+        if (access) setAccessToken(access);
+        return access;
+      });
     } catch {
       return null;
     } finally {
