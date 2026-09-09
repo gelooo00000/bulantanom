@@ -133,7 +133,7 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
             <h3 className="text-sm font-medium">{t.soilDetails}</h3>
             <div className="mt-2 flex flex-col gap-3">
               {report.details.map((d) => (
-                <div key={d.heading} className="border-border rounded-lg border px-4 py-3">
+                <div key={d.id} className="border-border rounded-lg border px-4 py-3">
                   <p className="text-sm font-medium">{d.heading}</p>
                   {!d.analysed ? (
                     <p className="text-muted-foreground mt-1 text-sm">{d.unavailable}</p>

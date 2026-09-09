@@ -38,6 +38,8 @@ export type ReportTable = {
 };
 
 export type ReportDetail = {
+  /** SoilRecommendation primary key - the heading alone is not unique. */
+  id: number;
   heading: string;
   analysed: boolean;
   unavailable: string;

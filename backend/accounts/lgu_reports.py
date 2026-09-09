@@ -478,6 +478,10 @@ def _build_soil(period: Period, filters: dict) -> dict:
         # kept in the same order so both surfaces read alike.
         details.append(
             {
+                # The row's own primary key. The heading is not unique - one
+                # Farmer can submit two soil assessments on the same day, and
+                # using it as a React key collapsed them into one card.
+                "id": r.pk,
                 "heading": f"{_display_name(r.farmer)} - {r.created_at.date().isoformat()}",
                 "analysed": r.ai_generated,
                 "unavailable": ""

@@ -211,6 +211,32 @@ class ReportDataAccuracyTests(LguReportsTestBase):
         _, data = self._stats("risk-assessment", period="all_time")
         self.assertEqual(data["tables"][0]["rows"][0]["evidence"], "No evidence submitted")
 
+    def test_soil_details_are_uniquely_identified(self):
+        """
+        One Farmer can submit two soil assessments on the same day. The detail
+        heading is "<farmer> - <date>", so it collides for those two rows; the
+        payload must carry the primary key for React to key on, or the second
+        card is dropped from the page.
+        """
+        from plants.models import SoilRecommendation
+
+        for _ in range(2):
+            SoilRecommendation.objects.create(
+                farmer=self.farmer,
+                soil_type="loamy",
+                soil_texture="fine",
+                drainage="good",
+                soil_moisture="moist",
+            )
+
+        _, data = self._stats("soil-assessment", period="all_time")
+        details = data["details"]
+        self.assertEqual(len(details), 2)
+        # Same heading, different ids - which is exactly the collision.
+        self.assertEqual(details[0]["heading"], details[1]["heading"])
+        self.assertNotEqual(details[0]["id"], details[1]["id"])
+        self.assertEqual(len({d["id"] for d in details}), len(details))
+
     def test_empty_report_state(self):
         """A period with no rows returns zeroes and an empty table, not an error."""
         stats, data = self._stats(
