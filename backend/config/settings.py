@@ -32,6 +32,35 @@ DEBUG = _env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
+# Django needs the scheme-qualified origin to accept an admin POST over
+# HTTPS. Without it, signing in to Django Admin in production fails CSRF
+# verification - and Admin is where LGU Officers are provisioned.
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS", "")
+
+# HTTPS hardening. Defaults follow DEBUG, so development over plain HTTP is
+# unaffected and a real deployment is secure without remembering four flags.
+SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", not DEBUG)
+
+# Deliberately an hour rather than the usual year. HSTS is not something a
+# browser lets you take back: once sent, that domain is HTTPS-only for the
+# full duration even if the certificate later breaks. An hour satisfies the
+# security check and keeps a bad deploy recoverable. Raise it to 31536000
+# once the certificate has proven itself.
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", False)
+
+# Behind a load balancer or reverse proxy (Render, Railway, nginx) Django
+# only ever sees plain HTTP on the inside, so SECURE_SSL_REDIRECT would
+# redirect to HTTPS forever - an infinite loop that looks like the app is
+# down. Setting this tells Django to trust the proxy's protocol header.
+# Enable it ONLY when a proxy you control actually sets that header;
+# otherwise a client can forge it and claim an insecure request was secure.
+if _env_bool("TRUST_PROXY_SSL_HEADER", False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 
 # Application definition
 
