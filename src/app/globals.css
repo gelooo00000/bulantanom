@@ -374,6 +374,14 @@
     display: block !important;
   }
 
+  /* ...but not the grids inside the report itself. The rule above is what
+     stops the hidden Available Reports column reserving a track; applied
+     indiscriminately it also flattened the summary tiles into one stacked
+     column down the page. */
+  .report-sheet .grid {
+    display: grid !important;
+  }
+
   .report-sheet,
   .report-sheet * {
     color: #111 !important;
