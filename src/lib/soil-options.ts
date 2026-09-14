@@ -86,6 +86,11 @@ export const SOIL_STRINGS = {
   aiUnavailable: "AI recommendation is temporarily unavailable.",
   savedNotice:
     "Your soil information has been saved successfully. Please try again later.",
+  tryAgain: "Try Again",
+  retrying: "Analyzing…",
+  retryHint: "Your soil information is saved — try again without re-entering anything.",
+  stillUnavailable:
+    "AI recommendation is still unavailable. Please try again in a few minutes.",
 
   // "Back to Soil Information" button and its states
   backToSoilInfo: "Back to Soil Information",

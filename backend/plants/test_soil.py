@@ -13,6 +13,7 @@ Gemini is always mocked. No test here spends real API quota.
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -404,3 +405,182 @@ class SoilLguAccessTests(SoilTestCase):
             **self.auth("officer@example.com", LGU_LOGIN_URL),
         )
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class _FakeGeminiError(Exception):
+    """Stands in for google.genai's ServerError, which carries `.code`."""
+
+    def __init__(self, code, message):
+        super().__init__(f"{code} {message}")
+        self.code = code
+
+
+class _FakeResponse:
+    def __init__(self, parsed):
+        self.parsed = parsed
+        self.text = ""
+
+
+class SoilGeminiFallbackTests(SoilTestCase):
+    """
+    Gemini's free tier allows 20 requests per model per day and a refused 503
+    still counts, so an overloaded model is never retried - the next model,
+    with its own quota, is tried instead. A 504 deadline is not passed on:
+    the soil deadline is 120s, so another attempt would keep the Farmer
+    waiting minutes.
+    """
+
+    def _post(self, side_effect, fallbacks=("fallback-model",)):
+        with override_settings(
+            GEMINI_MODEL="primary-model", GEMINI_FALLBACK_MODELS=list(fallbacks)
+        ), patch("google.genai.Client") as client_cls:
+            generate = client_cls.return_value.models.generate_content
+            generate.side_effect = side_effect
+            response = self.client.post(
+                LIST_URL, VALID_SOIL, format="json", **self.auth("farmer@example.com")
+            )
+        return response, [call.kwargs["model"] for call in generate.call_args_list]
+
+    def test_overloaded_primary_falls_back_to_the_next_model(self):
+        response, models = self._post([
+            _FakeGeminiError(503, "UNAVAILABLE. This model is currently experiencing high demand."),
+            _FakeResponse(gemini_payload(self.fruit.name)),
+        ])
+
+        self.assertEqual(models, ["primary-model", "fallback-model"])
+        self.assertTrue(response.data["ai_generated"])
+        self.assertEqual(response.data["suitable_fruits"][0]["name"], self.fruit.name)
+        row = SoilRecommendation.objects.get(pk=response.data["id"])
+        self.assertEqual(row.model_name, "fallback-model")
+
+    def test_exhausted_daily_quota_falls_back_to_the_next_model(self):
+        response, models = self._post([
+            _FakeGeminiError(429, "RESOURCE_EXHAUSTED"),
+            _FakeResponse(gemini_payload(self.fruit.name)),
+        ])
+
+        self.assertEqual(models, ["primary-model", "fallback-model"])
+        self.assertTrue(response.data["ai_generated"])
+
+    def test_an_overloaded_model_is_never_retried(self):
+        response, models = self._post(_FakeGeminiError(503, "UNAVAILABLE"), fallbacks=())
+
+        self.assertEqual(models, ["primary-model"])
+        self.assertFalse(response.data["ai_generated"])
+
+    def test_deadline_exceeded_504_does_not_try_another_model(self):
+        response, models = self._post(_FakeGeminiError(504, "DEADLINE_EXCEEDED"))
+
+        self.assertEqual(models, ["primary-model"])
+        self.assertFalse(response.data["ai_generated"])
+
+    def test_every_model_overloaded_still_saves_the_assessment(self):
+        response, models = self._post(_FakeGeminiError(503, "UNAVAILABLE"))
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(models, ["primary-model", "fallback-model"])
+        self.assertFalse(response.data["ai_generated"])
+        row = SoilRecommendation.objects.get(pk=response.data["id"])
+        self.assertEqual(row.soil_type, "sandy_loam")
+        self.assertTrue(row.failure_reason)
+
+    def test_primary_answer_records_the_primary_model(self):
+        response, models = self._post([_FakeResponse(gemini_payload(self.fruit.name))])
+
+        self.assertEqual(models, ["primary-model"])
+        row = SoilRecommendation.objects.get(pk=response.data["id"])
+        self.assertEqual(row.model_name, "primary-model")
+
+
+REANALYZE_URL = "/api/farmer/soil-recommendations/{}/reanalyze/"
+
+
+class SoilReanalyzeTests(SoilTestCase):
+    """"Try Again" re-runs Gemini on a saved assessment without re-entering it."""
+
+    def _create_failed(self, headers):
+        with patch("plants.views.generate_soil_recommendation", return_value=None):
+            response = self.client.post(LIST_URL, VALID_SOIL, format="json", **headers)
+        self.assertFalse(response.data["ai_generated"])
+        return response.data["id"]
+
+    def _reanalyze(self, soil_id, headers, result):
+        with patch(
+            "plants.views.generate_soil_recommendation", return_value=result
+        ) as gen:
+            response = self.client.post(
+                REANALYZE_URL.format(soil_id), format="json", **headers
+            )
+        return response, gen
+
+    def test_retry_recovers_a_failed_assessment(self):
+        headers = self.auth("farmer@example.com")
+        soil_id = self._create_failed(headers)
+
+        response, _ = self._reanalyze(soil_id, headers, gemini_payload(self.fruit.name))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["ai_generated"])
+        self.assertEqual(response.data["failure_reason"], "")
+        self.assertEqual(response.data["suitable_fruits"][0]["name"], self.fruit.name)
+        # The same row was completed - nothing new was stacked beside it.
+        self.assertEqual(SoilRecommendation.objects.count(), 1)
+        self.assertEqual(
+            SoilRecommendation.objects.get(pk=soil_id).notes, VALID_SOIL["notes"]
+        )
+
+    def test_retry_that_fails_again_keeps_the_assessment(self):
+        headers = self.auth("farmer@example.com")
+        soil_id = self._create_failed(headers)
+
+        response, _ = self._reanalyze(soil_id, headers, None)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["ai_generated"])
+        self.assertTrue(response.data["failure_reason"])
+        self.assertEqual(SoilRecommendation.objects.count(), 1)
+
+    def test_already_analysed_assessment_does_not_call_gemini(self):
+        headers = self.auth("farmer@example.com")
+        with patch(
+            "plants.views.generate_soil_recommendation",
+            return_value=gemini_payload(self.fruit.name),
+        ):
+            soil_id = self.client.post(
+                LIST_URL, VALID_SOIL, format="json", **headers
+            ).data["id"]
+
+        response, gen = self._reanalyze(soil_id, headers, None)
+
+        gen.assert_not_called()
+        self.assertTrue(response.data["ai_generated"])
+
+    def test_other_farmer_cannot_retry_it(self):
+        soil_id = self._create_failed(self.auth("farmer@example.com"))
+
+        response, gen = self._reanalyze(
+            soil_id, self.auth("other@example.com"), gemini_payload(self.fruit.name)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        gen.assert_not_called()
+
+    def test_unauthenticated_retry_is_rejected(self):
+        soil_id = self._create_failed(self.auth("farmer@example.com"))
+        response = self.client.post(REANALYZE_URL.format(soil_id), format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_success_after_failure_still_notifies_the_farmer(self):
+        from notifications.models import Notification, NotificationType
+
+        headers = self.auth("farmer@example.com")
+        with self.captureOnCommitCallbacks(execute=True):
+            soil_id = self._create_failed(headers)
+        with self.captureOnCommitCallbacks(execute=True):
+            self._reanalyze(soil_id, headers, gemini_payload(self.fruit.name))
+
+        ready = Notification.objects.filter(
+            recipient=self.farmer,
+            notification_type=NotificationType.SOIL_RECOMMENDATION_READY,
+        )
+        self.assertEqual(ready.count(), 1)

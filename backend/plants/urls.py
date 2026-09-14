@@ -61,6 +61,11 @@ farmer_urlpatterns = [
         views.SoilRecommendationDetailView.as_view(),
         name="soil-recommendation-detail",
     ),
+    path(
+        "soil-recommendations/<int:pk>/reanalyze/",
+        views.reanalyze_soil_recommendation,
+        name="soil-recommendation-reanalyze",
+    ),
     path("risk/", views.farmer_risk_overview, name="farmer-risk"),
     path("risk/history/", views.farmer_risk_history, name="farmer-risk-history"),
     *farmer_notification_urlpatterns,

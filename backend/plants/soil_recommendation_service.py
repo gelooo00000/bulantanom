@@ -27,6 +27,37 @@ from .models import Crop, CropCategory
 
 logger = logging.getLogger(__name__)
 
+# Gemini's free tier allows 20 requests per model per day, and a request
+# refused with 503 "high demand" still counts against it. Retrying the same
+# model therefore burns the day's quota without getting an answer. Each model
+# has its own quota and its own load, so an overloaded or exhausted model is
+# skipped in favour of the next one instead.
+_TRANSIENT_MARKERS = ("429", "503", "UNAVAILABLE", "RESOURCE_EXHAUSTED")
+
+
+def _models() -> list[str]:
+    """GEMINI_MODEL first, then each configured fallback, without repeats."""
+    return list(dict.fromkeys([settings.GEMINI_MODEL, *settings.GEMINI_FALLBACK_MODELS]))
+
+
+def _is_transient(exc: Exception) -> bool:
+    """
+    True when this model is overloaded (503) or out of quota (429), so the
+    next model is worth trying.
+
+    Deliberately excludes 504 DEADLINE_EXCEEDED and client timeouts: the soil
+    deadline is GEMINI_SOIL_TIMEOUT_SECONDS (120s), so moving on to another
+    model after one would keep the Farmer waiting minutes.
+    """
+    if "timeout" in type(exc).__name__.lower():
+        return False
+    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    if code in (429, 503):
+        return True
+    if code is not None:
+        return False
+    return any(marker in str(exc) for marker in _TRANSIENT_MARKERS)
+
 # The six sections, and nothing else. This shape is the contract shared by
 # the model fields, the serializer and the frontend result card.
 _CROP_ITEM = {
@@ -305,26 +336,39 @@ def generate_soil_recommendation(soil) -> dict | None:
         logger.warning("Soil recommendation skipped: crop catalog is empty.")
         return None
 
-    try:
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=_build_prompt(soil),
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
-                response_mime_type="application/json",
-                response_schema=RESPONSE_SCHEMA,
-                temperature=0.3,
-                http_options=types.HttpOptions(
-                    timeout=settings.GEMINI_SOIL_TIMEOUT_SECONDS * 1000
-                ),
-            ),
-        )
-    except Exception as exc:
-        # Never log the key; log only the exception type/message.
-        logger.warning(
-            "Gemini soil request failed: %s: %s", type(exc).__name__, exc
-        )
+    prompt = _build_prompt(soil)
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_INSTRUCTION,
+        response_mime_type="application/json",
+        response_schema=RESPONSE_SCHEMA,
+        temperature=0.3,
+        http_options=types.HttpOptions(
+            timeout=settings.GEMINI_SOIL_TIMEOUT_SECONDS * 1000
+        ),
+    )
+
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    response = None
+    for model in _models():
+        try:
+            response = client.models.generate_content(
+                model=model, contents=prompt, config=config
+            )
+            break
+        except Exception as exc:
+            transient = _is_transient(exc)
+            # Never log the key; log only the exception type/message.
+            logger.warning(
+                "Gemini soil request failed on %s (next model=%s): %s: %s",
+                model,
+                transient,
+                type(exc).__name__,
+                exc,
+            )
+            if not transient:
+                return None
+
+    if response is None:
         return None
 
     parsed = getattr(response, "parsed", None)
@@ -342,6 +386,11 @@ def generate_soil_recommendation(soil) -> dict | None:
     validated = _validate(parsed, catalog)
     if validated is None:
         logger.warning("Gemini soil response failed schema validation.")
+        return None
+    if model != settings.GEMINI_MODEL:
+        logger.info("Soil recommendation answered by fallback model %s.", model)
+    # The model that actually answered, so the saved row records it truthfully.
+    validated["model_name"] = model
     return validated
 
 
@@ -366,7 +415,7 @@ def apply_recommendation(soil, data: dict | None) -> bool:
     soil.soil_improvement_watering = data["soil_improvement_watering"]
     soil.important_warnings = data["important_warnings"]
     soil.ai_generated = True
-    soil.model_name = settings.GEMINI_MODEL
+    soil.model_name = data.get("model_name") or settings.GEMINI_MODEL
     soil.failure_reason = ""
     soil.save()
     return True

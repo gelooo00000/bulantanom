@@ -293,6 +293,11 @@ CORS_ALLOW_CREDENTIALS = True
 # still create plants (see plants/crop_intelligence_service.py).
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash").strip()
+# Tried in order when GEMINI_MODEL is overloaded (503) or out of its daily
+# quota (429). The free tier's 20 requests a day is per model, and each model
+# has its own load, so a fallback keeps soil recommendations working while
+# the primary model is saturated.
+GEMINI_FALLBACK_MODELS = _env_list("GEMINI_FALLBACK_MODELS", "gemini-3.1-flash-lite")
 # Passed to the API as the *server-side* deadline, so a value below the
 # model's real response time makes Google itself return 504 DEADLINE_EXCEEDED.
 # That still consumes a request from the daily quota, so a tight timeout

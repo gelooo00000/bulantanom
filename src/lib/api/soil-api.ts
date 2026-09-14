@@ -111,6 +111,21 @@ export async function fetchLatestSoilRecommendation(
   return result ?? null;
 }
 
+/**
+ * Re-runs Gemini for a saved assessment that has no AI result. The stored
+ * soil information is reused untouched, so the Farmer never re-enters it; an
+ * assessment that already has a recommendation comes back unchanged.
+ */
+export function reanalyzeSoilRecommendation(
+  accessToken: string,
+  soilId: number,
+): Promise<SoilRecommendation> {
+  return apiFetch(`/farmer/soil-recommendations/${soilId}/reanalyze/`, {
+    method: "POST",
+    accessToken,
+  });
+}
+
 /** Saved history. Database read only — costs no quota. */
 export function fetchSoilRecommendations(
   accessToken: string,

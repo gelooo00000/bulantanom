@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, LoaderCircle, TriangleAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  LoaderCircle,
+  RotateCw,
+  TriangleAlert,
+} from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { SoilResultCard } from "@/components/farmer/soil-result-card";
@@ -19,6 +26,7 @@ import { ApiError } from "@/lib/api/client";
 import {
   createSoilRecommendation,
   fetchLatestSoilRecommendation,
+  reanalyzeSoilRecommendation,
   type SoilRecommendationInput,
   type SoilRecommendation,
 } from "@/lib/api/soil-api";
@@ -114,6 +122,8 @@ export function SoilRecommendationForm() {
   const [result, setResult] = useState<SoilRecommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
   // Guards against a double-click firing two POSTs before React re-renders
   // the disabled button — state alone is not synchronous enough.
   const savingRef = useRef(false);
@@ -187,6 +197,27 @@ export function SoilRecommendationForm() {
     }
   }
 
+  /**
+   * Re-runs Gemini on the assessment already saved. The stored soil
+   * information is reused, so a Gemini outage never costs the Farmer their
+   * typing - they only have to press the button again.
+   */
+  async function handleRetry() {
+    if (!accessToken || !result || retrying) return;
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const updated = await reanalyzeSoilRecommendation(accessToken, result.id);
+      requestNotificationRefresh();
+      setResult(updated);
+      if (!updated.ai_generated) setRetryError(t.stillUnavailable);
+    } catch (err) {
+      setRetryError(err instanceof ApiError ? err.message : t.stillUnavailable);
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   /** The soil inputs as the API expects them. */
   function currentInput(): SoilRecommendationInput {
     return {
@@ -217,6 +248,7 @@ export function SoilRecommendationForm() {
     setNotes("");
     setResult(null);
     setError(null);
+    setRetryError(null);
     setStatus("idle");
     setSaveState("idle");
     savingRef.current = false;
@@ -287,8 +319,32 @@ export function SoilRecommendationForm() {
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium">{t.assessmentSaved}</p>
               <p className="text-muted-foreground text-sm">
-                {result.failure_reason ? t.aiUnavailable : t.notAnalyzed}
+                {result.failure_reason
+                  ? `${t.aiUnavailable} ${t.retryHint}`
+                  : t.notAnalyzed}
               </p>
+              {retryError ? (
+                <p className="text-risk-high text-sm">{retryError}</p>
+              ) : null}
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 self-start"
+                onClick={handleRetry}
+                disabled={retrying}
+              >
+                {retrying ? (
+                  <>
+                    <LoaderCircle className="size-3.5 animate-spin" />
+                    {t.retrying}
+                  </>
+                ) : (
+                  <>
+                    <RotateCw className="size-3.5" />
+                    {result.failure_reason ? t.tryAgain : t.submit}
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         ) : (

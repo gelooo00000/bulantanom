@@ -947,7 +947,14 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
 
     LGU Officers are told as well, since soil records are farm-wide
     monitoring data they are expected to review.
+
+    Keyed by outcome as well as row. A Farmer who presses "Try Again" after
+    a failed analysis must still hear that the recommendation is ready; with
+    one key per row that success was deduplicated away behind the earlier
+    "saved" notice.
     """
+    outcome = "ready" if analyzed else "saved"
+    dedupe_key = f"soil_recommendation:{soil.pk}:{outcome}"
     farmer = soil.farmer
     soil_type = soil.get_soil_type_display()
 
@@ -976,7 +983,7 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
             related_type=RelatedType.NONE,
             related_id=soil.pk,
             metadata={"soil_type": soil_type, "analyzed": analyzed},
-            dedupe_key=f"soil_recommendation:{soil.pk}",
+            dedupe_key=dedupe_key,
         )
         notify_lgu_officers(
             notification_type=(
@@ -996,7 +1003,7 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
                 "soil_type": soil_type,
                 "analyzed": analyzed,
             },
-            dedupe_key=f"soil_recommendation:{soil.pk}",
+            dedupe_key=dedupe_key,
         )
 
     _on_commit(run)

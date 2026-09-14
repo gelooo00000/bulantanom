@@ -699,6 +699,29 @@ def latest_soil_recommendation(request):
     return Response(SoilRecommendationSerializer(soil).data)
 
 
+@api_view(["POST"])
+@permission_classes([IsFarmer, IsApproved])
+def reanalyze_soil_recommendation(request, pk):
+    """
+    POST /api/farmer/soil-recommendations/{id}/reanalyze/
+
+    Backs "Try Again": re-runs Gemini for a saved soil assessment that has no
+    AI result - its analysis failed, or it was saved with `analyze=0`. The
+    stored soil information is reused untouched, so this is a pure retry and
+    never a way to edit an assessment. One that already has a recommendation
+    is returned as it is, without spending quota.
+    """
+    soil = get_object_or_404(SoilRecommendation, pk=pk, farmer=request.user)
+    if soil.ai_generated:
+        return Response(SoilRecommendationSerializer(soil).data)
+
+    if apply_recommendation(soil, generate_soil_recommendation(soil)):
+        # Only a success is news - the save itself was announced when it was
+        # submitted, so a retry that fails again stays quiet.
+        notify_soil_recommendation(soil, analyzed=True)
+    return Response(SoilRecommendationSerializer(soil).data)
+
+
 class AssessmentEvidenceView(APIView):
     """
     GET /api/farmer/assessments/{id}/evidence/
