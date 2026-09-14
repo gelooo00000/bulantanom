@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -434,3 +435,38 @@ class NoPublicPrivilegedSignupTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class RefreshCookieLifetimeTests(APITestCase):
+    """
+    The refresh cookie is a session cookie: closing the browser must sign the
+    user out, so reopening it lands on the public site instead of back inside
+    a Farmer, LGU or Admin account nobody logged out of.
+    """
+
+    def assert_session_cookie(self, response):
+        cookie = response.cookies[settings.REFRESH_COOKIE_NAME]
+        self.assertTrue(cookie.value)
+        self.assertEqual(cookie["max-age"], "")
+        self.assertEqual(cookie["expires"], "")
+
+    def test_login_sets_a_session_cookie(self):
+        make_user("approved@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        response = self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "approved@example.com", "password": "SecurePassword123!"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assert_session_cookie(response)
+
+    def test_refresh_keeps_it_a_session_cookie(self):
+        make_user("approved@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "approved@example.com", "password": "SecurePassword123!"},
+            format="json",
+        )
+        response = self.client.post(REFRESH_URL, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assert_session_cookie(response)

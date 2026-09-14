@@ -45,15 +45,14 @@ STATUS_MESSAGES = {
 }
 
 
-def _refresh_max_age():
-    return int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
-
-
 def _set_refresh_cookie(response, refresh_token):
+    # Deliberately a session cookie: no max_age or expires, so the browser
+    # drops it when it closes and reopening lands signed out instead of back
+    # inside a Farmer, LGU or Admin account nobody logged out of. The token
+    # itself still expires after REFRESH_TOKEN_LIFETIME, enforced server-side.
     response.set_cookie(
         key=settings.REFRESH_COOKIE_NAME,
         value=str(refresh_token),
-        max_age=_refresh_max_age(),
         httponly=True,
         secure=settings.REFRESH_COOKIE_SECURE,
         samesite=settings.REFRESH_COOKIE_SAMESITE,
