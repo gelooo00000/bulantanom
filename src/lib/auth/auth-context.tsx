@@ -13,6 +13,13 @@ import {
   type BackendUser,
 } from "@/lib/api/auth-api";
 import { ApiError, onSessionExpired } from "@/lib/api/client";
+import {
+  answerPresence,
+  clearTabSignedIn,
+  hasSignedInTab,
+  isTabSignedIn,
+  markTabSignedIn,
+} from "@/lib/auth/tab-session";
 import { getAccessToken, setAccessToken } from "@/lib/auth/token-storage";
 import type { AuthUser, Role } from "@/lib/auth/types";
 
@@ -71,8 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
+        // The cookie outlives the tab, so only restore it in a tab that held
+        // the session (a reload) or while another BulanTanom tab is signed in.
+        // Once every tab has closed, the session is over - see tab-session.
+        if (!(await hasSignedInTab())) {
+          if (cancelled) return;
+          setAccessToken(null);
+          setCurrentUser(null);
+          return;
+        }
+
         const { access, user } = await refreshSession();
         if (cancelled) return;
+        markTabSignedIn();
         setAccessToken(access);
         setCurrentUser(mapBackendUser(user));
         setTokenVersion((v) => v + 1);
@@ -96,16 +114,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // /login rather than stranding the user on a page that can no longer load
     // anything.
     return onSessionExpired(() => {
+      clearTabSignedIn();
       setCurrentUser(null);
       setTokenVersion((v) => v + 1);
     });
   }, []);
+
+  // Lets a newly opened tab join this session instead of starting signed out.
+  useEffect(() => answerPresence(isTabSignedIn), []);
 
   async function login(email: string, password: string, role: Role): Promise<AuthUser> {
     try {
       const { access, user } = await LOGIN_BY_ROLE[role](email, password);
       setAccessToken(access);
       const mapped = mapBackendUser(user);
+      markTabSignedIn();
       setCurrentUser(mapped);
       setTokenVersion((v) => v + 1);
       return mapped;
@@ -136,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear local state immediately so the UI reacts (RequireRole redirects
     // to /login) without waiting on the network; the server-side blacklist
     // call fires in the background best-effort.
+    clearTabSignedIn();
     setAccessToken(null);
     setCurrentUser(null);
     setTokenVersion((v) => v + 1);
