@@ -62,7 +62,10 @@ function extractError(body: unknown, fallback: string): { message: string; field
  * Opening the dashboard in a second tab was enough to do it. `withRefreshLock`
  * below extends the same one-refresh-at-a-time guarantee across documents.
  */
-let refreshInFlight: Promise<string | null> | null = null;
+let refreshInFlight: Promise<RefreshedSession | null> | null = null;
+
+/** Body of a successful POST /auth/refresh/: a new access token and the account. */
+export type RefreshedSession = { access: string; user: unknown };
 
 /** Web Locks are per-origin, so this name is shared by every tab. */
 const REFRESH_LOCK = "bulantanom:auth-refresh";
@@ -134,14 +137,19 @@ function notifySessionExpired(): void {
 }
 
 /**
- * Exchanges the refresh cookie for a new access token, or null if the session
- * is genuinely over (cookie missing, expired, or the account was suspended -
- * the backend re-checks account status on every refresh).
+ * Exchanges the refresh cookie for a new session, or null if the session is
+ * genuinely over (cookie missing, expired, or the account was suspended - the
+ * backend re-checks account status on every refresh).
  *
- * Shared by `apiFetch`, the multipart upload path and authorized images so all
- * three recover identically.
+ * This is the only place that may call POST /auth/refresh/. Every refresh
+ * rotates the cookie and blacklists the old one, so two concurrent calls with
+ * the same cookie always end with the second being refused - and the backend
+ * then clears the cookie, signing the user out. The boot-time refresh used to
+ * go around this guard; under React Strict Mode its effect runs twice, so
+ * every page reload in development fired two refreshes and logged the user
+ * out.
  */
-export async function refreshAccessToken(): Promise<string | null> {
+export async function refreshSharedSession(): Promise<RefreshedSession | null> {
   refreshInFlight ??= (async () => {
     try {
       return await withRefreshLock(async () => {
@@ -152,10 +160,10 @@ export async function refreshAccessToken(): Promise<string | null> {
         });
         if (!response.ok) return null;
 
-        const data = (await response.json()) as { access?: unknown };
-        const access = typeof data.access === "string" ? data.access : null;
-        if (access) setAccessToken(access);
-        return access;
+        const data = (await response.json()) as { access?: unknown; user?: unknown };
+        if (typeof data.access !== "string") return null;
+        setAccessToken(data.access);
+        return { access: data.access, user: data.user };
       });
     } catch {
       return null;
@@ -165,6 +173,15 @@ export async function refreshAccessToken(): Promise<string | null> {
   })();
 
   return refreshInFlight;
+}
+
+/**
+ * The new access token from `refreshSharedSession`, or null if the session is
+ * over. Shared by `apiFetch`, the multipart upload path and authorized images
+ * so all three recover identically.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  return (await refreshSharedSession())?.access ?? null;
 }
 
 /**

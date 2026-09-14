@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api/client";
+import { ApiError, apiFetch, refreshSharedSession } from "@/lib/api/client";
 
 export type BackendRole = "FARMER" | "LGU_OFFICER" | "ADMIN";
 export type BackendAccountStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
@@ -39,8 +39,10 @@ export function loginAdmin(email: string, password: string): Promise<AuthRespons
 }
 
 /** Cookie-based silent refresh — call on app boot to re-establish a session after a reload. */
-export function refreshSession(): Promise<AuthResponse> {
-  return apiFetch("/auth/refresh/", { method: "POST" });
+export async function refreshSession(): Promise<AuthResponse> {
+  const session = await refreshSharedSession();
+  if (!session) throw new ApiError("No active session.", 401);
+  return { access: session.access, user: session.user as BackendUser };
 }
 
 export function fetchCurrentUser(accessToken: string): Promise<BackendUser> {
