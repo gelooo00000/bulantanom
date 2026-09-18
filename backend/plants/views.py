@@ -28,7 +28,7 @@ from notifications.services import (
     notify_soil_warning,
 )
 
-from . import evidence_token
+from . import dashboard_service, evidence_token
 from .assessment_schedule import eligibility, with_last_assessment_date
 from .crop_intelligence_service import get_or_create_crop_intelligence, is_configured
 from .soil_recommendation_service import (
@@ -61,7 +61,7 @@ class CropListView(ListAPIView):
 
     serializer_class = CropSerializer
     permission_classes = [IsApproved]
-    queryset = Crop.objects.filter(is_active=True)
+    queryset = Crop.objects.filter(is_active=True).prefetch_related("variants")
 
 
 class FarmerPlantViewSet(viewsets.ModelViewSet):
@@ -83,7 +83,9 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
         # Annotated so each plant's weekly-assessment eligibility is derived
         # without a per-row query when listing.
         return with_last_assessment_date(
-            Plant.objects.filter(farmer=self.request.user).select_related("crop")
+            Plant.objects.filter(farmer=self.request.user)
+            .select_related("crop", "variant")
+            .prefetch_related("crop__variants")
         ).order_by("-created_at")
 
     def perform_create(self, serializer):
@@ -294,7 +296,9 @@ def validate_plant_evidence(request, plant_id):
     image does not pay for a second Gemini call.
     """
     plant = get_object_or_404(
-        Plant.objects.select_related("crop"), pk=plant_id, farmer=request.user
+        Plant.objects.select_related("crop", "variant").prefetch_related("crop__variants"),
+        pk=plant_id,
+        farmer=request.user,
     )
 
     image = request.FILES.get("evidence_image")
@@ -534,6 +538,18 @@ def farmer_risk_overview(request):
         )
 
     return Response({"counts": counts, "plants": items})
+
+
+@api_view(["GET"])
+@permission_classes([IsFarmer])
+def farmer_dashboard(request):
+    """
+    GET /api/farmer/dashboard/
+
+    Everything the Farmer dashboard shows, in one read. Assembled in
+    `dashboard_service` from MySQL — no AI call, and nothing estimated.
+    """
+    return Response(dashboard_service.build(request.user))
 
 
 @api_view(["GET"])

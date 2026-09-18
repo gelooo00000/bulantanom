@@ -66,6 +66,7 @@ farmer_urlpatterns = [
         views.reanalyze_soil_recommendation,
         name="soil-recommendation-reanalyze",
     ),
+    path("dashboard/", views.farmer_dashboard, name="farmer-dashboard"),
     path("risk/", views.farmer_risk_overview, name="farmer-risk"),
     path("risk/history/", views.farmer_risk_history, name="farmer-risk-history"),
     *farmer_notification_urlpatterns,

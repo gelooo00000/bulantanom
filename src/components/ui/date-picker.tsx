@@ -44,6 +44,16 @@ export function formatDisplayDate(value: string): string {
   });
 }
 
+/**
+ * Short form for chart axes, where a full "February 14, 2026" would collide
+ * with its neighbour. The full date is still what tooltips and tables show.
+ */
+export function formatShortDate(value: string): string {
+  const date = parseIsoDate(value);
+  if (!date) return value;
+  return date.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+}
+
 type DatePickerProps = {
   id?: string;
   value: string;
