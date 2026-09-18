@@ -35,11 +35,19 @@ from .soil_recommendation_service import (
     apply_recommendation,
     generate_soil_recommendation,
 )
-from .models import Assessment, Crop, Plant, RiskStatus, SoilRecommendation
+from .models import (
+    Assessment,
+    Crop,
+    CropVariant,
+    Plant,
+    RiskStatus,
+    SoilRecommendation,
+)
 from .serializers import (
     AssessmentSerializer,
     CropIntelligenceSerializer,
     CropSerializer,
+    CropVariantSerializer,
     PlantSerializer,
     SoilRecommendationSerializer,
     validate_evidence_file,
@@ -102,10 +110,17 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
 @permission_classes([IsFarmer])
 def crop_intelligence(request, crop_id):
     """
-    GET /api/farmer/crops/{crop_id}/intelligence/?planting_date=YYYY-MM-DD
+    GET /api/farmer/crops/{crop_id}/intelligence/
+        ?planting_date=YYYY-MM-DD&variant=<variant_id>
 
     Returns the calculated harvest window (always, from the Crop table) plus
     cached Gemini crop intelligence (best-effort).
+
+    `variant` matters: this endpoint powers the review screen the Farmer
+    confirms, and saving the plant applies the variety's own durations. Left
+    out, the preview was computed from the parent crop and disagreed with the
+    plant that was then created - 25 days apart for Sweet Corn against Corn.
+    The variety has to be part of the question for the answer to match.
 
     Gemini is never a hard dependency: on any failure this still returns 200
     with `intelligence: null` and an `unavailable_reason`, so the Add Plant
@@ -118,6 +133,18 @@ def crop_intelligence(request, crop_id):
             {"detail": "Please select a valid crop."}, status=status.HTTP_404_NOT_FOUND
         )
 
+    variant = None
+    variant_id = request.query_params.get("variant")
+    if variant_id:
+        variant = CropVariant.objects.filter(
+            pk=variant_id, crop=crop, is_active=True
+        ).first()
+        if variant is None:
+            return Response(
+                {"detail": "That variety does not belong to the selected crop."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     harvest_start = harvest_end = None
     planting_date_raw = request.query_params.get("planting_date")
     planting_date = None
@@ -129,21 +156,35 @@ def crop_intelligence(request, crop_id):
                 {"detail": "Please select a valid planting date."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        harvest_start, harvest_end = Plant.calculate_harvest_window(crop, planting_date)
+        harvest_start, harvest_end = Plant.calculate_harvest_window(
+            crop, planting_date, variant
+        )
 
     intelligence, generated_now = get_or_create_crop_intelligence(crop)
 
     return Response(
         {
             "crop": CropSerializer(crop).data,
+            "variant": CropVariantSerializer(variant).data if variant else None,
             # Calculated by Django from crop metadata — never AI-generated.
             "harvest_window": (
                 {
                     "planting_date": planting_date.isoformat(),
                     "expected_harvest_start": harvest_start.isoformat(),
                     "expected_harvest_end": harvest_end.isoformat(),
-                    "growing_duration_days": crop.growing_duration_days,
-                    "harvest_window_days": crop.harvest_window_days,
+                    # The variety's numbers when one was chosen, so the
+                    # review screen quotes the same figures the saved plant
+                    # will use.
+                    "growing_duration_days": (
+                        variant.growing_duration_days
+                        if variant
+                        else crop.growing_duration_days
+                    ),
+                    "harvest_window_days": (
+                        variant.harvest_window_days
+                        if variant
+                        else crop.harvest_window_days
+                    ),
                     "source": "crop_database_calculation",
                 }
                 if planting_date

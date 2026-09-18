@@ -12,6 +12,7 @@ No AI is involved in any of this, so nothing here is mocked.
 """
 
 from datetime import date
+from unittest.mock import patch
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -308,3 +309,100 @@ class VarietyCatalogIntegrityTests(APITestCase):
                 # makes recording the variety worth the farmer's time.
                 gap = abs(a.growing_duration_days - b.growing_duration_days)
                 self.assertGreaterEqual(gap, 60)
+
+
+class PreviewMatchesSavedPlantTests(APITestCase):
+    """
+    The review screen is what the Farmer actually confirms, so the window it
+    shows has to be the window they get. It was not: the preview endpoint
+    computed from the parent crop while saving applied the variety, putting
+    Sweet Corn 25 days apart from the date on the screen the Farmer had just
+    agreed to.
+
+    Gemini is stubbed out. The harvest window is Django's arithmetic and has
+    nothing to do with the AI guidance beside it, so calling the real API
+    here would only spend quota and make the suite flaky on a 503 — which is
+    exactly what it did before this patch was added.
+    """
+
+    def setUp(self):
+        patcher = patch(
+            "plants.views.get_or_create_crop_intelligence", return_value=(None, False)
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.farmer = User.objects.create_user(
+            email="farmer@example.com",
+            password=PW,
+            first_name="Test",
+            last_name="Farmer",
+            role=UserRole.FARMER,
+            account_status=AccountStatus.APPROVED,
+        )
+        res = self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "farmer@example.com", "password": PW},
+            format="json",
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {res.data['access']}")
+
+    def _preview(self, crop_id, planting_date, variant_id=None):
+        url = f"/api/farmer/crops/{crop_id}/intelligence/?planting_date={planting_date}"
+        if variant_id:
+            url += f"&variant={variant_id}"
+        return self.client.get(url)
+
+    def test_preview_window_equals_the_created_plant_window(self):
+        preview = self._preview("corn", "2026-03-01", "corn-sweet")
+        self.assertEqual(preview.status_code, status.HTTP_200_OK)
+
+        created = self.client.post(
+            PLANTS_URL,
+            {
+                "crop_id": "corn",
+                "variant_id": "corn-sweet",
+                "planting_date": "2026-03-01",
+            },
+            format="json",
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED, created.data)
+
+        window = preview.data["harvest_window"]
+        self.assertEqual(
+            window["expected_harvest_start"], created.data["expected_harvest_start"]
+        )
+        self.assertEqual(
+            window["expected_harvest_end"], created.data["expected_harvest_end"]
+        )
+
+    def test_preview_quotes_the_varietys_own_durations(self):
+        sweet = CropVariant.objects.get(id="corn-sweet")
+        preview = self._preview("corn", "2026-03-01", "corn-sweet")
+        self.assertEqual(
+            preview.data["harvest_window"]["growing_duration_days"],
+            sweet.growing_duration_days,
+        )
+        self.assertEqual(preview.data["variant"]["name"], "Sweet Corn")
+
+    def test_the_two_varieties_really_do_differ(self):
+        """Guards the test above from passing because nothing varies."""
+        sweet = self._preview("corn", "2026-03-01", "corn-sweet")
+        grain = self._preview("corn", "2026-03-01", "corn-yellow-field")
+        self.assertNotEqual(
+            sweet.data["harvest_window"]["expected_harvest_start"],
+            grain.data["harvest_window"]["expected_harvest_start"],
+        )
+
+    def test_no_variety_still_previews_from_the_crop(self):
+        crop = Crop.objects.get(id="corn")
+        preview = self._preview("corn", "2026-03-01")
+        self.assertIsNone(preview.data["variant"])
+        self.assertEqual(
+            preview.data["harvest_window"]["growing_duration_days"],
+            crop.growing_duration_days,
+        )
+
+    def test_a_variety_from_another_crop_is_refused(self):
+        res = self._preview("eggplant", "2026-03-01", "corn-sweet")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)

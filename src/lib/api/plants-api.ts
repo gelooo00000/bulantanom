@@ -101,6 +101,8 @@ export type HarvestWindow = {
 
 export type CropIntelligenceResponse = {
   crop: BackendCrop;
+  /** Echoes back the variety the window was calculated for, if any. */
+  variant: CropVariant | null;
   harvest_window: HarvestWindow | null;
   intelligence: CropIntelligence | null;
   intelligence_generated_now: boolean;
@@ -115,11 +117,17 @@ export function fetchCropIntelligence(
   accessToken: string,
   cropId: string,
   plantingDate: string,
+  /**
+   * Required for the preview to match what gets saved. Without it the
+   * harvest window came back computed from the parent crop while the
+   * created plant used the variety's own durations — 25 days apart for
+   * Sweet Corn against Corn.
+   */
+  variantId?: string | null,
 ): Promise<CropIntelligenceResponse> {
-  return apiFetch(
-    `/farmer/crops/${cropId}/intelligence/?planting_date=${encodeURIComponent(plantingDate)}`,
-    { accessToken },
-  );
+  const params = new URLSearchParams({ planting_date: plantingDate });
+  if (variantId) params.set("variant", variantId);
+  return apiFetch(`/farmer/crops/${cropId}/intelligence/?${params}`, { accessToken });
 }
 
 export function fetchPlants(accessToken: string): Promise<BackendPlant[]> {

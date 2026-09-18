@@ -13,6 +13,7 @@ import {
 import { useState, type FormEvent } from "react";
 
 import { CropSelect } from "@/components/farmer/crop-select";
+import { InSeasonCrops } from "@/components/farmer/in-season-crops";
 import { PlantingSeasonNote } from "@/components/farmer/planting-season-note";
 import { VariantSelect } from "@/components/farmer/variant-select";
 import { FadeIn } from "@/components/motion/fade-in";
@@ -21,10 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DatePicker, formatDisplayDate } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   createPlant,
   fetchCropIntelligence,
   fetchCrops,
+  fetchPlants,
   type CropIntelligenceResponse,
 } from "@/lib/api/plants-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
@@ -46,8 +49,12 @@ export default function AddPlantPage() {
   const { data: crops, loading: cropsLoading, error: cropsError, refetch } =
     useAuthedQuery(fetchCrops);
 
+  // The farmer's existing plants, read only to spot an accidental repeat.
+  const { data: existingPlants } = useAuthedQuery(fetchPlants);
+
   const [cropId, setCropId] = useState<string | null>(null);
   const [variantId, setVariantId] = useState<string | null>(null);
+  const [label, setLabel] = useState("");
   const [plantingDate, setPlantingDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -61,10 +68,21 @@ export default function AddPlantPage() {
 
   // Advise on the date the farmer chose, falling back to today while the
   // field is empty, so the note is useful before the date is filled in.
-  const seasonAdvice = adviseForMonth(
-    selectedCrop?.planting_window,
-    monthFromIsoDate(plantingDate),
-  );
+  const activeMonth = monthFromIsoDate(plantingDate);
+  const seasonAdvice = adviseForMonth(selectedCrop?.planting_window, activeMonth);
+
+  // Same crop, same variety, same day. Almost always a double submit or a
+  // forgotten earlier entry — but not always, since two beds can genuinely
+  // go in together, so this warns and never blocks.
+  const duplicate =
+    cropId && plantingDate
+      ? (existingPlants ?? []).find(
+          (plant) =>
+            plant.crop.id === cropId &&
+            (plant.variant?.id ?? null) === variantId &&
+            plant.planting_date === plantingDate,
+        )
+      : undefined;
 
   async function handleContinue(event: FormEvent) {
     event.preventDefault();
@@ -81,7 +99,11 @@ export default function AddPlantPage() {
     try {
       // The harvest window in this response is calculated by Django from the
       // crop table. Gemini only explains it — see the backend service.
-      setIntel(await fetchCropIntelligence(accessToken, cropId, plantingDate));
+      // The variety travels with the request, so the window shown here is
+      // the one the saved plant will actually get.
+      setIntel(
+        await fetchCropIntelligence(accessToken, cropId, plantingDate, variantId),
+      );
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Unable to load crop information.");
     } finally {
@@ -98,6 +120,7 @@ export default function AddPlantPage() {
         crop_id: cropId,
         planting_date: plantingDate,
         variant_id: variantId,
+        label: label.trim(),
       });
       // Django raised "Plant added" — show it on the bell straight away.
       requestNotificationRefresh();
@@ -113,7 +136,9 @@ export default function AddPlantPage() {
     return (
       <div className="mx-auto flex max-w-lg flex-col gap-6">
         <PageHeader title="Add a Plant" description="Preparing crop intelligence…" />
-        <Card className="py-10">
+        {/* Announced, because this replaces the whole page: without it a
+            screen reader user is told nothing changed and nothing finished. */}
+        <Card className="py-10" role="status" aria-live="polite">
           <CardContent className="flex flex-col items-center gap-4 px-6 text-center">
             <LoaderCircle className="text-primary size-7 animate-spin" />
             <p className="font-medium">
@@ -124,6 +149,18 @@ export default function AddPlantPage() {
               <li>Calculating harvest window</li>
               <li>Generating growing guidance</li>
             </ul>
+            {/* The guidance is a nicety; the plant record is the point. The
+                first farmer to pick any crop waits on a live Gemini call
+                behind a 60-second timeout, so there has to be a way past it
+                rather than a spinner with no exit. */}
+            <div className="mt-2 flex flex-col items-center gap-1.5">
+              <Button variant="outline" onClick={handleSave} disabled={saving}>
+                {saving ? "Adding plant…" : "Add plant without waiting"}
+              </Button>
+              <p className="text-muted-foreground/70 text-xs">
+                Guidance will still appear on the plant&apos;s page.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -148,8 +185,12 @@ export default function AddPlantPage() {
           </button>
 
           <PageHeader
-            title={`${intel.crop.emoji} ${intel.crop.name}`}
-            description="Review the crop information before adding this plant."
+            title={`${intel.crop.emoji} ${intel.variant?.name ?? intel.crop.name}`}
+            description={
+              intel.variant
+                ? `${intel.crop.name} · review before adding this plant.`
+                : "Review the crop information before adding this plant."
+            }
           />
 
           {window && (
@@ -283,6 +324,21 @@ export default function AddPlantPage() {
         </div>
       ) : (
         <form onSubmit={handleContinue} className="flex flex-col gap-5">
+          {/* Answers "what can I plant now" before the farmer has to guess a
+              crop and read the warning under it. Follows the planting date
+              once one is chosen, so back-dating a planting shows what was in
+              season then rather than today. */}
+          <InSeasonCrops
+            crops={crops ?? []}
+            month={activeMonth}
+            selectedCropId={cropId}
+            onSelect={(next) => {
+              setCropId(next);
+              setVariantId(null);
+              setFormError(null);
+            }}
+          />
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="crop">Crop</Label>
             <CropSelect
@@ -368,6 +424,39 @@ export default function AddPlantPage() {
               aren&apos;t accepted.
             </p>
           </div>
+
+          {/* The model has always had this field and `display_name` prefers
+              it; the form simply never asked. Without it a farmer with three
+              eggplant beds gets three identical rows in every list. */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="label">
+              Label{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="label"
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder="e.g. North Row, Beside the creek"
+              maxLength={120}
+            />
+            <p className="text-muted-foreground text-xs">
+              Helps you tell this planting apart from others of the same crop.
+            </p>
+          </div>
+
+          {/* Warns, never blocks: two beds can genuinely go in on one day. */}
+          {duplicate && (
+            <div className="border-risk-medium/30 bg-risk-medium/5 flex items-start gap-2.5 rounded-xl border px-3 py-2.5">
+              <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
+              <p className="text-sm">
+                You already recorded{" "}
+                <span className="font-medium">{duplicate.display_name}</span> planted
+                on this date. Add another only if this is a separate planting — a
+                label will keep them apart.
+              </p>
+            </div>
+          )}
 
           {formError && <p className="text-destructive text-sm">{formError}</p>}
 

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { BackendCrop } from "@/lib/api/plants-api";
+import type { BackendCrop, CropVariant } from "@/lib/api/plants-api";
 
 const CATEGORY_ORDER: BackendCrop["category"][] = ["fruit", "vegetable"];
 const CATEGORY_LABEL: Record<BackendCrop["category"], string> = {
@@ -24,12 +24,37 @@ const CATEGORY_LABEL: Record<BackendCrop["category"], string> = {
  * Substring match on the display name (so "cara" finds "Starfruit
  * (Carambola)") plus prefix match on local-name aliases (so "atis" finds
  * Sugar Apple without also matching Tomato via "kamatis").
+ *
+ * Varieties are searched too, and that is not a nicety. A farmer searches
+ * for what they planted, not its botanical parent — and with varieties in
+ * the catalog, 58 of the 74 names returned nothing at all: "Lakatan",
+ * "Sweet Corn", "Magallanes" and "Guapple" were each a dead end, even
+ * though every one of them is in the database.
+ *
+ * Returns the matching variety when the query hit one, so the row can say
+ * which, rather than leaving the farmer to guess why Banana came back for
+ * "lakatan".
  */
-function matches(crop: BackendCrop, query: string): boolean {
+export function matchedVariant(crop: BackendCrop, query: string): CropVariant | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  return (
+    (crop.variants ?? []).find(
+      (variant) =>
+        variant.name.toLowerCase().includes(q) ||
+        (variant.search_terms ?? []).some((term) => term.toLowerCase().startsWith(q)),
+    ) ?? null
+  );
+}
+
+export function matches(crop: BackendCrop, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
   if (crop.name.toLowerCase().includes(q)) return true;
-  return (crop.search_terms ?? []).some((term) => term.toLowerCase().startsWith(q));
+  if ((crop.search_terms ?? []).some((term) => term.toLowerCase().startsWith(q))) {
+    return true;
+  }
+  return matchedVariant(crop, q) !== null;
 }
 
 type CropSelectProps = {
@@ -46,7 +71,9 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
     () =>
       CATEGORY_ORDER.map((category) => ({
         category,
-        crops: crops.filter((crop) => crop.category === category && matches(crop, query)),
+        crops: crops
+          .filter((crop) => crop.category === category && matches(crop, query))
+          .map((crop) => ({ crop, via: matchedVariant(crop, query) })),
       })).filter((group) => group.crops.length > 0),
     [crops, query],
   );
@@ -99,12 +126,20 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
             groups.map(({ category, crops: groupCrops }) => (
               <SelectGroup key={category}>
                 <SelectGroupLabel>{CATEGORY_LABEL[category]}</SelectGroupLabel>
-                {groupCrops.map((crop) => (
+                {groupCrops.map(({ crop, via }) => (
                   <SelectItem key={crop.id} value={crop.id}>
                     {/* Emoji is a visual aid only — the name is always shown. */}
                     <span className="flex items-center gap-2">
                       <span aria-hidden="true">{crop.emoji}</span>
-                      {crop.name}
+                      <span className="flex flex-col items-start">
+                        <span>{crop.name}</span>
+                        {/* Says why this crop came back for the query. */}
+                        {via && (
+                          <span className="text-muted-foreground text-xs">
+                            {via.name}
+                          </span>
+                        )}
+                      </span>
                     </span>
                   </SelectItem>
                 ))}
