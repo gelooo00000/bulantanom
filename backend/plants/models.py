@@ -8,6 +8,8 @@ from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
+from . import crop_calendar
+
 
 class CropCategory(models.TextChoices):
     FRUIT = "fruit", "Fruit"
@@ -47,11 +49,87 @@ class Crop(models.Model):
     )
     is_active = models.BooleanField(default=True)
 
+    # --- Planting season ---------------------------------------------------
+    # Advisory only. These never move a harvest date; `calculate_harvest_window`
+    # remains the only thing that does. Held on the model rather than in code
+    # so an Admin can correct a window for Layuan Farm without a deploy —
+    # `plants/crop_calendar.py` documents where the seed values came from.
+    planting_months = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Month numbers (1-12) when this crop is normally planted here.",
+    )
+    planting_caution_months = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Months that are workable but need a named mitigation.",
+    )
+    planting_reason = models.TextField(
+        blank=True, help_text="Why the preferred window is what it is."
+    )
+    planting_risk = models.TextField(
+        blank=True, help_text="What goes wrong when planted outside the window."
+    )
+    planting_caution_note = models.TextField(
+        blank=True, help_text="Mitigation that makes a caution month workable."
+    )
+
     class Meta:
         ordering = ["category", "name"]
 
     def __str__(self):
         return self.name
+
+    def planting_advice(self, month):
+        """
+        Advisory verdict for planting this crop in `month` at Layuan Farm,
+        or None when no window is on record so the UI stays silent rather
+        than inventing guidance.
+        """
+        return crop_calendar.evaluate(
+            {
+                "preferred": self.planting_months or [],
+                "caution": self.planting_caution_months or [],
+                "reason": self.planting_reason,
+                "risk": self.planting_risk,
+                "caution_note": self.planting_caution_note,
+            },
+            month,
+        )
+
+
+class CropVariant(models.Model):
+    """
+    A named variety within a crop — Sweet Corn under Corn, Lakatan under
+    Banana. Optional everywhere: a Plant without a variant behaves exactly
+    as it did before this model existed.
+
+    Durations live here as well as on Crop because they genuinely differ by
+    variety (sweet corn is ready weeks before yellow field corn), and the
+    harvest window has to reflect what the farmer actually planted.
+    """
+
+    id = models.SlugField(primary_key=True, max_length=80)
+    crop = models.ForeignKey(Crop, on_delete=models.CASCADE, related_name="variants")
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    growing_duration_days = models.PositiveIntegerField(
+        help_text="Days from planting to the start of this variety's harvest window."
+    )
+    harvest_window_days = models.PositiveIntegerField(
+        help_text="Length of this variety's harvest window in days."
+    )
+    search_terms = models.JSONField(
+        default=list, blank=True, help_text="Local/alternate names used for searching."
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["crop_id", "sort_order", "name"]
+
+    def __str__(self):
+        return f"{self.crop.name} - {self.name}"
 
 
 class PlantStatus(models.TextChoices):
@@ -75,6 +153,16 @@ class Plant(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="plants"
     )
     crop = models.ForeignKey(Crop, on_delete=models.PROTECT, related_name="plants")
+    # Optional: plants recorded before variants existed, and crops that have
+    # no varieties on file, simply leave this null and fall back to the crop's
+    # own durations.
+    variant = models.ForeignKey(
+        "CropVariant",
+        on_delete=models.PROTECT,
+        related_name="plants",
+        null=True,
+        blank=True,
+    )
     label = models.CharField(
         max_length=120, blank=True, help_text="Optional farmer label, e.g. 'North Row'."
     )
@@ -100,22 +188,35 @@ class Plant(models.Model):
         return f"{self.crop.name} ({self.farmer.email})"
 
     @staticmethod
-    def calculate_harvest_window(crop, planting_date):
-        """Harvest window comes from crop metadata + planting date — never from AI."""
-        start = planting_date + timedelta(days=crop.growing_duration_days)
-        end = start + timedelta(days=crop.harvest_window_days)
+    def calculate_harvest_window(crop, planting_date, variant=None):
+        """
+        Harvest window comes from crop metadata + planting date — never from AI.
+
+        When a variety was recorded, its durations win: sweet corn and yellow
+        field corn are the same crop but weeks apart at harvest, and the
+        farmer's window has to match what is actually in the ground.
+        """
+        source = variant or crop
+        start = planting_date + timedelta(days=source.growing_duration_days)
+        end = start + timedelta(days=source.harvest_window_days)
         return start, end
 
     def save(self, *args, **kwargs):
         if not self.expected_harvest_start or not self.expected_harvest_end:
-            start, end = self.calculate_harvest_window(self.crop, self.planting_date)
+            start, end = self.calculate_harvest_window(
+                self.crop, self.planting_date, self.variant
+            )
             self.expected_harvest_start = start
             self.expected_harvest_end = end
         super().save(*args, **kwargs)
 
     @property
     def display_name(self):
-        return self.label or self.crop.name
+        if self.label:
+            return self.label
+        if self.variant_id:
+            return self.variant.name
+        return self.crop.name
 
     @property
     def age_days(self):

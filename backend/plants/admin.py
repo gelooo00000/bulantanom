@@ -1,6 +1,28 @@
 from django.contrib import admin
 
-from .models import Assessment, Crop, CropIntelligence, Plant, RiskAssessment
+from .models import (
+    Assessment,
+    Crop,
+    CropIntelligence,
+    CropVariant,
+    Plant,
+    RiskAssessment,
+)
+
+
+class CropVariantInline(admin.TabularInline):
+    """Varieties are maintained on the crop they belong to."""
+
+    model = CropVariant
+    extra = 0
+    fields = (
+        "id",
+        "name",
+        "growing_duration_days",
+        "harvest_window_days",
+        "sort_order",
+        "is_active",
+    )
 
 
 @admin.register(Crop)
@@ -11,11 +33,56 @@ class CropAdmin(admin.ModelAdmin):
         "category",
         "growing_duration_days",
         "harvest_window_days",
+        "variant_count",
         "is_active",
     )
     list_filter = ("category", "is_active")
     search_fields = ("id", "name")
     ordering = ("category", "name")
+    inlines = [CropVariantInline]
+    fieldsets = (
+        (None, {"fields": ("id", "name", "category", "emoji", "description", "is_active")}),
+        (
+            "Harvest timing",
+            {"fields": ("growing_duration_days", "harvest_window_days")},
+        ),
+        (
+            "Planting season at Layuan Farm",
+            {
+                "fields": (
+                    "planting_months",
+                    "planting_caution_months",
+                    "planting_reason",
+                    "planting_caution_note",
+                    "planting_risk",
+                ),
+                "description": (
+                    "Advisory only - these never change a harvest date. Months are "
+                    "numbers 1-12, e.g. [2, 3, 4, 5] for February to May. See "
+                    "plants/crop_calendar.py for where the seeded values came from."
+                ),
+            },
+        ),
+        ("Search", {"fields": ("search_terms",)}),
+    )
+
+    @admin.display(description="Varieties")
+    def variant_count(self, crop):
+        return crop.variants.count()
+
+
+@admin.register(CropVariant)
+class CropVariantAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "crop",
+        "growing_duration_days",
+        "harvest_window_days",
+        "is_active",
+    )
+    list_filter = ("crop__category", "is_active", "crop")
+    search_fields = ("id", "name", "crop__name")
+    ordering = ("crop__name", "sort_order")
 
 
 @admin.register(Plant)
@@ -24,6 +91,7 @@ class PlantAdmin(admin.ModelAdmin):
         "display_name",
         "farmer",
         "crop",
+        "variant",
         "planting_date",
         "expected_harvest_start",
         "status",

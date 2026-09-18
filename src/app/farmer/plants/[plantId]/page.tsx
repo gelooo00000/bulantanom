@@ -12,6 +12,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
+import { PlantingSeasonNote } from "@/components/farmer/planting-season-note";
 import { AssessmentRow } from "@/components/risk/assessment-row";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -100,13 +101,30 @@ export default function PlantDetailPage({
         <TabsPanel value="overview">
           <Card className="gap-3 py-5">
             <CardContent className="px-5">
-              <h2 className="text-sm font-medium">About {plant.crop.name}</h2>
-              <p className="text-muted-foreground mt-1.5 text-sm">{plant.crop.description}</p>
-              <p className="text-muted-foreground mt-3 text-sm">
-                Typical growing period {plant.crop.growing_duration_days} days, with a
-                harvest window of about {plant.crop.harvest_window_days} days. Actual
-                timing varies with variety, weather, soil and plant health.
+              <h2 className="text-sm font-medium">
+                About {plant.variant ? plant.variant.name : plant.crop.name}
+                {plant.variant && (
+                  <span className="text-muted-foreground font-normal">
+                    {" "}
+                    ({plant.crop.name})
+                  </span>
+                )}
+              </h2>
+              <p className="text-muted-foreground mt-1.5 text-sm">
+                {plant.variant?.description || plant.crop.description}
               </p>
+              <p className="text-muted-foreground mt-3 text-sm">
+                Typical growing period{" "}
+                {plant.variant?.growing_duration_days ??
+                  plant.crop.growing_duration_days}{" "}
+                days, with a harvest window of about{" "}
+                {plant.variant?.harvest_window_days ?? plant.crop.harvest_window_days}{" "}
+                days. Actual timing varies with
+                {plant.variant ? " " : " variety, "}weather, soil and plant health.
+              </p>
+
+              {/* How the month it was actually planted in suits this crop. */}
+              <PlantingSeasonNote advice={plant.planting_advice} className="mt-4" />
             </CardContent>
           </Card>
         </TabsPanel>

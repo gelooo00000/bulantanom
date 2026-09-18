@@ -2,10 +2,12 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 
+from . import crop_calendar
 from .models import (
     Assessment,
     Crop,
     CropIntelligence,
+    CropVariant,
     Plant,
     RiskAssessment,
     SoilRecommendation,
@@ -54,8 +56,24 @@ def validate_evidence_file(image):
     return image
 
 
+class CropVariantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CropVariant
+        fields = [
+            "id",
+            "name",
+            "description",
+            "growing_duration_days",
+            "harvest_window_days",
+            "search_terms",
+        ]
+        read_only_fields = fields
+
+
 class CropSerializer(serializers.ModelSerializer):
     category_label = serializers.CharField(source="get_category_display", read_only=True)
+    variants = serializers.SerializerMethodField()
+    planting_window = serializers.SerializerMethodField()
 
     class Meta:
         model = Crop
@@ -69,8 +87,38 @@ class CropSerializer(serializers.ModelSerializer):
             "harvest_window_days",
             "description",
             "search_terms",
+            "variants",
+            "planting_window",
         ]
         read_only_fields = fields
+
+    def get_variants(self, crop):
+        return CropVariantSerializer(
+            [v for v in crop.variants.all() if v.is_active], many=True
+        ).data
+
+    def get_planting_window(self, crop):
+        """
+        The crop's season, sent once so the picker can react to the farmer
+        changing the planting date without another round trip.
+
+        Only the month lists travel as data the client tests against; every
+        line of wording comes from here, so the agronomic text has exactly
+        one home. Null when no window is on record, which is the signal to
+        render nothing rather than guess.
+        """
+        preferred = list(crop.planting_months or [])
+        caution = list(crop.planting_caution_months or [])
+        if not preferred and not caution:
+            return None
+        return {
+            "preferred_months": preferred,
+            "caution_months": caution,
+            "preferred_label": crop_calendar.month_range_label(preferred),
+            "reason": crop.planting_reason,
+            "risk": crop.planting_risk,
+            "caution_note": crop.planting_caution_note,
+        }
 
 
 class CropIntelligenceSerializer(serializers.ModelSerializer):
@@ -103,6 +151,15 @@ class PlantSerializer(serializers.ModelSerializer):
     crop_id = serializers.PrimaryKeyRelatedField(
         source="crop", queryset=Crop.objects.filter(is_active=True), write_only=True
     )
+    variant = CropVariantSerializer(read_only=True)
+    variant_id = serializers.PrimaryKeyRelatedField(
+        source="variant",
+        queryset=CropVariant.objects.filter(is_active=True),
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    planting_advice = serializers.SerializerMethodField()
     display_name = serializers.CharField(read_only=True)
     age_days = serializers.IntegerField(read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
@@ -114,6 +171,9 @@ class PlantSerializer(serializers.ModelSerializer):
             "id",
             "crop",
             "crop_id",
+            "variant",
+            "variant_id",
+            "planting_advice",
             "label",
             "display_name",
             "planting_date",
@@ -129,6 +189,8 @@ class PlantSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "crop",
+            "variant",
+            "planting_advice",
             "display_name",
             "expected_harvest_start",
             "expected_harvest_end",
@@ -148,6 +210,14 @@ class PlantSerializer(serializers.ModelSerializer):
 
         return eligibility(obj)
 
+    def get_planting_advice(self, obj):
+        """
+        Whether this plant went into the ground in its crop's season. Read
+        from the stored planting date, so it stays true for the life of the
+        record instead of drifting with the current month.
+        """
+        return obj.crop.planting_advice(obj.planting_date.month)
+
     def validate_crop_id(self, value):
         if value is None:
             raise serializers.ValidationError("Please select a valid crop.")
@@ -166,18 +236,36 @@ class PlantSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Please enter a more recent planting date.")
         return value
 
+    def validate(self, attrs):
+        """
+        A variety belongs to exactly one crop. Rejecting the mismatch here
+        stops a Sweet Corn plant being filed under Eggplant and then having
+        its harvest window computed from the wrong durations.
+        """
+        crop = attrs.get("crop") or getattr(self.instance, "crop", None)
+        variant = attrs.get("variant", serializers.empty)
+        if variant is serializers.empty:
+            variant = getattr(self.instance, "variant", None)
+        if variant is not None and crop is not None and variant.crop_id != crop.id:
+            raise serializers.ValidationError(
+                {"variant_id": "That variety does not belong to the selected crop."}
+            )
+        return attrs
+
     def create(self, validated_data):
         crop = validated_data["crop"]
+        variant = validated_data.get("variant")
         planting_date = validated_data["planting_date"]
-        start, end = Plant.calculate_harvest_window(crop, planting_date)
+        start, end = Plant.calculate_harvest_window(crop, planting_date, variant)
         validated_data["expected_harvest_start"] = start
         validated_data["expected_harvest_end"] = end
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         crop = validated_data.get("crop", instance.crop)
+        variant = validated_data.get("variant", instance.variant)
         planting_date = validated_data.get("planting_date", instance.planting_date)
-        start, end = Plant.calculate_harvest_window(crop, planting_date)
+        start, end = Plant.calculate_harvest_window(crop, planting_date, variant)
         validated_data["expected_harvest_start"] = start
         validated_data["expected_harvest_end"] = end
         return super().update(instance, validated_data)

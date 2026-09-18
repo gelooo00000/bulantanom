@@ -1,6 +1,48 @@
 import { apiFetch } from "@/lib/api/client";
 import type { AssessmentEligibility } from "@/lib/api/risk-api";
 
+/** A named variety within a crop, e.g. Sweet Corn under Corn. */
+export type CropVariant = {
+  id: string;
+  name: string;
+  description: string;
+  /** Overrides the parent crop's duration when this variety is planted. */
+  growing_duration_days: number;
+  harvest_window_days: number;
+  search_terms: string[];
+};
+
+/**
+ * When this crop is normally planted at Layuan Farm.
+ *
+ * Only the month lists are data the UI tests against; every line of wording
+ * comes from Django, so the agronomic text has one home. `null` on a crop
+ * with no window on record — render nothing rather than guess.
+ */
+export type PlantingWindow = {
+  preferred_months: number[];
+  caution_months: number[];
+  /** Pre-formatted, e.g. "February-May". */
+  preferred_label: string;
+  reason: string;
+  risk: string;
+  caution_note: string;
+};
+
+export type PlantingAdviceStatus = "good" | "caution" | "poor";
+
+/** Django's verdict for one month. Advisory — never moves a harvest date. */
+export type PlantingAdvice = {
+  status: PlantingAdviceStatus;
+  month: number;
+  month_name: string;
+  headline: string;
+  detail: string;
+  preferred_months: number[];
+  preferred_label: string;
+  caution_months: number[];
+};
+
 export type BackendCrop = {
   id: string;
   name: string;
@@ -11,11 +53,17 @@ export type BackendCrop = {
   harvest_window_days: number;
   description: string;
   search_terms: string[];
+  variants: CropVariant[];
+  planting_window: PlantingWindow | null;
 };
 
 export type BackendPlant = {
   id: number;
   crop: BackendCrop;
+  /** Null for crops with no varieties, and for plants recorded before them. */
+  variant: CropVariant | null;
+  /** Season verdict for the month this plant actually went in the ground. */
+  planting_advice: PlantingAdvice | null;
   label: string;
   display_name: string;
   planting_date: string;
@@ -85,7 +133,12 @@ export function fetchPlant(accessToken: string, plantId: string): Promise<Backen
 /** The farmer is taken from the auth token server-side — never sent here. */
 export function createPlant(
   accessToken: string,
-  payload: { crop_id: string; planting_date: string; label?: string },
+  payload: {
+    crop_id: string;
+    planting_date: string;
+    label?: string;
+    variant_id?: string | null;
+  },
 ): Promise<BackendPlant> {
   return apiFetch("/farmer/plants/", { method: "POST", body: payload, accessToken });
 }

@@ -13,6 +13,8 @@ import {
 import { useState, type FormEvent } from "react";
 
 import { CropSelect } from "@/components/farmer/crop-select";
+import { PlantingSeasonNote } from "@/components/farmer/planting-season-note";
+import { VariantSelect } from "@/components/farmer/variant-select";
 import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,7 @@ import {
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
+import { adviseForMonth, monthFromIsoDate } from "@/lib/planting-season";
 
 function todayIso() {
   const now = new Date();
@@ -44,6 +47,7 @@ export default function AddPlantPage() {
     useAuthedQuery(fetchCrops);
 
   const [cropId, setCropId] = useState<string | null>(null);
+  const [variantId, setVariantId] = useState<string | null>(null);
   const [plantingDate, setPlantingDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -52,6 +56,15 @@ export default function AddPlantPage() {
   const [saving, setSaving] = useState(false);
 
   const selectedCrop = crops?.find((crop) => crop.id === cropId) ?? null;
+  const selectedVariant =
+    selectedCrop?.variants.find((variant) => variant.id === variantId) ?? null;
+
+  // Advise on the date the farmer chose, falling back to today while the
+  // field is empty, so the note is useful before the date is filled in.
+  const seasonAdvice = adviseForMonth(
+    selectedCrop?.planting_window,
+    monthFromIsoDate(plantingDate),
+  );
 
   async function handleContinue(event: FormEvent) {
     event.preventDefault();
@@ -84,6 +97,7 @@ export default function AddPlantPage() {
       const plant = await createPlant(accessToken, {
         crop_id: cropId,
         planting_date: plantingDate,
+        variant_id: variantId,
       });
       // Django raised "Plant added" — show it on the bell straight away.
       requestNotificationRefresh();
@@ -277,22 +291,62 @@ export default function AddPlantPage() {
               value={cropId}
               onValueChange={(next) => {
                 setCropId(next);
+                // Varieties belong to one crop, so the old choice cannot
+                // survive a crop change - Django would reject it anyway.
+                setVariantId(null);
                 setFormError(null);
               }}
             />
           </div>
 
+          {selectedCrop && selectedCrop.variants.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="variant">Variety</Label>
+              <VariantSelect
+                id="variant"
+                variants={selectedCrop.variants}
+                value={variantId}
+                onValueChange={(next) => {
+                  setVariantId(next);
+                  setFormError(null);
+                }}
+              />
+              <p className="text-muted-foreground text-xs">
+                Optional. Varieties differ in how long they take, so naming one
+                gives a more accurate harvest window.
+              </p>
+            </div>
+          )}
+
           {selectedCrop && (
             <Card className="py-4">
-              <CardContent className="px-4 text-sm">
-                <p className="font-medium">
-                  {selectedCrop.emoji} {selectedCrop.name}
-                </p>
-                <p className="text-muted-foreground mt-1">{selectedCrop.description}</p>
-                <p className="text-muted-foreground mt-2">
-                  Typical growing period: {selectedCrop.growing_duration_days} days ·
-                  harvest window {selectedCrop.harvest_window_days} days
-                </p>
+              <CardContent className="flex flex-col gap-2 px-4 text-sm">
+                <div>
+                  <p className="font-medium">
+                    {selectedCrop.emoji} {selectedCrop.name}
+                    {selectedVariant && (
+                      <span className="text-muted-foreground font-normal">
+                        {" "}
+                        · {selectedVariant.name}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    {selectedVariant?.description || selectedCrop.description}
+                  </p>
+                  <p className="text-muted-foreground mt-2">
+                    Typical growing period:{" "}
+                    {selectedVariant?.growing_duration_days ??
+                      selectedCrop.growing_duration_days}{" "}
+                    days · harvest window{" "}
+                    {selectedVariant?.harvest_window_days ??
+                      selectedCrop.harvest_window_days}{" "}
+                    days
+                  </p>
+                </div>
+
+                {/* Whether this month suits this crop here, and why. */}
+                <PlantingSeasonNote advice={seasonAdvice} />
               </CardContent>
             </Card>
           )}
