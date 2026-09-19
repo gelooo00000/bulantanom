@@ -138,9 +138,9 @@ describe("EnvironmentPanel", () => {
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 
-  it("plots two readings taken on the same day as two points", () => {
+  it("renders two readings taken on the same day without a key collision", () => {
     // Dates do not identify a reading — the farmer can record twice in one
-    // day — so the panel keys on the row id.
+    // day — so the scale keys its marks on the row id.
     //
     // The console spy is the part that actually catches a regression here:
     // React renders both elements even with duplicate keys and only warns,
@@ -156,21 +156,21 @@ describe("EnvironmentPanel", () => {
             recorded_on: "2026-09-14",
             soil_moisture: "moist",
             soil_moisture_label: "Moist",
-            ph_level: 6.6,
-            soil_type_label: "Loamy",
-            drainage_label: "Good",
+            ph_level: 8.9,
+            soil_type_label: "Clay Loam",
+            drainage_label: "Moderate",
           },
           history: [
-            { id: 1, date: "2026-09-14", ph: 6.2, moisture: "moist", moisture_rank: 4 },
-            { id: 2, date: "2026-09-14", ph: 6.6, moisture: "moist", moisture_rank: 4 },
+            { id: 1, date: "2026-09-14", ph: 8.4, moisture: "moist", moisture_rank: 4 },
+            { id: 2, date: "2026-09-14", ph: 8.9, moisture: "moist", moisture_rank: 4 },
           ],
           not_collected: [],
         }}
       />,
     );
-    expect(screen.getByText(/pH across your last 2 readings/)).toBeInTheDocument();
-    expect(screen.getByTitle("Sep 14: pH 6.2")).toBeInTheDocument();
-    expect(screen.getByTitle("Sep 14: pH 6.6")).toBeInTheDocument();
+
+    // The reading is interpreted, not just plotted.
+    expect(screen.getByText(/· Strongly alkaline/)).toBeInTheDocument();
 
     const duplicateKeyWarning = consoleError.mock.calls.some((args) =>
       args.some((a) => typeof a === "string" && a.includes("same key")),
@@ -178,44 +178,51 @@ describe("EnvironmentPanel", () => {
     expect(duplicateKeyWarning).toBe(false);
   });
 
-  it("shows a pH trend only once there are two readings to compare", () => {
-    const base = {
-      has_any: true,
-      latest: {
-        recorded_on: "2026-09-10",
-        soil_moisture: "moist",
-        soil_moisture_label: "Moist",
-        ph_level: 6.4,
-        soil_type_label: "Loamy",
-        drainage_label: "Good",
-      },
-      not_collected: [],
-    };
-    const one = render(
-      <EnvironmentPanel
-        environment={{
-          ...base,
-          history: [
-            { id: 1, date: "2026-09-10", ph: 6.4, moisture: "moist", moisture_rank: 4 },
-          ],
-        }}
-      />,
-    );
-    expect(screen.queryByText(/pH across your last/)).not.toBeInTheDocument();
-    one.unmount();
-
+  it("shows the pH scale whenever a pH was recorded, even for one reading", () => {
+    // The old dot plot needed two readings to draw anything, so a farmer
+    // with a single reading saw no pH context at all. A scale needs one.
     render(
       <EnvironmentPanel
         environment={{
-          ...base,
+          has_any: true,
+          latest: {
+            recorded_on: "2026-09-10",
+            soil_moisture: "moist",
+            soil_moisture_label: "Moist",
+            ph_level: 6.4,
+            soil_type_label: "Loamy",
+            drainage_label: "Good",
+          },
           history: [
-            { id: 1, date: "2026-08-01", ph: 5.9, moisture: "dry", moisture_rank: 2 },
-            { id: 2, date: "2026-09-10", ph: 6.4, moisture: "moist", moisture_rank: 4 },
+            { id: 1, date: "2026-09-10", ph: 6.4, moisture: "moist", moisture_rank: 4 },
           ],
+          not_collected: [],
         }}
       />,
     );
-    expect(screen.getByText(/pH across your last 2 readings/)).toBeInTheDocument();
+    expect(screen.getByText(/· Ideal for most crops/)).toBeInTheDocument();
+    expect(screen.getByText(/Green band is pH 6–7/)).toBeInTheDocument();
+  });
+
+  it("shows no pH scale when the farmer did not record a pH", () => {
+    render(
+      <EnvironmentPanel
+        environment={{
+          has_any: true,
+          latest: {
+            recorded_on: "2026-09-10",
+            soil_moisture: "moist",
+            soil_moisture_label: "Moist",
+            ph_level: null,
+            soil_type_label: "Loamy",
+            drainage_label: "Good",
+          },
+          history: [],
+          not_collected: [],
+        }}
+      />,
+    );
+    expect(screen.queryByText(/Green band/)).not.toBeInTheDocument();
   });
 });
 

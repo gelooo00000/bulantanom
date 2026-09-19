@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Droplets, FlaskConical } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDisplayDate, formatShortDate } from "@/components/ui/date-picker";
+import { SoilPhScale } from "@/components/farmer/soil-ph-scale";
+import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { FarmEnvironment } from "@/lib/api/dashboard-api";
 
 /**
@@ -27,18 +28,12 @@ const NOT_COLLECTED_LABEL: Record<string, string> = {
   humidity: "Humidity",
 };
 
-const PH_MIN = 3.5;
-const PH_MAX = 9;
-
 type EnvironmentPanelProps = {
   environment: FarmEnvironment;
 };
 
 export function EnvironmentPanel({ environment }: EnvironmentPanelProps) {
   const { latest, history, not_collected: notCollected } = environment;
-
-  const phHistory = history.filter((h) => h.ph !== null);
-  const showPhTrend = phHistory.length >= 2;
 
   return (
     <Card className="gap-0 py-4">
@@ -99,51 +94,17 @@ export function EnvironmentPanel({ environment }: EnvironmentPanelProps) {
               {latest.soil_type_label} · {latest.drainage_label} drainage
             </p>
 
-            {showPhTrend && (
-              <div className="border-border/60 mt-3 border-t pt-3">
-                <p className="text-muted-foreground text-xs">
-                  pH across your last {phHistory.length} readings
-                </p>
-                {/* A dot per reading on a fixed pH scale. Deliberately not a
-                    line: soil readings are taken weeks or months apart and a
-                    connecting line would imply a continuous drift nobody
-                    measured. */}
-                <div
-                  className="mt-2 flex h-10 items-end gap-1"
-                  role="img"
-                  aria-label={phHistory
-                    .map((h) => `${formatShortDate(h.date)}: pH ${h.ph}`)
-                    .join(", ")}
-                >
-                  {phHistory.map((h) => {
-                    const clamped = Math.min(Math.max(h.ph!, PH_MIN), PH_MAX);
-                    const pct = ((clamped - PH_MIN) / (PH_MAX - PH_MIN)) * 100;
-                    return (
-                      <div
-                        key={h.id}
-                        className="relative flex-1"
-                        style={{ height: "100%" }}
-                        title={`${formatShortDate(h.date)}: pH ${h.ph}`}
-                      >
-                        <span
-                          className="absolute left-1/2 size-2 -translate-x-1/2 rounded-full"
-                          style={{
-                            bottom: `${pct}%`,
-                            background: "var(--landing-accent)",
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="text-muted-foreground mt-1 flex justify-between text-[11px]">
-                  <span>{formatShortDate(phHistory[0].date)}</span>
-                  <span>pH {PH_MIN}–{PH_MAX} scale</span>
-                  <span>
-                    {formatShortDate(phHistory[phHistory.length - 1].date)}
-                  </span>
-                </div>
-              </div>
+            {/* The scale replaces a dot-per-reading time plot. Readings are
+                months apart and often only two, so time carried no signal —
+                and with both on one day the axis read "Sep 14 … Sep 14".
+                Where the reading sits against the ideal band is the thing
+                the farmer needs. */}
+            {latest.ph_level !== null && (
+              <SoilPhScale
+                ph={latest.ph_level}
+                recordedOn={latest.recorded_on}
+                history={history}
+              />
             )}
           </>
         )}
