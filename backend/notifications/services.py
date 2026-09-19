@@ -156,16 +156,16 @@ def _on_commit(fn):
 
 
 def notify_farmer_registered(farmer):
-    """Farmer signed up. The account is not approved yet — say exactly that."""
+    """Farmer signed up and is already in — welcome them, don't stall them."""
 
     def run():
         notify_farmer(
             farmer,
             notification_type=NotificationType.ACCOUNT_CREATED,
-            title="Registration Submitted",
+            title="Welcome to BulanTanom",
             message=(
-                "Your Farmer account has been created and is waiting for "
-                "administrator approval."
+                "Your Farmer account is ready. Add your first plant to start "
+                "tracking its growth, risk and harvest window."
             ),
             dedupe_key=f"account_created:{farmer.pk}",
         )
@@ -173,23 +173,23 @@ def notify_farmer_registered(farmer):
             notification_type=NotificationType.ACCOUNT_CREATED,
             title="New Farmer Registered",
             message=(
-                f"{farmer.get_full_name()} has registered in BulanTanom and is "
-                "awaiting account processing."
+                f"{farmer.get_full_name()} has registered in BulanTanom."
             ),
             related_type=RelatedType.FARMER,
             related_id=farmer.pk,
             metadata={"farmer_name": farmer.get_full_name()},
             dedupe_key=f"account_created:{farmer.pk}",
         )
-        # Admins are the ones who can actually act on this.
+        # Admins no longer gate the account, but they still need to know who
+        # joined - and they are the ones who can suspend it if the
+        # registration turns out not to be genuine.
         notify_admins(
             notification_type=NotificationType.ACCOUNT_CREATED,
             title="New Farmer Registration",
             message=(
-                f"{farmer.get_full_name()} has registered and is waiting for "
-                "administrator approval."
+                f"{farmer.get_full_name()} has registered and can now sign in."
             ),
-            severity=NotificationSeverity.WARNING,
+            severity=NotificationSeverity.INFO,
             related_type=RelatedType.FARMER,
             related_id=farmer.pk,
             metadata={

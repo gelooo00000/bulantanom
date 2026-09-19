@@ -16,13 +16,18 @@ export type BackendUser = {
 
 type AuthResponse = { access: string; user: BackendUser };
 
+/**
+ * Signing up also signs the Farmer in: the account is approved on creation,
+ * so the response carries the same tokens a login does and the client has
+ * one code path for both.
+ */
 export function signupFarmer(payload: {
   first_name: string;
   last_name: string;
   email: string;
   password: string;
   password_confirm: string;
-}): Promise<{ user: BackendUser; detail: string }> {
+}): Promise<AuthResponse> {
   return apiFetch("/auth/farmer/signup/", { method: "POST", body: payload });
 }
 

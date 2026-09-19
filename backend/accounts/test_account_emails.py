@@ -70,7 +70,10 @@ class AccountEmailTests(APITransactionTestCase):
     # ------------------------------------------------------- no premature mail
 
     def test_registration_does_not_email_the_farmer(self):
-        """Approval mail must wait for the actual approval."""
+        """
+        There is no approval step to announce, so there is no approval mail.
+        The in-app welcome notification is the only thing a signup raises.
+        """
         response = self.client.post(
             SIGNUP_URL,
             {
@@ -81,7 +84,7 @@ class AccountEmailTests(APITransactionTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         created = User.objects.get(email="new@example.com")
-        self.assertEqual(created.account_status, AccountStatus.PENDING)
+        self.assertEqual(created.account_status, AccountStatus.APPROVED)
         self.assertEqual(
             [m for m in mail.outbox if "new@example.com" in m.to], []
         )

@@ -29,7 +29,11 @@ type AuthContextValue = {
   loading: boolean;
   accessToken: string | null;
   login: (email: string, password: string, role: Role) => Promise<AuthUser>;
-  signup: (input: { name: string; email: string; password: string }) => Promise<void>;
+  signup: (input: {
+    name: string;
+    email: string;
+    password: string;
+  }) => Promise<AuthUser>;
   logout: () => void;
 };
 
@@ -137,19 +141,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signup(input: { name: string; email: string; password: string }): Promise<void> {
+  async function signup(input: {
+    name: string;
+    email: string;
+    password: string;
+  }): Promise<AuthUser> {
     const [firstName, ...rest] = input.name.trim().split(/\s+/);
     const lastName = rest.join(" ");
     try {
-      // Registration deliberately does NOT sign the user in — the account is
-      // created PENDING and needs Admin approval before it can authenticate.
-      await signupFarmer({
+      // Signing up signs the Farmer in — the account is approved on
+      // creation, so this establishes a session exactly as login does.
+      const { access, user } = await signupFarmer({
         first_name: firstName || input.name,
         last_name: lastName || firstName || input.name,
         email: input.email,
         password: input.password,
         password_confirm: input.password,
       });
+      setAccessToken(access);
+      const mapped = mapBackendUser(user);
+      markTabSignedIn();
+      setCurrentUser(mapped);
+      setTokenVersion((v) => v + 1);
+      return mapped;
     } catch (err) {
       throw new Error(messageFrom(err));
     }

@@ -262,14 +262,17 @@ class NoPublicOfficerRegistrationTests(APITestCase):
                 "email": "sneaky@example.com", "password": PW,
                 "password_confirm": PW,
                 "role": "LGU_OFFICER",
-                "account_status": "APPROVED",
+                # A status the server would never choose on its own, so the
+                # assertion below proves the client's value was dropped
+                # rather than coinciding with the default.
+                "account_status": "REJECTED",
             },
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         created = User.objects.get(email="sneaky@example.com")
         self.assertEqual(created.role, UserRole.FARMER)
-        self.assertEqual(created.account_status, AccountStatus.PENDING)
+        self.assertEqual(created.account_status, AccountStatus.APPROVED)
 
     def test_the_only_public_signup_route_is_farmer(self):
         """Guards against a public officer-registration route being added."""

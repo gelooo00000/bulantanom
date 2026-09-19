@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  CircleCheck,
-  Clock,
   FlaskConical,
   Lock,
   LoaderCircle,
@@ -53,7 +51,6 @@ export function SignupView() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -76,66 +73,16 @@ export function SignupView() {
 
     setSubmitting(true);
     try {
-      // Registration does not sign the Farmer in — the account is created
-      // PENDING and must be approved by an Admin first.
-      await signup({ name: fullName, email, password });
-      setSubmitted(true);
+      // Signing up signs the Farmer in, so this goes straight to their own
+      // dashboard rather than a waiting screen.
+      const user = await signup({ name: fullName, email, password });
+      router.replace(DASHBOARD_BY_ROLE[user.role]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
+      // Only on failure: on success the redirect unmounts this component,
+      // and clearing the flag first would flash the button back to idle.
       setSubmitting(false);
     }
-  }
-
-  if (submitted) {
-    return (
-      <AuthSplitLayout>
-        <FadeIn duration={500}>
-          <AuthCard>
-            <div className="flex flex-col items-center gap-4 text-center">
-              <span
-                className="flex size-12 items-center justify-center rounded-full border"
-                style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
-              >
-                <CircleCheck className="size-6" />
-              </span>
-              <div>
-                <h1 className="text-2xl font-medium tracking-tight text-foreground">
-                  Registration submitted
-                </h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Your Farmer account is currently waiting for administrator
-                  approval. You will be able to access BulanTanom once your
-                  account has been approved.
-                </p>
-              </div>
-
-              <div
-                className="w-full rounded-xl border p-3 text-left"
-                style={{ borderColor: "var(--landing-border)" }}
-              >
-                <p className="text-xs tracking-wide text-muted-foreground/70 uppercase">Submitted as</p>
-                <p className="mt-1 text-sm font-medium text-foreground">{fullName}</p>
-                <p className="text-sm text-muted-foreground">{email}</p>
-                <p className="text-risk-medium mt-2 flex items-center gap-1.5 text-xs">
-                  <Clock className="size-3.5" />
-                  Pending approval
-                </p>
-              </div>
-
-              <Button
-                nativeButton={false}
-                render={<Link href="/login?role=farmer" />}
-                className="w-full"
-              >
-                Return to Login
-                <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-              </Button>
-            </div>
-          </AuthCard>
-        </FadeIn>
-      </AuthSplitLayout>
-    );
   }
 
   return (

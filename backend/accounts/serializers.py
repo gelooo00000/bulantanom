@@ -63,10 +63,15 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
+        # Farmers are approved on sign-up and go straight to their dashboard.
+        # The status field is still a real gate, not a formality: an Admin can
+        # suspend or reject an account afterwards and `_authenticate_for_role`
+        # will refuse the next sign-in. What changed is only the starting
+        # value, so nobody waits to be let in to their own farm records.
         return User.objects.create_user(
             password=password,
             role=UserRole.FARMER,
-            account_status=AccountStatus.PENDING,
+            account_status=AccountStatus.APPROVED,
             **validated_data,
         )
 

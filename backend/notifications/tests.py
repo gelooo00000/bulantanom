@@ -625,7 +625,7 @@ class AccountNotificationTests(NotificationTestMixin, APITransactionTestCase):
         own = Notification.objects.get(
             recipient=farmer, notification_type=NotificationType.ACCOUNT_CREATED
         )
-        self.assertIn("waiting for administrator approval", own.message)
+        self.assertIn("Your Farmer account is ready", own.message)
 
         lgu = Notification.objects.get(
             recipient=self.officer, notification_type=NotificationType.ACCOUNT_CREATED

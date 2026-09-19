@@ -35,14 +35,62 @@ def make_user(email, role, account_status, password="SecurePassword123!"):
 
 
 class FarmerSignupTests(APITestCase):
-    def test_signup_creates_pending_farmer_and_notification(self):
+    def test_signup_creates_an_approved_farmer_and_notification(self):
         response = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         user = User.objects.get(email="juan@example.com")
         self.assertEqual(user.role, UserRole.FARMER)
-        self.assertEqual(user.account_status, AccountStatus.PENDING)
+        self.assertEqual(user.account_status, AccountStatus.APPROVED)
+        # Admins no longer gate the account, but they still get the record.
         self.assertEqual(RegistrationNotification.objects.filter(user=user).count(), 1)
+
+    def test_signup_signs_the_farmer_in(self):
+        """A new Farmer lands on their dashboard, not a waiting screen."""
+        response = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("access", response.data)
+        self.assertEqual(response.data["user"]["email"], "juan@example.com")
+        # Refresh token rides in the HttpOnly cookie, exactly as on login.
+        self.assertIn(settings.REFRESH_COOKIE_NAME, response.cookies)
+
+    def test_a_new_farmer_can_immediately_use_the_api(self):
+        signup = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {signup.data['access']}"
+        )
+        response = self.client.get("/api/farmer/plants/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_an_admin_can_still_shut_a_self_registered_account_down(self):
+        """
+        The gate moved, it did not disappear. Anyone can now sign themselves
+        in, so the thing that has to keep working is an Admin's ability to
+        shut an account down afterwards - including one holding a token
+        issued seconds earlier.
+        """
+        signup = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        access = signup.data["access"]
+
+        farmer = User.objects.get(email="juan@example.com")
+        farmer.account_status = AccountStatus.SUSPENDED
+        farmer.save()
+
+        # The token it was already given stops working.
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        self.assertEqual(
+            self.client.get("/api/farmer/plants/").status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+        # And it cannot sign back in for a fresh one.
+        self.client.credentials()
+        again = self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "juan@example.com", "password": VALID_SIGNUP["password"]},
+            format="json",
+        )
+        self.assertEqual(again.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_signup_never_returns_password_or_hash(self):
         response = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
@@ -60,14 +108,18 @@ class FarmerSignupTests(APITestCase):
         payload = {
             **VALID_SIGNUP,
             "role": "ADMIN",
-            "account_status": "APPROVED",
+            # REJECTED, not APPROVED: signups are approved by default now, so
+            # sending APPROVED would pass whether or not the field is
+            # honoured. A status the server would never pick is what actually
+            # proves the client cannot set this.
+            "account_status": "REJECTED",
             "is_superuser": True,
             "is_staff": True,
         }
         self.client.post(SIGNUP_URL, payload, format="json")
         user = User.objects.get(email="juan@example.com")
         self.assertEqual(user.role, UserRole.FARMER)
-        self.assertEqual(user.account_status, AccountStatus.PENDING)
+        self.assertEqual(user.account_status, AccountStatus.APPROVED)
         self.assertFalse(user.is_superuser)
         self.assertFalse(user.is_staff)
 
@@ -310,16 +362,33 @@ class AdminAccountManagementTests(APITestCase):
         self.assertEqual(officer.account_status, AccountStatus.APPROVED)
         self.assertTrue(officer.check_password("SecurePassword123!"))
 
-    def test_admin_sees_pending_registration_notifications(self):
+    def test_a_normal_signup_creates_nothing_for_an_admin_to_action(self):
+        """
+        Signups are approved on creation, so there is nothing waiting. The
+        endpoint still exists for accounts an Admin has put back to PENDING.
+        """
         self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
         response = self.client.get("/api/admin/registrations/", **self.auth)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_admin_still_sees_an_account_moved_back_to_pending(self):
+        self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        farmer = User.objects.get(email="juan@example.com")
+        farmer.account_status = AccountStatus.PENDING
+        farmer.save()
+
+        response = self.client.get("/api/admin/registrations/", **self.auth)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["user"]["email"], "juan@example.com")
 
     def test_notification_cleared_after_approval(self):
         self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
         farmer = User.objects.get(email="juan@example.com")
+        # Approval only means something for an account that is not already
+        # approved, which now takes an Admin putting it back.
+        farmer.account_status = AccountStatus.PENDING
+        farmer.save()
         self.client.patch(f"/api/admin/farmers/{farmer.id}/approve/", **self.auth)
         response = self.client.get("/api/admin/registrations/", **self.auth)
         self.assertEqual(len(response.data), 0)

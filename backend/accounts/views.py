@@ -123,9 +123,16 @@ def _authenticate_for_role(email, password, expected_role):
 class FarmerSignupView(generics.CreateAPIView):
     """
     POST /api/auth/farmer/signup/
-    Creates a FARMER account with account_status=PENDING and raises an
-    in-system notification for Admins. Deliberately does NOT return tokens —
-    a new Farmer cannot access anything until an Admin approves.
+
+    Creates an approved FARMER account and signs it in, so a new Farmer
+    lands on their own dashboard rather than a waiting screen. Returns the
+    same token shape as login — access token in the body, refresh token in
+    an HttpOnly cookie — so the client has one code path for both.
+
+    The account record still reaches Admins and LGU Officers as a
+    notification; what is gone is the gate, not the visibility. An Admin can
+    still suspend or reject the account afterwards, and the status check in
+    `_authenticate_for_role` will refuse the next sign-in.
     """
 
     queryset = User.objects.all()
@@ -137,19 +144,10 @@ class FarmerSignupView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         RegistrationNotification.objects.create(user=user)
-        # Personal 'waiting for approval' notice + an LGU heads-up. Both
-        # are queued until this transaction commits.
+        # Welcome notice + an LGU heads-up that a new Farmer has joined.
+        # Both are queued until this transaction commits.
         notify_farmer_registered(user)
-        return Response(
-            {
-                "user": UserSerializer(user).data,
-                "detail": (
-                    "Registration submitted. Your Farmer account is waiting for "
-                    "administrator approval."
-                ),
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return _tokens_response(user, status_code=status.HTTP_201_CREATED)
 
 
 class FarmerLoginView(APIView):

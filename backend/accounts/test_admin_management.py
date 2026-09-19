@@ -207,7 +207,7 @@ class AdminNotificationTests(AdminNotificationTestCase):
         )
         rows = self.admin_rows(notification_type="ACCOUNT_CREATED")
         self.assertEqual(rows.count(), 1)
-        self.assertIn("waiting for administrator approval", rows.first().message)
+        self.assertIn("can now sign in", rows.first().message)
 
     def test_suspension_notifies_the_farmer_and_the_admin(self):
         self.client.patch(
