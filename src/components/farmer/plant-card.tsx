@@ -4,6 +4,7 @@ import { ArrowRight, CircleCheck, ClipboardList } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
+import { plantAgeLabel, plantSubtitle, plantTitle } from "@/lib/plant-summary";
 
 /** Card for a real, database-backed plant owned by the authenticated Farmer. */
 export function PlantCard({ plant }: { plant: BackendPlant }) {
@@ -13,10 +14,10 @@ export function PlantCard({ plant }: { plant: BackendPlant }) {
         <CardContent className="flex flex-col gap-3 px-5">
           <div className="min-w-0">
             <p className="truncate font-medium">
-              <span aria-hidden="true">{plant.crop.emoji}</span> {plant.display_name}
+              <span aria-hidden="true">{plant.crop.emoji}</span> {plantTitle(plant)}
             </p>
             <p className="text-muted-foreground truncate text-sm">
-              {plant.crop.name} · {plant.status_label}
+              {plantSubtitle(plant)}
             </p>
           </div>
           <div className="text-muted-foreground flex flex-col gap-1 text-xs">
@@ -25,7 +26,7 @@ export function PlantCard({ plant }: { plant: BackendPlant }) {
               Expected harvest {formatDisplayDate(plant.expected_harvest_start)}
               <ArrowRight className="size-3" />
             </span>
-            <span>{plant.age_days} days old</span>
+            <span>{plantAgeLabel(plant.age_days)}</span>
           </div>
 
           {/* The weekly assessment is the Farmer's recurring job, and the lock

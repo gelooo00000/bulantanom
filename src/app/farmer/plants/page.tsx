@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { LoaderCircle, Plus, Sprout, TriangleAlert } from "lucide-react";
 
+import { AddPlantButton } from "@/components/farmer/add-plant-button";
+import { AddPlantTile } from "@/components/farmer/add-plant-tile";
+
 import { PlantCard } from "@/components/farmer/plant-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -13,7 +16,9 @@ import { useAuthedQuery } from "@/lib/api/use-authed-query";
 export default function MyPlantsPage() {
   const { data: plants, loading, error, refetch } = useAuthedQuery(fetchPlants);
 
-  const addButton = (
+  // The empty state keeps a plain button: with no plants yet there is
+  // nothing to duplicate, add several of, or import alongside.
+  const firstPlantButton = (
     <Button nativeButton={false} render={<Link href="/farmer/plants/new" />}>
       <Plus className="size-4" />
       Add Plant
@@ -27,7 +32,7 @@ export default function MyPlantsPage() {
         description={
           plants ? `${plants.length} plants tracked at Layuan Farm.` : "Your crops at Layuan Farm."
         }
-        action={addButton}
+        action={<AddPlantButton />}
       />
 
       {loading ? (
@@ -47,13 +52,16 @@ export default function MyPlantsPage() {
           icon={Sprout}
           title="No plants added yet"
           description="Add your first plant to start tracking its growth, risk, and harvest window."
-          action={addButton}
+          action={firstPlantButton}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {plants.map((plant) => (
             <PlantCard key={plant.id} plant={plant} />
           ))}
+          {/* Closes the grid, so adding another is where the farmer's eye
+              already is after reading the last card. */}
+          <AddPlantTile />
         </div>
       )}
     </div>
