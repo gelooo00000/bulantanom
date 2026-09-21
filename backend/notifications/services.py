@@ -884,19 +884,50 @@ def soil_concerns(soil) -> list[str]:
     concerns = []
 
     # Outside roughly 5.0-8.0 most crops struggle to take up nutrients.
-    if soil.ph_level is not None:
-        ph = float(soil.ph_level)
+    if soil.soil_ph is not None:
+        ph = float(soil.soil_ph)
         if ph < 5.0:
             concerns.append(f"strongly acidic soil (pH {ph:g})")
         elif ph > 8.0:
             concerns.append(f"strongly alkaline soil (pH {ph:g})")
 
-    # Poor drainage matters most when the soil is already holding water.
-    wet = {soil.SoilMoisture.MOIST, soil.SoilMoisture.VERY_WET}
-    if soil.drainage == soil.Drainage.POOR and soil.soil_moisture in wet:
-        concerns.append("poor drainage with wet soil, a waterlogging risk")
+    if soil.has_sensor_readings:
+        # Saturated ground, which is the waterlogging signal the old
+        # drainage-plus-moisture pair stood in for. The detector measures it
+        # directly, so the threshold can be a number rather than a category.
+        if soil.soil_moisture is not None and float(soil.soil_moisture) >= 85:
+            concerns.append(
+                f"saturated soil ({float(soil.soil_moisture):g}% moisture), "
+                "a waterlogging risk"
+            )
+        # Salinity high enough to stunt most vegetables.
+        if soil.soil_conductivity is not None and soil.soil_conductivity >= 4000:
+            concerns.append(
+                f"high salinity ({soil.soil_conductivity} microsiemens/cm)"
+            )
+    else:
+        # Pre-detector rows still carry the categorical answers.
+        wet = {soil.SoilMoisture.MOIST, soil.SoilMoisture.VERY_WET}
+        if (
+            soil.legacy_drainage == soil.Drainage.POOR
+            and soil.legacy_soil_moisture in wet
+        ):
+            concerns.append("poor drainage with wet soil, a waterlogging risk")
 
     return concerns
+
+
+def _soil_descriptor(soil) -> str:
+    """
+    A short phrase naming the assessment in a notification title or body.
+
+    The detector reports no soil type, so a sensor reading is described by
+    its pH - the one number an Officer can act on at a glance. Older rows
+    keep the categorical wording they were written with.
+    """
+    if soil.has_sensor_readings:
+        return "pH %g" % float(soil.soil_ph) if soil.soil_ph is not None else "sensor"
+    return soil.get_legacy_soil_type_display()
 
 
 def notify_soil_warning(soil):
@@ -911,7 +942,7 @@ def notify_soil_warning(soil):
         return
 
     farmer = soil.farmer
-    soil_type = soil.get_soil_type_display()
+    soil_type = _soil_descriptor(soil)
     detail = "; ".join(concerns)
 
     def run():
@@ -956,7 +987,7 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
     outcome = "ready" if analyzed else "saved"
     dedupe_key = f"soil_recommendation:{soil.pk}:{outcome}"
     farmer = soil.farmer
-    soil_type = soil.get_soil_type_display()
+    soil_type = _soil_descriptor(soil)
 
     def run():
         notify_farmer(
@@ -967,7 +998,7 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
                 else NotificationType.SOIL_ASSESSMENT_SAVED
             ),
             title=(
-                "Soil Recommendation Ready" if analyzed else "Soil Assessment Saved"
+                "Crop Recommendation Ready" if analyzed else "Soil Assessment Saved"
             ),
             message=(
                 f"Your {soil_type} soil assessment has AI crop suggestions ready."

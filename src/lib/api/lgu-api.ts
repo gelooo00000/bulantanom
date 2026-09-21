@@ -32,6 +32,10 @@ export type LguDashboard = {
   /** Latest reading per plant, counted by level. Never estimated. */
   risk: { LOW: number; MEDIUM: number; HIGH: number; unassessed: number } | null;
   assessments: number | null;
+  /** Assessments per week, oldest first, empty weeks included as 0. */
+  assessment_trend: { week_start: string; count: number }[];
+  /** Non-archived plants per crop, most planted first. */
+  crops: { name: string; emoji: string; count: number }[];
   harvest: number | null;
   /** Real soil-recommendation totals across approved Farmers. */
   soil_recommendations: SoilRecommendationCounts | null;
@@ -65,16 +69,27 @@ export type LguSoilRecommendation = {
   farmer_name: string;
   farmer_email: string;
 
-  soil_type_label: string;
-  soil_texture_label: string;
-  drainage_label: string;
-  soil_moisture_label: string;
-  ph_level: string | null;
-  nitrogen_label: string;
-  phosphorus_label: string;
-  potassium_label: string;
-  organic_matter_label: string;
+  // Soil detector readings. Decimals arrive as strings from DRF.
+  soil_temperature: string | null;
+  soil_moisture: string | null;
+  soil_conductivity: number | null;
+  soil_ph: string | null;
+  nitrogen: number | null;
+  phosphorus: number | null;
+  potassium: number | null;
+  soil_fertility: number | null;
+  has_sensor_readings: boolean;
   notes: string;
+
+  // Pre-detector categorical answers, with their display labels.
+  legacy_soil_type_label: string;
+  legacy_soil_texture_label: string;
+  legacy_drainage_label: string;
+  legacy_soil_moisture_label: string;
+  legacy_nitrogen_label: string;
+  legacy_phosphorus_label: string;
+  legacy_potassium_label: string;
+  legacy_organic_matter_label: string;
 
   suitable_fruits: { id: string; name: string; emoji: string; reason: string }[];
   suitable_vegetables: { id: string; name: string; emoji: string; reason: string }[];
@@ -125,10 +140,23 @@ export function fetchLguDashboard(accessToken: string): Promise<LguDashboard> {
   return apiFetch("/lgu/dashboard/", { accessToken });
 }
 
+/** A Farmer as the LGU list shows them: the safe profile plus monitoring. */
+export type LguFarmer = BackendUser & {
+  plant_count: number;
+  /** Plants whose latest assessment read HIGH. */
+  high_risk_plants: number;
+  /** Most recent weekly check (YYYY-MM-DD), or null if there has never been one. */
+  last_assessment_date: string | null;
+  /** Using BulanTanom right now, as decided by Django. */
+  is_online: boolean;
+  /** When they last used BulanTanom (ISO datetime), or null if never. */
+  last_seen_at: string | null;
+};
+
 export function fetchLguFarmers(
   accessToken: string,
   status?: BackendAccountStatus | "ALL",
-): Promise<BackendUser[]> {
+): Promise<LguFarmer[]> {
   const query = status ? `?status=${status}` : "";
   return apiFetch(`/lgu/farmers/${query}`, { accessToken });
 }

@@ -13,7 +13,7 @@ const LGU_NAV_ITEMS: NavItem[] = [
   { label: "High-Risk Cases", href: "/lgu/high-risk", icon: TriangleAlert },
   { label: "Assessment History", href: "/lgu/assessments", icon: ClipboardList },
   { label: "Harvest & Monitoring", href: "/lgu/harvest", icon: Wheat },
-  { label: "Soil Recommendations", href: "/lgu/soil-recommendations", icon: FlaskConical },
+  { label: "Crop Recommendations", href: "/lgu/soil-recommendations", icon: FlaskConical },
   { label: "Detailed Reports", href: "/lgu/reports", icon: FileText },
   { label: "Layuan Farm", href: "/lgu/farm", icon: MapPin },
 ];

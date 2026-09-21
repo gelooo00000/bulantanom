@@ -10,7 +10,7 @@ import {
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { CropSelect } from "@/components/farmer/crop-select";
 import { InSeasonCrops } from "@/components/farmer/in-season-crops";
@@ -68,6 +68,35 @@ export default function AddPlantPage() {
 
   // Advise on the date the farmer chose, falling back to today while the
   // field is empty, so the note is useful before the date is filled in.
+  /**
+   * Preselects the crop when arriving from a suggestion chip
+   * (`/farmer/plants/new?crop=pineapple`). Without this the dashboard's
+   * "tap one to add it" landed the farmer on a blank form.
+   *
+   * Read from `window.location` rather than `useSearchParams`, which would
+   * oblige this page to sit inside a Suspense boundary for no other reason.
+   * Waits for the catalog so an id that is not a real crop is ignored
+   * instead of selecting nothing and looking broken.
+   */
+  useEffect(() => {
+    if (!crops || cropId) return;
+    const params = new URLSearchParams(window.location.search);
+
+    const requested = params.get("crop");
+    if (requested && crops.some((crop) => crop.id === requested)) {
+      setCropId(requested);
+    }
+
+    // The dashboard asks "if I plant on <date>", so carrying that date over
+    // means the answer the farmer just read is the one the form starts from.
+    // Future dates are dropped: a plant record is something already in the
+    // ground, and the form would reject one anyway.
+    const date = params.get("date");
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= todayIso()) {
+      setPlantingDate(date);
+    }
+  }, [crops, cropId]);
+
   const activeMonth = monthFromIsoDate(plantingDate);
   const seasonAdvice = adviseForMonth(selectedCrop?.planting_window, activeMonth);
 

@@ -49,16 +49,16 @@ REMOVED_FIELDS = {
     "other_recommendations",
 }
 
+# One full set of soil-detector readings, all inside the device's ranges.
 VALID_SOIL = {
-    "soil_type": "sandy_loam",
-    "soil_texture": "loose",
-    "drainage": "good",
-    "soil_moisture": "moderate",
-    "ph_level": 6.5,
-    "nitrogen": "medium",
-    "phosphorus": "medium",
-    "potassium": "medium",
-    "organic_matter": "medium",
+    "soil_temperature": 28.5,
+    "soil_moisture": 65,
+    "soil_conductivity": 850,
+    "soil_ph": 6.5,
+    "nitrogen": 120,
+    "phosphorus": 80,
+    "potassium": 150,
+    "soil_fertility": 600,
     "notes": "The soil dries quickly after two sunny days.",
 }
 
@@ -126,8 +126,11 @@ class SoilSubmissionTests(SoilTestCase):
         self.assertTrue(response.data["ai_generated"])
         row = SoilRecommendation.objects.get(pk=response.data["id"])
         self.assertEqual(row.farmer, self.farmer)
-        self.assertEqual(row.soil_type, "sandy_loam")
-        self.assertEqual(row.ph_level, Decimal("6.50"))
+        # Stored as numbers, not the strings they arrived as.
+        self.assertEqual(row.soil_ph, Decimal("6.50"))
+        self.assertEqual(row.soil_temperature, Decimal("28.5"))
+        self.assertEqual(row.nitrogen, 120)
+        self.assertIsInstance(row.nitrogen, int)
 
     def test_result_contains_only_the_six_sections(self):
         with patch(
@@ -163,21 +166,35 @@ class SoilSubmissionTests(SoilTestCase):
         self.assertEqual(entry["emoji"], self.fruit.emoji)
         self.assertTrue(entry["emoji"])
 
-    def test_everything_may_be_unknown(self):
-        """Farmers must never be forced to supply lab measurements."""
-        with patch(
-            "plants.views.generate_soil_recommendation",
-            return_value=None,
-        ):
-            response = self.client.post(
-                LIST_URL, {"notes": "I do not know my soil."},
-                format="json", **self.auth("farmer@example.com"),
-            )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(SoilRecommendation.objects.count(), 1)
+    def test_every_reading_is_required(self):
+        """
+        The old form let a Farmer answer "unknown" to everything, because it
+        asked for lab measurements they might not have. The soil detector
+        supplies all eight readings, so a submission without them is now
+        incomplete rather than honest, and is refused.
+        """
+        response = self.client.post(
+            LIST_URL, {"notes": "I do not know my soil."},
+            format="json", **self.auth("farmer@example.com"),
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(SoilRecommendation.objects.count(), 0)
+        # Named per field, so the form can mark the offending input rather
+        # than making the Farmer hunt through eight numbers.
+        for field in ("soil_temperature", "soil_moisture", "soil_ph", "nitrogen"):
+            self.assertIn(field, response.data)
+
+    def test_a_partial_submission_names_only_the_missing_readings(self):
+        payload = {k: v for k, v in VALID_SOIL.items() if k != "soil_conductivity"}
+        response = self.client.post(
+            LIST_URL, payload, format="json", **self.auth("farmer@example.com")
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("soil_conductivity", response.data)
+        self.assertNotIn("soil_ph", response.data)
 
     def test_ph_outside_the_scale_is_rejected(self):
-        payload = dict(VALID_SOIL, ph_level=15)
+        payload = dict(VALID_SOIL, soil_ph=15)
         response = self.client.post(
             LIST_URL, payload, format="json", **self.auth("farmer@example.com")
         )
@@ -228,7 +245,7 @@ class SoilGeminiFailureTests(SoilTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertFalse(response.data["ai_generated"])
         row = SoilRecommendation.objects.get(pk=response.data["id"])
-        self.assertEqual(row.soil_type, "sandy_loam")
+        self.assertEqual(row.soil_ph, Decimal("6.50"))
         self.assertEqual(row.notes, VALID_SOIL["notes"])
         self.assertTrue(row.failure_reason)
 
@@ -250,7 +267,7 @@ class SoilGeminiFailureTests(SoilTestCase):
         with override_settings(GEMINI_API_KEY=""):
             self.assertFalse(svc.is_configured())
             row = SoilRecommendation(farmer=self.farmer, **{
-                k: v for k, v in VALID_SOIL.items() if k != "ph_level"
+                k: v for k, v in VALID_SOIL.items() if k != "soil_ph"
             })
             self.assertIsNone(svc.generate_soil_recommendation(row))
 
@@ -328,7 +345,7 @@ class SoilSaveOnlyTests(SoilTestCase):
         headers = self.auth("farmer@example.com")
         self.client.post(SAVE_ONLY_URL, VALID_SOIL, format="json", **headers)
         self.client.post(
-            SAVE_ONLY_URL, dict(VALID_SOIL, soil_type="clay"), format="json", **headers
+            SAVE_ONLY_URL, dict(VALID_SOIL, soil_ph=7.1), format="json", **headers
         )
         self.assertEqual(SoilRecommendation.objects.count(), 2)
 
@@ -339,7 +356,7 @@ class SoilOwnershipTests(SoilTestCase):
     def setUp(self):
         super().setUp()
         self.row = SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="sandy_loam", drainage="good"
+            farmer=self.farmer, soil_ph=Decimal("6.5"), soil_temperature=Decimal("28.5")
         )
 
     def detail_url(self, pk=None):
@@ -379,7 +396,8 @@ class SoilLguAccessTests(SoilTestCase):
     def setUp(self):
         super().setUp()
         SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="clay", drainage="poor", ai_generated=True
+            farmer=self.farmer, soil_ph=Decimal("7.2"), soil_temperature=Decimal("29.0"),
+            ai_generated=True
         )
 
     def test_officer_sees_records_with_the_farmer_identified(self):
@@ -389,7 +407,7 @@ class SoilLguAccessTests(SoilTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["farmer_email"], "farmer@example.com")
-        self.assertEqual(response.data[0]["soil_type_label"], "Clay")
+        self.assertEqual(str(response.data[0]["soil_ph"]), "7.20")
 
     def test_officer_does_not_see_unapproved_farmers(self):
         self.farmer.account_status = AccountStatus.SUSPENDED
@@ -481,7 +499,7 @@ class SoilGeminiFallbackTests(SoilTestCase):
         self.assertEqual(models, ["primary-model", "fallback-model"])
         self.assertFalse(response.data["ai_generated"])
         row = SoilRecommendation.objects.get(pk=response.data["id"])
-        self.assertEqual(row.soil_type, "sandy_loam")
+        self.assertEqual(row.soil_ph, Decimal("6.50"))
         self.assertTrue(row.failure_reason)
 
     def test_primary_answer_records_the_primary_model(self):

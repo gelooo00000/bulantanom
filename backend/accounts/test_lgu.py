@@ -217,6 +217,88 @@ class LguDashboardDataTests(APITestCase):
         make_user("o2@example.com", UserRole.LGU_OFFICER, AccountStatus.APPROVED)
         self.assertEqual(self.dashboard()["lgu_officers"], 2)
 
+    def _plant(self, farmer, crop, status="GROWING"):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from plants.models import Plant
+
+        today = timezone.localdate()
+        return Plant.objects.create(
+            farmer=farmer,
+            crop=crop,
+            planting_date=today,
+            expected_harvest_start=today + timedelta(days=60),
+            expected_harvest_end=today + timedelta(days=90),
+            status=status,
+        )
+
+    def _assess(self, plant, day):
+        from plants.models import Assessment
+
+        return Assessment.objects.create(
+            plant=plant,
+            assessment_date=day,
+            plant_age_days=10,
+            growth_condition="as_expected",
+            health_condition="healthy",
+            leaf_condition="healthy",
+            watering_frequency="daily",
+        )
+
+    def test_assessment_trend_keeps_every_week_including_empty_ones(self):
+        """Quiet weeks are the point of the chart, so they must be zeros, not gaps."""
+        trend = self.dashboard()["assessment_trend"]
+        self.assertEqual(len(trend), 8)
+        self.assertTrue(all(week["count"] == 0 for week in trend))
+
+    def test_assessment_trend_buckets_by_week_for_approved_farmers_only(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from plants.models import Crop
+
+        crop = Crop.objects.first()
+        approved = make_user("a@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        pending = make_user("p@example.com", UserRole.FARMER, AccountStatus.PENDING)
+        plant = self._plant(approved, crop)
+        today = timezone.localdate()
+
+        self._assess(plant, today)
+        # Two in last week, on different days (one assessment per plant per day).
+        last_monday = today - timedelta(days=today.weekday(), weeks=1)
+        self._assess(plant, last_monday)
+        self._assess(plant, last_monday + timedelta(days=2))
+        # Too old for the eight-week window.
+        self._assess(plant, today - timedelta(weeks=12))
+        # A non-approved Farmer's activity is not the LGU's working set.
+        self._assess(self._plant(pending, crop), today)
+
+        trend = self.dashboard()["assessment_trend"]
+        self.assertEqual(trend[-1]["count"], 1)
+        self.assertEqual(trend[-2]["count"], 2)
+        self.assertEqual(sum(week["count"] for week in trend), 3)
+        # Weeks are labelled by their Monday, oldest first.
+        self.assertLess(trend[0]["week_start"], trend[-1]["week_start"])
+
+    def test_crop_counts_are_most_planted_first_and_skip_archived(self):
+        from plants.models import Crop
+
+        first, second = Crop.objects.order_by("name")[:2]
+        farmer = make_user("a@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        self._plant(farmer, second)
+        self._plant(farmer, second)
+        self._plant(farmer, first)
+        self._plant(farmer, first, status="ARCHIVED")
+
+        crops = self.dashboard()["crops"]
+        self.assertEqual(
+            [(c["name"], c["count"]) for c in crops],
+            [(second.name, 2), (first.name, 1)],
+        )
+
 
 class LguFarmerListTests(APITestCase):
     def setUp(self):
@@ -256,6 +338,62 @@ class LguFarmerListTests(APITestCase):
 
     def test_empty_list_when_no_approved_farmers(self):
         self.assertEqual(self.client.get(FARMERS_URL, **self.auth).data, [])
+
+    def test_each_farmer_carries_a_monitoring_summary(self):
+        """
+        Plants, high-risk plants and the last weekly check, so the list alone
+        shows who needs a visit. High risk counts each plant's latest reading
+        only — a plant that has recovered is not flagged.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from plants.models import Assessment, Crop, Plant, RiskAssessment, RiskStatus
+
+        today = timezone.localdate()
+        crop = Crop.objects.first()
+        busy = make_user("busy@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        idle = make_user("idle@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+
+        def plant():
+            return Plant.objects.create(
+                farmer=busy,
+                crop=crop,
+                planting_date=today,
+                expected_harvest_start=today + timedelta(days=60),
+                expected_harvest_end=today + timedelta(days=90),
+            )
+
+        def assess(target, day, level):
+            assessment = Assessment.objects.create(
+                plant=target, assessment_date=day, plant_age_days=10,
+                growth_condition="as_expected", health_condition="healthy",
+                leaf_condition="healthy", watering_frequency="daily",
+            )
+            RiskAssessment.objects.create(
+                assessment=assessment, status=RiskStatus.COMPLETED,
+                risk_level=level, summary="test",
+            )
+
+        sick, recovered = plant(), plant()
+        assess(sick, today - timedelta(days=3), "HIGH")
+        assess(recovered, today - timedelta(days=10), "HIGH")
+        assess(recovered, today - timedelta(days=2), "LOW")
+
+        rows = {
+            row["email"]: row for row in self.client.get(FARMERS_URL, **self.auth).data
+        }
+        self.assertEqual(rows["busy@example.com"]["plant_count"], 2)
+        self.assertEqual(rows["busy@example.com"]["high_risk_plants"], 1)
+        self.assertEqual(
+            rows["busy@example.com"]["last_assessment_date"],
+            (today - timedelta(days=2)).isoformat(),
+        )
+        # A Farmer who has never checked anything reads as null, not a date.
+        self.assertEqual(rows["idle@example.com"]["plant_count"], 0)
+        self.assertEqual(rows["idle@example.com"]["high_risk_plants"], 0)
+        self.assertIsNone(rows["idle@example.com"]["last_assessment_date"])
 
     def test_farmer_detail_returns_safe_profile(self):
         farmer = make_user("a@example.com", UserRole.FARMER, AccountStatus.APPROVED)

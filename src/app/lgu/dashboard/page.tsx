@@ -1,46 +1,88 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
-  Clock,
-  FlaskConical,
-  Radar,
+  CircleHelp,
+  Leaf,
+  OctagonAlert,
   ShieldCheck,
-  Sprout,
   TriangleAlert,
-  Users,
-  Wheat,
 } from "lucide-react";
 
+import { HorizontalBars, WeeklyColumns, type BarRow } from "@/components/lgu/dashboard-charts";
 import { LguError, LguLoading, NotAvailableNotice } from "@/components/lgu/lgu-states";
-import { RiskCountsRow } from "@/components/risk/risk-counts";
-import { EmptyState } from "@/components/shared/empty-state";
-import { IconStatCard } from "@/components/shared/icon-stat-card";
+import { RiskPie } from "@/components/lgu/risk-pie";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { fetchLguDashboard, fetchLguSoilRecommendations } from "@/lib/api/lgu-api";
+import { fetchLguDashboard } from "@/lib/api/lgu-api";
 import { useLguQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
+
+/**
+ * The LGU Officer's dashboard: the whole farm at a glance.
+ *
+ * Read top to bottom it answers, in order: is anything urgent (the high-risk
+ * banner), how healthy are the plants and are Farmers keeping up their
+ * weekly checks (the first pair of charts), then what is growing and who is
+ * registered (the second pair). Every chart links to the page that holds
+ * the detail behind it.
+ *
+ * Every figure is read from MySQL by `/api/lgu/dashboard/`.
+ */
+
+// Past this many crops the tail folds into one "Other" bar, so the chart
+// stays scannable instead of growing a row per rarely-planted crop.
+const CROP_ROWS = 6;
 
 export default function LguDashboardPage() {
   const { currentUser } = useAuth();
   const { data, loading, error, refetch } = useLguQuery(fetchLguDashboard);
-  // Latest Farmer soil assessments, straight from MySQL — never hardcoded.
-  const { data: soilRecords } = useLguQuery((token) =>
-    fetchLguSoilRecommendations(token),
-  );
 
   if (loading) return <LguLoading label="Loading dashboard data…" />;
   if (error) return <LguError message={error} onRetry={refetch} />;
   if (!data) return null;
 
   const { farmers, farm } = data;
-  const hasFarmers = farmers.total > 0;
   // Counted by Django over the latest reading per plant, so a plant that has
   // since recovered is not still reported as high risk.
   const highRisk = data.risk?.HIGH ?? 0;
+
+  const riskRows: BarRow[] = data.risk
+    ? [
+        { key: "HIGH", label: "High risk", value: data.risk.HIGH, color: "var(--risk-high)", icon: OctagonAlert },
+        { key: "MEDIUM", label: "Medium risk", value: data.risk.MEDIUM, color: "var(--risk-medium)", icon: TriangleAlert },
+        { key: "LOW", label: "Low risk", value: data.risk.LOW, color: "var(--risk-low)", icon: Leaf },
+        { key: "none", label: "No reading yet", value: data.risk.unassessed, color: "var(--muted-foreground)", icon: CircleHelp },
+      ]
+    : [];
+
+  const crops = data.crops ?? [];
+  const cropRows: BarRow[] = crops.slice(0, CROP_ROWS).map((crop) => ({
+    key: crop.name,
+    label: crop.name,
+    emoji: crop.emoji,
+    value: crop.count,
+    color: "var(--primary)",
+  }));
+  const otherCrops = crops.slice(CROP_ROWS);
+  if (otherCrops.length > 0) {
+    cropRows.push({
+      key: "other",
+      label: `Other (${otherCrops.length} crop${otherCrops.length === 1 ? "" : "s"})`,
+      value: otherCrops.reduce((sum, crop) => sum + crop.count, 0),
+      color: "var(--muted-foreground)",
+    });
+  }
+
+  // Pending is the only account state that needs someone to act.
+  const farmerRows: BarRow[] = [
+    { key: "approved", label: "Approved", value: farmers.active, color: "var(--primary)" },
+    { key: "pending", label: "Pending approval", value: farmers.pending, color: "var(--risk-medium)" },
+    { key: "rejected", label: "Rejected", value: farmers.rejected, color: "var(--muted-foreground)" },
+    { key: "suspended", label: "Suspended", value: farmers.suspended, color: "var(--muted-foreground)" },
+  ];
 
   return (
     <div className="flex flex-col gap-5">
@@ -81,232 +123,103 @@ export default function LguDashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <IconStatCard icon={Users} label="Active Farmers" value={farmers.active} />
-        <IconStatCard
-          icon={Clock}
-          label="Pending approval"
-          value={farmers.pending}
-          tone={farmers.pending > 0 ? "risk-medium" : "primary"}
-        />
-        <IconStatCard icon={Sprout} label="Registered Plants" value={data.plants?.total ?? 0} />
-        <IconStatCard icon={ShieldCheck} label="LGU Officers" value={data.lgu_officers} />
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Registered Farmers</h2>
-          {hasFarmers && (
-            <Link
-              href="/lgu/farmers"
-              className="flex items-center gap-1 text-sm"
-              style={{ color: "var(--landing-accent)" }}
-            >
-              View all
-              <ArrowRight className="size-3.5" />
-            </Link>
-          )}
-        </div>
-        <div className="mt-3">
-          {farmers.active === 0 ? (
-            <EmptyState
-              icon={Sprout}
-              title="No approved Farmers yet"
-              description={
-                farmers.pending > 0
-                  ? `${farmers.pending} registration${farmers.pending > 1 ? "s are" : " is"} waiting for administrator approval.`
-                  : "Approved Farmer accounts will appear here once they register and an administrator approves them."
-              }
-              action={
-                <Button nativeButton={false} render={<Link href="/lgu/farmers" />}>
-                  Open Farmer records
-                  <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-                </Button>
-              }
-            />
-          ) : (
-            /* Approved and Pending already appear in the stat row above, so
-               this is a one-line breakdown rather than a second set of large
-               numbers repeating them. */
-            <div className="border-border text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border px-4 py-3 text-sm">
-              <span>
-                <span className="text-foreground font-medium tabular-nums">{farmers.active}</span>{" "}
-                approved
-              </span>
-              <span>
-                <span className="text-risk-medium font-medium tabular-nums">{farmers.pending}</span>{" "}
-                pending
-              </span>
-              <span>
-                <span className="text-foreground font-medium tabular-nums">{farmers.rejected}</span>{" "}
-                rejected
-              </span>
-              <span className="sm:ml-auto">
-                <span className="text-foreground font-medium tabular-nums">{farmers.total}</span>{" "}
-                total registrations
-              </span>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <ChartCard
+          title="Plant risk"
+          description="Latest AI reading per plant across approved Farmers."
+          href="/lgu/risks"
+          linkLabel="Risk overview"
+        >
+          {riskRows.length > 0 ? (
+            // The pie gives the share at a glance; the bars beside it name
+            // each level and its count, so the colours are never the only cue.
+            <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,180px)_1fr]">
+              <RiskPie rows={riskRows} />
+              <HorizontalBars rows={riskRows} unit="plant" label="Plants by risk level" />
             </div>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Plant risk</h2>
-          <Link
-            href="/lgu/risks"
-            className="flex items-center gap-1 text-sm"
-            style={{ color: "var(--landing-accent)" }}
-          >
-            Risk overview
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Latest AI reading per plant across approved Farmers
-          {data.assessments !== null && (
-            <> · {data.assessments} assessment{data.assessments === 1 ? "" : "s"} submitted</>
-          )}
-          .
-        </p>
-        <div className="mt-3">
-          {data.risk ? (
-            <RiskCountsRow counts={data.risk} />
           ) : (
-            <EmptyState
-              icon={Radar}
-              title="Risk readings not available"
-              description="The database did not return risk figures for this farm."
-            />
+            <p className="text-muted-foreground text-sm">
+              The database did not return risk figures for this farm.
+            </p>
           )}
-        </div>
-      </div>
+        </ChartCard>
 
-      <div>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Soil recommendations</h2>
-          <Link
-            href="/lgu/soil-recommendations"
-            className="flex items-center gap-1 text-sm"
-            style={{ color: "var(--landing-accent)" }}
-          >
-            View records
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Soil assessments submitted by approved Farmers, read live from the database.
-        </p>
-        <div className="mt-3">
-          {data.soil_recommendations && data.soil_recommendations.total > 0 ? (
-            <Card className="gap-3 py-5">
-              <CardContent className="grid grid-cols-3 gap-4 px-5">
-                <div>
-                  <p className="text-2xl font-medium tabular-nums">
-                    {data.soil_recommendations.total}
-                  </p>
-                  <p className="text-muted-foreground text-xs">Total submissions</p>
-                </div>
-                <div>
-                  <p className="text-risk-low text-2xl font-medium tabular-nums">
-                    {data.soil_recommendations.generated}
-                  </p>
-                  <p className="text-muted-foreground text-xs">AI analyzed</p>
-                </div>
-                <div>
-                  <p className="text-risk-medium text-2xl font-medium tabular-nums">
-                    {data.soil_recommendations.pending_analysis}
-                  </p>
-                  <p className="text-muted-foreground text-xs">Not analyzed</p>
-                </div>
-              </CardContent>
-            </Card>
+        <ChartCard
+          title="Weekly assessments"
+          description="Are Farmers keeping up their weekly plant checks?"
+          href="/lgu/assessments"
+          linkLabel="History"
+        >
+          <WeeklyColumns weeks={data.assessment_trend ?? []} />
+        </ChartCard>
+
+        <ChartCard
+          title="Crops planted"
+          description="Plants per crop at Layuan, most planted first."
+          href="/lgu/plants"
+          linkLabel="All plants"
+        >
+          {cropRows.length > 0 ? (
+            <HorizontalBars rows={cropRows} unit="plant" label="Plants per crop" />
           ) : (
-            <EmptyState
-              icon={FlaskConical}
-              title="No soil recommendations yet"
-              description="Records appear here once approved Farmers submit their soil information."
-            />
+            <p className="text-muted-foreground text-sm">No plants recorded yet.</p>
           )}
-        </div>
+        </ChartCard>
 
-        {/* A dashboard preview of the most recent submissions. The full soil
-            record - pH, drainage, moisture and the recommended crops - lives
-            on /lgu/soil-recommendations rather than being reproduced here. */}
-        {soilRecords && soilRecords.length > 0 && (
-          <div className="border-border divide-border mt-3 divide-y overflow-hidden rounded-xl border">
-            {soilRecords.slice(0, 3).map((record) => {
-              const cropCount =
-                record.suitable_fruits.length +
-                record.suitable_vegetables.length +
-                record.suitable_crops.length;
-              return (
-                <div
-                  key={record.id}
-                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{record.farmer_name}</p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {record.soil_type_label} · pH {record.ph_level ?? "unknown"} ·{" "}
-                      {record.drainage_label}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3 text-xs">
-                    {record.ai_generated ? (
-                      <span className="text-risk-low">
-                        {cropCount} crop{cropCount === 1 ? "" : "s"} recommended
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Not analyzed</span>
-                    )}
-                    <span className="text-muted-foreground">
-                      {new Date(record.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <ChartCard
+          title="Farmer accounts"
+          description={`${farmers.total} registration${farmers.total === 1 ? "" : "s"} · ${data.lgu_officers} LGU officer${data.lgu_officers === 1 ? "" : "s"}.`}
+          href="/lgu/farmers"
+          linkLabel="Farmer records"
+        >
+          <HorizontalBars rows={farmerRows} unit="farmer" label="Farmer accounts by status" />
+        </ChartCard>
+
       </div>
 
-      <div>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium">Agricultural monitoring</h2>
-          <Link
-            href="/lgu/harvest"
-            className="flex items-center gap-1 text-sm"
-            style={{ color: "var(--landing-accent)" }}
-          >
-            Harvest & Monitoring
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Harvest windows are calculated from each plant&apos;s recorded planting
-          date and its crop&apos;s growing period, read live from the database.
-          Actual picked yield is not recorded, so nothing here reports it.
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <IconStatCard
-            icon={Wheat}
-            label="Harvests open or due within 7 days"
-            value={data.harvest ?? 0}
-          />
-          <IconStatCard
-            icon={Sprout}
-            label="Plants still growing"
-            value={data.plants?.growing ?? 0}
-          />
-        </div>
-        {/* Renders nothing while every metric is backed by a query. Kept so a
-            future unbacked figure still shows an honest "not available"
-            state rather than a plausible-looking 0. */}
-        <div className="mt-3">
-          <NotAvailableNotice metrics={data.unavailable_metrics} />
-        </div>
+      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <ShieldCheck className="size-3.5" />
+        Every figure is read live from the BulanTanom database. Nothing here is estimated.
       </div>
+
+      {/* Renders nothing while every metric is backed by a query. Kept so a
+          future unbacked figure still shows an honest "not available" state
+          rather than a plausible-looking 0. */}
+      <NotAvailableNotice metrics={data.unavailable_metrics} />
     </div>
+  );
+}
+
+function ChartCard({
+  title,
+  description,
+  href,
+  linkLabel,
+  children,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  linkLabel: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card className="gap-0 py-4">
+      <CardContent className="flex h-full flex-col px-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-medium">{title}</h2>
+          <Link
+            href={href}
+            className="flex shrink-0 items-center gap-1 text-xs"
+            style={{ color: "var(--landing-accent)" }}
+          >
+            {linkLabel}
+            <ArrowRight className="size-3" />
+          </Link>
+        </div>
+        <p className="text-muted-foreground mt-0.5 mb-4 text-xs">{description}</p>
+        {children}
+      </CardContent>
+    </Card>
   );
 }

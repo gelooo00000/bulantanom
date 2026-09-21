@@ -57,3 +57,8 @@ export function fetchCurrentUser(accessToken: string): Promise<BackendUser> {
 export function logoutSession(): Promise<{ detail: string }> {
   return apiFetch("/auth/logout/", { method: "POST" });
 }
+
+/** Tells Django this user still has BulanTanom open (for the LGU's online dot). */
+export function sendHeartbeat(accessToken: string): Promise<void> {
+  return apiFetch("/auth/heartbeat/", { method: "POST", accessToken });
+}

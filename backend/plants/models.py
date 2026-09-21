@@ -1,8 +1,10 @@
 import os
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
@@ -499,40 +501,89 @@ class SoilRecommendation(models.Model):
         related_name="soil_recommendations",
     )
 
-    # --- Farmer-provided soil information -------------------------------
-    # Only soil_type and soil_texture are effectively required; everything
-    # else may be "unknown"/blank, because Farmers should never be forced to
-    # supply lab measurements they do not have.
-    soil_type = models.CharField(
-        max_length=20, choices=SoilType.choices, default=SoilType.UNKNOWN
+    # --- Soil sensor readings -------------------------------------------
+    # Eight measurements, matching what the farm's soil detector actually
+    # reports. All numeric: these are instrument readings, and storing them
+    # as text would make every range check, average and chart a parse away.
+    #
+    # Nullable at the database level even though the form requires them,
+    # because the ten assessments recorded before the detector arrived have
+    # no numeric readings at all. Required-ness is enforced in the
+    # serializer, where it applies to new submissions without rewriting
+    # history. `has_sensor_readings` below tells the two apart.
+    soil_temperature = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("-40")), MaxValueValidator(Decimal("80"))],
+        help_text="Degrees Celsius, -40 to 80.",
     )
-    soil_texture = models.CharField(
-        max_length=20, choices=SoilTexture.choices, default=SoilTexture.UNKNOWN
+    soil_moisture = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        help_text="Percent, 0 to 100.",
     )
-    drainage = models.CharField(
-        max_length=20, choices=Drainage.choices, default=Drainage.UNKNOWN
+    soil_conductivity = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[MaxValueValidator(20000)],
+        help_text="Microsiemens per centimetre, 0 to 20000.",
     )
-    soil_moisture = models.CharField(
-        max_length=20, choices=SoilMoisture.choices, default=SoilMoisture.UNKNOWN
-    )
-    ph_level = models.DecimalField(
+    soil_ph = models.DecimalField(
         max_digits=4, decimal_places=2, null=True, blank=True,
-        help_text="Optional. Null means the Farmer does not know the pH.",
+        validators=[MinValueValidator(Decimal("3")), MaxValueValidator(Decimal("10"))],
+        help_text="pH, 3 to 10.",
     )
-    nitrogen = models.CharField(
-        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
+    nitrogen = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(1999)],
+        help_text="Nitrogen in mg/kg, 1 to 1999.",
     )
-    phosphorus = models.CharField(
-        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
+    phosphorus = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(1999)],
+        help_text="Phosphorus in mg/kg, 1 to 1999.",
     )
-    potassium = models.CharField(
-        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
+    potassium = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(1999)],
+        help_text="Potassium in mg/kg, 1 to 1999.",
     )
-    organic_matter = models.CharField(
-        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
+    soil_fertility = models.PositiveIntegerField(
+        null=True, blank=True,
+        validators=[MaxValueValidator(3000)],
+        help_text="Fertility index in mg/kg, 0 to 3000.",
     )
     notes = models.TextField(
         blank=True, help_text="Free-text observations, e.g. 'dries out quickly'."
+    )
+
+    # --- Pre-detector assessments ---------------------------------------
+    # The categorical answers the form used to ask for. Kept, not dropped:
+    # this model deliberately stores a recommendation next to the exact soil
+    # information it was derived from, and deleting these columns would
+    # strand ten existing AI results with nothing explaining them. Nothing
+    # writes to them any more.
+    legacy_soil_type = models.CharField(
+        max_length=20, choices=SoilType.choices, default=SoilType.UNKNOWN
+    )
+    legacy_soil_texture = models.CharField(
+        max_length=20, choices=SoilTexture.choices, default=SoilTexture.UNKNOWN
+    )
+    legacy_drainage = models.CharField(
+        max_length=20, choices=Drainage.choices, default=Drainage.UNKNOWN
+    )
+    legacy_soil_moisture = models.CharField(
+        max_length=20, choices=SoilMoisture.choices, default=SoilMoisture.UNKNOWN
+    )
+    legacy_nitrogen = models.CharField(
+        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
+    )
+    legacy_phosphorus = models.CharField(
+        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
+    )
+    legacy_potassium = models.CharField(
+        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
+    )
+    legacy_organic_matter = models.CharField(
+        max_length=20, choices=NutrientLevel.choices, default=NutrientLevel.UNKNOWN
     )
     # --- Gemini result: exactly the six sections, nothing more -----------
     suitable_fruits = models.JSONField(default=list, blank=True)
@@ -557,12 +608,22 @@ class SoilRecommendation(models.Model):
 
     @property
     def has_npk(self) -> bool:
-        """
-        True when the Farmer supplied at least one nutrient reading. Drives
-        how cautious the fertilizer advice is allowed to be.
-        """
-        unknown = self.NutrientLevel.UNKNOWN
-        return any(
-            value != unknown
+        """True when N, P and K were all measured."""
+        return all(
+            value is not None
             for value in (self.nitrogen, self.phosphorus, self.potassium)
         )
+
+    @property
+    def has_sensor_readings(self) -> bool:
+        """
+        False for the assessments recorded before the soil detector, which
+        carry categorical answers in the legacy_* columns instead. Callers
+        that render or analyse a reading branch on this rather than on a
+        per-field null check.
+        """
+        # Keyed on temperature, not pH: pH existed on the old form too, so a
+        # pre-detector row that happened to record one would otherwise
+        # masquerade as a sensor reading. Temperature is both detector-only
+        # and required on every new submission.
+        return self.soil_temperature is not None

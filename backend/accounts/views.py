@@ -1,11 +1,13 @@
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from notifications.emails import (
@@ -276,13 +278,32 @@ class LogoutView(APIView):
         raw_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
         if raw_token:
             try:
-                RefreshToken(raw_token).blacklist()
-            except (TokenError, InvalidToken, AttributeError):
+                token = RefreshToken(raw_token)
+                # Takes the user offline for the LGU at once, rather than
+                # leaving them "online" until the presence window lapses.
+                User.objects.filter(pk=token[api_settings.USER_ID_CLAIM]).update(
+                    last_logout_at=timezone.now()
+                )
+                token.blacklist()
+            except (TokenError, InvalidToken, AttributeError, KeyError):
                 pass
 
         response = Response({"detail": "Logged out."}, status=status.HTTP_200_OK)
         _clear_refresh_cookie(response)
         return response
+
+
+class HeartbeatView(APIView):
+    """
+    POST /api/auth/heartbeat/ — "this user still has BulanTanom open".
+
+    The work is done by `PresenceJWTAuthentication`, which stamps
+    `last_seen_at` while authenticating the request; the view only has to
+    exist and succeed.
+    """
+
+    def post(self, request):
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # --------------------------------------------------------------------------

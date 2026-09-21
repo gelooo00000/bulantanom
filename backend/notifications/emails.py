@@ -37,7 +37,7 @@ FARMER_FEATURES = [
     "My Plants",
     "Risk Indicator",
     "Weekly Assessments",
-    "Soil Recommendation",
+    "Crop Recommendation",
     "Monitoring",
     "Notifications",
 ]
@@ -46,7 +46,7 @@ OFFICER_FEATURES = [
     "Farmer records and plant monitoring",
     "Risk assessments and high-risk cases",
     "Weekly assessment history and evidence",
-    "Soil recommendation records",
+    "Crop recommendation records",
     "Harvest windows across the farm",
 ]
 

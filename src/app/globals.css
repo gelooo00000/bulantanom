@@ -97,6 +97,10 @@
   --chart-3: oklch(0.68 0.09 148);
   --chart-4: oklch(0.78 0.06 148);
   --chart-5: oklch(0.86 0.04 148);
+  /* Two-series categorical pair (blue, then the brand green), validated for
+     colour-blind separation on the light card surface. */
+  --chart-series-1: #2a78d6;
+  --chart-series-2: oklch(0.46 0.14 152);
   --radius: 0.625rem;
   --sidebar: oklch(0.97 0.01 150);
   --sidebar-foreground: oklch(0.22 0.03 155);
@@ -155,6 +159,11 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  /* Two-series categorical pair, validated for colour-blind separation on
+     the dark card surface. The green is deeper than --primary on purpose:
+     the primary green is too light to sit in the dark chart band. */
+  --chart-series-1: #3987e5;
+  --chart-series-2: oklch(0.64 0.15 152);
   --sidebar: oklch(0.14 0.022 155);
   --sidebar-foreground: oklch(0.97 0.005 155);
   --sidebar-primary: oklch(0.72 0.16 152);

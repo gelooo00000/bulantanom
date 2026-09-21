@@ -41,7 +41,7 @@ const ROLE_CARDS: {
     role: "farmer",
     title: "Farmer",
     description:
-      "Manage crops, plant assessments, risk indicators, soil recommendations, and harvest information.",
+      "Manage crops, plant assessments, risk indicators, crop recommendations, and harvest information.",
     cta: "Continue as Farmer",
     icon: Sprout,
     loginHeading: "Welcome back, Farmer.",

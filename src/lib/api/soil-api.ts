@@ -23,17 +23,33 @@ export type SoilAdvice = {
 export type SoilRecommendation = {
   id: number;
 
-  // Farmer-provided soil information
-  soil_type: string;
-  soil_texture: string;
-  drainage: string;
-  soil_moisture: string;
-  ph_level: string | null;
-  nitrogen: string;
-  phosphorus: string;
-  potassium: string;
-  organic_matter: string;
+  /**
+   * Soil detector readings. Numeric in the database; DRF serialises decimals
+   * as strings, so temperature, moisture and pH arrive as strings and the
+   * integer readings as numbers. Parse before doing arithmetic on them.
+   */
+  soil_temperature: string | null;
+  soil_moisture: string | null;
+  soil_conductivity: number | null;
+  soil_ph: string | null;
+  nitrogen: number | null;
+  phosphorus: number | null;
+  potassium: number | null;
+  soil_fertility: number | null;
   notes: string;
+
+  /** False for assessments recorded before the detector. */
+  has_sensor_readings: boolean;
+
+  /** Categorical answers the old form collected. Read-only, legacy rows only. */
+  legacy_soil_type: string;
+  legacy_soil_texture: string;
+  legacy_drainage: string;
+  legacy_soil_moisture: string;
+  legacy_nitrogen: string;
+  legacy_phosphorus: string;
+  legacy_potassium: string;
+  legacy_organic_matter: string;
 
   // The six Gemini sections
   suitable_fruits: SoilCropSuggestion[];
@@ -51,16 +67,20 @@ export type SoilRecommendation = {
 };
 
 /** Only the soil inputs are writable; every AI field is server-owned. */
+/**
+ * What the form posts. Every reading is a number, not the typed string -
+ * the database columns are numeric and sending "28.5" would make the API
+ * responsible for guessing what the farmer meant.
+ */
 export type SoilRecommendationInput = {
-  soil_type: string;
-  soil_texture: string;
-  drainage: string;
-  soil_moisture: string;
-  ph_level: number | null;
-  nitrogen: string;
-  phosphorus: string;
-  potassium: string;
-  organic_matter: string;
+  soil_temperature: number;
+  soil_moisture: number;
+  soil_conductivity: number;
+  soil_ph: number;
+  nitrogen: number;
+  phosphorus: number;
+  potassium: number;
+  soil_fertility: number;
   notes: string;
 };
 

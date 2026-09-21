@@ -17,6 +17,7 @@ auth_urlpatterns = [
     path("refresh/", views.RefreshView.as_view(), name="auth-refresh"),
     path("me/", views.MeView.as_view(), name="auth-me"),
     path("logout/", views.LogoutView.as_view(), name="auth-logout"),
+    path("heartbeat/", views.HeartbeatView.as_view(), name="auth-heartbeat"),
 ]
 
 # Mounted at /api/admin/ — every route below is IsAdmin-guarded.

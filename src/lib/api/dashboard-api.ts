@@ -27,39 +27,28 @@ export type AssessmentTrend = {
   busiest_count: number;
 };
 
-export type SoilReadingHistory = {
+/** One crop the AI suggested for this farm's soil. */
+export type SuggestedCrop = {
+  /** Catalog id, so the row can preselect it in the Add Plant flow. */
+  id: string;
+  name: string;
+  emoji: string;
+  reason: string;
   /**
-   * The soil row's own id. The date does not identify a reading — a farmer
-   * can record two on the same day — so this is what the UI keys on.
+   * Months this crop is normally planted at Layuan Farm, and the ones that
+   * are workable with care. Travels with the suggestion so picking a date
+   * needs no extra request — suiting the soil and being in season are
+   * separate questions and the card answers both.
    */
-  id: number;
-  date: string;
-  /** Null when the farmer did not know the pH — never substituted with 0. */
-  ph: number | null;
-  moisture: string | null;
-  /** Soil moisture as 1–5, so it can be plotted. Null when unknown. */
-  moisture_rank: number | null;
+  planting_months: number[];
+  caution_months: number[];
 };
 
-export type EnvironmentLatest = {
-  recorded_on: string;
-  soil_moisture: string | null;
-  soil_moisture_label: string | null;
-  ph_level: number | null;
-  soil_type_label: string;
-  drainage_label: string;
-};
-
-export type FarmEnvironment = {
+export type CropSuggestions = {
   has_any: boolean;
-  latest: EnvironmentLatest | null;
-  history: SoilReadingHistory[];
-  /**
-   * Readings BulanTanom does not collect anywhere — currently temperature
-   * and humidity. Named by the server so the UI can say so plainly instead
-   * of rendering an empty gauge that reads as a broken sensor.
-   */
-  not_collected: string[];
+  /** When the soil assessment behind these suggestions was taken. */
+  recorded_on: string | null;
+  crops: SuggestedCrop[];
 };
 
 export type UpcomingHarvest = {
@@ -82,7 +71,7 @@ export type FarmAlert = {
 export type FarmerDashboard = {
   overview: FarmOverview;
   assessment_trend: AssessmentTrend;
-  environment: FarmEnvironment;
+  crop_suggestions: CropSuggestions;
   upcoming_harvests: UpcomingHarvest[];
   alerts: FarmAlert[];
 };

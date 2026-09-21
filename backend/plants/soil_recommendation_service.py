@@ -172,26 +172,65 @@ def _label(instance, field: str) -> str:
     return getattr(instance, f"get_{field}_display")()
 
 
+def _reading(value, unit: str) -> str:
+    """A measurement with its unit, or an explicit gap."""
+    return "Not recorded" if value is None else f"{value} {unit}"
+
+
+def _sensor_lines(soil) -> list[str]:
+    """
+    The detector's eight readings, with units.
+
+    Units are spelled out because the numbers are meaningless without them -
+    a conductivity of 850 is ordinary in microsiemens and absurd in
+    millisiemens, and the model has no other way to tell which it is being
+    given.
+    """
+    return [
+        "REPORTED SOIL SENSOR READINGS",
+        f"  Soil temperature: {_reading(soil.soil_temperature, 'degrees Celsius')}",
+        f"  Soil moisture: {_reading(soil.soil_moisture, 'percent')}",
+        f"  Soil conductivity: {_reading(soil.soil_conductivity, 'microsiemens per cm')}",
+        f"  Soil pH: {_reading(soil.soil_ph, 'pH')}",
+        f"  Nitrogen (N): {_reading(soil.nitrogen, 'mg/kg')}",
+        f"  Phosphorus (P): {_reading(soil.phosphorus, 'mg/kg')}",
+        f"  Potassium (K): {_reading(soil.potassium, 'mg/kg')}",
+        f"  Soil fertility: {_reading(soil.soil_fertility, 'mg/kg')}",
+    ]
+
+
+def _legacy_lines(soil) -> list[str]:
+    """
+    The categorical answers an older assessment carries instead.
+
+    Only reached by re-analysing a row recorded before the soil detector.
+    Kept so that re-running one of those does not silently analyse a set of
+    empty readings.
+    """
+    return [
+        "REPORTED SOIL INFORMATION (recorded before the soil detector, so",
+        "these are the farmer's own descriptions rather than measurements)",
+        f"  Soil type: {_label(soil, 'legacy_soil_type')}",
+        f"  Soil texture: {_label(soil, 'legacy_soil_texture')}",
+        f"  Drainage: {_label(soil, 'legacy_drainage')}",
+        f"  Soil moisture: {_label(soil, 'legacy_soil_moisture')}",
+        f"  Soil pH: {_reading(soil.soil_ph, 'pH')}",
+        f"  Nitrogen: {_label(soil, 'legacy_nitrogen')}",
+        f"  Phosphorus: {_label(soil, 'legacy_phosphorus')}",
+        f"  Potassium: {_label(soil, 'legacy_potassium')}",
+        f"  Organic matter: {_label(soil, 'legacy_organic_matter')}",
+    ]
+
+
 def _build_prompt(soil) -> str:
     fruits, vegetables = _catalog_lines()
-
-    ph = "Unknown" if soil.ph_level is None else str(soil.ph_level)
 
     lines = [
         "A Farmer reported the following soil information. Analyse THESE",
         "values and recommend accordingly.",
         "",
-        "REPORTED SOIL INFORMATION",
-        f"  Soil type: {_label(soil, 'soil_type')}",
-        f"  Soil texture: {_label(soil, 'soil_texture')}",
-        f"  Drainage: {_label(soil, 'drainage')}",
-        f"  Soil moisture: {_label(soil, 'soil_moisture')}",
-        f"  Soil pH: {ph}",
-        f"  Nitrogen: {_label(soil, 'nitrogen')}",
-        f"  Phosphorus: {_label(soil, 'phosphorus')}",
-        f"  Potassium: {_label(soil, 'potassium')}",
-        f"  Organic matter: {_label(soil, 'organic_matter')}",
     ]
+    lines += _sensor_lines(soil) if soil.has_sensor_readings else _legacy_lines(soil)
 
     if soil.notes.strip():
         lines.append(f"  Farmer's additional observations: {soil.notes.strip()}")
@@ -204,7 +243,7 @@ def _build_prompt(soil) -> str:
             "NOTE: No nitrogen, phosphorus or potassium readings were supplied.",
             "Keep fertilizer advice general and avoid exact dosages.",
         ]
-    if soil.ph_level is None:
+    if soil.soil_ph is None:
         lines += [
             "",
             "NOTE: Soil pH was not supplied. Do not assume a pH value.",

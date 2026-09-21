@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
@@ -399,22 +401,49 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
     """
 
     ai_available = serializers.SerializerMethodField()
+    has_sensor_readings = serializers.BooleanField(read_only=True)
+
+    # Every reading the detector produces is required on a new assessment.
+    # The columns are nullable so the ten pre-detector rows survive, which
+    # means required-ness has to be asserted here rather than by the
+    # database - see SENSOR_RANGES below for the bounds, which are the
+    # device's own and are enforced again on the model.
+    SENSOR_RANGES = {
+        "soil_temperature": (Decimal("-40"), Decimal("80"), "°C"),
+        "soil_moisture": (Decimal("0"), Decimal("100"), "%"),
+        "soil_conductivity": (0, 20000, "µS/cm"),
+        "soil_ph": (Decimal("3"), Decimal("10"), "pH"),
+        "nitrogen": (1, 1999, "mg/kg"),
+        "phosphorus": (1, 1999, "mg/kg"),
+        "potassium": (1, 1999, "mg/kg"),
+        "soil_fertility": (0, 3000, "mg/kg"),
+    }
 
     class Meta:
         model = SoilRecommendation
         fields = [
             "id",
-            # Farmer-provided soil information (writable)
-            "soil_type",
-            "soil_texture",
-            "drainage",
+            # Soil detector readings (writable)
+            "soil_temperature",
             "soil_moisture",
-            "ph_level",
+            "soil_conductivity",
+            "soil_ph",
             "nitrogen",
             "phosphorus",
             "potassium",
-            "organic_matter",
+            "soil_fertility",
             "notes",
+            # Pre-detector categorical answers, read-only so the LGU report
+            # and the farmer's own history can still render old assessments.
+            "legacy_soil_type",
+            "legacy_soil_texture",
+            "legacy_drainage",
+            "legacy_soil_moisture",
+            "legacy_nitrogen",
+            "legacy_phosphorus",
+            "legacy_potassium",
+            "legacy_organic_matter",
+            "has_sensor_readings",
             # Gemini result — exactly six sections (read-only)
             "suitable_fruits",
             "suitable_vegetables",
@@ -430,6 +459,15 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "legacy_soil_type",
+            "legacy_soil_texture",
+            "legacy_drainage",
+            "legacy_soil_moisture",
+            "legacy_nitrogen",
+            "legacy_phosphorus",
+            "legacy_potassium",
+            "legacy_organic_matter",
+            "has_sensor_readings",
             "suitable_fruits",
             "suitable_vegetables",
             "suitable_crops",
@@ -446,11 +484,36 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
     def get_ai_available(self, obj) -> bool:
         return bool(obj.ai_generated)
 
-    def validate_ph_level(self, value):
-        # Blank is legitimate — Farmers are not required to own a pH meter.
-        if value is not None and not (0 <= value <= 14):
-            raise serializers.ValidationError("Soil pH must be between 0 and 14.")
-        return value
+    def validate(self, attrs):
+        """
+        Range-check every reading, and require all eight on a new assessment.
+
+        Reported per field rather than as one combined message, so the form
+        can mark the offending input instead of the farmer hunting for which
+        of eight numbers was wrong.
+        """
+        errors = {}
+        creating = self.instance is None
+
+        for field, (low, high, unit) in self.SENSOR_RANGES.items():
+            value = attrs.get(field, serializers.empty)
+            if value is serializers.empty:
+                value = None if creating else getattr(self.instance, field, None)
+
+            if value is None:
+                if creating:
+                    errors[field] = "This reading is required."
+                continue
+
+            if not (low <= value <= high):
+                errors[field] = (
+                    f"Must be between {low} and {high} {unit} - "
+                    "outside what the soil detector can report."
+                )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
 
     def validate_notes(self, value):
         if value and len(value) > 2000:
@@ -474,25 +537,34 @@ class LguSoilRecommendationSerializer(serializers.ModelSerializer):
     farmer_name = serializers.CharField(source="farmer.get_full_name", read_only=True)
     farmer_email = serializers.EmailField(source="farmer.email", read_only=True)
 
-    soil_type_label = serializers.CharField(
-        source="get_soil_type_display", read_only=True
+    has_sensor_readings = serializers.BooleanField(read_only=True)
+
+    # Labels for the pre-detector rows only. A sensor reading is a number
+    # with a unit and needs no lookup; these exist so an Officer opening an
+    # older assessment still sees "Sandy Loam" rather than a blank column.
+    legacy_soil_type_label = serializers.CharField(
+        source="get_legacy_soil_type_display", read_only=True
     )
-    soil_texture_label = serializers.CharField(
-        source="get_soil_texture_display", read_only=True
+    legacy_soil_texture_label = serializers.CharField(
+        source="get_legacy_soil_texture_display", read_only=True
     )
-    drainage_label = serializers.CharField(source="get_drainage_display", read_only=True)
-    soil_moisture_label = serializers.CharField(
-        source="get_soil_moisture_display", read_only=True
+    legacy_drainage_label = serializers.CharField(
+        source="get_legacy_drainage_display", read_only=True
     )
-    nitrogen_label = serializers.CharField(source="get_nitrogen_display", read_only=True)
-    phosphorus_label = serializers.CharField(
-        source="get_phosphorus_display", read_only=True
+    legacy_soil_moisture_label = serializers.CharField(
+        source="get_legacy_soil_moisture_display", read_only=True
     )
-    potassium_label = serializers.CharField(
-        source="get_potassium_display", read_only=True
+    legacy_nitrogen_label = serializers.CharField(
+        source="get_legacy_nitrogen_display", read_only=True
     )
-    organic_matter_label = serializers.CharField(
-        source="get_organic_matter_display", read_only=True
+    legacy_phosphorus_label = serializers.CharField(
+        source="get_legacy_phosphorus_display", read_only=True
+    )
+    legacy_potassium_label = serializers.CharField(
+        source="get_legacy_potassium_display", read_only=True
+    )
+    legacy_organic_matter_label = serializers.CharField(
+        source="get_legacy_organic_matter_display", read_only=True
     )
 
     class Meta:
@@ -502,25 +574,34 @@ class LguSoilRecommendationSerializer(serializers.ModelSerializer):
             "farmer_id",
             "farmer_name",
             "farmer_email",
-            # Reported soil information, with display labels for the table.
-            "soil_type",
-            "soil_type_label",
-            "soil_texture",
-            "soil_texture_label",
-            "drainage",
-            "drainage_label",
+            # Soil detector readings.
+            "soil_temperature",
             "soil_moisture",
-            "soil_moisture_label",
-            "ph_level",
+            "soil_conductivity",
+            "soil_ph",
             "nitrogen",
-            "nitrogen_label",
             "phosphorus",
-            "phosphorus_label",
             "potassium",
-            "potassium_label",
-            "organic_matter",
-            "organic_matter_label",
+            "soil_fertility",
+            "has_sensor_readings",
             "notes",
+            # Pre-detector categorical answers.
+            "legacy_soil_type",
+            "legacy_soil_type_label",
+            "legacy_soil_texture",
+            "legacy_soil_texture_label",
+            "legacy_drainage",
+            "legacy_drainage_label",
+            "legacy_soil_moisture",
+            "legacy_soil_moisture_label",
+            "legacy_nitrogen",
+            "legacy_nitrogen_label",
+            "legacy_phosphorus",
+            "legacy_phosphorus_label",
+            "legacy_potassium",
+            "legacy_potassium_label",
+            "legacy_organic_matter",
+            "legacy_organic_matter_label",
             # The AI result, exactly as the Farmer saw it.
             "suitable_fruits",
             "suitable_vegetables",

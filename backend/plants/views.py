@@ -624,17 +624,18 @@ class SoilRecommendationListCreateView(generics.ListCreateAPIView):
     message, so the Farmer never loses what they typed.
     """
 
-    # Soil fields compared when deciding whether a save is a duplicate.
+    # Sensor readings compared when deciding whether a save is a duplicate.
+    # The legacy_* columns are deliberately absent: nothing writes to them,
+    # so including them would compare two identical defaults on every row.
     SOIL_FIELDS = (
-        "soil_type",
-        "soil_texture",
-        "drainage",
+        "soil_temperature",
         "soil_moisture",
-        "ph_level",
+        "soil_conductivity",
+        "soil_ph",
         "nitrogen",
         "phosphorus",
         "potassium",
-        "organic_matter",
+        "soil_fertility",
         "notes",
     )
 

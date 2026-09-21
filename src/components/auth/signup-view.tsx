@@ -102,7 +102,7 @@ export function SignupView() {
               </h1>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Manage your plants, assessments, risk monitoring, soil recommendations, and
+              Manage your plants, assessments, risk monitoring, crop recommendations, and
               harvest tracking — all in one place for Layuan Farm.
             </p>
           </div>

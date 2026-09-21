@@ -14,13 +14,6 @@ import { SoilResultCard } from "@/components/farmer/soil-result-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -31,58 +24,76 @@ import {
   type SoilRecommendation,
 } from "@/lib/api/soil-api";
 import { useAuth } from "@/lib/auth/auth-context";
+import { cn } from "@/lib/utils";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import {
-  DRAINAGE_OPTIONS,
-  NUTRIENT_OPTIONS,
-  SOIL_MOISTURE_OPTIONS,
+  SENSOR_FIELDS,
   SOIL_STRINGS as t,
-  SOIL_TEXTURE_OPTIONS,
-  SOIL_TYPE_OPTIONS,
-  type SoilOption,
+  validateReading,
+  type SensorField,
 } from "@/lib/soil-options";
 
 type Status = "idle" | "analyzing" | "done";
 type SaveState = "idle" | "saving" | "saved";
 
 /**
- * One labelled Select. Extracted because the form has eight of them and the
- * Base UI trigger/value/content structure is verbose enough that repeating
- * it inline would bury the actual field list.
+ * One labelled numeric reading with its unit.
+ *
+ * Extracted because the form has eight of them and they differ only by the
+ * spec they are handed. The unit sits inside the field rather than beside
+ * the label, so it stays attached to the number when the grid wraps to one
+ * column on a phone.
  */
-function SoilSelect({
-  id,
-  label,
-  options,
+function SoilNumberField({
+  field,
   value,
+  error,
   onChange,
 }: {
-  id: string;
-  label: string;
-  options: SoilOption[];
+  field: SensorField;
   value: string;
+  error?: string;
   onChange: (value: string) => void;
 }) {
+  const id = `soil-${field.key.replace(/_/g, "-")}`;
+  const errorId = `${id}-error`;
+
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      {/* Base UI can emit null on clear; "unknown" is the safe fallback. */}
-      <Select value={value} onValueChange={(next) => onChange(next ?? "unknown")}>
-        <SelectTrigger id={id}>
-          <SelectValue placeholder="Select">
-            {(selected: string) =>
-              options.find((o) => o.value === selected)?.label ?? "Select"
-            }
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Label htmlFor={id}>{field.label}</Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type="number"
+          inputMode="decimal"
+          min={field.min}
+          max={field.max}
+          step={field.step}
+          placeholder={field.placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          className={cn("pr-16", error && "border-destructive")}
+        />
+        {/* Not a <label>: it names the unit, not the control, and a second
+            label would compete with the real one for the field's name. */}
+        <span
+          aria-hidden="true"
+          className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs"
+        >
+          {field.unit}
+        </span>
+      </div>
+      {error ? (
+        <p id={errorId} className="text-destructive text-xs">
+          {error}
+        </p>
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          {field.min} to {field.max} {field.unit}
+        </p>
+      )}
     </div>
   );
 }
@@ -130,16 +141,23 @@ export function SoilRecommendationForm() {
 
   // Soil inputs. Everything defaults to "unknown" so a Farmer can submit
   // without being forced to supply measurements they do not have.
-  const [soilType, setSoilType] = useState("unknown");
-  const [soilTexture, setSoilTexture] = useState("unknown");
-  const [drainage, setDrainage] = useState("unknown");
-  const [soilMoisture, setSoilMoisture] = useState("unknown");
-  const [phLevel, setPhLevel] = useState("");
-  const [nitrogen, setNitrogen] = useState("unknown");
-  const [phosphorus, setPhosphorus] = useState("unknown");
-  const [potassium, setPotassium] = useState("unknown");
-  const [organicMatter, setOrganicMatter] = useState("unknown");
+  // Held as the typed text, not as numbers: a half-typed "6." is a valid
+  // thing to have in the box and coercing on every keystroke would fight
+  // the farmer's cursor.
+  const [readings, setReadings] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
+
+  function setReading(key: string, value: string) {
+    setReadings((prev) => ({ ...prev, [key]: value }));
+    // Clear the complaint as soon as they start fixing it.
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
 
   /**
    * Restores the last saved result on load — a plain database read that
@@ -161,6 +179,20 @@ export function SoilRecommendationForm() {
         if (cancelled || !latest) return;
         setResult(latest);
         setStatus("done");
+        // Put the saved readings back in the inputs, so stepping back to
+        // "Soil Information" shows what was submitted rather than a blank
+        // form the Farmer would have to retype from the device.
+        if (latest.has_sensor_readings) {
+          setReadings(
+            Object.fromEntries(
+              SENSOR_FIELDS.map((field) => {
+                const value = latest[field.key];
+                return [field.key, value === null ? "" : String(value)];
+              }),
+            ),
+          );
+        }
+        setNotes(latest.notes ?? "");
       } catch {
         // A failed restore is not worth surfacing — the Farmer can simply
         // fill in the form as normal.
@@ -175,6 +207,21 @@ export function SoilRecommendationForm() {
     event.preventDefault();
     if (!accessToken || status === "analyzing") return;
 
+    // Check every reading before the request. Django validates these again -
+    // this pass exists so an out-of-range number is caught beside the field
+    // that caused it, rather than after a round trip.
+    const errors: Record<string, string> = {};
+    for (const field of SENSOR_FIELDS) {
+      const message = validateReading(field, readings[field.key] ?? "");
+      if (message) errors[field.key] = message;
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError(null);
+      return;
+    }
+
+    setFieldErrors({});
     setStatus("analyzing");
     setError(null);
 
@@ -218,33 +265,23 @@ export function SoilRecommendationForm() {
     }
   }
 
-  /** The soil inputs as the API expects them. */
+  /**
+   * The readings as the API expects them: numbers.
+   *
+   * Only called once validation has passed, so every field is present and
+   * parses - Number() here cannot produce a NaN.
+   */
   function currentInput(): SoilRecommendationInput {
-    return {
-      soil_type: soilType,
-      soil_texture: soilTexture,
-      drainage,
-      soil_moisture: soilMoisture,
-      ph_level: phLevel.trim() === "" ? null : Number(phLevel),
-      nitrogen,
-      phosphorus,
-      potassium,
-      organic_matter: organicMatter,
-      notes,
-    };
+    const numeric = Object.fromEntries(
+      SENSOR_FIELDS.map((field) => [field.key, Number(readings[field.key])]),
+    ) as Omit<SoilRecommendationInput, "notes">;
+    return { ...numeric, notes };
   }
 
   /** Clears every field so the Farmer starts a genuinely new assessment. */
   function resetForNewAssessment() {
-    setSoilType("unknown");
-    setSoilTexture("unknown");
-    setDrainage("unknown");
-    setSoilMoisture("unknown");
-    setPhLevel("");
-    setNitrogen("unknown");
-    setPhosphorus("unknown");
-    setPotassium("unknown");
-    setOrganicMatter("unknown");
+    setReadings({});
+    setFieldErrors({});
     setNotes("");
     setResult(null);
     setError(null);
@@ -366,82 +403,23 @@ export function SoilRecommendationForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-sm font-medium">{t.sensorSectionTitle}</h2>
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          {t.sensorSectionHint}
+        </p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <SoilSelect
-          id="soil-type"
-          label={t.soilType}
-          options={SOIL_TYPE_OPTIONS}
-          value={soilType}
-          onChange={setSoilType}
-        />
-        <SoilSelect
-          id="soil-texture"
-          label={t.soilTexture}
-          options={SOIL_TEXTURE_OPTIONS}
-          value={soilTexture}
-          onChange={setSoilTexture}
-        />
-        <SoilSelect
-          id="drainage"
-          label={t.drainage}
-          options={DRAINAGE_OPTIONS}
-          value={drainage}
-          onChange={setDrainage}
-        />
-        <SoilSelect
-          id="soil-moisture"
-          label={t.soilMoisture}
-          options={SOIL_MOISTURE_OPTIONS}
-          value={soilMoisture}
-          onChange={setSoilMoisture}
-        />
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="ph-level">
-            {t.phLevel}{" "}
-            <span className="text-muted-foreground font-normal">({t.optional})</span>
-          </Label>
-          <Input
-            id="ph-level"
-            type="number"
-            min={0}
-            max={14}
-            step={0.1}
-            placeholder="e.g. 6.5"
-            value={phLevel}
-            onChange={(e) => setPhLevel(e.target.value)}
+        {SENSOR_FIELDS.map((field) => (
+          <SoilNumberField
+            key={field.key}
+            field={field}
+            value={readings[field.key] ?? ""}
+            error={fieldErrors[field.key]}
+            onChange={(value) => setReading(field.key, value)}
           />
-          <p className="text-muted-foreground text-xs">{t.phHint}</p>
-        </div>
-
-        <SoilSelect
-          id="organic-matter"
-          label={t.organicMatter}
-          options={NUTRIENT_OPTIONS}
-          value={organicMatter}
-          onChange={setOrganicMatter}
-        />
-        <SoilSelect
-          id="nitrogen"
-          label={t.nitrogen}
-          options={NUTRIENT_OPTIONS}
-          value={nitrogen}
-          onChange={setNitrogen}
-        />
-        <SoilSelect
-          id="phosphorus"
-          label={t.phosphorus}
-          options={NUTRIENT_OPTIONS}
-          value={phosphorus}
-          onChange={setPhosphorus}
-        />
-        <SoilSelect
-          id="potassium"
-          label={t.potassium}
-          options={NUTRIENT_OPTIONS}
-          value={potassium}
-          onChange={setPotassium}
-        />
+        ))}
       </div>
 
       <div className="flex flex-col gap-2">

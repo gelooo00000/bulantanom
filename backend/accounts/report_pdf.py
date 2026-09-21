@@ -225,7 +225,7 @@ def render(report: dict) -> bytes:
     details = report.get("details", [])
     if details:
         story.append(PageBreak())
-        story.append(Paragraph("Soil Recommendation Details", styles["h2"]))
+        story.append(Paragraph("Crop Recommendation Details", styles["h2"]))
         for d in details:
             story.append(Paragraph(d["heading"], styles["h3"]))
             if not d["analysed"]:

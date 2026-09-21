@@ -78,11 +78,40 @@ export function SoilSummaryCard({ soil }: { soil: SoilRecommendation | null }) {
   return (
     <Card className="gap-3 py-5">
       <CardContent className="flex flex-col gap-4 px-5">
+        {/* The four readings a farmer glances at. The rest are on the full
+            recommendation; this is a summary, not the whole assessment. */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Fact label={t.soilType} value={titleCase(soil.soil_type)} />
-          <Fact label={t.phLevel} value={soil.ph_level} />
-          <Fact label={t.soilMoisture} value={titleCase(soil.soil_moisture)} />
-          <Fact label={t.drainage} value={titleCase(soil.drainage)} />
+          {soil.has_sensor_readings ? (
+            <>
+              <Fact label={t.phLevel} value={soil.soil_ph} />
+              <Fact
+                label={t.soilMoisture}
+                value={soil.soil_moisture === null ? null : `${soil.soil_moisture}%`}
+              />
+              <Fact
+                label="Nitrogen (N)"
+                value={soil.nitrogen === null ? null : `${soil.nitrogen} mg/kg`}
+              />
+              <Fact
+                label="Soil Fertility"
+                value={
+                  soil.soil_fertility === null ? null : `${soil.soil_fertility} mg/kg`
+                }
+              />
+            </>
+          ) : (
+            /* Recorded before the soil detector, so there are no readings
+               to show - only the descriptions the farmer chose. */
+            <>
+              <Fact label={t.soilType} value={titleCase(soil.legacy_soil_type)} />
+              <Fact label={t.phLevel} value={soil.soil_ph} />
+              <Fact
+                label={t.soilMoisture}
+                value={titleCase(soil.legacy_soil_moisture)}
+              />
+              <Fact label={t.drainage} value={titleCase(soil.legacy_drainage)} />
+            </>
+          )}
         </div>
 
         {soil.ai_generated ? (

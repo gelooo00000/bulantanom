@@ -82,6 +82,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Presence, for the LGU's "who is using BulanTanom right now" view. Both
+    # are written by `accounts.presence`, never by the client.
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    last_logout_at = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"

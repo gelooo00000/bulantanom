@@ -61,6 +61,12 @@ type DatePickerProps = {
   /** ISO date; days after this are disabled. */
   max?: string;
   placeholder?: string;
+  /**
+   * Shows "Sep 19" instead of "September 19, 2026". For a trigger sitting in
+   * a card header, where the full date wraps to two lines and pushes the
+   * heading around.
+   */
+  compact?: boolean;
 };
 
 export function DatePicker({
@@ -69,6 +75,7 @@ export function DatePicker({
   onChange,
   max,
   placeholder = "Select a date",
+  compact = false,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = parseIsoDate(value);
@@ -129,8 +136,12 @@ export function DatePicker({
         )}
       >
         <CalendarDays className="text-muted-foreground size-4 shrink-0" />
-        <span className={cn(!value && "text-muted-foreground")}>
-          {value ? formatDisplayDate(value) : placeholder}
+        <span className={cn("truncate", !value && "text-muted-foreground")}>
+          {value
+            ? compact
+              ? formatShortDate(value)
+              : formatDisplayDate(value)
+            : placeholder}
         </span>
       </button>
 

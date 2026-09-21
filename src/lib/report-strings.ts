@@ -35,7 +35,7 @@ export const REPORT_STRINGS = {
   preparing: "Preparing…",
 
   summary: "Summary",
-  soilDetails: "Soil Recommendation Details",
+  soilDetails: "Crop Recommendation Details",
   noRecords: "No records for this period.",
   noneRecorded: "None recorded",
   farm: "Farm",

@@ -61,7 +61,7 @@ class DashboardServiceTests(APITestCase):
             health_condition="healthy",
             leaf_condition="green",
             watering_frequency="daily",
-            soil_moisture="moderate",
+            soil_moisture=Decimal("65"),
         )
 
     # ---------------------------------------------------------------- trend
@@ -100,78 +100,96 @@ class DashboardServiceTests(APITestCase):
         trend = dashboard_service.assessment_trend(self.farmer, self.today)
         self.assertEqual(trend["total"], 0)
 
-    # ---------------------------------------------------------- environment
-    def test_environment_reports_absence_rather_than_zeroes(self):
-        env = dashboard_service.environment(self.farmer)
-        self.assertFalse(env["has_any"])
-        self.assertIsNone(env["latest"])
-        self.assertEqual(env["history"], [])
+    # --------------------------------------------------- crop suggestions
+    def _analysed_row(self, **over):
+        defaults = dict(
+            farmer=self.farmer,
+            soil_ph=Decimal("6.40"),
+            soil_temperature=Decimal("28.0"),
+            soil_moisture=Decimal("65"),
+            ai_generated=True,
+            suitable_fruits=[
+                {"id": "pineapple", "name": "Pineapple", "emoji": "🍍",
+                 "reason": "Suits acidic soil."}
+            ],
+            suitable_vegetables=[
+                {"id": "eggplant", "name": "Eggplant", "emoji": "🍆",
+                 "reason": "Tolerates the moisture recorded."}
+            ],
+            suitable_crops=[],
+        )
+        defaults.update(over)
+        return SoilRecommendation.objects.create(**defaults)
 
-    def test_environment_always_declares_what_the_farm_does_not_measure(self):
+    def test_suggestions_are_empty_until_an_assessment_is_analysed(self):
+        result = dashboard_service.crop_suggestions(self.farmer)
+        self.assertFalse(result["has_any"])
+        self.assertEqual(result["crops"], [])
+        self.assertIsNone(result["recorded_on"])
+
+    def test_a_saved_but_unanalysed_assessment_suggests_nothing(self):
+        """There is no AI result on it, so there is nothing to show."""
+        SoilRecommendation.objects.create(
+            farmer=self.farmer,
+            soil_ph=Decimal("6.40"),
+            soil_temperature=Decimal("28.0"),
+            ai_generated=False,
+        )
+        self.assertFalse(dashboard_service.crop_suggestions(self.farmer)["has_any"])
+
+    def test_the_three_result_sections_become_one_list(self):
         """
-        Temperature and humidity are not collected anywhere in BulanTanom.
-        Saying so is what stops the UI rendering an empty gauge that looks
-        like a broken sensor.
+        Fruit, vegetable and crop matter to the report. To a farmer choosing
+        what to plant next they are one list of things worth planting.
         """
-        empty = dashboard_service.environment(self.farmer)
-        SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="loamy", ph_level=Decimal("6.40"),
-            soil_moisture="moist",
+        self._analysed_row()
+        result = dashboard_service.crop_suggestions(self.farmer)
+
+        self.assertTrue(result["has_any"])
+        self.assertEqual([c["name"] for c in result["crops"]], ["Pineapple", "Eggplant"])
+        self.assertEqual(result["crops"][0]["id"], "pineapple")
+        self.assertEqual(result["crops"][0]["reason"], "Suits acidic soil.")
+
+    def test_only_the_newest_analysed_assessment_is_used(self):
+        self._analysed_row()
+        self._analysed_row(
+            suitable_fruits=[
+                {"id": "banana", "name": "Banana", "emoji": "🍌", "reason": "New soil."}
+            ],
+            suitable_vegetables=[],
         )
-        filled = dashboard_service.environment(self.farmer)
+        result = dashboard_service.crop_suggestions(self.farmer)
+        # Older advice describes soil the farmer has since re-measured.
+        self.assertEqual([c["name"] for c in result["crops"]], ["Banana"])
 
-        for env in (empty, filled):
-            self.assertIn("temperature", env["not_collected"])
-            self.assertIn("humidity", env["not_collected"])
+    def test_a_long_list_is_capped_so_the_card_stays_scannable(self):
+        many = [
+            {"id": f"c{i}", "name": f"Crop {i}", "emoji": "", "reason": ""}
+            for i in range(20)
+        ]
+        self._analysed_row(suitable_fruits=many, suitable_vegetables=[])
+        result = dashboard_service.crop_suggestions(self.farmer)
+        self.assertEqual(len(result["crops"]), dashboard_service.MAX_CROP_SUGGESTIONS)
 
-    def test_environment_reads_the_latest_soil_row(self):
-        SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="clay", ph_level=Decimal("5.10"),
-            soil_moisture="dry",
+    def test_a_nameless_entry_is_dropped_rather_than_rendered_blank(self):
+        self._analysed_row(
+            suitable_fruits=[{"id": "x", "name": "   ", "emoji": "", "reason": ""}],
+            suitable_vegetables=[],
         )
+        self.assertEqual(dashboard_service.crop_suggestions(self.farmer)["crops"], [])
+
+    def test_suggestions_are_scoped_to_the_farmer(self):
+        other = make_farmer("other@example.com")
         SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="loamy", ph_level=Decimal("6.40"),
-            soil_moisture="moist",
+            farmer=other,
+            soil_ph=Decimal("6.40"),
+            soil_temperature=Decimal("28.0"),
+            ai_generated=True,
+            suitable_fruits=[
+                {"id": "banana", "name": "Banana", "emoji": "", "reason": ""}
+            ],
         )
-
-        env = dashboard_service.environment(self.farmer)
-        self.assertEqual(env["latest"]["ph_level"], 6.4)
-        self.assertEqual(env["latest"]["soil_moisture_label"], "Moist")
-        # Oldest first, so a chart reads left to right.
-        self.assertEqual([h["ph"] for h in env["history"]], [5.1, 6.4])
-
-    def test_history_rows_carry_a_unique_id(self):
-        """
-        The date does not identify a reading — two can be recorded on the
-        same day — so the row id travels with each entry. Keyed on the date
-        instead, the UI silently dropped one of a same-day pair.
-        """
-        SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="loamy", ph_level=Decimal("6.20"),
-            soil_moisture="moist",
-        )
-        SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="loamy", ph_level=Decimal("6.60"),
-            soil_moisture="moist",
-        )
-
-        env = dashboard_service.environment(self.farmer)
-        ids = [h["id"] for h in env["history"]]
-
-        self.assertEqual(len(env["history"]), 2)
-        self.assertEqual(len(set(ids)), 2)
-        # Both landed on the same calendar day, which is exactly the case
-        # the id exists to survive.
-        self.assertEqual(len({h["date"] for h in env["history"]}), 1)
-
-    def test_unknown_ph_stays_null_instead_of_becoming_zero(self):
-        SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="loamy", soil_moisture="moist"
-        )
-        env = dashboard_service.environment(self.farmer)
-        self.assertIsNone(env["latest"]["ph_level"])
-        # A pH of 0 would plot as extreme acidity; absence must stay absence.
-        self.assertNotIn(0, [h["ph"] for h in env["history"]])
+        self.assertFalse(dashboard_service.crop_suggestions(self.farmer)["has_any"])
 
     # ------------------------------------------------------------- harvests
     def test_upcoming_harvests_are_soonest_first_and_exclude_the_past(self):
@@ -220,7 +238,7 @@ class DashboardServiceTests(APITestCase):
     def test_a_recent_soil_reading_raises_no_alert(self):
         self._plant()
         SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_type="loamy", soil_moisture="moist"
+            farmer=self.farmer, soil_temperature=Decimal("28.0"), soil_moisture=Decimal("65")
         )
         messages = [a["message"] for a in dashboard_service.alerts(self.farmer, self.today)]
         self.assertNotIn("No soil reading recorded yet.", messages)
@@ -276,7 +294,7 @@ class DashboardApiTests(APITestCase):
         for key in (
             "overview",
             "assessment_trend",
-            "environment",
+            "crop_suggestions",
             "upcoming_harvests",
             "alerts",
         ):

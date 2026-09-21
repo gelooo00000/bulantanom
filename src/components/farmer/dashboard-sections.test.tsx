@@ -1,14 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AssessmentTrendChart } from "@/components/farmer/assessment-trend-chart";
-import { EnvironmentPanel } from "@/components/farmer/environment-panel";
+import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
 import { FarmAlerts } from "@/components/farmer/farm-alerts";
 import { HarvestSchedule } from "@/components/farmer/harvest-schedule";
+import type { BackendPlant } from "@/lib/api/plants-api";
 import type {
   AssessmentTrend,
-  FarmEnvironment,
+  CropSuggestions,
   UpcomingHarvest,
 } from "@/lib/api/dashboard-api";
 
@@ -74,155 +75,181 @@ describe("AssessmentTrendChart", () => {
   });
 });
 
-const NO_READINGS: FarmEnvironment = {
+const NO_SUGGESTIONS: CropSuggestions = {
   has_any: false,
-  latest: null,
-  history: [],
-  not_collected: ["temperature", "humidity"],
+  recorded_on: null,
+  crops: [],
 };
 
-describe("EnvironmentPanel", () => {
-  it("says what the farm does not measure instead of drawing empty gauges", () => {
-    render(<EnvironmentPanel environment={NO_READINGS} />);
+const SUGGESTED: CropSuggestions = {
+  has_any: true,
+  recorded_on: "2026-09-19",
+  crops: [
+    {
+      id: "pineapple",
+      name: "Pineapple",
+      emoji: "🍍",
+      reason: "Suited to the acidic soil pH you recorded.",
+      planting_months: [2, 3, 4, 5, 6, 7, 8],
+      caution_months: [9, 1],
+    },
+    {
+      id: "eggplant",
+      name: "Eggplant",
+      emoji: "🍆",
+      reason: "Tolerates the moisture measured.",
+      planting_months: [2, 3, 4, 5],
+      caution_months: [6, 7, 8, 1],
+    },
+  ],
+};
+
+describe("CropSuggestionsCard", () => {
+  // "Today" is fixed so the card's default date is deterministic. Without
+  // it the answer changes with the month the suite happens to run in, and
+  // every assertion below would have to be written as a maybe.
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function renderOn(iso: string, suggestions = SUGGESTED) {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(`${iso}T08:00:00`));
+    return render(<CropSuggestionsCard suggestions={suggestions} />);
+  }
+
+  it("lists the crops worth planting on the date shown", () => {
+    // March: both crops are in their planting window.
+    renderOn("2026-03-15");
+    expect(screen.getByRole("link", { name: /Pineapple/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Eggplant/ })).toBeInTheDocument();
+  });
+
+  it("drops crops that are out of season for that date", () => {
+    // October sits in Bulan's rainfall and typhoon peak.
+    renderOn("2026-10-15");
+    expect(screen.queryByRole("link", { name: /Pineapple/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Eggplant/ })).not.toBeInTheDocument();
+  });
+
+  it("says so plainly when nothing is in season, rather than sitting empty", () => {
+    renderOn("2026-10-15");
     expect(
-      screen.getByText(/Temperature and Humidity are not measured at Layuan Farm/),
+      screen.getByText(/None of your soil's crops are in season in October/),
     ).toBeInTheDocument();
   });
 
-  it("invites a first reading when none exists", () => {
-    render(<EnvironmentPanel environment={NO_READINGS} />);
-    expect(screen.getByText(/No soil reading recorded yet/)).toBeInTheDocument();
+  it("offers a calendar in place of the old link", () => {
+    renderOn("2026-03-15");
+    const picker = screen.getByRole("button", { name: /Mar 15/ });
+    expect(picker).toHaveAttribute("aria-haspopup", "dialog");
   });
 
-  it("shows the latest moisture and pH", () => {
-    render(
-      <EnvironmentPanel
-        environment={{
-          has_any: true,
-          latest: {
-            recorded_on: "2026-09-10",
-            soil_moisture: "moist",
-            soil_moisture_label: "Moist",
-            ph_level: 6.4,
-            soil_type_label: "Loamy",
-            drainage_label: "Good",
-          },
-          history: [],
-          not_collected: ["temperature", "humidity"],
-        }}
-      />,
+  it("carries the crop and the chosen date into Add Plant", () => {
+    renderOn("2026-03-15");
+    expect(screen.getByRole("link", { name: /Pineapple/ })).toHaveAttribute(
+      "href",
+      "/farmer/plants/new?crop=pineapple&date=2026-03-15",
     );
-    expect(screen.getByText("Moist")).toBeInTheDocument();
-    expect(screen.getByText("6.4")).toBeInTheDocument();
   });
 
-  it("renders an unknown pH as not recorded, never as zero", () => {
-    render(
-      <EnvironmentPanel
-        environment={{
-          has_any: true,
-          latest: {
-            recorded_on: "2026-09-10",
-            soil_moisture: null,
-            soil_moisture_label: null,
-            ph_level: null,
-            soil_type_label: "Loamy",
-            drainage_label: "Good",
-          },
-          history: [],
-          not_collected: [],
-        }}
-      />,
-    );
-    expect(screen.getAllByText("Not recorded")).toHaveLength(2);
-    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  it("says why each crop suits the soil", () => {
+    renderOn("2026-03-15");
+    expect(
+      screen.getByText("Suited to the acidic soil pH you recorded."),
+    ).toBeInTheDocument();
   });
 
-  it("renders two readings taken on the same day without a key collision", () => {
-    // Dates do not identify a reading — the farmer can record twice in one
-    // day — so the scale keys its marks on the row id.
-    //
-    // The console spy is the part that actually catches a regression here:
-    // React renders both elements even with duplicate keys and only warns,
-    // so asserting on the rendered output alone passes either way. The
-    // warning is the defect.
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    render(
-      <EnvironmentPanel
-        environment={{
-          has_any: true,
-          latest: {
-            recorded_on: "2026-09-14",
-            soil_moisture: "moist",
-            soil_moisture_label: "Moist",
-            ph_level: 8.9,
-            soil_type_label: "Clay Loam",
-            drainage_label: "Moderate",
-          },
-          history: [
-            { id: 1, date: "2026-09-14", ph: 8.4, moisture: "moist", moisture_rank: 4 },
-            { id: 2, date: "2026-09-14", ph: 8.9, moisture: "moist", moisture_rank: 4 },
-          ],
-          not_collected: [],
-        }}
-      />,
-    );
-
-    // The reading is interpreted, not just plotted.
-    expect(screen.getByText(/· Strongly alkaline/)).toBeInTheDocument();
-
-    const duplicateKeyWarning = consoleError.mock.calls.some((args) =>
-      args.some((a) => typeof a === "string" && a.includes("same key")),
-    );
-    expect(duplicateKeyWarning).toBe(false);
+  it("dates the soil reading the advice came from", () => {
+    renderOn("2026-03-15");
+    expect(screen.getByText(/September 19, 2026/)).toBeInTheDocument();
   });
 
-  it("shows the pH scale whenever a pH was recorded, even for one reading", () => {
-    // The old dot plot needed two readings to draw anything, so a farmer
-    // with a single reading saw no pH context at all. A scale needs one.
-    render(
-      <EnvironmentPanel
-        environment={{
-          has_any: true,
-          latest: {
-            recorded_on: "2026-09-10",
-            soil_moisture: "moist",
-            soil_moisture_label: "Moist",
-            ph_level: 6.4,
-            soil_type_label: "Loamy",
-            drainage_label: "Good",
-          },
-          history: [
-            { id: 1, date: "2026-09-10", ph: 6.4, moisture: "moist", moisture_rank: 4 },
-          ],
-          not_collected: [],
-        }}
-      />,
-    );
-    expect(screen.getByText(/· Ideal for most crops/)).toBeInTheDocument();
-    expect(screen.getByText(/Green band is pH 6–7/)).toBeInTheDocument();
+  it("announces the list when the date changes", () => {
+    renderOn("2026-03-15");
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
-  it("shows no pH scale when the farmer did not record a pH", () => {
-    render(
-      <EnvironmentPanel
-        environment={{
-          has_any: true,
-          latest: {
-            recorded_on: "2026-09-10",
-            soil_moisture: "moist",
-            soil_moisture_label: "Moist",
-            ph_level: null,
-            soil_type_label: "Loamy",
-            drainage_label: "Good",
-          },
-          history: [],
-          not_collected: [],
-        }}
-      />,
+  it("invites a first reading when there is nothing to suggest", () => {
+    render(<CropSuggestionsCard suggestions={NO_SUGGESTIONS} />);
+    expect(
+      screen.getByText(/Enter your soil detector readings/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Get recommendation" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no calendar before there is anything to filter", () => {
+    render(<CropSuggestionsCard suggestions={NO_SUGGESTIONS} />);
+    expect(screen.queryByRole("button", { name: /Pick a date/ })).not.toBeInTheDocument();
+  });
+
+  it("does not present AI advice as a substitute for an agriculturist", () => {
+    renderOn("2026-03-15");
+    expect(screen.getByText(/LGU agriculturist/)).toBeInTheDocument();
+  });
+
+  // Only the fields the card reads; the rest of a plant is irrelevant here.
+  function plantedOn(
+    id: number,
+    name: string,
+    date: string,
+    status: BackendPlant["status"] = "GROWING",
+  ): BackendPlant {
+    return {
+      id,
+      display_name: name,
+      planting_date: date,
+      status,
+      status_label: "Growing",
+      crop: { emoji: "🍍" },
+    } as BackendPlant;
+  }
+
+  function renderWithPlants(
+    iso: string,
+    plants: BackendPlant[],
+    suggestions = SUGGESTED,
+  ) {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(`${iso}T08:00:00`));
+    return render(
+      <CropSuggestionsCard suggestions={suggestions} plants={plants} />,
     );
-    expect(screen.queryByText(/Green band/)).not.toBeInTheDocument();
+  }
+
+  it("shows the plants that were planted on the picked date", () => {
+    renderWithPlants("2026-09-19", [
+      plantedOn(7, "Pineapple", "2026-09-19"),
+      plantedOn(8, "Okra", "2026-09-18"),
+    ]);
+    expect(screen.getByText(/Planted on September 19, 2026/)).toBeInTheDocument();
+    // Pineapple is also in season in September, so it can appear twice; the
+    // planted one is the one that opens the farmer's own plant.
+    const planted = screen.getByRole("region", { name: "Planted on this date" });
+    expect(within(planted).getByRole("link", { name: /Pineapple/ })).toHaveAttribute(
+      "href",
+      "/farmer/plants/7",
+    );
+    expect(screen.queryByRole("link", { name: /Okra/ })).not.toBeInTheDocument();
+  });
+
+  it("leaves archived plants out of what was planted", () => {
+    renderWithPlants("2026-09-19", [
+      plantedOn(7, "Pineapple", "2026-09-19", "ARCHIVED"),
+    ]);
+    expect(screen.queryByText(/Planted on/)).not.toBeInTheDocument();
+  });
+
+  it("offers the calendar for planted days even before a soil reading", () => {
+    renderWithPlants(
+      "2026-09-19",
+      [plantedOn(7, "Pineapple", "2026-09-19")],
+      NO_SUGGESTIONS,
+    );
+    expect(screen.getByRole("button", { name: /Sep 19/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Pineapple/ })).toBeInTheDocument();
   });
 });
 

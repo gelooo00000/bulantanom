@@ -9,6 +9,8 @@ pass a smoke test and fail these.
 
 from datetime import timedelta
 
+from decimal import Decimal
+
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -223,10 +225,9 @@ class ReportDataAccuracyTests(LguReportsTestBase):
         for _ in range(2):
             SoilRecommendation.objects.create(
                 farmer=self.farmer,
-                soil_type="loamy",
-                soil_texture="fine",
-                drainage="good",
-                soil_moisture="moist",
+                soil_temperature=Decimal("28.0"),
+                soil_moisture=Decimal("65"),
+                soil_conductivity=850,
             )
 
         _, data = self._stats("soil-assessment", period="all_time")
@@ -368,6 +369,10 @@ class ReportScaleTests(LguReportsTestBase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             return len(ctx.captured_queries), len(response.data["tables"][0]["rows"])
 
+        # Warm-up: the first authenticated request also stamps the officer's
+        # `last_seen_at` (accounts.presence). That one-off write is not what
+        # this test measures, so it happens before either count is taken.
+        query_count()
         before_queries, before_rows = query_count()
 
         Assessment.objects.bulk_create(

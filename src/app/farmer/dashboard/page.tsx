@@ -4,13 +4,14 @@ import Link from "next/link";
 import { ArrowRight, LoaderCircle, Sprout, TriangleAlert } from "lucide-react";
 
 import { AssessmentTrendChart } from "@/components/farmer/assessment-trend-chart";
-import { EnvironmentPanel } from "@/components/farmer/environment-panel";
+import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
 import { FarmAlerts } from "@/components/farmer/farm-alerts";
 import { HarvestSchedule } from "@/components/farmer/harvest-schedule";
 import { RiskCountsRow } from "@/components/risk/risk-counts";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { fetchFarmerDashboard } from "@/lib/api/dashboard-api";
+import { fetchPlants } from "@/lib/api/plants-api";
 import { fetchFarmerRisk } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -42,6 +43,8 @@ export default function FarmerDashboardPage() {
   // The risk counts come from the endpoint that already feeds the Risk
   // Indicators page, so both screens can never disagree.
   const { data: risk } = useAuthedQuery(fetchFarmerRisk);
+  // Lets the soil card show what was planted on the day the farmer picks.
+  const { data: plants } = useAuthedQuery(fetchPlants);
 
   const firstName = currentUser?.firstName ?? "Farmer";
 
@@ -65,7 +68,7 @@ export default function FarmerDashboardPage() {
     );
   }
 
-  const { overview, assessment_trend, environment, upcoming_harvests, alerts } =
+  const { overview, assessment_trend, crop_suggestions, upcoming_harvests, alerts } =
     dashboard;
   // `overview` is no longer rendered; its plant count still decides whether
   // this is a working farm or a first-run empty state.
@@ -124,7 +127,10 @@ export default function FarmerDashboardPage() {
             <HarvestSchedule harvests={upcoming_harvests} />
           </div>
 
-          <EnvironmentPanel environment={environment} />
+          <CropSuggestionsCard
+            suggestions={crop_suggestions}
+            plants={plants ?? []}
+          />
         </>
       )}
     </div>

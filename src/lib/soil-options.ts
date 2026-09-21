@@ -1,5 +1,10 @@
 /**
- * Soil field options and UI strings for the Soil Recommendation feature.
+ * Soil field options and UI strings for the Crop Recommendation feature.
+ *
+ * The feature is named for what it gives back - crop suggestions - while the
+ * field labels stay soil-specific, because they describe what the Farmer is
+ * being asked for. "Soil pH" is a real measurement; "Crop pH" would be
+ * nonsense.
  *
  * Values mirror the `SoilRecommendation` TextChoices in Django exactly, so
  * the form can post them straight through without a mapping layer.
@@ -57,8 +62,131 @@ export const NUTRIENT_OPTIONS: SoilOption[] = [
 ];
 
 /** The six AI result section titles, plus the form's own copy. */
+/**
+ * The eight readings the farm's soil detector reports.
+ *
+ * One definition drives the label, the unit, the input constraints and the
+ * client-side range check, so the form and its validation can never disagree
+ * about what the device can measure. The ranges are the device's own and are
+ * enforced again in Django - this copy exists to catch a typo before it
+ * costs a round trip, not to be the authority.
+ */
+export type SensorField = {
+  /** Matches the Django field name exactly; the payload is built from it. */
+  key:
+    | "soil_temperature"
+    | "soil_moisture"
+    | "soil_conductivity"
+    | "soil_ph"
+    | "nitrogen"
+    | "phosphorus"
+    | "potassium"
+    | "soil_fertility";
+  label: string;
+  unit: string;
+  min: number;
+  max: number;
+  /** 1 for whole-number readings, finer where the sensor reports decimals. */
+  step: number;
+  placeholder: string;
+};
+
+export const SENSOR_FIELDS: SensorField[] = [
+  {
+    key: "soil_temperature",
+    label: "Soil Temperature",
+    unit: "°C",
+    min: -40,
+    max: 80,
+    step: 0.1,
+    placeholder: "28.5",
+  },
+  {
+    key: "soil_moisture",
+    label: "Soil Moisture",
+    unit: "%",
+    min: 0,
+    max: 100,
+    step: 0.1,
+    placeholder: "65",
+  },
+  {
+    key: "soil_conductivity",
+    label: "Soil Conductivity",
+    unit: "µS/cm",
+    min: 0,
+    max: 20000,
+    step: 1,
+    placeholder: "850",
+  },
+  {
+    key: "soil_ph",
+    label: "Soil pH",
+    unit: "pH",
+    min: 3,
+    max: 10,
+    step: 0.1,
+    placeholder: "6.5",
+  },
+  {
+    key: "nitrogen",
+    label: "Nitrogen (N)",
+    unit: "mg/kg",
+    min: 1,
+    max: 1999,
+    step: 1,
+    placeholder: "120",
+  },
+  {
+    key: "phosphorus",
+    label: "Phosphorus (P)",
+    unit: "mg/kg",
+    min: 1,
+    max: 1999,
+    step: 1,
+    placeholder: "80",
+  },
+  {
+    key: "potassium",
+    label: "Potassium (K)",
+    unit: "mg/kg",
+    min: 1,
+    max: 1999,
+    step: 1,
+    placeholder: "150",
+  },
+  {
+    key: "soil_fertility",
+    label: "Soil Fertility",
+    unit: "mg/kg",
+    min: 0,
+    max: 3000,
+    step: 1,
+    placeholder: "600",
+  },
+];
+
+/**
+ * Why a typed reading is not acceptable, or null when it is.
+ *
+ * Empty is reported as missing rather than out of range: the detector gives
+ * a value for every field, so a blank is an unfinished form, not a farmer
+ * declining to answer.
+ */
+export function validateReading(field: SensorField, raw: string): string | null {
+  const text = raw.trim();
+  if (text === "") return `${field.label} is required.`;
+
+  const value = Number(text);
+  if (!Number.isFinite(value)) return `${field.label} must be a number.`;
+  if (value < field.min || value > field.max) {
+    return `${field.label} must be between ${field.min} and ${field.max} ${field.unit}.`;
+  }
+  return null;
+}
+
 export const SOIL_STRINGS = {
-  resultTitle: "AI Soil Recommendation",
+  resultTitle: "AI Crop Recommendation",
   suitableFruits: "Suitable Fruits",
   suitableVegetables: "Suitable Vegetables",
   suitableCrops: "Suitable Crops",
@@ -81,6 +209,9 @@ export const SOIL_STRINGS = {
   additionalInfoHint: "e.g. The soil becomes dry quickly.",
   optional: "Optional",
   submit: "Get Recommendation",
+  sensorSectionTitle: "Soil Detector Readings",
+  sensorSectionHint:
+    "Enter the readings from your soil detector. All eight are needed for a crop recommendation.",
   analyzing: "Analyzing your soil information…",
   analyzingHint: "Reviewing what you reported to suggest suitable crops.",
   aiUnavailable: "AI recommendation is temporarily unavailable.",
@@ -95,11 +226,11 @@ export const SOIL_STRINGS = {
   // "Back to Soil Information" button and its states
   backToSoilInfo: "Back to Soil Information",
   saved: "Saved",
-  saveSuccess: "Soil recommendation saved successfully.",
+  saveSuccess: "Crop recommendation saved successfully.",
   newAssessmentReady: "Enter your soil information for a new assessment.",
 
   // Farmer Dashboard summary card
-  soilIntelligence: "Soil Intelligence",
+  soilIntelligence: "Crop Recommendation",
   latestAssessment: "Last Assessment",
   viewRecommendation: "View Full Recommendation",
   noAssessmentTitle: "No soil assessment yet",

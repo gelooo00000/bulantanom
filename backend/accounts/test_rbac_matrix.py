@@ -20,6 +20,8 @@ Expected outcomes:
 
 from datetime import timedelta
 
+from decimal import Decimal
+
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -73,8 +75,8 @@ class RbacMatrixBase(APITestCase):
             summary="Healthy.",
         )
         cls.soil = SoilRecommendation.objects.create(
-            farmer=cls.farmer, soil_type="loamy", soil_texture="fine",
-            drainage="good", soil_moisture="moist",
+            farmer=cls.farmer, soil_temperature=Decimal("28.0"), soil_moisture=Decimal("65"),
+            soil_conductivity=850,
         )
 
     LOGIN = {

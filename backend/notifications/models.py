@@ -49,7 +49,7 @@ class NotificationType(models.TextChoices):
 
     SOIL_RECOMMENDATION_READY = (
         "SOIL_RECOMMENDATION_READY",
-        "Soil recommendation ready",
+        "Crop recommendation ready",
     )
     SOIL_ASSESSMENT_SAVED = "SOIL_ASSESSMENT_SAVED", "Soil assessment saved"
     SOIL_WARNING = "SOIL_WARNING", "Soil warning"

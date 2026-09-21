@@ -130,6 +130,71 @@ def _assessment_count():
     ).count()
 
 
+# How many weeks the dashboard's assessment chart covers. Two months is long
+# enough to show whether weekly checks are keeping up, short enough that each
+# bar is still readable on a phone.
+ASSESSMENT_TREND_WEEKS = 8
+
+
+def _weekly_assessment_trend():
+    """
+    Assessments submitted per week by approved Farmers, oldest week first.
+
+    Every week in the range is returned, including the empty ones — a chart
+    drawn only through the busy weeks would hide exactly the lapse in
+    monitoring an Officer needs to see. Weeks start on Monday.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from plants.models import Assessment
+
+    today = timezone.localdate()
+    this_week = today - timedelta(days=today.weekday())
+    first_week = this_week - timedelta(weeks=ASSESSMENT_TREND_WEEKS - 1)
+
+    counts = {first_week + timedelta(weeks=i): 0 for i in range(ASSESSMENT_TREND_WEEKS)}
+    dates = Assessment.objects.filter(
+        plant__farmer__role=UserRole.FARMER,
+        plant__farmer__account_status=AccountStatus.APPROVED,
+        assessment_date__gte=first_week,
+        assessment_date__lte=today,
+    ).values_list("assessment_date", flat=True)
+    for day in dates:
+        counts[day - timedelta(days=day.weekday())] += 1
+
+    return [
+        {"week_start": week.isoformat(), "count": count}
+        for week, count in counts.items()
+    ]
+
+
+def _crop_counts():
+    """
+    Plants per crop across approved Farmers, most planted first.
+
+    Archived plants were removed by their Farmer, so they are not counted as
+    growing at Layuan.
+    """
+    from plants.models import Plant, PlantStatus
+
+    rows = (
+        Plant.objects.filter(
+            farmer__role=UserRole.FARMER,
+            farmer__account_status=AccountStatus.APPROVED,
+        )
+        .exclude(status=PlantStatus.ARCHIVED)
+        .values("crop__name", "crop__emoji")
+        .annotate(count=Count("id"))
+        .order_by("-count", "crop__name")
+    )
+    return [
+        {"name": row["crop__name"], "emoji": row["crop__emoji"], "count": row["count"]}
+        for row in rows
+    ]
+
+
 def _farmer_counts():
     """
     One conditional-aggregation query for every Farmer status bucket,
@@ -169,6 +234,9 @@ def lgu_dashboard(request):
             "plants": _plant_counts(),
             "risk": _risk_counts(),
             "assessments": _assessment_count(),
+            # Chart data: weekly assessment activity and what is planted.
+            "assessment_trend": _weekly_assessment_trend(),
+            "crops": _crop_counts(),
             # Real: plants whose stored harvest window is open or opens
             # within the next week. 0 here means "queried and found none".
             "harvest": _upcoming_harvest_count(),
@@ -185,8 +253,62 @@ class LguFarmerListView(generics.ListAPIView):
     GET /api/lgu/farmers/?status=PENDING — filter by account status
     GET /api/lgu/farmers/?status=ALL     — every Farmer regardless of status
 
-    Returns only the safe UserSerializer fields; never a password or hash.
+    Returns only the safe UserSerializer fields; never a password or hash —
+    plus each Farmer's monitoring summary, so an Officer can see from the
+    list alone who needs a visit:
+
+    - `plant_count`: plants the Farmer has recorded.
+    - `high_risk_plants`: plants whose *latest* assessment read HIGH, counted
+      the same way as the dashboard, so a recovered plant is not flagged.
+    - `last_assessment_date`: the Farmer's most recent weekly check, or null
+      if they have never submitted one.
+    - `is_online` / `last_seen_at`: whether the Farmer is using BulanTanom
+      right now, and when they last were (see `accounts.presence`).
     """
+
+    def list(self, request, *args, **kwargs):
+        from collections import Counter
+
+        from django.db.models import Max
+
+        from plants.models import Plant
+
+        farmers = list(
+            self.filter_queryset(self.get_queryset()).annotate(
+                plant_count=Count("plants", distinct=True),
+                last_assessment_date=Max("plants__assessments__assessment_date"),
+            )
+        )
+        high_risk = Counter(
+            assessment.plant.farmer_id
+            for assessment in _latest_assessment_per_plant(
+                Plant.objects.filter(farmer__in=[farmer.id for farmer in farmers])
+            )
+            if getattr(assessment, "risk", None)
+            and assessment.risk.risk_level == "HIGH"
+        )
+
+        from django.utils import timezone
+
+        from .presence import is_online
+
+        now = timezone.now()
+        rows = []
+        for farmer in farmers:
+            row = self.get_serializer(farmer).data
+            row["plant_count"] = farmer.plant_count
+            row["high_risk_plants"] = high_risk[farmer.id]
+            row["last_assessment_date"] = (
+                farmer.last_assessment_date.isoformat()
+                if farmer.last_assessment_date
+                else None
+            )
+            row["is_online"] = is_online(farmer, now)
+            row["last_seen_at"] = (
+                farmer.last_seen_at.isoformat() if farmer.last_seen_at else None
+            )
+            rows.append(row)
+        return Response(rows)
 
     serializer_class = UserSerializer
     permission_classes = [IsLguOfficer]

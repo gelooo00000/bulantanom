@@ -14,7 +14,7 @@ const FEATURES: { icon: ElementType; title: string; description: string }[] = [
   },
   {
     icon: FlaskConical,
-    title: "Soil Recommendation",
+    title: "Crop Recommendation",
     description: "Enter soil properties and get best crop suggestions.",
   },
   {

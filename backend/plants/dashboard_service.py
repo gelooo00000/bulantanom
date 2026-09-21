@@ -17,14 +17,12 @@ wrong. Where a reading has never been recorded, the payload says so
 explicitly rather than sending a zero that would render as a real
 measurement.
 
-TEMPERATURE AND HUMIDITY
-------------------------
-BulanTanom does not collect them. There is no weather integration and no
-sensor model — the only environmental readings a Farmer ever enters are soil
-moisture and, optionally, pH, both on the soil recommendation form. They are
-reported in `environment.not_collected` so the UI can say plainly that the
-farm does not record them, which is the honest alternative to showing an
-empty gauge that looks like a broken sensor.
+SOIL READINGS ARE NOT HERE
+--------------------------
+The detector's eight readings live on the Crop Recommendation page, where
+they are entered and where the AI result explains them. The dashboard shows
+what came out of that - the crops worth planting - rather than repeating the
+raw numbers, which said little on their own.
 """
 
 from __future__ import annotations
@@ -35,7 +33,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from .assessment_schedule import eligibility
-from .models import Assessment, Plant, SoilRecommendation
+from .models import Assessment, Crop, Plant, SoilRecommendation
 
 # How far back the activity chart looks. Long enough to show a habit
 # forming, short enough that a single week still reads clearly.
@@ -51,6 +49,9 @@ HARVEST_SOON_DAYS = 14
 
 # Upcoming harvests shown on the dashboard. The Harvest page has them all.
 MAX_UPCOMING_HARVESTS = 5
+
+# Suggested crops shown before the card gets too long to scan.
+MAX_CROP_SUGGESTIONS = 8
 
 
 def _plural(count, singular, plural=None):
@@ -88,65 +89,67 @@ def assessment_trend(farmer, today=None, days=TREND_DAYS):
     }
 
 
-def _moisture_rank(value):
-    """Soil moisture as an ordinal, so it can be plotted. None when unknown."""
-    order = ["very_dry", "dry", "moderate", "moist", "very_wet"]
-    return order.index(value) + 1 if value in order else None
 
 
-def environment(farmer):
+def crop_suggestions(farmer, limit=MAX_CROP_SUGGESTIONS):
     """
-    Latest soil readings, plus history when the farmer has recorded more
-    than one, so the UI can show a trend instead of a single number.
+    Crops the farmer's most recent analysed soil assessment suggested.
+
+    Surfaced on the dashboard because this is the output of the whole
+    Crop Recommendation feature and it was otherwise reachable only by
+    opening another page - a farmer deciding what to plant next had no
+    reason to know it was there.
+
+    Only an analysed assessment is used. A saved-but-unanalysed one has no
+    suggestions to show, and an older analysed row would be advice about
+    soil the farmer has since re-measured.
     """
-    readings = list(
-        SoilRecommendation.objects.filter(farmer=farmer).order_by("-created_at")[:12]
+    latest = (
+        SoilRecommendation.objects.filter(farmer=farmer, ai_generated=True)
+        .order_by("-created_at")
+        .first()
     )
+    if latest is None:
+        return {"has_any": False, "recorded_on": None, "crops": []}
 
-    if not readings:
-        return {
-            "has_any": False,
-            "latest": None,
-            "history": [],
-            "not_collected": ["temperature", "humidity"],
-        }
+    # The three result sections are one list to the farmer: things worth
+    # planting. The split into fruit/vegetable/crop matters to the report,
+    # not to someone choosing what to put in the ground next.
+    crops = []
+    for section in ("suitable_fruits", "suitable_vegetables", "suitable_crops"):
+        for item in getattr(latest, section) or []:
+            name = (item.get("name") or "").strip()
+            if not name:
+                continue
+            crops.append(
+                {
+                    "id": item.get("id") or "",
+                    "name": name,
+                    "emoji": item.get("emoji") or "",
+                    "reason": (item.get("reason") or "").strip(),
+                }
+            )
+    crops = crops[:limit]
 
-    latest = readings[0]
-    unknown = SoilRecommendation.SoilMoisture.UNKNOWN
-
-    # Oldest first, so a chart reads left to right. The row id travels with
-    # each entry because the date does not identify it: a farmer can record
-    # two readings on the same day, and the UI needs a stable unique key.
-    history = [
-        {
-            "id": r.id,
-            "date": r.created_at.date().isoformat(),
-            "ph": float(r.ph_level) if r.ph_level is not None else None,
-            "moisture": r.soil_moisture if r.soil_moisture != unknown else None,
-            "moisture_rank": _moisture_rank(r.soil_moisture),
-        }
-        for r in reversed(readings)
-    ]
+    # Each suggestion carries its planting window, so the card can answer
+    # "is this worth planting on the date I picked" without another request.
+    # Suiting the soil and being in season are different questions, and a
+    # farmer needs both answered before putting something in the ground.
+    windows = {
+        crop.id: crop
+        for crop in Crop.objects.filter(id__in=[c["id"] for c in crops if c["id"]])
+    }
+    for entry in crops:
+        crop = windows.get(entry["id"])
+        entry["planting_months"] = list(crop.planting_months or []) if crop else []
+        entry["caution_months"] = (
+            list(crop.planting_caution_months or []) if crop else []
+        )
 
     return {
-        "has_any": True,
-        "latest": {
-            "recorded_on": latest.created_at.date().isoformat(),
-            "soil_moisture": (
-                None if latest.soil_moisture == unknown else latest.soil_moisture
-            ),
-            "soil_moisture_label": (
-                None
-                if latest.soil_moisture == unknown
-                else latest.get_soil_moisture_display()
-            ),
-            "ph_level": float(latest.ph_level) if latest.ph_level is not None else None,
-            "soil_type_label": latest.get_soil_type_display(),
-            "drainage_label": latest.get_drainage_display(),
-        },
-        # Only the readings that carry a number are worth plotting.
-        "history": [h for h in history if h["ph"] is not None or h["moisture_rank"]],
-        "not_collected": ["temperature", "humidity"],
+        "has_any": bool(crops),
+        "recorded_on": latest.created_at.date().isoformat(),
+        "crops": crops,
     }
 
 
@@ -388,7 +391,7 @@ def build(farmer, today=None):
     return {
         "overview": overview(farmer, today),
         "assessment_trend": assessment_trend(farmer, today),
-        "environment": environment(farmer),
+        "crop_suggestions": crop_suggestions(farmer),
         "upcoming_harvests": upcoming_harvests(farmer, today),
         "alerts": alerts(farmer, today),
     }

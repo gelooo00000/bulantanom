@@ -16,7 +16,7 @@ const ROLES: {
     icon: Sprout,
     title: "Farmer",
     description:
-      "Monitor plants, submit assessments, and get AI-backed risk indicators and soil recommendations for your crops.",
+      "Monitor plants, submit assessments, and get AI-backed risk indicators and crop recommendations for your soil.",
     cta: "Continue as Farmer",
     href: "/login?role=farmer",
   },
@@ -24,7 +24,7 @@ const ROLES: {
     icon: ShieldCheck,
     title: "LGU Agricultural Officer",
     description:
-      "Review farmer plant data, soil recommendation records, and risk trends across Layuan Farm.",
+      "Review farmer plant data, crop recommendation records, and risk trends across Layuan Farm.",
     cta: "Continue as Officer",
     href: "/login?role=lgu",
   },

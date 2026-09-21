@@ -138,6 +138,17 @@ def _approved_farmers():
     return User.objects.filter(**APPROVED_FARMER)
 
 
+def _soil_value(value) -> str:
+    """
+    A sensor reading for a report cell.
+
+    Bare number, no unit: the unit is in the column header, and repeating it
+    in every cell makes a wide table harder to scan down. Pre-detector rows
+    have no readings, and say so rather than showing a blank.
+    """
+    return "Not recorded" if value is None else f"{value}"
+
+
 def _display_name(user) -> str:
     return user.get_full_name() or user.email
 
@@ -462,15 +473,14 @@ def _build_soil(period: Period, filters: dict) -> dict:
             {
                 "farmer": _display_name(r.farmer),
                 "date": r.created_at.date().isoformat(),
-                "soil_type": r.get_soil_type_display(),
-                "texture": r.get_soil_texture_display(),
-                "drainage": r.get_drainage_display(),
-                "moisture": r.get_soil_moisture_display(),
-                "ph": str(r.ph_level) if r.ph_level is not None else "Not recorded",
-                "n": r.get_nitrogen_display(),
-                "p": r.get_phosphorus_display(),
-                "k": r.get_potassium_display(),
-                "om": r.get_organic_matter_display(),
+                "temperature": _soil_value(r.soil_temperature),
+                "moisture": _soil_value(r.soil_moisture),
+                "conductivity": _soil_value(r.soil_conductivity),
+                "ph": _soil_value(r.soil_ph),
+                "n": _soil_value(r.nitrogen),
+                "p": _soil_value(r.phosphorus),
+                "k": _soil_value(r.potassium),
+                "fertility": _soil_value(r.soil_fertility),
                 "notes": r.notes.strip() or "No notes",
             }
         )
@@ -518,13 +528,16 @@ def _build_soil(period: Period, filters: dict) -> dict:
         "tables": [
             {
                 "title": "Soil Assessments",
+                # Units are in the headers, so each cell stays a bare
+                # number and the columns line up when read down.
                 "columns": [
-                    "Farmer", "Date", "Soil Type", "Texture", "Drainage",
-                    "Moisture", "pH", "N", "P", "K", "Organic Matter", "Notes",
+                    "Farmer", "Date", "Temp (°C)", "Moisture (%)",
+                    "Conductivity (µS/cm)", "pH", "N (mg/kg)",
+                    "P (mg/kg)", "K (mg/kg)", "Fertility (mg/kg)", "Notes",
                 ],
                 "keys": [
-                    "farmer", "date", "soil_type", "texture", "drainage",
-                    "moisture", "ph", "n", "p", "k", "om", "notes",
+                    "farmer", "date", "temperature", "moisture",
+                    "conductivity", "ph", "n", "p", "k", "fertility", "notes",
                 ],
                 "rows": rows,
                 "wide": True,

@@ -15,12 +15,24 @@ import { useLguQuery } from "@/lib/api/use-authed-query";
 import { cn } from "@/lib/utils";
 
 /** One reported soil property, hidden entirely when the Farmer said "Unknown". */
-function SoilFact({ label, value }: { label: string; value: string | null }) {
-  if (!value || value === "Unknown") return null;
+function SoilFact({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  /** A sensor reading or a categorical label, depending on the row's age. */
+  value: string | number | null;
+  unit?: string;
+}) {
+  if (value === null || value === "" || value === "Unknown") return null;
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="text-sm">{value}</span>
+      <span className="text-sm">
+        {value}
+        {unit ? <span className="text-muted-foreground ml-1 text-xs">{unit}</span> : null}
+      </span>
     </div>
   );
 }
@@ -78,7 +90,10 @@ function RecordCard({ record }: { record: LguSoilRecommendation }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{record.farmer_name}</p>
           <p className="text-muted-foreground truncate text-xs">
-            {record.soil_type_label} · pH {record.ph_level ?? "unknown"} · {submitted}
+            {record.has_sensor_readings
+              ? `pH ${record.soil_ph ?? "—"} · ${record.soil_moisture ?? "—"}% moisture`
+              : record.legacy_soil_type_label}{" "}
+            · {submitted}
           </p>
         </div>
         <span
@@ -107,15 +122,30 @@ function RecordCard({ record }: { record: LguSoilRecommendation }) {
 
           {/* What the Farmer actually reported. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <SoilFact label="Soil type" value={record.soil_type_label} />
-            <SoilFact label="Texture" value={record.soil_texture_label} />
-            <SoilFact label="Drainage" value={record.drainage_label} />
-            <SoilFact label="Moisture" value={record.soil_moisture_label} />
-            <SoilFact label="pH" value={record.ph_level} />
-            <SoilFact label="Nitrogen" value={record.nitrogen_label} />
-            <SoilFact label="Phosphorus" value={record.phosphorus_label} />
-            <SoilFact label="Potassium" value={record.potassium_label} />
-            <SoilFact label="Organic matter" value={record.organic_matter_label} />
+            {record.has_sensor_readings ? (
+              <>
+                <SoilFact label="Temperature" value={record.soil_temperature} unit="°C" />
+                <SoilFact label="Moisture" value={record.soil_moisture} unit="%" />
+                <SoilFact label="Conductivity" value={record.soil_conductivity} unit="µS/cm" />
+                <SoilFact label="pH" value={record.soil_ph} />
+                <SoilFact label="Nitrogen" value={record.nitrogen} unit="mg/kg" />
+                <SoilFact label="Phosphorus" value={record.phosphorus} unit="mg/kg" />
+                <SoilFact label="Potassium" value={record.potassium} unit="mg/kg" />
+                <SoilFact label="Fertility" value={record.soil_fertility} unit="mg/kg" />
+              </>
+            ) : (
+              /* Recorded before the detector. */
+              <>
+                <SoilFact label="Soil type" value={record.legacy_soil_type_label} />
+                <SoilFact label="Texture" value={record.legacy_soil_texture_label} />
+                <SoilFact label="Drainage" value={record.legacy_drainage_label} />
+                <SoilFact label="Moisture" value={record.legacy_soil_moisture_label} />
+                <SoilFact label="pH" value={record.soil_ph} />
+                <SoilFact label="Nitrogen" value={record.legacy_nitrogen_label} />
+                <SoilFact label="Phosphorus" value={record.legacy_phosphorus_label} />
+                <SoilFact label="Potassium" value={record.legacy_potassium_label} />
+              </>
+            )}
           </div>
 
           {record.notes ? (
@@ -193,18 +223,18 @@ export default function LguSoilRecommendationsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Soil Recommendation Records"
+        title="Crop Recommendation Records"
         description="Soil assessments submitted by farmers at Layuan Farm, read live from the database."
       />
 
       {loading ? (
-        <LguLoading label="Loading soil recommendation records…" />
+        <LguLoading label="Loading crop recommendation records…" />
       ) : error ? (
         <LguError message={error} onRetry={refetch} />
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={FlaskConical}
-          title="No soil recommendations yet"
+          title="No crop recommendations yet"
           description="Records appear here once approved Farmers submit their soil information."
         />
       ) : (
