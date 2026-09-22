@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendCrop } from "@/lib/api/plants-api";
+import { useLanguage } from "@/lib/i18n";
 import { adviseForMonth, monthName } from "@/lib/planting-season";
 
 /**
@@ -62,6 +63,7 @@ export function InSeasonCrops({
   onSelect,
 }: InSeasonCropsProps) {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useLanguage();
 
   if (crops.length === 0) return null;
 
@@ -97,14 +99,15 @@ export function InSeasonCrops({
             className={sparse ? "text-risk-medium size-4" : "text-risk-low size-4"}
             aria-hidden="true"
           />
-          Good to plant in {monthName(month)}
+          {t("inSeason.title", { month: monthName(month, t) })}
         </h2>
 
         {good.length > 0 ? (
           <>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              {good.length} crop{good.length === 1 ? "" : "s"} in season. Tap one to
-              select it.
+              {good.length === 1
+                ? t("inSeason.countOne")
+                : t("inSeason.count", { n: good.length })}
             </p>
             <ul className="mt-2.5 flex flex-wrap gap-1.5">
               {(expanded ? good : good.slice(0, COLLAPSED_LIMIT)).map((crop) => (
@@ -132,30 +135,26 @@ export function InSeasonCrops({
                 aria-expanded={expanded}
                 className="text-muted-foreground hover:text-foreground mt-2 text-xs underline underline-offset-2"
               >
-                {expanded
-                  ? "Show fewer"
-                  : `Show all ${good.length} crops in season`}
+                {expanded ? t("inSeason.fewer") : t("inSeason.all", { n: good.length })}
               </button>
             )}
           </>
         ) : (
           <p className="text-muted-foreground mt-1 text-sm">
-            Nothing in the catalog is at its best in {monthName(month)}.
+            {t("inSeason.none", { month: monthName(month, t) })}
           </p>
         )}
 
         {sparse && (
           <div className="border-border/60 mt-3 border-t pt-2.5">
             <p className="text-muted-foreground text-xs leading-relaxed">
-              {monthName(month)} sits in Bulan&apos;s wettest and most
-              typhoon-exposed stretch, so most crops are out of season rather
-              than the list being incomplete.
+              {t("inSeason.wet", { month: monthName(month, t) })}
               {nextGoodMonth && (
                 <>
                   {" "}
-                  Planting picks up again in{" "}
+                  {t("inSeason.picksUp")}{" "}
                   <span className="text-foreground font-medium">
-                    {monthName(nextGoodMonth)}
+                    {monthName(nextGoodMonth, t)}
                   </span>
                   .
                 </>
@@ -164,7 +163,7 @@ export function InSeasonCrops({
             {caution.length > 0 && (
               <>
                 <p className="text-muted-foreground mt-2.5 text-xs font-medium">
-                  Workable with care this month
+                  {t("inSeason.workable")}
                 </p>
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">
                   {caution.map((crop) => (
@@ -191,8 +190,7 @@ export function InSeasonCrops({
         )}
 
         <p className="text-muted-foreground/70 mt-3 text-[11px]">
-          Based on each crop&apos;s usual planting window for Bulan&apos;s climate —
-          not a live weather forecast.
+          {t("inSeason.note")}
         </p>
       </CardContent>
     </Card>

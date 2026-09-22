@@ -42,6 +42,7 @@ import {
   type NotificationType,
 } from "@/lib/api/notifications-api";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useLanguage, type Translate } from "@/lib/i18n";
 import { subscribeToNotificationRefresh } from "@/lib/notification-refresh";
 import {
   getSoundPreference,
@@ -87,24 +88,28 @@ const SEVERITY_TONE: Record<string, string> = {
 };
 
 /** Relative time from the stored timestamp — no invented dates. */
-function timeAgo(iso: string) {
+function timeAgo(iso: string, t: Translate, dateLocale: string) {
   const then = new Date(iso).getTime();
   const minutes = Math.round((Date.now() - then) / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("time.justNow");
+  if (minutes < 60) return t("time.minutes", { n: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("time.hours", { n: hours });
   const days = Math.round(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
+  if (days < 7) return t("time.days", { n: days });
+  return new Date(iso).toLocaleDateString(dateLocale);
 }
 
 function NotificationRow({
   notification,
   onOpen,
+  t,
+  dateLocale,
 }: {
   notification: BackendNotification;
   onOpen: (n: BackendNotification) => void;
+  t: Translate;
+  dateLocale: string;
 }) {
   const Icon = ICONS[notification.notification_type] ?? Bell;
   const tone = SEVERITY_TONE[notification.severity] ?? SEVERITY_TONE.info;
@@ -131,7 +136,7 @@ function NotificationRow({
           </span>
           {!notification.is_read && (
             <span
-              aria-label="Unread"
+              aria-label={t("bell.unread")}
               className={cn(
                 "mt-1.5 size-1.5 shrink-0 rounded-full",
                 critical ? "bg-risk-high" : "bg-primary",
@@ -143,7 +148,7 @@ function NotificationRow({
           {notification.message}
         </span>
         <span className="text-muted-foreground/60 mt-1 block text-xs">
-          {timeAgo(notification.created_at)}
+          {timeAgo(notification.created_at, t, dateLocale)}
         </span>
       </span>
     </button>
@@ -165,6 +170,8 @@ const POLL_INTERVAL_MS = 60_000;
 export function NotificationBell({ scope }: { scope: NotificationScope }) {
   const router = useRouter();
   const { accessToken } = useAuth();
+  // Only the Farmer screens are translated; LGU and admin stay in English.
+  const { t, dateLocale } = useLanguage(scope === "farmer");
   const [items, setItems] = useState<BackendNotification[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -235,11 +242,11 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
       setUnread(count);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load notifications.");
+      setError(err instanceof Error ? err.message : t("bell.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, scope, unreadOnly]);
+  }, [accessToken, scope, unreadOnly, t]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -365,7 +372,7 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
     >
       <Popover.Trigger
         className="text-muted-foreground hover:text-foreground border-border hover:bg-accent relative flex size-8 items-center justify-center rounded-lg border transition-colors"
-        aria-label={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
+        aria-label={unread > 0 ? t("bell.titleUnread", { count: unread }) : t("bell.title")}
       >
         <Bell className="size-4" />
         {unread > 0 && (
@@ -386,7 +393,7 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
           >
             <div className="border-border flex flex-col gap-2 border-b px-4 py-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">Notifications</span>
+                <span className="text-sm font-medium">{t("bell.title")}</span>
                 <div className="flex items-center gap-3">
                   {unread > 0 && (
                     <button
@@ -394,7 +401,7 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
                       onClick={handleMarkAll}
                       className="text-muted-foreground hover:text-foreground text-xs transition-colors"
                     >
-                      Mark all as read
+                      {t("bell.markAll")}
                     </button>
                   )}
                   <button
@@ -408,14 +415,10 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
                     }}
                     aria-pressed={soundEnabled}
                     aria-label={
-                      soundEnabled
-                        ? "Mute notification sound"
-                        : "Unmute notification sound"
+                      soundEnabled ? t("bell.mute") : t("bell.unmute")
                     }
                     title={
-                      soundEnabled
-                        ? "Notification sound on"
-                        : "Notification sound off"
+                      soundEnabled ? t("bell.soundOn") : t("bell.soundOff")
                     }
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -440,7 +443,7 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
                         : "border-border text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    {only ? `Unread${unread > 0 ? ` (${unread})` : ""}` : "All"}
+                    {only ? `${t("bell.unread")}${unread > 0 ? ` (${unread})` : ""}` : t("bell.all")}
                   </button>
                 ))}
               </div>
@@ -457,16 +460,16 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
                 <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
                   <Bell className="text-muted-foreground/50 size-5" />
                   <p className="text-sm font-medium">
-                    {unreadOnly ? "No unread notifications" : "No notifications yet"}
+                    {unreadOnly ? t("bell.noneUnread") : t("bell.none")}
                   </p>
                   <p className="text-muted-foreground max-w-[15rem] text-sm">
                     {unreadOnly
-                      ? "Everything here has been read."
+                      ? t("bell.allRead")
                       : scope === "admin"
                         ? "Farmer registrations and account changes will appear here."
                         : scope === "lgu"
                           ? "Farmer registrations, assessments and risk changes will appear here."
-                        : "Activity on your plants and assessments will appear here."}
+                        : t("bell.emptyFarmer")}
                   </p>
                 </div>
               ) : (
@@ -475,6 +478,8 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
                     key={notification.id}
                     notification={notification}
                     onOpen={handleOpen}
+                    t={t}
+                    dateLocale={dateLocale}
                   />
                 ))
               )}

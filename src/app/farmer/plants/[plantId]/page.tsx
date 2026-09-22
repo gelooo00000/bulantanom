@@ -23,6 +23,8 @@ import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { fetchPlant, type BackendPlant } from "@/lib/api/plants-api";
 import { fetchPlantAssessments } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { useLanguage } from "@/lib/i18n";
+import { plantStatusLabel } from "@/lib/plant-summary";
 
 export default function PlantDetailPage({
   params,
@@ -30,6 +32,8 @@ export default function PlantDetailPage({
   params: Promise<{ plantId: string }>;
 }) {
   const { plantId } = use(params);
+  const { t, dateLocale } = useLanguage();
+  const date = (iso: string) => formatDisplayDate(iso, dateLocale);
   const { data: plant, loading, error, refetch } = useAuthedQuery(
     (token) => fetchPlant(token, plantId),
     [plantId],
@@ -43,7 +47,7 @@ export default function PlantDetailPage({
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
         <LoaderCircle className="text-primary size-6 animate-spin" />
-        <p className="text-muted-foreground text-sm">Loading plant…</p>
+        <p className="text-muted-foreground text-sm">{t("detail.loading")}</p>
       </div>
     );
   }
@@ -54,14 +58,14 @@ export default function PlantDetailPage({
     return (
       <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
         <TriangleAlert className="text-risk-high size-5" />
-        <p className="text-sm font-medium">Unable to load this plant.</p>
+        <p className="text-sm font-medium">{t("detail.loadFailed")}</p>
         <p className="text-muted-foreground max-w-sm text-sm">
-          {error ?? "This plant could not be found in your records."}
+          {error ?? t("detail.notFound")}
         </p>
         <div className="flex gap-2">
-          <Button onClick={refetch}>Try again</Button>
+          <Button onClick={refetch}>{t("common.tryAgain")}</Button>
           <Button variant="outline" nativeButton={false} render={<Link href="/farmer/plants" />}>
-            Back to My Plants
+            {t("add.back")}
           </Button>
         </div>
       </div>
@@ -77,32 +81,42 @@ export default function PlantDetailPage({
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <PlantStat icon={CalendarDays} label="Planting date" value={formatDisplayDate(plant.planting_date)} />
-        <PlantStat icon={Clock} label="Current age" value={`${plant.age_days} days`} />
-        <PlantStat icon={Sprout} label="Status" value={plant.status_label} />
+        <PlantStat icon={CalendarDays} label={t("detail.plantingDate")} value={date(plant.planting_date)} />
         <PlantStat
-          icon={CalendarDays}
-          label="Harvest from"
-          value={formatDisplayDate(plant.expected_harvest_start)}
+          icon={Clock}
+          label={t("detail.age")}
+          value={t("detail.ageValue", { n: plant.age_days })}
+        />
+        <PlantStat
+          icon={Sprout}
+          label={t("detail.status")}
+          value={plant.is_planned ? t("plant.planned") : plantStatusLabel(plant, t)}
         />
         <PlantStat
           icon={CalendarDays}
-          label="Harvest until"
-          value={formatDisplayDate(plant.expected_harvest_end)}
+          label={t("detail.harvestFrom")}
+          value={date(plant.expected_harvest_start)}
+        />
+        <PlantStat
+          icon={CalendarDays}
+          label={t("detail.harvestUntil")}
+          value={date(plant.expected_harvest_end)}
         />
       </div>
 
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTab value="overview">Overview</TabsTab>
-          <TabsTab value="assessments">Assessments</TabsTab>
+          <TabsTab value="overview">{t("detail.overview")}</TabsTab>
+          <TabsTab value="assessments">{t("detail.assessments")}</TabsTab>
         </TabsList>
 
         <TabsPanel value="overview">
           <Card className="gap-3 py-5">
             <CardContent className="px-5">
               <h2 className="text-sm font-medium">
-                About {plant.variant ? plant.variant.name : plant.crop.name}
+                {t("detail.about", {
+                  name: plant.variant ? plant.variant.name : plant.crop.name,
+                })}
                 {plant.variant && (
                   <span className="text-muted-foreground font-normal">
                     {" "}
@@ -114,13 +128,11 @@ export default function PlantDetailPage({
                 {plant.variant?.description || plant.crop.description}
               </p>
               <p className="text-muted-foreground mt-3 text-sm">
-                Typical growing period{" "}
-                {plant.variant?.growing_duration_days ??
-                  plant.crop.growing_duration_days}{" "}
-                days, with a harvest window of about{" "}
-                {plant.variant?.harvest_window_days ?? plant.crop.harvest_window_days}{" "}
-                days. Actual timing varies with
-                {plant.variant ? " " : " variety, "}weather, soil and plant health.
+                {t(plant.variant ? "detail.typical" : "detail.typicalNoVariety", {
+                  growing:
+                    plant.variant?.growing_duration_days ?? plant.crop.growing_duration_days,
+                  window: plant.variant?.harvest_window_days ?? plant.crop.harvest_window_days,
+                })}
               </p>
 
               {/* How the month it was actually planted in suits this crop. */}
@@ -137,14 +149,14 @@ export default function PlantDetailPage({
           ) : !assessments || assessments.length === 0 ? (
             <EmptyState
               icon={Sprout}
-              title="No assessment yet"
-              description="Start this plant's first weekly assessment to get an AI risk reading."
+              title={t("detail.noAssessment")}
+              description={t("detail.noAssessmentText")}
               action={
                 <Button
                   nativeButton={false}
                   render={<Link href={`/farmer/plants/${plant.id}/assessment`} />}
                 >
-                  Start Weekly Assessment
+                  {t("detail.start")}
                   <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
                 </Button>
               }
@@ -173,6 +185,7 @@ export default function PlantDetailPage({
  */
 function AssessmentCta({ plant }: { plant: BackendPlant }) {
   const { can_assess, days_remaining } = plant.assessment_eligibility;
+  const { t } = useLanguage();
 
   if (can_assess) {
     return (
@@ -180,7 +193,7 @@ function AssessmentCta({ plant }: { plant: BackendPlant }) {
         nativeButton={false}
         render={<Link href={`/farmer/plants/${plant.id}/assessment`} />}
       >
-        Start Weekly Assessment
+        {t("detail.start")}
         <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
       </Button>
     );
@@ -190,10 +203,12 @@ function AssessmentCta({ plant }: { plant: BackendPlant }) {
     <div className="flex flex-col items-start gap-1">
       <Button disabled>
         <CalendarCheck className="size-4" />
-        Assessment Completed
+        {t("detail.completed")}
       </Button>
       <span className="text-muted-foreground text-xs">
-        Next assessment in {days_remaining} {days_remaining === 1 ? "day" : "days"}
+        {days_remaining === 1
+          ? t("detail.nextInOne")
+          : t("detail.nextIn", { n: days_remaining })}
       </span>
     </div>
   );

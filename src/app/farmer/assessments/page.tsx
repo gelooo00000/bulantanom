@@ -10,11 +10,13 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { fetchFarmerRiskHistory } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export default function AssessmentHistoryPage() {
   const { data, loading, error, refetch } = useAuthedQuery(fetchFarmerRiskHistory);
   const [riskFilter, setRiskFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
+  const { t } = useLanguage();
 
   // History only grows, so without this the readings worth revisiting sink
   // below weeks of routine low-risk entries.
@@ -25,30 +27,30 @@ export default function AssessmentHistoryPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Assessment History"
-        description="All weekly assessments you have submitted, newest first."
+        title={t("history.title")}
+        description={t("history.description")}
       />
 
       {loading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
           <LoaderCircle className="text-primary size-6 animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading your assessments…</p>
+          <p className="text-muted-foreground text-sm">{t("history.loading")}</p>
         </div>
       ) : error ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">Unable to connect to BulanTanom.</p>
+          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground text-sm">{error}</p>
-          <Button onClick={refetch}>Try again</Button>
+          <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="No assessments submitted yet"
-          description="Submit a weekly assessment for one of your plants to start building a history."
+          title={t("history.emptyTitle")}
+          description={t("history.emptyText")}
           action={
             <Button nativeButton={false} render={<Link href="/farmer/plants" />}>
-              Go to My Plants
+              {t("history.goToPlants")}
               <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
             </Button>
           }
@@ -58,8 +60,10 @@ export default function AssessmentHistoryPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-sm">
               {shown.length === data.length
-                ? `${data.length} ${data.length === 1 ? "assessment" : "assessments"}`
-                : `${shown.length} of ${data.length} assessments`}
+                ? data.length === 1
+                  ? t("history.countOne")
+                  : t("history.count", { n: data.length })
+                : t("history.countOf", { shown: shown.length, total: data.length })}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {(["ALL", "HIGH", "MEDIUM", "LOW"] as const).map((value) => (
@@ -74,7 +78,15 @@ export default function AssessmentHistoryPage() {
                       : "border-border text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {value === "ALL" ? "All" : `${value.charAt(0)}${value.slice(1).toLowerCase()} risk`}
+                  {value === "ALL"
+                    ? t("history.all")
+                    : t(
+                        value === "HIGH"
+                          ? "risk.highRisk"
+                          : value === "MEDIUM"
+                            ? "risk.mediumRisk"
+                            : "risk.lowRisk",
+                      )}
                 </button>
               ))}
             </div>
@@ -83,8 +95,8 @@ export default function AssessmentHistoryPage() {
           {shown.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
-              title="No assessments at this risk level"
-              description="Try a different filter to see your other readings."
+              title={t("history.noneAtLevel")}
+              description={t("history.tryFilter")}
             />
           ) : (
             shown.map((assessment) => (

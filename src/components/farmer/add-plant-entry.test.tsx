@@ -9,23 +9,16 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
 }));
 
-/**
- * The Base UI menu popup does not open under jsdom, so what is pinned here
- * is the part that has to be right regardless of the popup: two separately
- * labelled controls rather than one ambiguous one, and a main action that
- * goes straight to the add flow without the farmer opening a menu first.
- */
-
 describe("AddPlantButton", () => {
-  it("exposes the two halves as separately named controls", () => {
+  it("is a single Add Plant button, with no menu of other ways in", () => {
     render(<AddPlantButton />);
     expect(screen.getByRole("button", { name: "Add Plant" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "More ways to add plants" }),
-    ).toBeInTheDocument();
+    // Duplicate, add several and CSV import were never built; they are gone.
+    expect(screen.queryByRole("button", { name: "More ways to add plants" })).toBeNull();
+    expect(screen.queryByText(/Duplicate existing plant|Add several at once|Import from CSV/)).toBeNull();
   });
 
-  it("starts the add flow from the main half, no menu needed", async () => {
+  it("starts the add flow", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
     push.mockClear();
@@ -34,13 +27,6 @@ describe("AddPlantButton", () => {
     await user.click(screen.getByRole("button", { name: "Add Plant" }));
 
     expect(push).toHaveBeenCalledWith("/farmer/plants/new");
-  });
-
-  it("keeps the two halves as real buttons, never nested", () => {
-    // A button inside a button is invalid HTML and announces as one control.
-    const { container } = render(<AddPlantButton />);
-    expect(container.querySelector("button button")).toBeNull();
-    expect(container.querySelector("a button")).toBeNull();
   });
 });
 

@@ -30,6 +30,11 @@ export type BackendRisk = {
 /** Server-decided weekly-assessment schedule. Never computed in the browser. */
 export type AssessmentEligibility = {
   can_assess: boolean;
+  /**
+   * True for a planned planting (planting date still ahead): nothing to
+   * assess yet, and `next_assessment_date` is the planting date.
+   */
+  planned?: boolean;
   last_assessment_date: string | null;
   next_assessment_date: string | null;
   days_remaining: number;

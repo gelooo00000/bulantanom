@@ -1,15 +1,15 @@
 "use client";
 
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6].map((day) => `weekday.${day}` as MessageKey);
+// How far ahead of the current month the calendar can be browsed.
+const BROWSE_AHEAD_MONTHS = 12;
+const MONTHS = Array.from({ length: 12 }, (_, month) => `month.${month}` as MessageKey);
 
 /** Local-time YYYY-MM-DD — avoids the UTC shift `toISOString()` introduces. */
 function toIsoDate(date: Date): string {
@@ -34,10 +34,11 @@ function parseIsoDate(value: string): Date | null {
   return date;
 }
 
-export function formatDisplayDate(value: string): string {
+/** `locale` comes from `useLanguage().dateLocale` on translated screens. */
+export function formatDisplayDate(value: string, locale = "en-PH"): string {
   const date = parseIsoDate(value);
   if (!date) return value;
-  return date.toLocaleDateString("en-PH", {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -48,10 +49,10 @@ export function formatDisplayDate(value: string): string {
  * Short form for chart axes, where a full "February 14, 2026" would collide
  * with its neighbour. The full date is still what tooltips and tables show.
  */
-export function formatShortDate(value: string): string {
+export function formatShortDate(value: string, locale = "en-PH"): string {
   const date = parseIsoDate(value);
   if (!date) return value;
-  return date.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+  return date.toLocaleDateString(locale, { month: "short", day: "numeric" });
 }
 
 type DatePickerProps = {
@@ -67,6 +68,14 @@ type DatePickerProps = {
    * heading around.
    */
   compact?: boolean;
+  /**
+   * Which edge of the trigger the calendar lines up with. "start" (the
+   * default) opens it rightwards from the trigger's left edge; "end" opens
+   * it leftwards from the right edge — for a trigger at the right of a card,
+   * where opening rightwards pushes the calendar off the card and the screen
+   * (and the page shifts sideways to make room).
+   */
+  align?: "start" | "end";
 };
 
 export function DatePicker({
@@ -74,9 +83,11 @@ export function DatePicker({
   value,
   onChange,
   max,
-  placeholder = "Select a date",
+  placeholder,
   compact = false,
+  align = "start",
 }: DatePickerProps) {
+  const { t, dateLocale } = useLanguage();
   const [open, setOpen] = useState(false);
   const selected = parseIsoDate(value);
   const maxDate = max ? parseIsoDate(max) : null;
@@ -100,24 +111,55 @@ export function DatePicker({
     };
   }, [open]);
 
-  const grid = useMemo(() => {
-    const year = viewDate.getFullYear();
-    const month = viewDate.getMonth();
-    const firstWeekday = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const cells: (Date | null)[] = Array(firstWeekday).fill(null);
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      cells.push(new Date(year, month, day));
-    }
-    return cells;
-  }, [viewDate]);
+  // The calendar never goes back before the current month: it opens on this
+  // month at the earliest, and "Previous", the month list and the year list
+  // all stop there. Worked out from today's date on every render, so the
+  // limit moves forward on its own when the month changes.
+  const today = new Date();
+  const earliest = new Date(today.getFullYear(), today.getMonth(), 1);
+  // Browsing forward is allowed for a year — September on to January and
+  // beyond. `max` does not stop the browsing; it only greys out the days
+  // after it.
+  const latest = new Date(earliest.getFullYear(), earliest.getMonth() + BROWSE_AHEAD_MONTHS, 1);
 
-  const years = useMemo(() => {
-    const current = new Date().getFullYear();
-    return Array.from({ length: 30 }, (_, i) => current - i);
-  }, []);
+  /** Any month, pulled back inside earliest..latest. */
+  function clampMonth(date: Date): Date {
+    const first = new Date(date.getFullYear(), date.getMonth(), 1);
+    if (first < earliest) return earliest;
+    if (first > latest) return latest;
+    return first;
+  }
+
+  const shownMonth = clampMonth(viewDate);
+  const canGoBack = shownMonth > earliest;
+  const canGoForward = shownMonth < latest;
+  const shownYear = shownMonth.getFullYear();
+  const shownMonthIndex = shownMonth.getMonth();
+
+  // At most 42 cells, so it is simply built each render.
+  const firstWeekday = new Date(shownYear, shownMonthIndex, 1).getDay();
+  const daysInMonth = new Date(shownYear, shownMonthIndex + 1, 0).getDate();
+  const grid: (Date | null)[] = Array(firstWeekday).fill(null);
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    grid.push(new Date(shownYear, shownMonthIndex, day));
+  }
+
+  const years = Array.from(
+    { length: latest.getFullYear() - earliest.getFullYear() + 1 },
+    (_, i) => earliest.getFullYear() + i,
+  );
+
+  function monthOutOfRange(month: number): boolean {
+    const first = new Date(shownMonth.getFullYear(), month, 1);
+    return first < earliest || first > latest;
+  }
+
+  // The first day that can be picked is today: tomorrow, today's date greys
+  // out on its own. Days after `max`, when a caller passes one, are also out.
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   function isDisabled(date: Date) {
+    if (date < startOfToday) return true;
     return maxDate ? date > maxDate : false;
   }
 
@@ -139,50 +181,56 @@ export function DatePicker({
         <span className={cn("truncate", !value && "text-muted-foreground")}>
           {value
             ? compact
-              ? formatShortDate(value)
-              : formatDisplayDate(value)
-            : placeholder}
+              ? formatShortDate(value, dateLocale)
+              : formatDisplayDate(value, dateLocale)
+            : (placeholder ?? t("calendar.placeholder"))}
         </span>
       </button>
 
       {open && (
         <div
           role="dialog"
-          aria-label="Choose planting date"
-          className="border-border bg-popover absolute z-50 mt-2 w-[19rem] rounded-xl border p-3 shadow-lg"
+          aria-label={t("calendar.dialog")}
+          className={cn(
+            "border-border bg-popover absolute z-50 mt-2 w-[19rem] max-w-[calc(100vw-2rem)] rounded-xl border p-3 shadow-lg",
+            align === "end" ? "right-0" : "left-0",
+          )}
         >
           <div className="flex items-center gap-2">
             <button
               type="button"
-              aria-label="Previous month"
-              onClick={() =>
-                setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))
-              }
-              className="hover:bg-accent text-muted-foreground hover:text-foreground rounded-md p-1.5"
+              aria-label={t("calendar.previous")}
+              disabled={!canGoBack}
+              onClick={() => setViewDate(clampMonth(new Date(shownYear, shownMonthIndex - 1, 1)))}
+              className="hover:bg-accent text-muted-foreground hover:text-foreground rounded-md p-1.5 disabled:pointer-events-none disabled:opacity-30"
             >
               <ChevronLeft className="size-4" />
             </button>
 
             <select
-              aria-label="Month"
-              value={viewDate.getMonth()}
-              onChange={(e) =>
-                setViewDate(new Date(viewDate.getFullYear(), Number(e.target.value), 1))
-              }
+              aria-label={t("calendar.month")}
+              value={shownMonthIndex}
+              onChange={(e) => setViewDate(clampMonth(new Date(shownYear, Number(e.target.value), 1)))}
               className="border-border bg-background flex-1 rounded-md border px-2 py-1 text-sm outline-none"
             >
-              {MONTHS.map((label, index) => (
-                <option key={label} value={index}>
-                  {label}
-                </option>
-              ))}
+              {/* Only the months that can be shown: in the current year that
+                  starts at this month, so earlier ones are not listed at all. */}
+              {MONTHS.map((label, index) =>
+                monthOutOfRange(index) ? null : (
+                  <option key={label} value={index}>
+                    {t(label)}
+                  </option>
+                ),
+              )}
             </select>
 
             <select
-              aria-label="Year"
-              value={viewDate.getFullYear()}
+              aria-label={t("calendar.year")}
+              value={shownYear}
               onChange={(e) =>
-                setViewDate(new Date(Number(e.target.value), viewDate.getMonth(), 1))
+                // A month that does not exist in the new year's range (e.g.
+                // July of the current year) is pulled back inside it.
+                setViewDate(clampMonth(new Date(Number(e.target.value), shownMonthIndex, 1)))
               }
               className="border-border bg-background rounded-md border px-2 py-1 text-sm outline-none"
             >
@@ -195,11 +243,10 @@ export function DatePicker({
 
             <button
               type="button"
-              aria-label="Next month"
-              onClick={() =>
-                setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))
-              }
-              className="hover:bg-accent text-muted-foreground hover:text-foreground rounded-md p-1.5"
+              aria-label={t("calendar.next")}
+              disabled={!canGoForward}
+              onClick={() => setViewDate(clampMonth(new Date(shownYear, shownMonthIndex + 1, 1)))}
+              className="hover:bg-accent text-muted-foreground hover:text-foreground rounded-md p-1.5 disabled:pointer-events-none disabled:opacity-30"
             >
               <ChevronRight className="size-4" />
             </button>
@@ -211,7 +258,7 @@ export function DatePicker({
                 key={day}
                 className="text-muted-foreground py-1 text-center text-[11px] font-medium"
               >
-                {day}
+                {t(day)}
               </div>
             ))}
             {grid.map((date, index) => {
@@ -250,7 +297,7 @@ export function DatePicker({
             }}
             className="text-primary mt-2 w-full rounded-md py-1.5 text-sm hover:underline"
           >
-            Today
+            {t("common.today")}
           </button>
         </div>
       )}

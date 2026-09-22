@@ -20,38 +20,12 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 
 from django.conf import settings
 
+from .gemini_models import generate_with_fallback
+
 logger = logging.getLogger(__name__)
-
-# Gemini returns 429/503 when the model is momentarily saturated. Those fail
-# in about a second, so retrying is nearly free. A read timeout is NOT
-# retried: it has already consumed the whole timeout budget, and a second
-# attempt would double the farmer's wait for little gain — the honest
-# "analysis unavailable" state plus the reanalyze endpoint handles it better.
-GEMINI_MAX_ATTEMPTS = 3
-GEMINI_RETRY_DELAY_SECONDS = 1.5
-_RETRYABLE_MARKERS = (
-    "429",
-    "503",
-    "504",
-    "UNAVAILABLE",
-    "DEADLINE_EXCEEDED",
-    "RESOURCE_EXHAUSTED",
-    "overloaded",
-)
-
-
-def _is_retryable(exc: Exception) -> bool:
-    """True for transient upstream saturation, not timeouts or bad requests."""
-    if "timeout" in type(exc).__name__.lower():
-        return False
-    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
-    if code in (429, 503, 504):
-        return True
-    return any(marker in str(exc) for marker in _RETRYABLE_MARKERS)
 
 RESPONSE_SCHEMA = {
     "type": "object",
@@ -321,29 +295,16 @@ def evaluate_assessment(assessment) -> dict | None:
         ),
     )
 
-    response = None
-    for attempt in range(GEMINI_MAX_ATTEMPTS):
-        try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL, contents=parts, config=config
-            )
-            break
-        except Exception as exc:
-            # 429/503 mean the model is momentarily busy, not that the
-            # request is wrong — worth one short retry before giving up.
-            retryable = _is_retryable(exc)
-            logger.warning(
-                "Gemini risk evaluation failed (attempt %d/%d, retryable=%s): %s: %s",
-                attempt + 1,
-                GEMINI_MAX_ATTEMPTS,
-                retryable,
-                type(exc).__name__,
-                exc,
-            )
-            if not retryable or attempt == GEMINI_MAX_ATTEMPTS - 1:
-                return None
-            time.sleep(GEMINI_RETRY_DELAY_SECONDS * (attempt + 1))
+    # An overloaded (503) or out-of-quota (429) model is skipped for the next
+    # configured one; retrying the same model only burns its daily quota.
+    try:
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    except Exception as exc:
+        logger.warning("Gemini client could not be created: %s", type(exc).__name__)
+        return None
+    response, model = generate_with_fallback(
+        client, contents=parts, config=config, label="risk evaluation"
+    )
 
     if response is None:
         return None
@@ -366,4 +327,6 @@ def evaluate_assessment(assessment) -> dict | None:
         return None
 
     validated["image_analyzed"] = image_analyzed
+    # The model that actually answered, recorded on the RiskAssessment.
+    validated["model_name"] = model
     return validated

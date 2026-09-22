@@ -7,11 +7,7 @@ import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
 import { FarmAlerts } from "@/components/farmer/farm-alerts";
 import { HarvestSchedule } from "@/components/farmer/harvest-schedule";
 import type { BackendPlant } from "@/lib/api/plants-api";
-import type {
-  AssessmentTrend,
-  CropSuggestions,
-  UpcomingHarvest,
-} from "@/lib/api/dashboard-api";
+import type { AssessmentTrend, UpcomingHarvest } from "@/lib/api/dashboard-api";
 
 /**
  * These pin the dashboard's central promise: it shows what the farm actually
@@ -75,119 +71,10 @@ describe("AssessmentTrendChart", () => {
   });
 });
 
-const NO_SUGGESTIONS: CropSuggestions = {
-  has_any: false,
-  recorded_on: null,
-  crops: [],
-};
-
-const SUGGESTED: CropSuggestions = {
-  has_any: true,
-  recorded_on: "2026-09-19",
-  crops: [
-    {
-      id: "pineapple",
-      name: "Pineapple",
-      emoji: "🍍",
-      reason: "Suited to the acidic soil pH you recorded.",
-      planting_months: [2, 3, 4, 5, 6, 7, 8],
-      caution_months: [9, 1],
-    },
-    {
-      id: "eggplant",
-      name: "Eggplant",
-      emoji: "🍆",
-      reason: "Tolerates the moisture measured.",
-      planting_months: [2, 3, 4, 5],
-      caution_months: [6, 7, 8, 1],
-    },
-  ],
-};
-
 describe("CropSuggestionsCard", () => {
-  // "Today" is fixed so the card's default date is deterministic. Without
-  // it the answer changes with the month the suite happens to run in, and
-  // every assertion below would have to be written as a maybe.
+  // "Today" is fixed so the card's default date is deterministic.
   afterEach(() => {
     vi.useRealTimers();
-  });
-
-  function renderOn(iso: string, suggestions = SUGGESTED) {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date(`${iso}T08:00:00`));
-    return render(<CropSuggestionsCard suggestions={suggestions} />);
-  }
-
-  it("lists the crops worth planting on the date shown", () => {
-    // March: both crops are in their planting window.
-    renderOn("2026-03-15");
-    expect(screen.getByRole("link", { name: /Pineapple/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Eggplant/ })).toBeInTheDocument();
-  });
-
-  it("drops crops that are out of season for that date", () => {
-    // October sits in Bulan's rainfall and typhoon peak.
-    renderOn("2026-10-15");
-    expect(screen.queryByRole("link", { name: /Pineapple/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Eggplant/ })).not.toBeInTheDocument();
-  });
-
-  it("says so plainly when nothing is in season, rather than sitting empty", () => {
-    renderOn("2026-10-15");
-    expect(
-      screen.getByText(/None of your soil's crops are in season in October/),
-    ).toBeInTheDocument();
-  });
-
-  it("offers a calendar in place of the old link", () => {
-    renderOn("2026-03-15");
-    const picker = screen.getByRole("button", { name: /Mar 15/ });
-    expect(picker).toHaveAttribute("aria-haspopup", "dialog");
-  });
-
-  it("carries the crop and the chosen date into Add Plant", () => {
-    renderOn("2026-03-15");
-    expect(screen.getByRole("link", { name: /Pineapple/ })).toHaveAttribute(
-      "href",
-      "/farmer/plants/new?crop=pineapple&date=2026-03-15",
-    );
-  });
-
-  it("says why each crop suits the soil", () => {
-    renderOn("2026-03-15");
-    expect(
-      screen.getByText("Suited to the acidic soil pH you recorded."),
-    ).toBeInTheDocument();
-  });
-
-  it("dates the soil reading the advice came from", () => {
-    renderOn("2026-03-15");
-    expect(screen.getByText(/September 19, 2026/)).toBeInTheDocument();
-  });
-
-  it("announces the list when the date changes", () => {
-    renderOn("2026-03-15");
-    expect(screen.getByRole("status")).toBeInTheDocument();
-  });
-
-  it("invites a first reading when there is nothing to suggest", () => {
-    render(<CropSuggestionsCard suggestions={NO_SUGGESTIONS} />);
-    expect(
-      screen.getByText(/Enter your soil detector readings/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Get recommendation" }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows no calendar before there is anything to filter", () => {
-    render(<CropSuggestionsCard suggestions={NO_SUGGESTIONS} />);
-    expect(screen.queryByRole("button", { name: /Pick a date/ })).not.toBeInTheDocument();
-  });
-
-  it("does not present AI advice as a substitute for an agriculturist", () => {
-    renderOn("2026-03-15");
-    expect(screen.getByText(/LGU agriculturist/)).toBeInTheDocument();
   });
 
   // Only the fields the card reads; the rest of a plant is irrelevant here.
@@ -207,49 +94,93 @@ describe("CropSuggestionsCard", () => {
     } as BackendPlant;
   }
 
-  function renderWithPlants(
-    iso: string,
-    plants: BackendPlant[],
-    suggestions = SUGGESTED,
-  ) {
+  const PLANTS = [
+    plantedOn(7, "Pineapple", "2026-09-19"),
+    plantedOn(8, "Banana", "2026-09-19"),
+    plantedOn(9, "Okra", "2026-09-18"),
+  ];
+
+  function renderOn(iso: string, plants: BackendPlant[] = PLANTS) {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(`${iso}T08:00:00`));
-    return render(
-      <CropSuggestionsCard suggestions={suggestions} plants={plants} />,
-    );
+    return render(<CropSuggestionsCard plants={plants} />);
   }
 
-  it("shows the plants that were planted on the picked date", () => {
-    renderWithPlants("2026-09-19", [
-      plantedOn(7, "Pineapple", "2026-09-19"),
-      plantedOn(8, "Okra", "2026-09-18"),
-    ]);
-    expect(screen.getByText(/Planted on September 19, 2026/)).toBeInTheDocument();
-    // Pineapple is also in season in September, so it can appear twice; the
-    // planted one is the one that opens the farmer's own plant.
-    const planted = screen.getByRole("region", { name: "Planted on this date" });
-    expect(within(planted).getByRole("link", { name: /Pineapple/ })).toHaveAttribute(
+  it("shows only the plants planted on the picked date", () => {
+    renderOn("2026-09-19");
+    expect(screen.getByText("Planted on September 19, 2026 · 2 plants")).toBeInTheDocument();
+    const list = screen.getByRole("list", { name: "Planted on this date" });
+    expect(within(list).getByRole("link", { name: /Pineapple/ })).toHaveAttribute(
       "href",
       "/farmer/plants/7",
     );
+    expect(within(list).getByRole("link", { name: /Banana/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Okra/ })).not.toBeInTheDocument();
   });
 
-  it("leaves archived plants out of what was planted", () => {
-    renderWithPlants("2026-09-19", [
-      plantedOn(7, "Pineapple", "2026-09-19", "ARCHIVED"),
-    ]);
-    expect(screen.queryByText(/Planted on/)).not.toBeInTheDocument();
+  it("no longer lists crops to plant — only what was planted", () => {
+    renderOn("2026-09-19");
+    expect(screen.queryByText(/Suited to plant in/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/LGU agriculturist/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
 
-  it("offers the calendar for planted days even before a soil reading", () => {
-    renderWithPlants(
-      "2026-09-19",
-      [plantedOn(7, "Pineapple", "2026-09-19")],
-      NO_SUGGESTIONS,
+  it("says plainly when nothing was planted that day", () => {
+    renderOn("2026-09-20");
+    expect(screen.getByText("Nothing was planted on September 20, 2026.")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+
+  it("calls a future day's plants planned, not planted", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderOn("2026-09-19", [
+      plantedOn(7, "Pineapple", "2026-09-19"),
+      { ...plantedOn(8, "Corn", "2026-09-25"), is_planned: true },
+    ]);
+    await user.click(screen.getByRole("button", { name: /Sep 19/ }));
+    await user.click(screen.getByRole("button", { name: "25" }));
+    expect(screen.getByText("Planned for September 25, 2026 · 1 plant")).toBeInTheDocument();
+    expect(screen.getByText("Planned")).toBeInTheDocument();
+  });
+
+  it("says nothing is planned for an empty future day", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderOn("2026-09-19");
+    await user.click(screen.getByRole("button", { name: /Sep 19/ }));
+    await user.click(screen.getByRole("button", { name: "28" }));
+    expect(screen.getByText("Nothing is planned for September 28, 2026.")).toBeInTheDocument();
+  });
+
+  it("leaves archived plants out", () => {
+    renderOn("2026-09-19", [plantedOn(7, "Pineapple", "2026-09-19", "ARCHIVED")]);
+    expect(screen.queryByRole("link", { name: /Pineapple/ })).not.toBeInTheDocument();
+  });
+
+  it("offers the calendar, opening on today", () => {
+    renderOn("2026-09-19");
+    const picker = screen.getByRole("button", { name: /Sep 19/ });
+    expect(picker).toHaveAttribute("aria-haspopup", "dialog");
+  });
+
+  it("opens the calendar from the right edge, so it stays inside the card", async () => {
+    // Regression: opening from the trigger's left edge pushed the calendar
+    // past the card and off the screen, and the page shifted sideways.
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderOn("2026-09-19");
+    await user.click(screen.getByRole("button", { name: /Sep 19/ }));
+    const calendar = screen.getByRole("dialog", { name: "Choose planting date" });
+    expect(calendar).toHaveClass("right-0");
+    expect(calendar).not.toHaveClass("left-0");
+  });
+
+  it("invites a first plant when there are none, with no calendar", () => {
+    renderOn("2026-09-19", []);
+    expect(screen.getByText(/Plants you add will appear here/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add a plant" })).toHaveAttribute(
+      "href",
+      "/farmer/plants/new",
     );
-    expect(screen.getByRole("button", { name: /Sep 19/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Pineapple/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Sep 19/ })).not.toBeInTheDocument();
   });
 });
 

@@ -17,7 +17,7 @@ import type {
   SoilCropSuggestion,
   SoilRecommendation,
 } from "@/lib/api/soil-api";
-import { SOIL_STRINGS as t } from "@/lib/soil-options";
+import { useSoilStrings } from "@/lib/soil-options";
 
 /**
  * Renders exactly the six Gemini sections — nothing more. Each is a titled
@@ -117,6 +117,7 @@ function WarningList({ items, emptyText }: { items: SoilAdvice[]; emptyText: str
 }
 
 export function SoilResultCard({ result }: { result: SoilRecommendation }) {
+  const t = useSoilStrings();
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2">

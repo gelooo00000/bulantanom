@@ -16,12 +16,25 @@ import { cn } from "@/lib/utils";
 
 export type NavItem = { label: string; href: string; icon: ElementType };
 
+/** The shell's own words, for a role whose screens are translated. */
+export type ShellCopy = { logOut: string; more: string; farm: string; weather: string };
+
+const ENGLISH_COPY: ShellCopy = {
+  logOut: "Log out",
+  more: "More",
+  farm: "Layuan Farm",
+  weather: "28°C · Partly sunny",
+};
+
 type RoleShellProps = {
   roleLabel: string;
   navItems: NavItem[];
   homeHref: string;
   /** Which API prefix the bell reads from. Omit to hide the bell. */
   notificationScope?: NotificationScope;
+  copy?: ShellCopy;
+  /** Extra header controls, placed before the bell. */
+  headerActions?: ReactNode;
   children: ReactNode;
 };
 
@@ -30,6 +43,8 @@ export function RoleShell({
   navItems,
   homeHref,
   notificationScope,
+  copy = ENGLISH_COPY,
+  headerActions,
   children,
 }: RoleShellProps) {
   const pathname = usePathname();
@@ -93,7 +108,7 @@ export function RoleShell({
             className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
           >
             <LogOut className="size-3.5" />
-            Log out
+            {copy.logOut}
           </button>
         </div>
       </aside>
@@ -102,13 +117,14 @@ export function RoleShell({
         <header className="border-border bg-background/80 sticky top-0 z-10 flex items-center gap-4 border-b px-6 py-2.5 text-sm backdrop-blur-md">
           <span className="text-muted-foreground flex items-center gap-1.5">
             <MapPin className="size-3.5" />
-            Layuan Farm
+            {copy.farm}
           </span>
           <span className="text-muted-foreground hidden items-center gap-1.5 sm:flex">
             <Sun className="size-3.5" />
-            28°C · Partly sunny
+            {copy.weather}
           </span>
           <div className="ml-auto flex items-center gap-2">
+            {headerActions}
             {/* Admin has no notification events of its own, so the bell is
                 rendered only for the roles that actually receive them. */}
             {notificationScope && <NotificationBell scope={notificationScope} />}
@@ -141,7 +157,7 @@ export function RoleShell({
             <MenuPrimitive.Root>
               <MenuPrimitive.Trigger className="text-muted-foreground flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] font-medium">
                 <EllipsisVertical className="size-5" />
-                More
+                {copy.more}
               </MenuPrimitive.Trigger>
               <MenuPrimitive.Portal>
                 <MenuPrimitive.Positioner side="top" align="end" sideOffset={8}>
@@ -166,7 +182,7 @@ export function RoleShell({
                       className="hover:bg-accent flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm outline-none"
                     >
                       <LogOut className="size-4" />
-                      Log out
+                      {copy.logOut}
                     </MenuPrimitive.Item>
                   </MenuPrimitive.Popup>
                 </MenuPrimitive.Positioner>

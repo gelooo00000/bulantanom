@@ -176,24 +176,33 @@ def generate_crop_intelligence(
         logger.exception("google-genai SDK unavailable.")
         return None
 
+    # When GEMINI_MODEL is overloaded (503 "high demand") or out of its daily
+    # quota (429), the next configured model is tried instead of telling the
+    # Farmer the AI is unavailable.
+    from .gemini_models import generate_with_fallback
+
     try:
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=_build_prompt(crop, planting_date, harvest_start, harvest_end),
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
-                response_mime_type="application/json",
-                response_schema=RESPONSE_SCHEMA,
-                temperature=0.3,
-                http_options=types.HttpOptions(
-                    timeout=settings.GEMINI_TIMEOUT_SECONDS * 1000
-                ),
-            ),
-        )
     except Exception as exc:
-        # Never log the key; log only the exception type/message.
-        logger.warning("Gemini request failed: %s: %s", type(exc).__name__, exc)
+        logger.warning("Gemini client could not be created: %s", type(exc).__name__)
+        return None
+
+    response, model = generate_with_fallback(
+        client,
+        contents=_build_prompt(crop, planting_date, harvest_start, harvest_end),
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+            response_mime_type="application/json",
+            response_schema=RESPONSE_SCHEMA,
+            temperature=0.3,
+            http_options=types.HttpOptions(
+                timeout=settings.GEMINI_TIMEOUT_SECONDS * 1000
+            ),
+        ),
+        label="crop intelligence",
+    )
+
+    if response is None:
         return None
 
     parsed = getattr(response, "parsed", None)
@@ -213,6 +222,9 @@ def generate_crop_intelligence(
     validated = _validate(parsed)
     if validated is None:
         logger.warning("Gemini response failed schema validation.")
+        return None
+    # The model that actually answered, so the cached row records it truthfully.
+    validated["model_name"] = model
     return validated
 
 
@@ -242,7 +254,7 @@ def get_or_create_crop_intelligence(crop, force_refresh: bool = False):
             "care_guidance": data["care_guidance"],
             "harvest_guidance": data["harvest_guidance"],
             "important_factors": data["important_factors"],
-            "model_name": settings.GEMINI_MODEL,
+            "model_name": data.get("model_name", settings.GEMINI_MODEL),
             "generated_at": timezone.now(),
         },
     )

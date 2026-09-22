@@ -70,11 +70,19 @@ export function previousPh(
   return null;
 }
 
-/** A record worth an Officer's look: soil outside 6.0–7.0, or AI warnings. */
-export function needsAttention(record: LguSoilRecommendation): boolean {
-  const band = phBand(phValue(record));
-  const offBand = band !== "IDEAL" && band !== "NONE";
-  return offBand || record.important_warnings.length > 0;
+/**
+ * Soil at Layuan (Bulan, Sorsogon — lowland tropics) sits roughly in the
+ * mid-20s to mid-30s °C all year. A reading far outside this window is far
+ * more likely a detector or typing error than real soil, and advice built on
+ * it (frost protection, say) would be wrong — so it is flagged for checking.
+ */
+export const PLAUSIBLE_SOIL_TEMP_C = { min: 15, max: 45 } as const;
+
+export function temperatureNeedsCheck(temperature: string | null): boolean {
+  if (temperature === null || temperature === "") return false;
+  const value = Number(temperature);
+  if (!Number.isFinite(value)) return false;
+  return value < PLAUSIBLE_SOIL_TEMP_C.min || value > PLAUSIBLE_SOIL_TEMP_C.max;
 }
 
 export function recommendedCrops(record: LguSoilRecommendation) {

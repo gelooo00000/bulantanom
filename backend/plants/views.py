@@ -251,7 +251,8 @@ def _run_risk_evaluation(assessment):
         limitations=result["limitations"],
         next_assessment_days=result["next_assessment_days"],
         image_analyzed=result["image_analyzed"],
-        model_name=settings.GEMINI_MODEL,
+        # A fallback model may have answered when GEMINI_MODEL was busy.
+        model_name=result.get("model_name", settings.GEMINI_MODEL),
     )
 
 
@@ -414,8 +415,12 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
             return Response(
                 {
                     "detail": (
-                        "You have already completed this week's assessment for this "
-                        f"plant. The next one is available on "
+                        "This plant is planned for "
+                        f"{schedule['next_assessment_date']} and is not in the ground "
+                        "yet. You can assess it from that day."
+                        if schedule.get("planned")
+                        else "You have already completed this week's assessment for "
+                        f"this plant. The next one is available on "
                         f"{schedule['next_assessment_date']}."
                     ),
                     "assessment_eligibility": schedule,

@@ -30,58 +30,61 @@ import {
   type EvidenceValidation,
 } from "@/lib/api/risk-api";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 
-type Option = { value: string; label: string };
+type Option = { value: string; label: MessageKey };
 
+// The values are what Django stores; only the labels are translated.
 const GROWTH: Option[] = [
-  { value: "faster_than_expected", label: "Faster than expected" },
-  { value: "as_expected", label: "About as expected" },
-  { value: "slower_than_expected", label: "Slower than expected" },
-  { value: "stunted", label: "Stunted / barely growing" },
+  { value: "faster_than_expected", label: "opt.growth.faster_than_expected" },
+  { value: "as_expected", label: "opt.growth.as_expected" },
+  { value: "slower_than_expected", label: "opt.growth.slower_than_expected" },
+  { value: "stunted", label: "opt.growth.stunted" },
 ];
 const HEALTH: Option[] = [
-  { value: "healthy", label: "Healthy" },
-  { value: "slightly_unhealthy", label: "Slightly unhealthy" },
-  { value: "unhealthy", label: "Unhealthy" },
+  { value: "healthy", label: "opt.health.healthy" },
+  { value: "slightly_unhealthy", label: "opt.health.slightly_unhealthy" },
+  { value: "unhealthy", label: "opt.health.unhealthy" },
 ];
 const LEAF: Option[] = [
-  { value: "healthy", label: "Healthy green leaves" },
-  { value: "slight_yellowing", label: "Slight yellowing" },
-  { value: "yellowing", label: "Noticeable yellowing" },
-  { value: "spots", label: "Spots or lesions" },
-  { value: "wilting", label: "Wilting or drooping" },
-  { value: "damaged", label: "Visible damage / holes" },
+  { value: "healthy", label: "opt.leaf.healthy" },
+  { value: "slight_yellowing", label: "opt.leaf.slight_yellowing" },
+  { value: "yellowing", label: "opt.leaf.yellowing" },
+  { value: "spots", label: "opt.leaf.spots" },
+  { value: "wilting", label: "opt.leaf.wilting" },
+  { value: "damaged", label: "opt.leaf.damaged" },
 ];
 const FLOWERING: Option[] = [
-  { value: "not_flowering", label: "Not flowering" },
-  { value: "starting", label: "Starting to flower" },
-  { value: "flowering", label: "Flowering" },
-  { value: "finished", label: "Flowering finished" },
+  { value: "not_flowering", label: "opt.flowering.not_flowering" },
+  { value: "starting", label: "opt.flowering.starting" },
+  { value: "flowering", label: "opt.flowering.flowering" },
+  { value: "finished", label: "opt.flowering.finished" },
 ];
 const FRUITING: Option[] = [
-  { value: "not_fruiting", label: "Not fruiting" },
-  { value: "forming", label: "Fruit forming" },
-  { value: "developing", label: "Fruit developing" },
-  { value: "ripening", label: "Fruit ripening" },
+  { value: "not_fruiting", label: "opt.fruiting.not_fruiting" },
+  { value: "forming", label: "opt.fruiting.forming" },
+  { value: "developing", label: "opt.fruiting.developing" },
+  { value: "ripening", label: "opt.fruiting.ripening" },
 ];
 const WATERING: Option[] = [
-  { value: "daily", label: "Daily" },
-  { value: "every_other_day", label: "Every other day" },
-  { value: "twice_weekly", label: "Twice a week" },
-  { value: "weekly", label: "Weekly" },
-  { value: "rain_fed", label: "Rain-fed only" },
+  { value: "daily", label: "opt.watering.daily" },
+  { value: "every_other_day", label: "opt.watering.every_other_day" },
+  { value: "twice_weekly", label: "opt.watering.twice_weekly" },
+  { value: "weekly", label: "opt.watering.weekly" },
+  { value: "rain_fed", label: "opt.watering.rain_fed" },
 ];
 const SOIL: Option[] = [
-  { value: "dry", label: "Dry" },
-  { value: "slightly_dry", label: "Slightly dry" },
-  { value: "moist", label: "Moist" },
-  { value: "wet", label: "Wet" },
-  { value: "waterlogged", label: "Waterlogged" },
+  { value: "dry", label: "opt.soil.dry" },
+  { value: "slightly_dry", label: "opt.soil.slightly_dry" },
+  { value: "moist", label: "opt.soil.moist" },
+  { value: "wet", label: "opt.soil.wet" },
+  { value: "waterlogged", label: "opt.soil.waterlogged" },
 ];
 
-function label(options: Option[], value: string | null, placeholder: string) {
-  return options.find((o) => o.value === value)?.label ?? placeholder;
+function label(options: Option[], value: string | null, placeholder: string, t: Translate) {
+  const option = options.find((o) => o.value === value);
+  return option ? t(option.label) : placeholder;
 }
 
 function FormSection({
@@ -117,17 +120,18 @@ function Choice({
   options: Option[];
   placeholder: string;
 }) {
+  const { t } = useLanguage();
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger id={id}>
         <SelectValue placeholder={placeholder}>
-          {(v: string) => label(options, v, placeholder)}
+          {(v: string) => label(options, v, placeholder, t)}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
-            {option.label}
+            {t(option.label)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -154,6 +158,7 @@ export function AssessmentForm({
   onLocked?: (eligibility: AssessmentEligibility) => void;
 }) {
   const { accessToken } = useAuth();
+  const { t } = useLanguage();
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<BackendAssessment | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +207,7 @@ export function AssessmentForm({
       setError(
         err instanceof Error
           ? err.message
-          : "Plant evidence could not be verified right now. Please try again in a moment.",
+          : t("asmt.verifyFailed"),
       );
       setStatus("idle");
       return;
@@ -255,7 +260,7 @@ export function AssessmentForm({
           return;
         }
       }
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : t("asmt.wentWrong"));
       setStatus("idle");
     }
   }
@@ -264,9 +269,9 @@ export function AssessmentForm({
     return (
       <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-10 text-center">
         <ScanEye className="text-primary size-6 animate-pulse" />
-        <p className="text-sm font-medium">Checking plant evidence…</p>
+        <p className="text-sm font-medium">{t("asmt.checking")}</p>
         <p className="text-muted-foreground max-w-sm text-sm">
-          We&apos;re verifying that your photo matches the selected crop.
+          {t("asmt.checkingText")}
         </p>
       </div>
     );
@@ -278,10 +283,10 @@ export function AssessmentForm({
         {evidenceResult && <EvidenceVerdict result={evidenceResult} />}
         <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-10 text-center">
           <LoaderCircle className="text-primary size-6 animate-spin" />
-          <p className="text-sm font-medium">Evaluating {plantLabel}…</p>
+          <p className="text-sm font-medium">{t("asmt.evaluating", { name: plantLabel })}</p>
           <ul className="text-muted-foreground space-y-1 text-sm">
-            <li>Comparing actual condition with expected development</li>
-            <li>Generating risk evaluation</li>
+            <li>{t("asmt.step1")}</li>
+            <li>{t("asmt.step2")}</li>
           </ul>
         </div>
       </div>
@@ -295,7 +300,7 @@ export function AssessmentForm({
         <RiskInfoNote />
         <div className="flex flex-wrap gap-2">
           <Button nativeButton={false} render={<Link href={`/farmer/plants/${plantId}`} />}>
-            Back to plant
+            {t("lock.backToPlant")}
             <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>
           <Button
@@ -303,7 +308,7 @@ export function AssessmentForm({
             nativeButton={false}
             render={<Link href="/farmer/risk-indicator" />}
           >
-            Risk Indicator
+            {t("nav.risk")}
           </Button>
         </div>
       </div>
@@ -312,88 +317,88 @@ export function AssessmentForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <FormSection title="Growth" description="How the plant has developed this week.">
+      <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="height">Plant height (cm, optional)</Label>
+            <Label htmlFor="height">{t("asmt.height")}</Label>
             <Input
               id="height"
               type="number"
               min={0}
               step={0.1}
-              placeholder="e.g. 45"
+              placeholder={t("asmt.heightExample")}
               value={height}
               onChange={(e) => setHeight(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="growth">Growth compared with expected</Label>
+            <Label htmlFor="growth">{t("asmt.growthCompared")}</Label>
             <Choice
               id="growth"
               value={growth}
               onChange={setGrowth}
               options={GROWTH}
-              placeholder="Select"
+              placeholder={t("asmt.select")}
             />
           </div>
         </div>
       </FormSection>
 
-      <FormSection title="Plant health" description="Overall condition and what the leaves look like.">
+      <FormSection title={t("asmt.health")} description={t("asmt.healthText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="health">Overall health</Label>
-            <Choice id="health" value={health} onChange={setHealth} options={HEALTH} placeholder="Select" />
+            <Label htmlFor="health">{t("asmt.overallHealth")}</Label>
+            <Choice id="health" value={health} onChange={setHealth} options={HEALTH} placeholder={t("asmt.select")} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="leaf">Leaf condition</Label>
-            <Choice id="leaf" value={leaf} onChange={setLeaf} options={LEAF} placeholder="Select" />
+            <Label htmlFor="leaf">{t("asmt.leaf")}</Label>
+            <Choice id="leaf" value={leaf} onChange={setLeaf} options={LEAF} placeholder={t("asmt.select")} />
           </div>
         </div>
       </FormSection>
 
-      <FormSection title="Flowering & fruiting" description="Leave blank if not applicable yet.">
+      <FormSection title={t("asmt.flowerFruit")} description={t("asmt.blankIfNA")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="flowering">Flowering status</Label>
-            <Choice id="flowering" value={flowering} onChange={setFlowering} options={FLOWERING} placeholder="Select" />
+            <Label htmlFor="flowering">{t("asmt.flowering")}</Label>
+            <Choice id="flowering" value={flowering} onChange={setFlowering} options={FLOWERING} placeholder={t("asmt.select")} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="fruiting">Fruiting status</Label>
-            <Choice id="fruiting" value={fruiting} onChange={setFruiting} options={FRUITING} placeholder="Select" />
+            <Label htmlFor="fruiting">{t("asmt.fruiting")}</Label>
+            <Choice id="fruiting" value={fruiting} onChange={setFruiting} options={FRUITING} placeholder={t("asmt.select")} />
           </div>
         </div>
       </FormSection>
 
-      <FormSection title="Water & soil" description="How the plant has been watered and how the soil feels.">
+      <FormSection title={t("asmt.waterSoil")} description={t("asmt.waterSoilText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="watering">Watering frequency</Label>
-            <Choice id="watering" value={watering} onChange={setWatering} options={WATERING} placeholder="Select" />
+            <Label htmlFor="watering">{t("asmt.watering")}</Label>
+            <Choice id="watering" value={watering} onChange={setWatering} options={WATERING} placeholder={t("asmt.select")} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="soil">Soil moisture</Label>
-            <Choice id="soil" value={soil} onChange={setSoil} options={SOIL} placeholder="Select" />
+            <Label htmlFor="soil">{t("asmt.soil")}</Label>
+            <Choice id="soil" value={soil} onChange={setSoil} options={SOIL} placeholder={t("asmt.select")} />
           </div>
         </div>
       </FormSection>
 
-      <FormSection title="Symptoms" description="Leave blank if you haven't noticed anything.">
+      <FormSection title={t("asmt.symptoms")} description={t("asmt.symptomsText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="pest">Pest observations</Label>
-            <Textarea id="pest" placeholder="None observed" value={pest} onChange={(e) => setPest(e.target.value)} />
+            <Label htmlFor="pest">{t("asmt.pest")}</Label>
+            <Textarea id="pest" placeholder={t("asmt.noneObserved")} value={pest} onChange={(e) => setPest(e.target.value)} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="disease">Disease-like symptoms</Label>
-            <Textarea id="disease" placeholder="None observed" value={disease} onChange={(e) => setDisease(e.target.value)} />
+            <Label htmlFor="disease">{t("asmt.disease")}</Label>
+            <Textarea id="disease" placeholder={t("asmt.noneObserved")} value={disease} onChange={(e) => setDisease(e.target.value)} />
           </div>
         </div>
       </FormSection>
 
       <FormSection
-        title="Plant condition evidence"
-        description={`A clear photo of your ${cropName.toLowerCase()} is required. We check that it matches the crop before evaluating risk.`}
+        title={t("asmt.evidence")}
+        description={t("asmt.evidenceText", { crop: cropName.toLowerCase() })}
       >
         <EvidenceUpload ref={uploadRef} file={evidence} onChange={changeEvidence} />
         {evidenceResult && (
@@ -404,24 +409,25 @@ export function AssessmentForm({
         )}
       </FormSection>
 
-      <FormSection title="Observations" description="Anything else worth noting.">
+      <FormSection title={t("asmt.observations")} description={t("asmt.observationsText")}>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="environment">Environmental observations</Label>
+          <Label htmlFor="environment">{t("asmt.environment")}</Label>
           <Textarea
             id="environment"
-            placeholder="e.g. Heavy rain the past few days"
+            placeholder={t("asmt.environmentExample")}
             value={environment}
             onChange={(e) => setEnvironment(e.target.value)}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="notes">What have you noticed about your plant this week?</Label>
+          <Label htmlFor="notes">{t("asmt.notes")}</Label>
           <Textarea
             id="notes"
-            placeholder="In your own words, describe anything that concerns you about this plant."
+            placeholder={t("asmt.notesPlaceholder")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
+          <p className="text-muted-foreground text-xs">{t("asmt.anyLanguage")}</p>
         </div>
       </FormSection>
 
@@ -429,12 +435,12 @@ export function AssessmentForm({
 
       <div className="flex flex-col gap-2">
         <Button type="submit" size="lg" disabled={!canSubmit} className="self-start">
-          Submit Assessment
+          {t("asmt.submit")}
           <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
         </Button>
         {!evidence && (
           <p className="text-muted-foreground text-sm">
-            Add a plant photo to submit this assessment.
+            {t("asmt.needPhoto")}
           </p>
         )}
       </div>

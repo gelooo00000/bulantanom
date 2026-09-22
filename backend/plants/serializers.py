@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.utils import timezone
 from rest_framework import serializers
 
 from . import crop_calendar
@@ -164,6 +163,7 @@ class PlantSerializer(serializers.ModelSerializer):
     planting_advice = serializers.SerializerMethodField()
     display_name = serializers.CharField(read_only=True)
     age_days = serializers.IntegerField(read_only=True)
+    is_planned = serializers.BooleanField(read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     assessment_eligibility = serializers.SerializerMethodField()
 
@@ -184,6 +184,7 @@ class PlantSerializer(serializers.ModelSerializer):
             "status",
             "status_label",
             "age_days",
+            "is_planned",
             "assessment_eligibility",
             "created_at",
             "updated_at",
@@ -198,6 +199,7 @@ class PlantSerializer(serializers.ModelSerializer):
             "expected_harvest_end",
             "status_label",
             "age_days",
+            "is_planned",
             "assessment_eligibility",
             "created_at",
             "updated_at",
@@ -228,11 +230,10 @@ class PlantSerializer(serializers.ModelSerializer):
     def validate_planting_date(self, value):
         if value is None:
             raise serializers.ValidationError("Please select a valid planting date.")
-        # A plant record represents something already in the ground, so a
-        # future planting date is rejected. (DRF already rejects malformed
-        # and impossible calendar dates such as 2026-02-31.)
-        if value > timezone.localdate():
-            raise serializers.ValidationError("Planting date cannot be in the future.")
+        # A future date is a planned planting: the plant is "planned" until
+        # that day, and cannot be assessed before it (see
+        # assessment_schedule.eligibility). DRF already rejects malformed and
+        # impossible calendar dates such as 2026-02-31.
         # Guard against obvious typos like year 1900.
         if value.year < 1980:
             raise serializers.ValidationError("Please enter a more recent planting date.")

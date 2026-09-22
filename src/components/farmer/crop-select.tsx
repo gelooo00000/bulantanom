@@ -13,11 +13,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { BackendCrop, CropVariant } from "@/lib/api/plants-api";
+import { useLanguage, type MessageKey } from "@/lib/i18n";
 
 const CATEGORY_ORDER: BackendCrop["category"][] = ["fruit", "vegetable"];
-const CATEGORY_LABEL: Record<BackendCrop["category"], string> = {
-  fruit: "Fruits",
-  vegetable: "Vegetables & Crops",
+const CATEGORY_LABEL: Record<BackendCrop["category"], MessageKey> = {
+  fruit: "cropSelect.fruit",
+  vegetable: "cropSelect.vegetable",
 };
 
 /**
@@ -66,6 +67,7 @@ type CropSelectProps = {
 
 export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps) {
   const [query, setQuery] = useState("");
+  const { t } = useLanguage();
 
   const groups = useMemo(
     () =>
@@ -89,7 +91,7 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
       }}
     >
       <SelectTrigger id={id}>
-        <SelectValue placeholder="Select a crop">
+        <SelectValue placeholder={t("cropSelect.placeholder")}>
           {() =>
             selectedCrop ? (
               <span className="flex items-center gap-2">
@@ -97,7 +99,7 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
                 {selectedCrop.name}
               </span>
             ) : (
-              "Select a crop"
+              t("cropSelect.placeholder")
             )
           }
         </SelectValue>
@@ -114,8 +116,8 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
               // Base UI Select runs its own typeahead on keydown; without
               // this the popup would jump around while typing here.
               onKeyDown={(event) => event.stopPropagation()}
-              placeholder="Search crops…"
-              aria-label="Search crops"
+              placeholder={t("cropSelect.search")}
+              aria-label={t("cropSelect.searchLabel")}
               className="border-border bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border pr-2 pl-8 text-sm outline-none focus-visible:ring-3"
             />
           </div>
@@ -125,7 +127,7 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
           {groups.length > 0 ? (
             groups.map(({ category, crops: groupCrops }) => (
               <SelectGroup key={category}>
-                <SelectGroupLabel>{CATEGORY_LABEL[category]}</SelectGroupLabel>
+                <SelectGroupLabel>{t(CATEGORY_LABEL[category])}</SelectGroupLabel>
                 {groupCrops.map(({ crop, via }) => (
                   <SelectItem key={crop.id} value={crop.id}>
                     {/* Emoji is a visual aid only — the name is always shown. */}
@@ -147,7 +149,7 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
             ))
           ) : (
             <p className="text-muted-foreground px-2 py-6 text-center text-sm">
-              No crops match “{query}”.
+              {t("cropSelect.noMatch", { query })}
             </p>
           )}
         </div>

@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, CircleCheck, Info, OctagonAlert, TriangleAlert } from "lucide-react";
 import type { ElementType } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import type { FarmAlert } from "@/lib/api/dashboard-api";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * What needs the farmer's attention right now.
@@ -47,6 +50,7 @@ type FarmAlertsProps = {
 };
 
 export function FarmAlerts({ alerts, hasPlants }: FarmAlertsProps) {
+  const { t } = useLanguage();
   if (!hasPlants) return null;
 
   if (alerts.length === 0) {
@@ -54,17 +58,15 @@ export function FarmAlerts({ alerts, hasPlants }: FarmAlertsProps) {
       <Card className="gap-0 py-4">
         <CardContent className="flex items-center gap-2.5 px-4">
           <CircleCheck className="text-risk-low size-4 shrink-0" aria-hidden="true" />
-          <p className="text-sm">
-            Nothing needs your attention right now.
-          </p>
+          <p className="text-sm">{t("alerts.none")}</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <section aria-label="Needs attention" className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">Needs attention</h2>
+    <section aria-label={t("alerts.title")} className="flex flex-col gap-2">
+      <h2 className="text-sm font-medium">{t("alerts.title")}</h2>
       <ul className="flex flex-col gap-2">
         {alerts.map((alert, index) => {
           const style = STYLES[alert.severity];

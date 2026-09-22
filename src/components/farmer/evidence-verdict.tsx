@@ -1,35 +1,38 @@
+"use client";
+
 import { CircleCheck, ImageOff, ScanEye, TriangleAlert } from "lucide-react";
 import type { ElementType } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { EvidenceValidation } from "@/lib/api/risk-api";
+import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const STYLES: Record<
   string,
-  { icon: ElementType; title: string; tone: string; border: string }
+  { icon: ElementType; title: MessageKey; tone: string; border: string }
 > = {
   match: {
     icon: CircleCheck,
-    title: "Plant Evidence Verified",
+    title: "verdict.match",
     tone: "text-risk-low",
     border: "border-risk-low/30 bg-risk-low/5",
   },
   mismatch: {
     icon: TriangleAlert,
-    title: "Evidence Doesn't Match",
+    title: "verdict.mismatch",
     tone: "text-risk-medium",
     border: "border-risk-medium/30 bg-risk-medium/5",
   },
   no_plant: {
     icon: ImageOff,
-    title: "Invalid Plant Evidence",
+    title: "verdict.no_plant",
     tone: "text-risk-high",
     border: "border-risk-high/30 bg-risk-high/5",
   },
   unclear: {
     icon: ScanEye,
-    title: "Photo Not Clear Enough",
+    title: "verdict.unclear",
     tone: "text-risk-medium",
     border: "border-risk-medium/30 bg-risk-medium/5",
   },
@@ -47,6 +50,7 @@ export function EvidenceVerdict({
   result: EvidenceValidation;
   onReplace?: () => void;
 }) {
+  const { t } = useLanguage();
   const style = STYLES[result.verdict] ?? STYLES.unclear;
   const Icon = style.icon;
 
@@ -55,7 +59,7 @@ export function EvidenceVerdict({
       <Icon className={cn("mt-0.5 size-4 shrink-0", style.tone)} />
       <div className="flex flex-col items-start gap-3">
         <div>
-          <p className="text-sm font-medium">{style.title}</p>
+          <p className="text-sm font-medium">{t(style.title)}</p>
           <p className="text-muted-foreground mt-1 text-sm">{result.reason}</p>
           {!result.evidence_valid && (
             <p className="text-muted-foreground mt-1 text-sm">{result.message}</p>
@@ -63,7 +67,7 @@ export function EvidenceVerdict({
         </div>
         {!result.evidence_valid && onReplace && (
           <Button type="button" size="sm" variant="outline" onClick={onReplace}>
-            Replace Image
+            {t("verdict.replace")}
           </Button>
         )}
       </div>

@@ -1,6 +1,9 @@
+"use client";
+
 import { CalendarCheck, CloudRain, TriangleAlert } from "lucide-react";
 
 import type { PlantingAdvice } from "@/lib/api/plants-api";
+import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,25 +20,25 @@ import { cn } from "@/lib/utils";
 
 const STYLES: Record<
   PlantingAdvice["status"],
-  { icon: typeof CalendarCheck; container: string; accent: string; label: string }
+  { icon: typeof CalendarCheck; container: string; accent: string; label: MessageKey }
 > = {
   good: {
     icon: CalendarCheck,
     container: "border-risk-low/30 bg-risk-low/5",
     accent: "text-risk-low",
-    label: "In season",
+    label: "season.good",
   },
   caution: {
     icon: CloudRain,
     container: "border-risk-medium/30 bg-risk-medium/5",
     accent: "text-risk-medium",
-    label: "Outside the ideal window",
+    label: "season.caution",
   },
   poor: {
     icon: TriangleAlert,
     container: "border-risk-high/30 bg-risk-high/5",
     accent: "text-risk-high",
-    label: "Not the season for this crop",
+    label: "season.poor",
   },
 };
 
@@ -45,6 +48,7 @@ type PlantingSeasonNoteProps = {
 };
 
 export function PlantingSeasonNote({ advice, className }: PlantingSeasonNoteProps) {
+  const { t } = useLanguage();
   // No window on record for this crop — say nothing rather than guess.
   if (!advice) return null;
 
@@ -63,7 +67,7 @@ export function PlantingSeasonNote({ advice, className }: PlantingSeasonNoteProp
         <Icon className={cn("mt-0.5 size-4 shrink-0", style.accent)} aria-hidden="true" />
         <div className="flex flex-col gap-1">
           <p className="text-sm leading-snug font-medium">
-            <span className={cn("sr-only")}>{style.label}. </span>
+            <span className={cn("sr-only")}>{t(style.label)}. </span>
             {advice.headline}
           </p>
           {advice.detail && (
@@ -73,7 +77,7 @@ export function PlantingSeasonNote({ advice, className }: PlantingSeasonNoteProp
           )}
           {advice.preferred_months.length > 0 && advice.status !== "good" && (
             <p className="text-muted-foreground text-xs">
-              Usually planted here in{" "}
+              {t("season.usually")}{" "}
               <span className="text-foreground font-medium">
                 {advice.preferred_label}
               </span>

@@ -15,6 +15,7 @@ import { fetchPlants } from "@/lib/api/plants-api";
 import { fetchFarmerRisk } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * The Farmer dashboard: an overview, not a second copy of the navigation.
@@ -34,6 +35,7 @@ import { useAuth } from "@/lib/auth/auth-context";
  */
 export default function FarmerDashboardPage() {
   const { currentUser } = useAuth();
+  const { t } = useLanguage();
   const {
     data: dashboard,
     loading,
@@ -46,13 +48,13 @@ export default function FarmerDashboardPage() {
   // Lets the soil card show what was planted on the day the farmer picks.
   const { data: plants } = useAuthedQuery(fetchPlants);
 
-  const firstName = currentUser?.firstName ?? "Farmer";
+  const firstName = currentUser?.firstName ?? t("shell.role");
 
   if (loading) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
         <LoaderCircle className="text-primary size-6 animate-spin" />
-        <p className="text-muted-foreground text-sm">Loading your farm data…</p>
+        <p className="text-muted-foreground text-sm">{t("dash.loading")}</p>
       </div>
     );
   }
@@ -61,15 +63,14 @@ export default function FarmerDashboardPage() {
     return (
       <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
         <TriangleAlert className="text-risk-high size-5" />
-        <p className="text-sm font-medium">Unable to connect to BulanTanom.</p>
+        <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
         <p className="text-muted-foreground max-w-sm text-sm">{error}</p>
-        <Button onClick={refetch}>Try again</Button>
+        <Button onClick={refetch}>{t("common.tryAgain")}</Button>
       </div>
     );
   }
 
-  const { overview, assessment_trend, crop_suggestions, upcoming_harvests, alerts } =
-    dashboard;
+  const { overview, assessment_trend, upcoming_harvests, alerts } = dashboard;
   // `overview` is no longer rendered; its plant count still decides whether
   // this is a working farm or a first-run empty state.
   const hasPlants = overview.plant_count > 0;
@@ -81,21 +82,21 @@ export default function FarmerDashboardPage() {
           className="text-xs font-medium tracking-[0.2em] uppercase"
           style={{ color: "var(--landing-accent)" }}
         >
-          Layuan Farm · AI Farm Intelligence
+          {t("dash.eyebrow")}
         </p>
         <h1 className="mt-1 text-2xl font-medium tracking-tight">
-          Welcome, {firstName}.
+          {t("dash.welcome", { name: firstName })}
         </h1>
       </div>
 
       {!hasPlants ? (
         <EmptyState
           icon={Sprout}
-          title="You haven't added any plants yet"
-          description="Add your first plant to start tracking its growth, risk, and harvest window."
+          title={t("dash.emptyTitle")}
+          description={t("dash.emptyText")}
           action={
             <Button nativeButton={false} render={<Link href="/farmer/plants/new" />}>
-              Add Your First Plant
+              {t("dash.addFirst")}
               <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
             </Button>
           }
@@ -106,15 +107,15 @@ export default function FarmerDashboardPage() {
 
           {/* The existing Low / Medium / High breakdown, reused as-is. */}
           {risk && (
-            <section aria-label="Crop risk" className="flex flex-col gap-2">
+            <section aria-label={t("dash.cropRisk")} className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium">Crop risk</h2>
+                <h2 className="text-sm font-medium">{t("dash.cropRisk")}</h2>
                 <Link
                   href="/farmer/risk-indicator"
                   className="flex items-center gap-1 text-sm"
                   style={{ color: "var(--landing-accent)" }}
                 >
-                  Details
+                  {t("dash.details")}
                   <ArrowRight className="size-3.5" />
                 </Link>
               </div>
@@ -127,10 +128,7 @@ export default function FarmerDashboardPage() {
             <HarvestSchedule harvests={upcoming_harvests} />
           </div>
 
-          <CropSuggestionsCard
-            suggestions={crop_suggestions}
-            plants={plants ?? []}
-          />
+          <CropSuggestionsCard plants={plants ?? []} />
         </>
       )}
     </div>

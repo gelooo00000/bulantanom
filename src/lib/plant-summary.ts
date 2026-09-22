@@ -1,4 +1,5 @@
 import type { BackendPlant } from "@/lib/api/plants-api";
+import { englishT, type Translate } from "@/lib/i18n";
 
 /**
  * How a plant describes itself on a card.
@@ -31,13 +32,14 @@ export function plantTitle(plant: BackendPlant): string {
  * said "Avocado". Every part here is dropped when it would be redundant or
  * is not recorded, so nothing renders as an empty separator.
  */
-export function plantSubtitle(plant: BackendPlant): string {
+export function plantSubtitle(plant: BackendPlant, t: Translate = englishT): string {
   const parts: string[] = [];
 
   // Only when the heading showed the variety — otherwise this repeats it.
   if (plant.variant) parts.push(plant.crop.name);
   if (plant.label.trim()) parts.push(plant.label.trim());
-  parts.push(plant.status_label);
+  // A planned planting is stored as Growing, but is not in the ground yet.
+  parts.push(plant.is_planned ? t("plant.planned") : plantStatusLabel(plant, t));
 
   return parts.join(" · ");
 }
@@ -48,8 +50,20 @@ export function plantSubtitle(plant: BackendPlant): string {
  * Fixes "1 days old", and treats a plant recorded on the day it went in as
  * "Planted today" rather than "0 days old", which reads like a missing value.
  */
-export function plantAgeLabel(ageDays: number): string {
-  if (ageDays <= 0) return "Planted today";
-  if (ageDays === 1) return "1 day old";
-  return `${ageDays} days old`;
+export function plantAgeLabel(ageDays: number, t: Translate = englishT): string {
+  if (ageDays <= 0) return t("age.today");
+  if (ageDays === 1) return t("age.one");
+  return t("age.many", { n: ageDays });
 }
+
+/** The status in the Farmer's language; Django's own label is English. */
+export function plantStatusLabel(plant: BackendPlant, t: Translate = englishT): string {
+  return plant.status in STATUS_KEYS ? t(STATUS_KEYS[plant.status]) : plant.status_label;
+}
+
+const STATUS_KEYS = {
+  GROWING: "status.GROWING",
+  READY_FOR_HARVEST: "status.READY_FOR_HARVEST",
+  HARVESTED: "status.HARVESTED",
+  ARCHIVED: "status.ARCHIVED",
+} as const;

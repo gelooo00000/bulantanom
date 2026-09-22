@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { UpcomingHarvest } from "@/lib/api/dashboard-api";
+import { useLanguage, type Translate } from "@/lib/i18n";
 
 /**
  * The next few harvest windows to open.
@@ -16,15 +19,15 @@ import type { UpcomingHarvest } from "@/lib/api/dashboard-api";
  * recomputed here from the browser clock.
  */
 
-function whenLabel(harvest: UpcomingHarvest): string {
-  if (harvest.in_window) return "Ready now";
-  if (harvest.days_away === 0) return "Today";
-  if (harvest.days_away === 1) return "Tomorrow";
-  if (harvest.days_away < 30) return `in ${harvest.days_away} days`;
+function whenLabel(harvest: UpcomingHarvest, t: Translate): string {
+  if (harvest.in_window) return t("when.readyNow");
+  if (harvest.days_away === 0) return t("when.today");
+  if (harvest.days_away === 1) return t("when.tomorrow");
+  if (harvest.days_away < 30) return t("when.days", { n: harvest.days_away });
   const months = Math.round(harvest.days_away / 30);
-  if (months < 12) return `in ${months} month${months === 1 ? "" : "s"}`;
+  if (months < 12) return months === 1 ? t("when.month") : t("when.months", { n: months });
   const years = Math.round(harvest.days_away / 365);
-  return `in ${years} year${years === 1 ? "" : "s"}`;
+  return years === 1 ? t("when.year") : t("when.years", { n: years });
 }
 
 type HarvestScheduleProps = {
@@ -32,18 +35,19 @@ type HarvestScheduleProps = {
 };
 
 export function HarvestSchedule({ harvests }: HarvestScheduleProps) {
+  const { t, dateLocale } = useLanguage();
   return (
     <Card className="gap-0 py-4">
       <CardContent className="px-4">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium">Harvest schedule</h2>
+          <h2 className="text-sm font-medium">{t("harvest.title")}</h2>
           {harvests.length > 0 && (
             <Link
               href="/farmer/harvest"
               className="flex shrink-0 items-center gap-1 text-xs"
               style={{ color: "var(--landing-accent)" }}
             >
-              All harvests
+              {t("harvest.all")}
               <ArrowRight className="size-3" />
             </Link>
           )}
@@ -51,7 +55,7 @@ export function HarvestSchedule({ harvests }: HarvestScheduleProps) {
 
         {harvests.length === 0 ? (
           <p className="text-muted-foreground mt-2 text-sm">
-            No harvests scheduled. Add a plant and its window will appear here.
+            {t("harvest.none")}
           </p>
         ) : (
           <ul className="mt-2 flex flex-col">
@@ -67,7 +71,7 @@ export function HarvestSchedule({ harvests }: HarvestScheduleProps) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm">{h.name}</span>
                     <span className="text-muted-foreground block text-xs">
-                      {formatDisplayDate(h.expected_harvest_start)}
+                      {formatDisplayDate(h.expected_harvest_start, dateLocale)}
                     </span>
                   </span>
                   <span
@@ -75,7 +79,7 @@ export function HarvestSchedule({ harvests }: HarvestScheduleProps) {
                       h.in_window ? "text-risk-low font-medium" : "text-muted-foreground"
                     }`}
                   >
-                    {whenLabel(h)}
+                    {whenLabel(h, t)}
                   </span>
                 </Link>
               </li>

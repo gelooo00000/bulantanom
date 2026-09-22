@@ -13,6 +13,8 @@
  * to say they do not know rather than being forced to invent a value.
  */
 
+import { englishT, useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
+
 export type SoilOption = { value: string; label: string };
 
 export const SOIL_TYPE_OPTIONS: SoilOption[] = [
@@ -173,16 +175,26 @@ export const SENSOR_FIELDS: SensorField[] = [
  * a value for every field, so a blank is an unfinished form, not a farmer
  * declining to answer.
  */
-export function validateReading(field: SensorField, raw: string): string | null {
+export function validateReading(
+  field: SensorField,
+  raw: string,
+  t: Translate = englishT,
+): string | null {
+  const label = sensorLabel(field, t);
   const text = raw.trim();
-  if (text === "") return `${field.label} is required.`;
+  if (text === "") return t("sensor.required", { label });
 
   const value = Number(text);
-  if (!Number.isFinite(value)) return `${field.label} must be a number.`;
+  if (!Number.isFinite(value)) return t("sensor.notNumber", { label });
   if (value < field.min || value > field.max) {
-    return `${field.label} must be between ${field.min} and ${field.max} ${field.unit}.`;
+    return t("sensor.outOfRange", { label, min: field.min, max: field.max, unit: field.unit });
   }
   return null;
+}
+
+/** A detector reading's name in the Farmer's language. */
+export function sensorLabel(field: SensorField, t: Translate = englishT): string {
+  return t(`sensor.${field.key}`);
 }
 
 export const SOIL_STRINGS = {
@@ -240,3 +252,16 @@ export const SOIL_STRINGS = {
   notAnalyzed:
     "No AI recommendation was generated for this assessment. Submit it to get crop suggestions.",
 } as const;
+
+export type SoilStrings = Record<keyof typeof SOIL_STRINGS, string>;
+
+/**
+ * `SOIL_STRINGS`, in the Farmer's language. Every entry has a
+ * `soil.<name>` message; a test keeps the two in step.
+ */
+export function useSoilStrings(): SoilStrings {
+  const { t } = useLanguage();
+  return Object.fromEntries(
+    Object.keys(SOIL_STRINGS).map((key) => [key, t(`soil.${key}` as MessageKey)]),
+  ) as SoilStrings;
+}

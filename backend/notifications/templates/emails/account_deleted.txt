@@ -1,0 +1,18 @@
+Hello {{ name }},
+
+Your BulanTanom {{ role_label }} account has been deleted by an administrator
+on {{ deleted_on }}. You can no longer sign in with it.
+
+Account Status: Deleted
+Role: {{ role_label }}
+{% if records %}
+These records were permanently deleted with the account:
+{% for record in records %}  - {{ record }}
+{% endfor %}{% else %}
+The account had no farm records.
+{% endif %}
+If you believe this is a mistake, contact your farm administrator. Deleted
+records cannot be restored, but you can register a new account.
+
+--
+BulanTanom will never ask you for your password by email.

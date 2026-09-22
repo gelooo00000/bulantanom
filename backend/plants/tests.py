@@ -87,13 +87,52 @@ class PlantCreationTests(PlantApiTestCase):
         self.assertEqual(plant.farmer.email, "farmer@example.com")
         self.assertEqual(victim.plants.count(), 0)
 
-    def test_future_planting_date_rejected(self):
-        future = (timezone.localdate() + timedelta(days=5)).isoformat()
+    def test_future_planting_date_is_accepted_as_a_planned_plant(self):
+        """
+        A farmer can schedule a planting: a future date is saved, the plant is
+        flagged as planned, and its harvest window is counted from that date.
+        """
+        planting = timezone.localdate() + timedelta(days=5)
         response = self.client.post(
-            PLANTS_URL, {"crop_id": "guava", "planting_date": future},
+            PLANTS_URL, {"crop_id": "guava", "planting_date": planting.isoformat()},
             format="json", **self.auth,
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["is_planned"])
+        self.assertEqual(response.data["age_days"], 0)
+        crop = Crop.objects.get(pk="guava")
+        self.assertEqual(
+            response.data["expected_harvest_start"],
+            (planting + timedelta(days=crop.growing_duration_days)).isoformat(),
+        )
+
+    def test_planned_plant_cannot_be_assessed_before_its_planting_date(self):
+        planting = timezone.localdate() + timedelta(days=5)
+        plant_id = self.client.post(
+            PLANTS_URL, {"crop_id": "guava", "planting_date": planting.isoformat()},
+            format="json", **self.auth,
+        ).data["id"]
+
+        schedule = self.client.get(f"{PLANTS_URL}{plant_id}/", **self.auth).data[
+            "assessment_eligibility"
+        ]
+        self.assertFalse(schedule["can_assess"])
+        self.assertTrue(schedule["planned"])
+        self.assertEqual(schedule["next_assessment_date"], planting.isoformat())
+        self.assertEqual(schedule["days_remaining"], 5)
+
+        response = self.client.post(f"{PLANTS_URL}{plant_id}/assessments/", {}, **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("not in the ground yet", response.data["detail"])
+
+    def test_a_plant_planted_today_is_not_planned(self):
+        response = self.client.post(
+            PLANTS_URL,
+            {"crop_id": "guava", "planting_date": timezone.localdate().isoformat()},
+            format="json", **self.auth,
+        )
+        self.assertFalse(response.data["is_planned"])
+        self.assertTrue(response.data["assessment_eligibility"]["can_assess"])
 
     def test_impossible_calendar_date_rejected(self):
         response = self.client.post(

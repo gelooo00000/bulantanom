@@ -37,6 +37,19 @@ def eligibility(plant, today=None) -> dict:
         days_remaining, interval_days
     """
     today = today or timezone.localdate()
+
+    # A planned planting is not in the ground yet, so there is nothing to
+    # assess: the first assessment opens on the planting date itself.
+    if plant.planting_date > today:
+        return {
+            "can_assess": False,
+            "planned": True,
+            "last_assessment_date": None,
+            "next_assessment_date": plant.planting_date.isoformat(),
+            "days_remaining": (plant.planting_date - today).days,
+            "interval_days": ASSESSMENT_INTERVAL_DAYS,
+        }
+
     latest = last_assessment_date(plant)
 
     if latest is None:

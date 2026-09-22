@@ -11,6 +11,7 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from notifications.emails import (
+    email_account_deleted,
     email_account_reactivated,
     email_account_suspended,
     email_farmer_approved,
@@ -320,6 +321,34 @@ class AdminUserListView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
 
+    def list(self, request, *args, **kwargs):
+        """
+        Each account plus what an Admin needs to act on it: the Farmer's
+        records (what a deletion would destroy), and whether the person is
+        using BulanTanom right now or when they last were.
+        """
+        from django.db.models import Count
+        from django.utils import timezone
+
+        from .presence import is_online
+
+        accounts = self.filter_queryset(self.get_queryset()).annotate(
+            plant_count=Count("plants", distinct=True),
+            assessment_count=Count("plants__assessments", distinct=True),
+            soil_record_count=Count("soil_recommendations", distinct=True),
+        )
+        now = timezone.now()
+        rows = []
+        for user in accounts:
+            row = self.get_serializer(user).data
+            row["plant_count"] = user.plant_count
+            row["assessment_count"] = user.assessment_count
+            row["soil_record_count"] = user.soil_record_count
+            row["is_online"] = is_online(user, now)
+            row["last_seen_at"] = user.last_seen_at.isoformat() if user.last_seen_at else None
+            rows.append(row)
+        return Response(rows)
+
     def get_queryset(self):
         queryset = User.objects.all()
         role = self.request.query_params.get("role")
@@ -542,17 +571,16 @@ def delete_account(request, user_id):
     """
     DELETE /api/admin/accounts/{id}/ — permanently remove an account.
 
-    Deliberately conservative. `Plant.farmer`, `SoilRecommendation.farmer` and
-    `Notification.recipient` all cascade, so deleting an active Farmer would
-    silently destroy their plants, weekly assessments, risk history and
-    evidence photos. That is agricultural history the farm cannot recreate,
-    and losing it to a mis-click is far worse than leaving a disabled account
-    in the table.
+    `Plant.farmer`, `SoilRecommendation.farmer` and `Notification.recipient`
+    all cascade, so deleting a Farmer who has records also destroys their
+    plants, weekly assessments, risk history and evidence photos — history
+    the farm cannot recreate.
 
-    So deletion is allowed only for accounts that own no such history —
-    typically a registration that was never approved. Anything else is
-    refused with 409 and the Admin is told to suspend instead, which the
-    permission layer already treats as a full lockout.
+    So an account with records is refused (409, with the counts) unless the
+    request carries `?include_records=true`, which the Admin screen sends
+    only after a confirmation that lists what will be lost and asks for the
+    account's email to be typed. Suspending remains the way to lock an
+    account out while keeping its history.
 
     An Admin can never delete their own account, and never another Admin.
     """
@@ -575,19 +603,36 @@ def delete_account(request, user_id):
             status=status.HTTP_403_FORBIDDEN,
         )
 
+    # An account that owns farm records is deleted only when the Admin has
+    # explicitly confirmed losing them (`?include_records=true`, sent after
+    # the confirmation that lists exactly what goes). Without it the request
+    # is refused with the counts, so a mis-click or an old client can never
+    # wipe a Farmer's history silently.
     history = _history_counts(user)
-    if any(history.values()):
+    include_records = request.query_params.get("include_records") == "true"
+    if any(history.values()) and not include_records:
         return Response(
             {
                 "detail": (
-                    "This account has farm records and cannot be deleted. "
-                    "Suspend it instead — a suspended account loses access "
-                    "immediately while its history is kept."
+                    "This account has farm records. Deleting it also permanently "
+                    "deletes them — confirm that to continue, or suspend the "
+                    "account instead to keep its history."
                 ),
                 "history": history,
             },
             status=status.HTTP_409_CONFLICT,
         )
+
+    # Evidence photos are files, not rows: the cascade removes the
+    # assessments but would leave their images behind in storage.
+    if history["assessments"]:
+        from plants.models import Assessment
+
+        for assessment in Assessment.objects.filter(plant__farmer=user).exclude(
+            evidence_image=""
+        ):
+            if assessment.evidence_image:
+                assessment.evidence_image.delete(save=False)
 
     # Snapshot before deleting — the row is gone by the time the audit
     # notification is emitted after commit.
@@ -599,6 +644,11 @@ def delete_account(request, user_id):
     }
     user.delete()
     notify_account_deleted(actor=request.user, **deleted)
+    # Tell the person too — by email, since their in-app inbox went with the
+    # account. Sent after commit, from the snapshot taken above.
+    email_account_deleted(
+        name=deleted["name"], email=deleted["email"], role=deleted["role"], history=history
+    )
     return Response(
         {"detail": f"{deleted['email']} has been deleted."}, status=status.HTTP_200_OK
     )

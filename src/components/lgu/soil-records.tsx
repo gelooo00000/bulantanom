@@ -1,27 +1,40 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronDown, Search, TriangleAlert, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  CircleAlert,
+  Droplets,
+  FlaskConical,
+  Search,
+  Sprout,
+  TriangleAlert,
+  X,
+} from "lucide-react";
+import type { ElementType } from "react";
 import { useId, useMemo, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import type { LguSoilRecommendation } from "@/lib/api/lgu-api";
 import {
   PH_BANDS,
+  PLAUSIBLE_SOIL_TEMP_C,
   latestPerFarmer,
   matchesFarmer,
-  needsAttention,
   phBand,
   phValue,
   previousPh,
   recommendedCrops,
+  temperatureNeedsCheck,
   type PhBand,
 } from "@/lib/lgu-soil-stats";
 import { cn } from "@/lib/utils";
 
 /**
  * The body of the LGU Crop Recommendation Records page: a one-line summary,
- * then every soil record — each Farmer's latest by default — searchable and
- * filterable to the ones that need a follow-up.
+ * then each Farmer's latest soil check, split into the ones the AI analysed
+ * and the ones it could not.
  */
 
 const BAND_CHIP: Record<PhBand, string> = {
@@ -32,7 +45,15 @@ const BAND_CHIP: Record<PhBand, string> = {
   NONE: "border-border text-muted-foreground",
 };
 
-type Status = "ALL" | "ATTENTION" | "NOT_ANALYZED";
+const BAND_TEXT: Record<PhBand, string> = {
+  TOO_ACIDIC: "text-risk-high",
+  SLIGHTLY_ACIDIC: "text-risk-medium",
+  IDEAL: "text-risk-low",
+  ALKALINE: "text-[var(--chart-series-1)]",
+  NONE: "text-muted-foreground",
+};
+
+type Status = "ANALYZED" | "NOT_ANALYZED";
 
 export function SoilRecords({ records }: { records: LguSoilRecommendation[] }) {
   const latest = useMemo(() => latestPerFarmer(records), [records]);
@@ -62,27 +83,25 @@ export function SoilRecords({ records }: { records: LguSoilRecommendation[] }) {
 
 /* ------------------------------------------------------------------- list */
 
+/**
+ * Each Farmer's latest soil check, in two tabs: the ones the AI analysed
+ * (the advice the Farmer received) and the ones it could not, which are the
+ * Farmers still waiting for advice.
+ */
 export function RecordList({ records }: { records: LguSoilRecommendation[] }) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<Status>("ALL");
-  const [history, setHistory] = useState(false);
+  const [status, setStatus] = useState<Status>("ANALYZED");
 
-  const base = useMemo(
-    () => (history ? records : latestPerFarmer(records)).filter((r) => matchesFarmer(r, query)),
-    [records, history, query],
+  const latest = useMemo(
+    () => latestPerFarmer(records).filter((r) => matchesFarmer(r, query)),
+    [records, query],
   );
-  const counts = {
-    ALL: base.length,
-    ATTENTION: base.filter(needsAttention).length,
-    NOT_ANALYZED: base.filter((r) => !r.ai_generated).length,
+  const counts: Record<Status, number> = {
+    ANALYZED: latest.filter((r) => r.ai_generated).length,
+    NOT_ANALYZED: latest.filter((r) => !r.ai_generated).length,
   };
-  const shown = base
-    .filter(
-      (r) =>
-        status === "ALL" ||
-        (status === "ATTENTION" && needsAttention(r)) ||
-        (status === "NOT_ANALYZED" && !r.ai_generated),
-    )
+  const shown = latest
+    .filter((r) => (status === "ANALYZED" ? r.ai_generated : !r.ai_generated))
     .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
 
   return (
@@ -110,52 +129,45 @@ export function RecordList({ records }: { records: LguSoilRecommendation[] }) {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter records">
-          {(
-            [
-              ["ALL", "All"],
-              ["ATTENTION", "Needs attention"],
-              ["NOT_ANALYZED", "Not analysed"],
-            ] as const
-          ).map(([value, text]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={status === value}
-              onClick={() => setStatus(value)}
-              className={cn(
-                "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
-                status === value
-                  ? "border-primary/50 bg-primary/10 text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {text}
-              <span className="text-muted-foreground ml-1.5 tabular-nums">{counts[value]}</span>
-            </button>
-          ))}
-        </div>
-
-        <label className="text-muted-foreground flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={history}
-            onChange={(e) => setHistory(e.target.checked)}
-            className="accent-[var(--primary)]"
-          />
-          Show every submission
-        </label>
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter records">
+        {(
+          [
+            ["ANALYZED", "Analysed"],
+            ["NOT_ANALYZED", "Not analysed"],
+          ] as const
+        ).map(([value, text]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={status === value}
+            onClick={() => setStatus(value)}
+            className={cn(
+              "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+              status === value
+                ? "border-primary/50 bg-primary/10 text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {text}
+            <span className="text-muted-foreground ml-1.5 tabular-nums">{counts[value]}</span>
+          </button>
+        ))}
       </div>
 
       <p className="text-muted-foreground text-sm" role="status">
-        {shown.length === 1 ? "1 record" : `${shown.length} records`}
-        {history ? " · newest first" : " · each farmer's latest"}
+        {shown.length === 1 ? "1 farmer" : `${shown.length} farmers`} · latest soil check
+        {status === "NOT_ANALYZED" &&
+          shown.length > 0 &&
+          " · these farmers are still waiting for AI advice"}
       </p>
 
       {shown.length === 0 ? (
         <div className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-10 text-center text-sm">
-          {query.trim() ? `No farmers match "${query.trim()}".` : "No records in this view."}
+          {query.trim()
+            ? `No farmers match "${query.trim()}".`
+            : status === "ANALYZED"
+              ? "No analysed soil checks yet."
+              : "Every farmer's latest soil check has AI advice."}
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -172,69 +184,6 @@ export function RecordList({ records }: { records: LguSoilRecommendation[] }) {
 
 /* ----------------------------------------------------------------- record */
 
-/** One reported soil property, hidden entirely when the Farmer said "Unknown". */
-function SoilFact({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: string | number | null;
-  unit?: string;
-}) {
-  if (value === null || value === "" || value === "Unknown") return null;
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="text-sm">
-        {value}
-        {unit ? <span className="text-muted-foreground ml-1 text-xs">{unit}</span> : null}
-      </span>
-    </div>
-  );
-}
-
-function CropList({ title, crops }: { title: string; crops: LguSoilRecommendation["suitable_fruits"] }) {
-  if (crops.length === 0) return null;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-muted-foreground text-xs">{title}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {crops.map((crop) => (
-          <span key={crop.id} title={crop.reason} className="border-border bg-card/60 rounded-lg border px-2 py-1 text-sm">
-            <span aria-hidden>{crop.emoji}</span> {crop.name}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AdviceList({
-  title,
-  items,
-  warning = false,
-}: {
-  title: string;
-  items: { recommendation: string }[];
-  warning?: boolean;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-muted-foreground text-xs">{title}</span>
-      <ul className={cn("flex flex-col gap-1 text-sm", warning ? "text-risk-medium" : "text-muted-foreground")}>
-        {items.map((item, i) => (
-          <li key={i} className="flex gap-2">
-            {warning ? <TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> : <span aria-hidden>•</span>}
-            <span>{item.recommendation}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 export function RecordCard({
   record,
   previous,
@@ -250,11 +199,8 @@ export function RecordCard({
   const bandLabel = PH_BANDS.find((b) => b.key === band)!.label;
   const crops = recommendedCrops(record);
   const warnings = record.important_warnings.length;
-  const submitted = new Date(record.created_at).toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const tempCheck = temperatureNeedsCheck(record.soil_temperature);
+  const submitted = new Date(record.created_at);
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
@@ -268,7 +214,7 @@ export function RecordCard({
         <div className="min-w-0 flex-1 basis-40">
           <p className="truncate text-sm font-medium">{record.farmer_name}</p>
           <p className="text-muted-foreground truncate text-xs">
-            {submitted}
+            {submitted.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
             {record.has_sensor_readings &&
               record.nitrogen !== null &&
               ` · N ${record.nitrogen} · P ${record.phosphorus ?? "—"} · K ${record.potassium ?? "—"}`}
@@ -307,64 +253,132 @@ export function RecordCard({
           </span>
         )}
 
+        {tempCheck && (
+          <span className="text-risk-high flex shrink-0 items-center gap-1 text-xs font-medium">
+            <CircleAlert className="size-3.5" />
+            Check reading
+          </span>
+        )}
+
         <ChevronDown
           className={cn("text-muted-foreground size-4 shrink-0 transition-transform", open && "rotate-180")}
         />
       </button>
 
       {open && (
-        <CardContent id={panelId} className="flex flex-col gap-4 border-t px-4 pt-4 pb-5">
-          <p className="text-muted-foreground truncate text-sm">{record.farmer_email}</p>
-
-          {ph !== null && previous !== null && <PhChange from={previous} to={ph} />}
-
-          {/* What the Farmer actually reported. */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {record.has_sensor_readings ? (
-              <>
-                <SoilFact label="Temperature" value={record.soil_temperature} unit="°C" />
-                <SoilFact label="Moisture" value={record.soil_moisture} unit="%" />
-                <SoilFact label="Conductivity" value={record.soil_conductivity} unit="µS/cm" />
-                <SoilFact label="pH" value={record.soil_ph} />
-                <SoilFact label="Nitrogen" value={record.nitrogen} unit="mg/kg" />
-                <SoilFact label="Phosphorus" value={record.phosphorus} unit="mg/kg" />
-                <SoilFact label="Potassium" value={record.potassium} unit="mg/kg" />
-                <SoilFact label="Fertility" value={record.soil_fertility} unit="mg/kg" />
-              </>
-            ) : (
-              /* Recorded before the detector. */
-              <>
-                <SoilFact label="Soil type" value={record.legacy_soil_type_label} />
-                <SoilFact label="Texture" value={record.legacy_soil_texture_label} />
-                <SoilFact label="Drainage" value={record.legacy_drainage_label} />
-                <SoilFact label="Moisture" value={record.legacy_soil_moisture_label} />
-                <SoilFact label="pH" value={record.soil_ph} />
-                <SoilFact label="Nitrogen" value={record.legacy_nitrogen_label} />
-                <SoilFact label="Phosphorus" value={record.legacy_phosphorus_label} />
-                <SoilFact label="Potassium" value={record.legacy_potassium_label} />
-              </>
-            )}
+        <CardContent id={panelId} className="flex flex-col gap-5 border-t px-4 pt-4 pb-5">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <span>{record.farmer_email}</span>
+            <span>
+              Checked{" "}
+              {submitted.toLocaleString("en-PH", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </span>
           </div>
 
-          {record.notes ? (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Farmer&apos;s observations</span>
-              <p className="text-sm">{record.notes}</p>
+          {/* A reading the soil at Layuan cannot give: the advice built on it
+              should not be passed on until the reading is checked. */}
+          {tempCheck && (
+            <div
+              role="note"
+              className="border-risk-high/40 bg-risk-high/10 flex gap-3 rounded-lg border p-3 text-sm"
+            >
+              <CircleAlert className="text-risk-high mt-0.5 size-4 shrink-0" />
+              <p>
+                <span className="text-risk-high font-medium">Check this reading with the farmer.</span>{" "}
+                A soil temperature of {Number(record.soil_temperature)}°C is not possible at Layuan
+                (expected {PLAUSIBLE_SOIL_TEMP_C.min}–{PLAUSIBLE_SOIL_TEMP_C.max}°C), so it is likely a
+                detector or typing error. Advice based on it, such as frost protection, may not apply.
+              </p>
             </div>
+          )}
+
+          {/* The AI's warnings come first: they are what needs acting on. */}
+          {record.ai_generated && warnings > 0 && (
+            <Section icon={TriangleAlert} title={`Warnings (${warnings})`} tone="warn">
+              <ul className="flex flex-col gap-1.5">
+                {record.important_warnings.map((item, i) => (
+                  <li key={i} className="text-sm">
+                    {item.recommendation}
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          <Section icon={FlaskConical} title="Soil readings">
+            {ph !== null && previous !== null && <PhChange from={previous} to={ph} />}
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {record.has_sensor_readings ? (
+                <>
+                  <Reading
+                    label="pH"
+                    value={ph === null ? null : ph.toFixed(1)}
+                    note={ph === null ? undefined : bandLabel}
+                    noteClass={BAND_TEXT[band]}
+                  />
+                  <Reading
+                    label="Temperature"
+                    value={record.soil_temperature}
+                    unit="°C"
+                    note={tempCheck ? "Check reading" : undefined}
+                    noteClass="text-risk-high"
+                  />
+                  <Reading label="Moisture" value={record.soil_moisture} unit="%" />
+                  <Reading label="Conductivity" value={record.soil_conductivity} unit="µS/cm" />
+                  <Reading label="Nitrogen (N)" value={record.nitrogen} unit="mg/kg" />
+                  <Reading label="Phosphorus (P)" value={record.phosphorus} unit="mg/kg" />
+                  <Reading label="Potassium (K)" value={record.potassium} unit="mg/kg" />
+                  <Reading label="Fertility" value={record.soil_fertility} unit="mg/kg" />
+                </>
+              ) : (
+                /* Recorded before the detector. */
+                <>
+                  <Reading
+                    label="pH"
+                    value={ph === null ? null : ph.toFixed(1)}
+                    note={ph === null ? undefined : bandLabel}
+                    noteClass={BAND_TEXT[band]}
+                  />
+                  <Reading label="Soil type" value={record.legacy_soil_type_label} />
+                  <Reading label="Texture" value={record.legacy_soil_texture_label} />
+                  <Reading label="Drainage" value={record.legacy_drainage_label} />
+                  <Reading label="Moisture" value={record.legacy_soil_moisture_label} />
+                  <Reading label="Nitrogen" value={record.legacy_nitrogen_label} />
+                  <Reading label="Phosphorus" value={record.legacy_phosphorus_label} />
+                  <Reading label="Potassium" value={record.legacy_potassium_label} />
+                </>
+              )}
+            </div>
+          </Section>
+
+          {record.notes ? (
+            <Section icon={Sprout} title="Farmer's observations">
+              <p className="text-sm">{record.notes}</p>
+            </Section>
           ) : null}
 
-          {/* The AI result, exactly as the Farmer saw it. */}
           {record.ai_generated ? (
-            <div className="border-border flex flex-col gap-3 border-t pt-3">
-              <CropList title="Suitable fruits" crops={record.suitable_fruits} />
-              <CropList title="Suitable vegetables" crops={record.suitable_vegetables} />
-              <CropList title="Suitable crops" crops={record.suitable_crops} />
-              <AdviceList title="Fertilizer" items={record.fertilizer_recommendations} />
-              <AdviceList title="Soil improvement & watering" items={record.soil_improvement_watering} />
-              <AdviceList title="Warnings" items={record.important_warnings} warning />
-            </div>
+            <>
+              {crops.length > 0 && (
+                <Section icon={Sprout} title={`Recommended crops (${crops.length})`}>
+                  <ul className="flex flex-col gap-2">
+                    <CropRows kind="Fruit" crops={record.suitable_fruits} />
+                    <CropRows kind="Vegetable" crops={record.suitable_vegetables} />
+                    <CropRows kind="Crop" crops={record.suitable_crops} />
+                  </ul>
+                </Section>
+              )}
+              <AdviceSection icon={FlaskConical} title="Fertilizer" items={record.fertilizer_recommendations} />
+              <AdviceSection icon={Droplets} title="Soil improvement & watering" items={record.soil_improvement_watering} />
+            </>
           ) : (
-            <p className="text-muted-foreground border-border border-t pt-3 text-sm">
+            <p className="text-muted-foreground border-border rounded-lg border border-dashed p-3 text-sm">
               The soil information was saved, but the AI recommendation could not be generated at
               the time of submission. The farmer can re-run it from their Crop Recommendation page.
             </p>
@@ -372,6 +386,106 @@ export function RecordCard({
         </CardContent>
       )}
     </Card>
+  );
+}
+
+function Section({
+  icon: Icon,
+  title,
+  tone,
+  children,
+}: {
+  icon: ElementType;
+  title: string;
+  tone?: "warn";
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      aria-label={title}
+      className={cn(tone === "warn" && "border-risk-medium/40 bg-risk-medium/10 rounded-lg border p-3")}
+    >
+      <h3
+        className={cn(
+          "mb-1.5 flex items-center gap-1.5 text-xs font-medium",
+          tone === "warn" ? "text-risk-medium" : "text-muted-foreground",
+        )}
+      >
+        <Icon className="size-3.5" aria-hidden="true" />
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/** One soil reading as a tile, with a short verdict where there is a sound basis. */
+function Reading({
+  label,
+  value,
+  unit,
+  note,
+  noteClass,
+}: {
+  label: string;
+  value: string | number | null;
+  unit?: string;
+  note?: string;
+  noteClass?: string;
+}) {
+  if (value === null || value === "" || value === "Unknown") return null;
+  return (
+    <div className="bg-muted/40 rounded-lg px-3 py-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="text-sm font-medium tabular-nums">
+        {value}
+        {unit ? <span className="text-muted-foreground ml-1 text-xs font-normal">{unit}</span> : null}
+      </p>
+      {note && <p className={cn("text-xs font-medium", noteClass)}>{note}</p>}
+    </div>
+  );
+}
+
+/** Each crop with the AI's reason beside it, so the Officer can explain it. */
+function CropRows({ kind, crops }: { kind: string; crops: LguSoilRecommendation["suitable_fruits"] }) {
+  return (
+    <>
+      {crops.map((crop) => (
+        <li key={crop.id} className="flex gap-2.5">
+          <span aria-hidden="true" className="text-lg leading-6">
+            {crop.emoji}
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm">
+              <span className="font-medium">{crop.name}</span>
+              <span className="text-muted-foreground ml-1.5 text-xs">{kind}</span>
+            </p>
+            {crop.reason && <p className="text-muted-foreground text-xs">{crop.reason}</p>}
+          </div>
+        </li>
+      ))}
+    </>
+  );
+}
+
+function AdviceSection({
+  icon,
+  title,
+  items,
+}: {
+  icon: ElementType;
+  title: string;
+  items: { recommendation: string }[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <Section icon={icon} title={title}>
+      <ul className="text-muted-foreground flex list-disc flex-col gap-1 pl-5 text-sm">
+        {items.map((item, i) => (
+          <li key={i}>{item.recommendation}</li>
+        ))}
+      </ul>
+    </Section>
   );
 }
 
@@ -399,4 +513,3 @@ export function PhChange({ from, to }: { from: number; to: number }) {
     </p>
   );
 }
-

@@ -224,6 +224,11 @@ class Plant(models.Model):
     def age_days(self):
         return max(0, (timezone.localdate() - self.planting_date).days)
 
+    @property
+    def is_planned(self):
+        """Planting date still ahead: not in the ground yet, so not assessable."""
+        return self.planting_date > timezone.localdate()
+
 
 def evidence_upload_path(instance, filename):
     """

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
+import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,6 +18,7 @@ import { cn } from "@/lib/utils";
  * tab" behave the way they look like they should.
  */
 export function AddPlantTile({ className }: { className?: string }) {
+  const { t } = useLanguage();
   return (
     <Link
       href="/farmer/plants/new"
@@ -26,9 +30,9 @@ export function AddPlantTile({ className }: { className?: string }) {
       <span className="border-primary/40 text-primary group-hover:bg-primary/10 flex size-10 items-center justify-center rounded-full border transition-colors">
         <Plus className="size-5" />
       </span>
-      <span className="mt-1 text-sm font-medium">Add another plant</span>
+      <span className="mt-1 text-sm font-medium">{t("addTile.title")}</span>
       <span className="text-muted-foreground max-w-[22ch] text-xs">
-        See what&apos;s recommended to plant now
+        {t("addTile.hint")}
       </span>
     </Link>
   );

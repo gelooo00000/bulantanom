@@ -1,24 +1,27 @@
+"use client";
+
 import { Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
 
+import { useFarmerLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { RiskLevel } from "@/lib/mock-data";
 
 const RISK_CONFIG: Record<
   RiskLevel,
-  { label: string; icon: typeof Leaf; className: string }
+  { label: MessageKey; icon: typeof Leaf; className: string }
 > = {
   low: {
-    label: "Low Risk",
+    label: "riskBadge.low",
     icon: Leaf,
     className: "bg-risk-low/15 text-risk-low border-risk-low/30",
   },
   medium: {
-    label: "Medium Risk",
+    label: "riskBadge.medium",
     icon: TriangleAlert,
     className: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
   },
   high: {
-    label: "High Risk",
+    label: "riskBadge.high",
     icon: OctagonAlert,
     className: "bg-risk-high/15 text-risk-high border-risk-high/40",
   },
@@ -31,6 +34,7 @@ type RiskBadgeProps = {
 };
 
 export function RiskBadge({ level, size = "default", className }: RiskBadgeProps) {
+  const { t } = useFarmerLanguage();
   const config = RISK_CONFIG[level];
   const Icon = config.icon;
 
@@ -44,7 +48,7 @@ export function RiskBadge({ level, size = "default", className }: RiskBadgeProps
       )}
     >
       <Icon className={size === "sm" ? "size-3" : "size-3.5"} />
-      {config.label}
+      {t(config.label)}
     </span>
   );
 }

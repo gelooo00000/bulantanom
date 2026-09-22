@@ -180,6 +180,66 @@ def email_account_suspended(user):
     )
 
 
+def email_account_deleted(*, name, email, role, history):
+    """
+    Tells the person their account was deleted, and what went with it.
+
+    Unlike the other lifecycle emails this takes a snapshot, not a user: the
+    account row is gone by the time the email is sent, and `EmailLog` rows
+    cascade with their recipient, so there is no log row to claim or retry.
+    It is queued after commit — a deletion that rolls back emails nobody —
+    and a failed send is logged and swallowed, never shown to the Admin.
+    """
+    to_email = (email or "").strip()
+    if not to_email:
+        logger.warning("No email address for a deleted account; skipping notice.")
+        return
+
+    role_label = "LGU Officer" if role == "LGU_OFFICER" else "Farmer"
+    records = []
+    if history.get("plants"):
+        n = history["plants"]
+        records.append(f"{n} plant{'' if n == 1 else 's'}")
+    if history.get("assessments"):
+        n = history["assessments"]
+        records.append(
+            f"{n} weekly assessment{'' if n == 1 else 's'}, with their risk readings "
+            "and evidence photos"
+        )
+    if history.get("soil_recommendations"):
+        n = history["soil_recommendations"]
+        records.append(f"{n} soil check{'' if n == 1 else 's'} and crop recommendations")
+
+    context = {
+        "name": name or to_email,
+        "site_name": "BulanTanom",
+        "login_url": login_url(),
+        "role_label": role_label,
+        "records": records,
+        "deleted_on": timezone.localdate().strftime("%B %d, %Y").replace(" 0", " "),
+    }
+
+    def send():
+        try:
+            message = EmailMultiAlternatives(
+                subject="Your BulanTanom Account Has Been Deleted",
+                body=render_to_string("emails/account_deleted.txt", context),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[to_email],
+            )
+            message.attach_alternative(
+                render_to_string("emails/account_deleted.html", context), "text/html"
+            )
+            message.send(fail_silently=False)
+        except Exception as exc:
+            logger.warning(
+                "Account-deleted email to %s failed: %s: %s",
+                to_email, type(exc).__name__, exc,
+            )
+
+    _queue(send)
+
+
 def email_account_reactivated(user):
     is_officer = user.role == "LGU_OFFICER"
     subject = (

@@ -147,11 +147,67 @@ class AccountDeletionTests(AccountsSetupMixin, APITestCase):
         )
         response = self.delete(self.farmer)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn("Suspend it instead", response.data["detail"])
+        self.assertIn("also permanently deletes them", response.data["detail"])
         self.assertEqual(response.data["history"]["plants"], 1)
         # Both the account and its history must survive the refusal.
         self.assertTrue(User.objects.filter(pk=self.farmer.pk).exists())
         self.assertEqual(Plant.objects.filter(farmer=self.farmer).count(), 1)
+
+    def test_confirmed_delete_removes_a_farmer_and_all_their_records(self):
+        """
+        With the explicit `include_records=true` the Admin screen sends after
+        its confirmation, the Farmer goes — and so does everything they owned.
+        """
+        from datetime import date
+
+        from plants.models import Assessment, Crop, Plant, SoilRecommendation
+
+        plant = Plant.objects.create(
+            farmer=self.farmer, crop=Crop.objects.first(), planting_date=date(2026, 1, 1)
+        )
+        Assessment.objects.create(
+            plant=plant, plant_age_days=10, growth_condition="as_expected",
+            health_condition="healthy", leaf_condition="healthy", watering_frequency="daily",
+        )
+        SoilRecommendation.objects.create(farmer=self.farmer)
+
+        response = self.client.delete(
+            f"/api/admin/accounts/{self.farmer.id}/?include_records=true",
+            **self.auth("admin@example.com", ADMIN_LOGIN_URL),
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(User.objects.filter(pk=self.farmer.pk).exists())
+        self.assertEqual(Plant.objects.filter(pk=plant.pk).count(), 0)
+        self.assertEqual(Assessment.objects.filter(plant_id=plant.pk).count(), 0)
+        self.assertEqual(SoilRecommendation.objects.filter(farmer_id=self.farmer.pk).count(), 0)
+
+    def test_include_records_never_lets_an_admin_be_deleted(self):
+        other_admin = make_user("admin2@example.com", UserRole.ADMIN)
+        response = self.client.delete(
+            f"/api/admin/accounts/{other_admin.id}/?include_records=true",
+            **self.auth("admin@example.com", ADMIN_LOGIN_URL),
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(User.objects.filter(pk=other_admin.pk).exists())
+
+    def test_account_list_carries_records_and_presence(self):
+        from datetime import date
+
+        from plants.models import Crop, Plant
+
+        Plant.objects.create(
+            farmer=self.farmer, crop=Crop.objects.first(), planting_date=date(2026, 1, 1)
+        )
+        rows = self.client.get(
+            "/api/admin/users/", **self.auth("admin@example.com", ADMIN_LOGIN_URL)
+        ).data
+        farmer = next(r for r in rows if r["id"] == self.farmer.id)
+        self.assertEqual(farmer["plant_count"], 1)
+        self.assertEqual(farmer["assessment_count"], 0)
+        self.assertEqual(farmer["soil_record_count"], 0)
+        self.assertIn("is_online", farmer)
+        self.assertIn("last_seen_at", farmer)
+        self.assertNotIn("password", str(farmer))
 
     def test_admin_cannot_delete_their_own_account(self):
         response = self.delete(self.admin)

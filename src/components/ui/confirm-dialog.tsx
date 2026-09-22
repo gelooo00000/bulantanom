@@ -5,6 +5,7 @@ import { LoaderCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useFarmerLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -48,6 +49,7 @@ export function ConfirmDialog({
   // unmounts it and the typed phrase resets on its own — no effect needed,
   // and reopening can never start already-confirmed.
   const [typed, setTyped] = useState("");
+  const { t } = useFarmerLanguage();
 
   const phraseSatisfied = !confirmPhrase || typed === confirmPhrase;
   const canConfirm = phraseSatisfied && !busy;
@@ -100,7 +102,7 @@ export function ConfirmDialog({
               onClick={() => onOpenChange(false)}
               disabled={busy}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant={destructive ? "destructive" : "default"}

@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CropVariant } from "@/lib/api/plants-api";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * Variety picker, shown only for crops that have varieties on file.
@@ -33,6 +34,7 @@ export function VariantSelect({
   onValueChange,
 }: VariantSelectProps) {
   const selected = variants.find((variant) => variant.id === value);
+  const { t } = useLanguage();
 
   return (
     <Select
@@ -42,21 +44,21 @@ export function VariantSelect({
       }
     >
       <SelectTrigger id={id}>
-        <SelectValue placeholder="Not specified">
-          {() => selected?.name ?? "Not specified"}
+        <SelectValue placeholder={t("variant.none")}>
+          {() => selected?.name ?? t("variant.none")}
         </SelectValue>
       </SelectTrigger>
 
       <SelectContent className="max-h-80 w-[var(--anchor-width)] min-w-64">
         <SelectItem value={UNSPECIFIED}>
-          <span className="text-muted-foreground">Not specified</span>
+          <span className="text-muted-foreground">{t("variant.none")}</span>
         </SelectItem>
         {variants.map((variant) => (
           <SelectItem key={variant.id} value={variant.id}>
             <span className="flex flex-col items-start gap-0.5 text-left">
               <span>{variant.name}</span>
               <span className="text-muted-foreground text-xs">
-                about {variant.growing_duration_days} days to harvest
+                {t("variant.days", { n: variant.growing_duration_days })}
               </span>
             </span>
           </SelectItem>

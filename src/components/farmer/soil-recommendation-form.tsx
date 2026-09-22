@@ -26,9 +26,11 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
+import { useLanguage } from "@/lib/i18n";
 import {
   SENSOR_FIELDS,
-  SOIL_STRINGS as t,
+  sensorLabel,
+  useSoilStrings,
   validateReading,
   type SensorField,
 } from "@/lib/soil-options";
@@ -55,12 +57,13 @@ function SoilNumberField({
   error?: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useLanguage();
   const id = `soil-${field.key.replace(/_/g, "-")}`;
   const errorId = `${id}-error`;
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{field.label}</Label>
+      <Label htmlFor={id}>{sensorLabel(field, t)}</Label>
       <div className="relative">
         <Input
           id={id}
@@ -91,7 +94,7 @@ function SoilNumberField({
         </p>
       ) : (
         <p className="text-muted-foreground text-xs">
-          {field.min} to {field.max} {field.unit}
+          {t("sensor.range", { min: field.min, max: field.max, unit: field.unit })}
         </p>
       )}
     </div>
@@ -128,6 +131,8 @@ function setWantsNewAssessment(wants: boolean) {
 
 export function SoilRecommendationForm() {
   const { accessToken } = useAuth();
+  const t = useSoilStrings();
+  const { t: translate } = useLanguage();
 
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<SoilRecommendation | null>(null);
@@ -212,7 +217,7 @@ export function SoilRecommendationForm() {
     // that caused it, rather than after a round trip.
     const errors: Record<string, string> = {};
     for (const field of SENSOR_FIELDS) {
-      const message = validateReading(field, readings[field.key] ?? "");
+      const message = validateReading(field, readings[field.key] ?? "", translate);
       if (message) errors[field.key] = message;
     }
     if (Object.keys(errors).length > 0) {

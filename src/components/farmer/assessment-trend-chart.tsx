@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate, formatShortDate } from "@/components/ui/date-picker";
 import type { AssessmentTrend } from "@/lib/api/dashboard-api";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * How often this farmer has been assessing, over the last month.
@@ -33,6 +34,7 @@ type AssessmentTrendChartProps = {
 
 export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
   const [showTable, setShowTable] = useState(false);
+  const { t, dateLocale } = useLanguage();
 
   const days = trend.days ?? [];
   if (days.length === 0) return null;
@@ -57,33 +59,35 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
     <Card className="gap-0 py-4">
       <CardContent className="px-4">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-medium">Assessment activity</h2>
+          <h2 className="text-sm font-medium">{t("trend.title")}</h2>
           <button
             type="button"
             onClick={() => setShowTable((v) => !v)}
             className="text-muted-foreground hover:text-foreground shrink-0 text-xs underline underline-offset-2"
             aria-expanded={showTable}
           >
-            {showTable ? "Show chart" : "Show numbers"}
+            {showTable ? t("trend.showChart") : t("trend.showNumbers")}
           </button>
         </div>
         <p className="text-muted-foreground mt-0.5 text-xs">
           {trend.total === 0
-            ? `No assessments in the last ${trend.range_days} days.`
-            : `${trend.total} assessment${trend.total === 1 ? "" : "s"} in the last ${trend.range_days} days.`}
+            ? t("trend.none", { days: trend.range_days })
+            : trend.total === 1
+              ? t("trend.one", { days: trend.range_days })
+              : t("trend.many", { n: trend.total, days: trend.range_days })}
         </p>
 
         {showTable ? (
           <div className="mt-3 max-h-56 overflow-y-auto">
             <table className="w-full text-sm">
-              <caption className="sr-only">Assessments submitted per day</caption>
+              <caption className="sr-only">{t("trend.caption")}</caption>
               <thead className="bg-card sticky top-0">
                 <tr className="text-muted-foreground text-left text-xs">
                   <th scope="col" className="pb-1 font-medium">
-                    Date
+                    {t("trend.date")}
                   </th>
                   <th scope="col" className="pb-1 text-right font-medium">
-                    Assessments
+                    {t("trend.count")}
                   </th>
                 </tr>
               </thead>
@@ -93,14 +97,14 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
                 {active.length > 0 ? (
                   active.map((d) => (
                     <tr key={d.date} className="border-border/60 border-t">
-                      <td className="py-1.5">{formatDisplayDate(d.date)}</td>
+                      <td className="py-1.5">{formatDisplayDate(d.date, dateLocale)}</td>
                       <td className="py-1.5 text-right tabular-nums">{d.count}</td>
                     </tr>
                   ))
                 ) : (
                   <tr className="border-border/60 border-t">
                     <td colSpan={2} className="text-muted-foreground py-2">
-                      No assessments in this period.
+                      {t("trend.emptyPeriod")}
                     </td>
                   </tr>
                 )}
@@ -119,8 +123,12 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
               role="img"
               aria-label={
                 trend.total === 0
-                  ? `No assessments in the last ${trend.range_days} days.`
-                  : `${trend.total} assessments over the last ${trend.range_days} days, busiest day ${trend.busiest_count}.`
+                  ? t("trend.none", { days: trend.range_days })
+                  : t("trend.chartLabel", {
+                      n: trend.total,
+                      days: trend.range_days,
+                      peak: trend.busiest_count,
+                    })
               }
             >
             <svg
@@ -177,17 +185,15 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
                   top: `${(p.y / VIEW_H) * 100}%`,
                   background: "var(--landing-accent)",
                 }}
-                title={`${formatShortDate(p.date)}: ${p.count}`}
+                title={`${formatShortDate(p.date, dateLocale)}: ${p.count}`}
               />
             ))}
             </div>
 
             <div className="text-muted-foreground mt-1 flex justify-between text-[11px]">
-              <span>{formatShortDate(first.date)}</span>
-              <span>
-                Peak {trend.busiest_count} in a day
-              </span>
-              <span>{formatShortDate(last.date)}</span>
+              <span>{formatShortDate(first.date, dateLocale)}</span>
+              <span>{t("trend.peak", { n: trend.busiest_count })}</span>
+              <span>{formatShortDate(last.date, dateLocale)}</span>
             </div>
           </>
         )}

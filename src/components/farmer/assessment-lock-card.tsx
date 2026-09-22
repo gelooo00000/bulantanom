@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, CalendarCheck, Sprout } from "lucide-react";
 
@@ -5,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { AssessmentEligibility } from "@/lib/api/risk-api";
+import { useLanguage, type Translate } from "@/lib/i18n";
 
-function daysLabel(days: number) {
-  if (days <= 0) return "today";
-  return days === 1 ? "in 1 day" : `in ${days} days`;
+function daysLabel(days: number, t: Translate) {
+  if (days <= 0) return t("lock.today");
+  return days === 1 ? t("lock.inOne") : t("lock.inDays", { n: days });
 }
 
 /**
@@ -26,6 +29,8 @@ export function AssessmentLockCard({
   plantLabel: string;
   plantId: number;
 }) {
+  const { t, dateLocale } = useLanguage();
+  const date = (iso: string) => formatDisplayDate(iso, dateLocale);
   return (
     <Card className="gap-4 py-5">
       <CardContent className="flex flex-col gap-4 px-5">
@@ -40,11 +45,32 @@ export function AssessmentLockCard({
             <Sprout className="size-5" />
           </span>
           <div>
-            <h2 className="font-medium">Weekly Assessment Completed</h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              You have already completed this week&apos;s assessment for {plantLabel}.
-              Your next assessment will be available {daysLabel(eligibility.days_remaining)}.
-            </p>
+            {eligibility.planned ? (
+              // A planned planting: not assessed yet, and not assessable
+              // until the day it goes in the ground.
+              <>
+                <h2 className="font-medium">{t("lock.notPlanted")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t("lock.plannedText", {
+                    name: plantLabel,
+                    date: eligibility.next_assessment_date
+                      ? date(eligibility.next_assessment_date)
+                      : t("lock.laterDate"),
+                    when: daysLabel(eligibility.days_remaining, t),
+                  })}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="font-medium">{t("lock.doneTitle")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t("lock.doneText", {
+                    name: plantLabel,
+                    when: daysLabel(eligibility.days_remaining, t),
+                  })}
+                </p>
+              </>
+            )}
           </div>
         </div>
 
@@ -54,25 +80,27 @@ export function AssessmentLockCard({
               className="size-4"
               style={{ color: "var(--landing-accent)" }}
             />
-            Next assessment
+            {eligibility.planned ? t("lock.first") : t("lock.next")}
           </span>
           <span className="text-sm font-medium tabular-nums">
             {eligibility.next_assessment_date
-              ? formatDisplayDate(eligibility.next_assessment_date)
-              : "Available now"}
+              ? date(eligibility.next_assessment_date)
+              : t("lock.availableNow")}
           </span>
         </div>
 
         {eligibility.last_assessment_date && (
           <p className="text-muted-foreground/70 text-xs">
-            Last assessed {formatDisplayDate(eligibility.last_assessment_date)} · one
-            assessment per {eligibility.interval_days} days.
+            {t("lock.last", {
+              date: date(eligibility.last_assessment_date),
+              n: eligibility.interval_days,
+            })}
           </p>
         )}
 
         <div className="flex flex-wrap gap-2">
           <Button nativeButton={false} render={<Link href={`/farmer/plants/${plantId}`} />}>
-            Back to plant
+            {t("lock.backToPlant")}
             <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>
           <Button
@@ -80,7 +108,7 @@ export function AssessmentLockCard({
             nativeButton={false}
             render={<Link href="/farmer/assessments" />}
           >
-            View past assessments
+            {t("lock.past")}
           </Button>
         </div>
       </CardContent>

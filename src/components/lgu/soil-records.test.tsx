@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 
 import { PhChange, SoilRecords } from "@/components/lgu/soil-records";
 import type { LguSoilRecommendation } from "@/lib/api/lgu-api";
-import { latestPerFarmer, needsAttention, phBand, previousPh } from "@/lib/lgu-soil-stats";
+import {
+  latestPerFarmer,
+  phBand,
+  previousPh,
+  temperatureNeedsCheck,
+} from "@/lib/lgu-soil-stats";
 
 const PINEAPPLE = { id: "pineapple", name: "Pineapple", emoji: "🍍", reason: "Likes acid" };
 const CORN = { id: "corn", name: "Corn", emoji: "🌽", reason: "Tolerant" };
@@ -90,10 +95,11 @@ describe("soil statistics", () => {
     expect(previousPh(first, RECORDS)).toBeNull();
   });
 
-  it("flags soil outside the ideal range, or with AI warnings", () => {
-    expect(needsAttention(RECORDS[1])).toBe(true); // 5.8 and a warning
-    expect(needsAttention(RECORDS[3])).toBe(true); // 8.0
-    expect(needsAttention(RECORDS[4])).toBe(false); // 6.4, no warnings
+  it("flags a soil temperature Layuan's climate cannot produce", () => {
+    expect(temperatureNeedsCheck("-0.1")).toBe(true);
+    expect(temperatureNeedsCheck("60")).toBe(true);
+    expect(temperatureNeedsCheck("28.4")).toBe(false);
+    expect(temperatureNeedsCheck(null)).toBe(false);
   });
 });
 
@@ -118,29 +124,28 @@ describe("SoilRecords", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists each farmer's latest record by default, and every submission on request", async () => {
-    const user = userEvent.setup();
+  it("shows only the Analysed and Not analysed tabs, with counts", () => {
     render(<SoilRecords records={RECORDS} />);
-    expect(recordRows()).toHaveLength(3);
-    await user.click(screen.getByRole("checkbox", { name: "Show every submission" }));
-    expect(recordRows()).toHaveLength(5);
+    const tabs = within(screen.getByRole("group", { name: "Filter records" })).getAllByRole("button");
+    expect(tabs.map((t) => t.textContent)).toEqual(["Analysed2", "Not analysed1"]);
+    expect(screen.queryByRole("checkbox", { name: /Show every submission/ })).not.toBeInTheDocument();
   });
 
-  it("filters to the records that need a follow-up, with counts", async () => {
+  it("opens on the analysed checks, each farmer's latest only", () => {
+    render(<SoilRecords records={RECORDS} />);
+    // Maria and Ana; Juan's latest check was not analysed.
+    expect(recordRows()).toHaveLength(2);
+    expect(screen.getByText("pH 5.8 · Slightly acidic")).toBeInTheDocument();
+    expect(screen.getByText("pH 6.4 · Ideal")).toBeInTheDocument();
+  });
+
+  it("lists the farmers still waiting for AI advice under Not analysed", async () => {
     const user = userEvent.setup();
     render(<SoilRecords records={RECORDS} />);
-    await user.click(screen.getByRole("button", { name: /Needs attention\s*2/ }));
-    expect(recordRows()).toHaveLength(2);
     await user.click(screen.getByRole("button", { name: /Not analysed\s*1/ }));
     expect(recordRows()).toHaveLength(1);
     expect(recordRows()[0]).toContain("Juan Cruz");
-  });
-
-  it("shows the pH band on each record", () => {
-    render(<SoilRecords records={RECORDS} />);
-    expect(screen.getByText("pH 5.8 · Slightly acidic")).toBeInTheDocument();
-    expect(screen.getByText("pH 8.0 · Alkaline")).toBeInTheDocument();
-    expect(screen.getByText("pH 6.4 · Ideal")).toBeInTheDocument();
+    expect(screen.getByText(/still waiting for AI advice/)).toBeInTheDocument();
   });
 
   it("shows how a farmer's pH moved since their previous reading", async () => {
@@ -149,6 +154,51 @@ describe("SoilRecords", () => {
     await user.click(screen.getByRole("button", { name: /Maria Santos/ }));
     expect(screen.getByText("pH 4.8 → 5.8")).toBeInTheDocument();
     expect(screen.getByText("towards the ideal range")).toBeInTheDocument();
+  });
+});
+
+describe("RecordCard detail", () => {
+  const ODD = record({ id: 9, name: "Angelo Gloriane" }, "2026-09-19", {
+    soil_ph: "4.0",
+    soil_temperature: "-0.1",
+    suitable_fruits: [PINEAPPLE],
+    important_warnings: [
+      { recommendation: "The soil temperature is dangerous for most crops." },
+      { recommendation: "The soil pH of 4.00 is extremely acidic." },
+    ],
+    fertilizer_recommendations: [{ recommendation: "Apply agricultural lime." }],
+  });
+
+  async function openRecord() {
+    const user = userEvent.setup();
+    render(<SoilRecords records={[ODD]} />);
+    await user.click(screen.getByRole("button", { name: /Angelo Gloriane/ }));
+  }
+
+  it("asks the officer to check an impossible reading before trusting the advice", async () => {
+    await openRecord();
+    expect(screen.getByRole("note")).toHaveTextContent(/Check this reading with the farmer/);
+    expect(screen.getByRole("note")).toHaveTextContent(/-0\.1°C is not possible at Layuan/);
+  });
+
+  it("puts the AI's warnings before the readings and the advice", async () => {
+    await openRecord();
+    const sections = screen.getAllByRole("region").map((r) => r.getAttribute("aria-label"));
+    expect(sections.indexOf("Warnings (2)")).toBeLessThan(sections.indexOf("Soil readings"));
+    expect(sections.indexOf("Soil readings")).toBeLessThan(sections.indexOf("Fertilizer"));
+  });
+
+  it("gives each recommended crop the AI's reason, not just its name", async () => {
+    await openRecord();
+    const crops = screen.getByRole("region", { name: "Recommended crops (2)" });
+    expect(crops).toHaveTextContent("Pineapple");
+    expect(crops).toHaveTextContent("Likes acid");
+  });
+
+  it("labels the pH reading with its band", async () => {
+    await openRecord();
+    const readings = screen.getByRole("region", { name: "Soil readings" });
+    expect(readings).toHaveTextContent("Too acidic");
   });
 });
 

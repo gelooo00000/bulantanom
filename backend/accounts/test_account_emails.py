@@ -388,3 +388,103 @@ class EmailConfigurationTests(TestCase):
         environment.
         """
         self.assertFalse(settings.EMAIL_USE_TLS and settings.EMAIL_USE_SSL)
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    FRONTEND_URL="https://bulantanom.example",
+    DEFAULT_FROM_EMAIL="BulanTanom <no-reply@bulantanom.example>",
+)
+class AccountDeletedEmailTests(APITransactionTestCase):
+    """The person whose account an Admin deletes is told, by email."""
+
+    def setUp(self):
+        mail.outbox = []
+        self.admin = make_user("admin@example.com", UserRole.ADMIN)
+        self.farmer = User.objects.create_user(
+            email="paul@example.com", password=PW, first_name="Paul", last_name="Brizuela",
+            role=UserRole.FARMER, account_status=AccountStatus.APPROVED,
+        )
+        token = self.client.post(
+            ADMIN_LOGIN_URL, {"email": "admin@example.com", "password": PW}, format="json"
+        ).data["access"]
+        self.admin_auth = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+
+    def crop(self):
+        # These tests are transactional, so the database is flushed between
+        # them — including the seeded crop catalog. Each makes its own crop.
+        from plants.models import Crop
+
+        crop, _ = Crop.objects.get_or_create(
+            id="test-crop",
+            defaults={
+                "name": "Test Crop", "category": "fruit", "emoji": "🌱",
+                "growing_duration_days": 90, "harvest_window_days": 20,
+            },
+        )
+        return crop
+
+    def delete(self, user, include_records=False):
+        query = "?include_records=true" if include_records else ""
+        return self.client.delete(f"/api/admin/accounts/{user.id}/{query}", **self.admin_auth)
+
+    def deleted_emails(self):
+        return [m for m in mail.outbox if "paul@example.com" in m.to]
+
+    def test_deleted_farmer_is_emailed_with_what_was_deleted(self):
+        from datetime import date
+
+        from plants.models import Assessment, Plant, SoilRecommendation
+
+        plant = Plant.objects.create(
+            farmer=self.farmer, crop=self.crop(), planting_date=date(2026, 1, 1)
+        )
+        Assessment.objects.create(
+            plant=plant, plant_age_days=10, growth_condition="as_expected",
+            health_condition="healthy", leaf_condition="healthy", watering_frequency="daily",
+        )
+        SoilRecommendation.objects.create(farmer=self.farmer)
+
+        self.assertEqual(self.delete(self.farmer, include_records=True).status_code, 200)
+
+        [message] = self.deleted_emails()
+        self.assertEqual(message.subject, "Your BulanTanom Account Has Been Deleted")
+        self.assertIn("Hello Paul Brizuela", message.body)
+        self.assertIn("Farmer account has been deleted", message.body)
+        self.assertIn("1 plant", message.body)
+        self.assertIn("1 weekly assessment", message.body)
+        self.assertIn("1 soil check", message.body)
+        # The HTML part is there too, for mail clients that show it.
+        self.assertEqual(message.alternatives[0][1], "text/html")
+
+    def test_account_without_records_is_emailed_too(self):
+        self.assertEqual(self.delete(self.farmer).status_code, 200)
+        [message] = self.deleted_emails()
+        self.assertIn("The account had no farm records.", message.body)
+
+    def test_a_refused_deletion_emails_nobody(self):
+        from datetime import date
+
+        from plants.models import Plant
+
+        Plant.objects.create(
+            farmer=self.farmer, crop=self.crop(), planting_date=date(2026, 1, 1)
+        )
+        # Records present, no include_records: refused, and no email.
+        self.assertEqual(self.delete(self.farmer).status_code, 409)
+        self.assertEqual(self.deleted_emails(), [])
+
+    def test_a_failed_email_does_not_undo_the_deletion(self):
+        with patch(
+            "django.core.mail.EmailMultiAlternatives.send",
+            side_effect=smtplib.SMTPException("SMTP unreachable"),
+        ):
+            response = self.delete(self.farmer)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(pk=self.farmer.pk).exists())
+
+    def test_the_email_never_contains_a_password(self):
+        self.delete(self.farmer)
+        [message] = self.deleted_emails()
+        self.assertNotIn(PW, message.body)
+        self.assertNotIn("password:", message.body.lower())

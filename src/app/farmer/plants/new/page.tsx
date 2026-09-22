@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,7 +11,7 @@ import {
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { CropSelect } from "@/components/farmer/crop-select";
 import { InSeasonCrops } from "@/components/farmer/in-season-crops";
@@ -22,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DatePicker, formatDisplayDate } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   createPlant,
   fetchCropIntelligence,
@@ -33,6 +33,7 @@ import {
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
+import { useLanguage } from "@/lib/i18n";
 import { adviseForMonth, monthFromIsoDate } from "@/lib/planting-season";
 
 function todayIso() {
@@ -42,9 +43,16 @@ function todayIso() {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+// The address never changes while this page is open.
+function subscribeToNothing() {
+  return () => {};
+}
+
 export default function AddPlantPage() {
   const router = useRouter();
   const { accessToken } = useAuth();
+  const { t, language, dateLocale } = useLanguage();
+  const date = (iso: string) => formatDisplayDate(iso, dateLocale);
 
   const { data: crops, loading: cropsLoading, error: cropsError, refetch } =
     useAuthedQuery(fetchCrops);
@@ -52,53 +60,57 @@ export default function AddPlantPage() {
   // The farmer's existing plants, read only to spot an accidental repeat.
   const { data: existingPlants } = useAuthedQuery(fetchPlants);
 
-  const [cropId, setCropId] = useState<string | null>(null);
+  // `undefined` until the farmer picks, so the link's values apply until then.
+  const [pickedCropId, setCropId] = useState<string | null | undefined>(undefined);
   const [variantId, setVariantId] = useState<string | null>(null);
-  const [label, setLabel] = useState("");
-  const [plantingDate, setPlantingDate] = useState("");
+  const [pickedDate, setPlantingDate] = useState<string | undefined>(undefined);
   const [formError, setFormError] = useState<string | null>(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [intel, setIntel] = useState<CropIntelligenceResponse | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /**
+   * Preselects the crop when arriving from a suggestion chip
+   * (`/farmer/plants/new?crop=pineapple`), and the day when a date is carried
+   * in the link. Without this the dashboard's "tap one to add it" landed the
+   * farmer on a blank form.
+   *
+   * Read from `window.location` rather than `useSearchParams`, which would
+   * oblige this page to sit inside a Suspense boundary for no other reason.
+   * Derived during render instead of copied into state by an effect, so
+   * there is no extra render, and the farmer's own pick always wins.
+   */
+  const search = useSyncExternalStore(
+    subscribeToNothing,
+    () => window.location.search,
+    () => "",
+  );
+  const link = new URLSearchParams(search);
+  const requestedCrop = link.get("crop");
+  // Waits for the catalog so an id that is not a real crop is ignored
+  // instead of selecting nothing and looking broken.
+  const linkedCrop =
+    requestedCrop && crops?.some((crop) => crop.id === requestedCrop)
+      ? requestedCrop
+      : null;
+  // Past dates are dropped: the calendar starts at today, and the form
+  // would reject one anyway.
+  const requestedDate = link.get("date");
+  const linkedDate =
+    requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate >= todayIso()
+      ? requestedDate
+      : "";
+
+  const cropId = pickedCropId === undefined ? linkedCrop : pickedCropId;
+  const plantingDate = pickedDate ?? linkedDate;
+
   const selectedCrop = crops?.find((crop) => crop.id === cropId) ?? null;
   const selectedVariant =
     selectedCrop?.variants.find((variant) => variant.id === variantId) ?? null;
 
-  // Advise on the date the farmer chose, falling back to today while the
-  // field is empty, so the note is useful before the date is filled in.
-  /**
-   * Preselects the crop when arriving from a suggestion chip
-   * (`/farmer/plants/new?crop=pineapple`). Without this the dashboard's
-   * "tap one to add it" landed the farmer on a blank form.
-   *
-   * Read from `window.location` rather than `useSearchParams`, which would
-   * oblige this page to sit inside a Suspense boundary for no other reason.
-   * Waits for the catalog so an id that is not a real crop is ignored
-   * instead of selecting nothing and looking broken.
-   */
-  useEffect(() => {
-    if (!crops || cropId) return;
-    const params = new URLSearchParams(window.location.search);
-
-    const requested = params.get("crop");
-    if (requested && crops.some((crop) => crop.id === requested)) {
-      setCropId(requested);
-    }
-
-    // The dashboard asks "if I plant on <date>", so carrying that date over
-    // means the answer the farmer just read is the one the form starts from.
-    // Future dates are dropped: a plant record is something already in the
-    // ground, and the form would reject one anyway.
-    const date = params.get("date");
-    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= todayIso()) {
-      setPlantingDate(date);
-    }
-  }, [crops, cropId]);
-
   const activeMonth = monthFromIsoDate(plantingDate);
-  const seasonAdvice = adviseForMonth(selectedCrop?.planting_window, activeMonth);
+  const seasonAdvice = adviseForMonth(selectedCrop?.planting_window, activeMonth, t);
 
   // Same crop, same variety, same day. Almost always a double submit or a
   // forgotten earlier entry — but not always, since two beds can genuinely
@@ -117,10 +129,10 @@ export default function AddPlantPage() {
     event.preventDefault();
     setFormError(null);
 
-    if (!cropId) return setFormError("Please select a valid crop.");
-    if (!plantingDate) return setFormError("Please select a valid planting date.");
-    if (plantingDate > todayIso()) {
-      return setFormError("Planting date cannot be in the future.");
+    if (!cropId) return setFormError(t("add.errorCrop"));
+    if (!plantingDate) return setFormError(t("add.errorDate"));
+    if (plantingDate < todayIso()) {
+      return setFormError(t("add.errorPast"));
     }
     if (!accessToken) return;
 
@@ -134,7 +146,7 @@ export default function AddPlantPage() {
         await fetchCropIntelligence(accessToken, cropId, plantingDate, variantId),
       );
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Unable to load crop information.");
+      setFormError(err instanceof Error ? err.message : t("add.errorIntel"));
     } finally {
       setAnalyzing(false);
     }
@@ -149,13 +161,12 @@ export default function AddPlantPage() {
         crop_id: cropId,
         planting_date: plantingDate,
         variant_id: variantId,
-        label: label.trim(),
       });
       // Django raised "Plant added" — show it on the bell straight away.
       requestNotificationRefresh();
       router.push(`/farmer/plants/${plant.id}`);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Unable to add this plant.");
+      setFormError(err instanceof Error ? err.message : t("add.errorSave"));
       setSaving(false);
     }
   }
@@ -164,19 +175,19 @@ export default function AddPlantPage() {
   if (analyzing) {
     return (
       <div className="mx-auto flex max-w-lg flex-col gap-6">
-        <PageHeader title="Add a Plant" description="Preparing crop intelligence…" />
+        <PageHeader title={t("add.title")} description={t("add.preparing")} />
         {/* Announced, because this replaces the whole page: without it a
             screen reader user is told nothing changed and nothing finished. */}
         <Card className="py-10" role="status" aria-live="polite">
           <CardContent className="flex flex-col items-center gap-4 px-6 text-center">
             <LoaderCircle className="text-primary size-7 animate-spin" />
             <p className="font-medium">
-              Analyzing {selectedCrop?.emoji} {selectedCrop?.name}…
+              {t("add.analyzing", { crop: `${selectedCrop?.emoji ?? ""} ${selectedCrop?.name ?? ""}` })}
             </p>
             <ul className="text-muted-foreground space-y-1 text-sm">
-              <li>Preparing crop information</li>
-              <li>Calculating harvest window</li>
-              <li>Generating growing guidance</li>
+              <li>{t("add.step1")}</li>
+              <li>{t("add.step2")}</li>
+              <li>{t("add.step3")}</li>
             </ul>
             {/* The guidance is a nicety; the plant record is the point. The
                 first farmer to pick any crop waits on a live Gemini call
@@ -184,10 +195,10 @@ export default function AddPlantPage() {
                 rather than a spinner with no exit. */}
             <div className="mt-2 flex flex-col items-center gap-1.5">
               <Button variant="outline" onClick={handleSave} disabled={saving}>
-                {saving ? "Adding plant…" : "Add plant without waiting"}
+                {saving ? t("add.adding") : t("add.skipWait")}
               </Button>
               <p className="text-muted-foreground/70 text-xs">
-                Guidance will still appear on the plant&apos;s page.
+                {t("add.laterGuidance")}
               </p>
             </div>
           </CardContent>
@@ -210,15 +221,15 @@ export default function AddPlantPage() {
             className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 self-start text-sm"
           >
             <ArrowLeft className="size-3.5" />
-            Back to crop selection
+            {t("add.backToSelect")}
           </button>
 
           <PageHeader
             title={`${intel.crop.emoji} ${intel.variant?.name ?? intel.crop.name}`}
             description={
               intel.variant
-                ? `${intel.crop.name} · review before adding this plant.`
-                : "Review the crop information before adding this plant."
+                ? t("add.reviewVariant", { crop: intel.crop.name })
+                : t("add.review")
             }
           />
 
@@ -230,20 +241,21 @@ export default function AddPlantPage() {
                   style={{ color: "var(--landing-accent)" }}
                 >
                   <CalendarDays className="size-3.5" />
-                  Expected harvest window
+                  {t("add.window")}
                 </p>
                 <p className="mt-2 text-lg font-medium">
-                  {formatDisplayDate(window.expected_harvest_start)} —{" "}
-                  {formatDisplayDate(window.expected_harvest_end)}
+                  {date(window.expected_harvest_start)} —{" "}
+                  {date(window.expected_harvest_end)}
                 </p>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  Planted {formatDisplayDate(window.planting_date)} · typical growing period{" "}
-                  {window.growing_duration_days} days
+                  {t("add.windowPlanted", {
+                    date: date(window.planting_date),
+                    n: window.growing_duration_days,
+                  })}
                 </p>
                 <p className="text-muted-foreground/70 mt-2 flex items-start gap-1.5 text-xs">
                   <Info className="mt-0.5 size-3 shrink-0" />
-                  Calculated from BulanTanom&apos;s crop records — an estimate, not a
-                  guaranteed harvest date.
+                  {t("add.windowNote")}
                 </p>
               </CardContent>
             </Card>
@@ -263,7 +275,7 @@ export default function AddPlantPage() {
                     <Sparkles className="size-4" />
                   </span>
                   <div>
-                    <h2 className="font-medium">Crop Intelligence</h2>
+                    <h2 className="font-medium">{t("add.intel")}</h2>
                     <p className="text-muted-foreground mt-0.5 text-sm">
                       {ai.crop_overview}
                     </p>
@@ -271,14 +283,14 @@ export default function AddPlantPage() {
                 </div>
 
                 {ai.growing_notes.length > 0 && (
-                  <Section title="Growing characteristics" items={ai.growing_notes} />
+                  <Section title={t("add.growing")} items={ai.growing_notes} />
                 )}
                 {ai.care_guidance.length > 0 && (
-                  <Section title="Care guidance" items={ai.care_guidance} />
+                  <Section title={t("add.care")} items={ai.care_guidance} />
                 )}
                 {ai.harvest_guidance && (
                   <div>
-                    <h3 className="text-sm font-medium">Harvest guidance</h3>
+                    <h3 className="text-sm font-medium">{t("add.harvestGuidance")}</h3>
                     <p className="text-muted-foreground mt-1.5 text-sm">
                       {ai.harvest_guidance}
                     </p>
@@ -286,14 +298,14 @@ export default function AddPlantPage() {
                 )}
                 {ai.important_factors.length > 0 && (
                   <Section
-                    title="Factors that can affect timing"
+                    title={t("add.factors")}
                     items={ai.important_factors}
                   />
                 )}
 
                 <p className="text-muted-foreground/60 border-border border-t pt-3 text-[11px]">
-                  AI-generated guidance for reference only. It does not diagnose plant
-                  disease or replace an agricultural officer.
+                  {t("add.aiNote")}
+                  {language !== "en" && ` ${t("result.aiText")}`}
                 </p>
               </CardContent>
             </Card>
@@ -301,11 +313,10 @@ export default function AddPlantPage() {
             <div className="border-risk-medium/30 bg-risk-medium/5 flex items-start gap-3 rounded-xl border p-4">
               <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
               <div>
-                <p className="text-sm font-medium">Crop intelligence is unavailable</p>
+                <p className="text-sm font-medium">{t("add.intelUnavailable")}</p>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  {intel.unavailable_reason ??
-                    "Crop intelligence is temporarily unavailable."}{" "}
-                  Your plant can still be added.
+                  {intel.unavailable_reason ?? t("add.intelUnavailableDefault")}{" "}
+                  {t("add.canStillAdd")}
                 </p>
               </div>
             </div>
@@ -317,11 +328,11 @@ export default function AddPlantPage() {
             {saving ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />
-                Adding plant…
+                {t("add.adding")}
               </>
             ) : (
               <>
-                Add Plant
+                {t("addPlant.button")}
                 <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
               </>
             )}
@@ -334,22 +345,32 @@ export default function AddPlantPage() {
   // ------------------------------------------------------------- select form
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6">
+      {/* A link, not router.back(): it returns to My Plants even when the
+          farmer arrived here from the dashboard or a bookmark. */}
+      <Link
+        href="/farmer/plants"
+        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 self-start text-sm"
+      >
+        <ArrowLeft className="size-3.5" />
+        {t("add.back")}
+      </Link>
+
       <PageHeader
-        title="Add a Plant"
-        description="Choose a crop and its planting date to start tracking it at Layuan Farm."
+        title={t("add.title")}
+        description={t("add.description")}
       />
 
       {cropsLoading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
           <LoaderCircle className="text-primary size-6 animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading crops…</p>
+          <p className="text-muted-foreground text-sm">{t("add.loadingCrops")}</p>
         </div>
       ) : cropsError ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">Unable to connect to BulanTanom.</p>
+          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground text-sm">{cropsError}</p>
-          <Button onClick={refetch}>Try again</Button>
+          <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
       ) : (
         <form onSubmit={handleContinue} className="flex flex-col gap-5">
@@ -369,7 +390,7 @@ export default function AddPlantPage() {
           />
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="crop">Crop</Label>
+            <Label htmlFor="crop">{t("add.crop")}</Label>
             <CropSelect
               id="crop"
               crops={crops ?? []}
@@ -386,7 +407,7 @@ export default function AddPlantPage() {
 
           {selectedCrop && selectedCrop.variants.length > 0 && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="variant">Variety</Label>
+              <Label htmlFor="variant">{t("add.variety")}</Label>
               <VariantSelect
                 id="variant"
                 variants={selectedCrop.variants}
@@ -397,8 +418,7 @@ export default function AddPlantPage() {
                 }}
               />
               <p className="text-muted-foreground text-xs">
-                Optional. Varieties differ in how long they take, so naming one
-                gives a more accurate harvest window.
+                {t("add.varietyHint")}
               </p>
             </div>
           )}
@@ -420,13 +440,14 @@ export default function AddPlantPage() {
                     {selectedVariant?.description || selectedCrop.description}
                   </p>
                   <p className="text-muted-foreground mt-2">
-                    Typical growing period:{" "}
-                    {selectedVariant?.growing_duration_days ??
-                      selectedCrop.growing_duration_days}{" "}
-                    days · harvest window{" "}
-                    {selectedVariant?.harvest_window_days ??
-                      selectedCrop.harvest_window_days}{" "}
-                    days
+                    {t("add.typical", {
+                      growing:
+                        selectedVariant?.growing_duration_days ??
+                        selectedCrop.growing_duration_days,
+                      window:
+                        selectedVariant?.harvest_window_days ??
+                        selectedCrop.harvest_window_days,
+                    })}
                   </p>
                 </div>
 
@@ -437,7 +458,7 @@ export default function AddPlantPage() {
           )}
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="plantingDate">Planting date</Label>
+            <Label htmlFor="plantingDate">{t("add.plantingDate")}</Label>
             <DatePicker
               id="plantingDate"
               value={plantingDate}
@@ -445,32 +466,10 @@ export default function AddPlantPage() {
                 setPlantingDate(next);
                 setFormError(null);
               }}
-              max={todayIso()}
-              placeholder="Select the planting date"
+              placeholder={t("add.selectDate")}
             />
             <p className="text-muted-foreground text-xs">
-              A plant record represents a crop already in the ground, so future dates
-              aren&apos;t accepted.
-            </p>
-          </div>
-
-          {/* The model has always had this field and `display_name` prefers
-              it; the form simply never asked. Without it a farmer with three
-              eggplant beds gets three identical rows in every list. */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="label">
-              Label{" "}
-              <span className="text-muted-foreground font-normal">(optional)</span>
-            </Label>
-            <Input
-              id="label"
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-              placeholder="e.g. North Row, Beside the creek"
-              maxLength={120}
-            />
-            <p className="text-muted-foreground text-xs">
-              Helps you tell this planting apart from others of the same crop.
+              {t("add.dateHint")}
             </p>
           </div>
 
@@ -479,10 +478,7 @@ export default function AddPlantPage() {
             <div className="border-risk-medium/30 bg-risk-medium/5 flex items-start gap-2.5 rounded-xl border px-3 py-2.5">
               <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
               <p className="text-sm">
-                You already recorded{" "}
-                <span className="font-medium">{duplicate.display_name}</span> planted
-                on this date. Add another only if this is a separate planting — a
-                label will keep them apart.
+                {t("add.duplicate", { name: duplicate.display_name })}
               </p>
             </div>
           )}
@@ -490,7 +486,7 @@ export default function AddPlantPage() {
           {formError && <p className="text-destructive text-sm">{formError}</p>}
 
           <Button type="submit" disabled={!cropId || !plantingDate} className="self-start">
-            Continue
+            {t("common.continue")}
             <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>
         </form>

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchFarmerRisk, type BackendAssessment } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { useLanguage } from "@/lib/i18n";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -32,40 +33,45 @@ function daysSince(dateString: string) {
 }
 
 function AssessmentStatus({ assessment }: { assessment: BackendAssessment }) {
+  const { t } = useLanguage();
   const elapsed = daysSince(assessment.assessment_date);
   return (
     <span className="text-muted-foreground text-sm">
-      Last assessed{" "}
-      {elapsed === 0 ? "today" : elapsed === 1 ? "yesterday" : `${elapsed} days ago`}
-      {elapsed >= 7 && " · due for a weekly check"}
+      {elapsed === 0
+        ? t("monitor.lastToday")
+        : elapsed === 1
+          ? t("monitor.lastYesterday")
+          : t("monitor.lastDays", { n: elapsed })}
+      {elapsed >= 7 && t("monitor.due")}
     </span>
   );
 }
 
 export default function MonitoringPage() {
   const { data, loading, error, refetch } = useAuthedQuery(fetchFarmerRisk);
+  const { t } = useLanguage();
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Monitoring"
-        description="Keep track of upcoming assessments for each plant."
+        title={t("monitor.title")}
+        description={t("monitor.description")}
       />
 
       {loading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
           <LoaderCircle className="text-primary size-6 animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading your plants…</p>
+          <p className="text-muted-foreground text-sm">{t("myPlants.loading")}</p>
         </div>
       ) : error ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">Unable to connect to BulanTanom.</p>
+          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground text-sm">{error}</p>
-          <Button onClick={refetch}>Try again</Button>
+          <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
       ) : !data || data.plants.length === 0 ? (
-        <EmptyState icon={Activity} title="No plants to monitor yet" />
+        <EmptyState icon={Activity} title={t("monitor.empty")} />
       ) : (
         <div className="flex flex-col gap-3">
           {data.plants.map(({ plant, latest_assessment: latest }) => (
@@ -87,7 +93,7 @@ export default function MonitoringPage() {
                   {latest ? (
                     <AssessmentStatus assessment={latest} />
                   ) : (
-                    <span className="text-muted-foreground text-sm">No assessment yet</span>
+                    <span className="text-muted-foreground text-sm">{t("detail.noAssessment")}</span>
                   )}
                 </div>
                 {plant.assessment_eligibility.can_assess ? (
@@ -96,18 +102,21 @@ export default function MonitoringPage() {
                     nativeButton={false}
                     render={<Link href={`/farmer/plants/${plant.id}/assessment`} />}
                   >
-                    Start Assessment
+                    {t("monitor.start")}
                     <ArrowRight className="size-3.5 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
                   </Button>
                 ) : (
                   <div className="flex flex-col items-end gap-1">
                     <Button size="sm" disabled>
                       <CalendarCheck className="size-3.5" />
-                      Assessment Completed
+                      {t("detail.completed")}
                     </Button>
                     <span className="text-muted-foreground/70 text-xs">
-                      Next in {plant.assessment_eligibility.days_remaining}{" "}
-                      {plant.assessment_eligibility.days_remaining === 1 ? "day" : "days"}
+                      {plant.assessment_eligibility.days_remaining === 1
+                        ? t("monitor.nextOne")
+                        : t("monitor.nextDays", {
+                            n: plant.assessment_eligibility.days_remaining,
+                          })}
                     </span>
                   </div>
                 )}

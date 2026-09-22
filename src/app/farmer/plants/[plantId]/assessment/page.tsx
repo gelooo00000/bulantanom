@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { fetchPlant } from "@/lib/api/plants-api";
 import type { AssessmentEligibility } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { useLanguage } from "@/lib/i18n";
 
 export default function AssessmentPage({
   params,
@@ -17,6 +18,7 @@ export default function AssessmentPage({
   params: Promise<{ plantId: string }>;
 }) {
   const { plantId } = use(params);
+  const { t } = useLanguage();
   const { data: plant, loading, error, refetch } = useAuthedQuery(
     (token) => fetchPlant(token, plantId),
     [plantId],
@@ -31,7 +33,7 @@ export default function AssessmentPage({
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
         <LoaderCircle className="text-primary size-6 animate-spin" />
-        <p className="text-muted-foreground text-sm">Loading plant…</p>
+        <p className="text-muted-foreground text-sm">{t("detail.loading")}</p>
       </div>
     );
   }
@@ -40,14 +42,14 @@ export default function AssessmentPage({
     return (
       <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
         <TriangleAlert className="text-risk-high size-5" />
-        <p className="text-sm font-medium">Unable to load this plant.</p>
+        <p className="text-sm font-medium">{t("detail.loadFailed")}</p>
         <p className="text-muted-foreground max-w-sm text-sm">
-          {error ?? "This plant could not be found in your records."}
+          {error ?? t("detail.notFound")}
         </p>
         <div className="flex gap-2">
-          <Button onClick={refetch}>Try again</Button>
+          <Button onClick={refetch}>{t("common.tryAgain")}</Button>
           <Button variant="outline" nativeButton={false} render={<Link href="/farmer/plants" />}>
-            Back to My Plants
+            {t("add.back")}
           </Button>
         </div>
       </div>
@@ -67,13 +69,13 @@ export default function AssessmentPage({
           className="text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1.5 text-sm"
         >
           <ArrowLeft className="size-3.5" />
-          Back to {plantLabel}
+          {t("asmt.backTo", { name: plantLabel })}
         </Link>
-        <h1 className="text-2xl font-medium tracking-tight">Weekly Assessment</h1>
+        <h1 className="text-2xl font-medium tracking-tight">{t("asmt.title")}</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           {eligibility.can_assess
-            ? `Answer a few questions about ${plantLabel} to get an AI risk reading.`
-            : `${plantLabel} has already been assessed this week.`}
+            ? t("asmt.intro", { name: plantLabel })
+            : t("asmt.alreadyDone", { name: plantLabel })}
         </p>
       </div>
 

@@ -25,10 +25,22 @@ export function fetchAdminDashboard(accessToken: string): Promise<AdminDashboard
   return apiFetch("/admin/dashboard/", { accessToken });
 }
 
+/**
+ * An account as the Admin list returns it: the safe profile, the records a
+ * deletion would destroy, and whether the person is using BulanTanom now.
+ */
+export type AdminUser = BackendUser & {
+  plant_count: number;
+  assessment_count: number;
+  soil_record_count: number;
+  is_online: boolean;
+  last_seen_at: string | null;
+};
+
 export function listUsers(
   accessToken: string,
   filters: { role?: BackendRole; status?: BackendAccountStatus } = {},
-): Promise<BackendUser[]> {
+): Promise<AdminUser[]> {
   const params = new URLSearchParams();
   if (filters.role) params.set("role", filters.role);
   if (filters.status) params.set("status", filters.status);
@@ -72,15 +84,18 @@ export function reactivateOfficer(
 /**
  * Permanently removes an account.
  *
- * The server refuses (409) when the account owns plants, assessments or soil
- * records, because those cascade — the Admin is told to suspend instead. It
- * also refuses to delete the caller's own account or any Admin.
+ * An account that owns plants, assessments or soil records is refused (409)
+ * unless `includeRecords` is set — which the Admin screen does only after a
+ * confirmation listing what will be lost, since those records are deleted
+ * with it. The server never deletes the caller's own account or any Admin.
  */
 export function deleteAccount(
   accessToken: string,
   userId: number,
+  { includeRecords = false }: { includeRecords?: boolean } = {},
 ): Promise<{ detail: string }> {
-  return apiFetch(`/admin/accounts/${userId}/`, { method: "DELETE", accessToken });
+  const query = includeRecords ? "?include_records=true" : "";
+  return apiFetch(`/admin/accounts/${userId}/${query}`, { method: "DELETE", accessToken });
 }
 
 /**

@@ -72,6 +72,8 @@ export type BackendPlant = {
   status: "GROWING" | "READY_FOR_HARVEST" | "HARVESTED" | "ARCHIVED";
   status_label: string;
   age_days: number;
+  /** Planting date still ahead: a planned planting, not in the ground yet. */
+  is_planned: boolean;
   /** Weekly-assessment lock state, decided by Django from stored assessments. */
   assessment_eligibility: AssessmentEligibility;
   created_at: string;

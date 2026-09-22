@@ -12,37 +12,39 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchFarmerRisk } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { useLanguage } from "@/lib/i18n";
 
 export default function RiskIndicatorPage() {
   const { data, loading, error, refetch } = useAuthedQuery(fetchFarmerRisk);
+  const { t } = useLanguage();
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Plant Risk Indicator"
-        description="AI risk readings across all your plants at Layuan Farm."
+        title={t("riskPage.title")}
+        description={t("riskPage.description")}
       />
 
       {loading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
           <LoaderCircle className="text-primary size-6 animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading your risk readings…</p>
+          <p className="text-muted-foreground text-sm">{t("riskPage.loading")}</p>
         </div>
       ) : error ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">Unable to connect to BulanTanom.</p>
+          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground text-sm">{error}</p>
-          <Button onClick={refetch}>Try again</Button>
+          <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
       ) : !data || data.plants.length === 0 ? (
         <EmptyState
           icon={Sprout}
-          title="No plants yet"
-          description="Add a plant, then submit a weekly assessment to get an AI risk reading for it."
+          title={t("riskPage.emptyTitle")}
+          description={t("riskPage.emptyText")}
           action={
             <Button nativeButton={false} render={<Link href="/farmer/plants/new" />}>
-              Add a plant
+              {t("suited.addPlant")}
               <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
             </Button>
           }
@@ -67,7 +69,7 @@ export default function RiskIndicatorPage() {
                         {plant.crop.emoji} {plant.display_name}
                       </p>
                       <p className="text-muted-foreground text-sm">
-                        No assessment submitted yet — day {plant.age_days}.
+                        {t("riskPage.notYet", { n: plant.age_days })}
                       </p>
                     </div>
                     {plant.assessment_eligibility.can_assess ? (
@@ -77,12 +79,15 @@ export default function RiskIndicatorPage() {
                         nativeButton={false}
                         render={<Link href={`/farmer/plants/${plant.id}/assessment`} />}
                       >
-                        Assess now
+                        {t("riskPage.assessNow")}
                       </Button>
                     ) : (
                       <span className="text-muted-foreground text-xs">
-                        Next assessment in{" "}
-                        {plant.assessment_eligibility.days_remaining} days
+                        {plant.assessment_eligibility.days_remaining === 1
+                          ? t("detail.nextInOne")
+                          : t("detail.nextIn", {
+                              n: plant.assessment_eligibility.days_remaining,
+                            })}
                       </span>
                     )}
                   </CardContent>

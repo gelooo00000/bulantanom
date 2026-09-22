@@ -8,6 +8,7 @@ import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card
 import { Button } from "@/components/ui/button";
 import { fetchAssessment } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { useLanguage } from "@/lib/i18n";
 
 export default function AssessmentDetailPage({
   params,
@@ -15,6 +16,7 @@ export default function AssessmentDetailPage({
   params: Promise<{ assessmentId: string }>;
 }) {
   const { assessmentId } = use(params);
+  const { t } = useLanguage();
   const {
     data: assessment,
     loading,
@@ -26,7 +28,7 @@ export default function AssessmentDetailPage({
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
         <LoaderCircle className="text-primary size-6 animate-spin" />
-        <p className="text-muted-foreground text-sm">Loading assessment…</p>
+        <p className="text-muted-foreground text-sm">{t("asmtDetail.loading")}</p>
       </div>
     );
   }
@@ -35,18 +37,18 @@ export default function AssessmentDetailPage({
     return (
       <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
         <TriangleAlert className="text-risk-high size-5" />
-        <p className="text-sm font-medium">Unable to load this assessment.</p>
+        <p className="text-sm font-medium">{t("asmtDetail.loadFailed")}</p>
         <p className="text-muted-foreground max-w-sm text-sm">
-          {error ?? "This assessment could not be found in your records."}
+          {error ?? t("asmtDetail.notFound")}
         </p>
         <div className="flex gap-2">
-          <Button onClick={refetch}>Try again</Button>
+          <Button onClick={refetch}>{t("common.tryAgain")}</Button>
           <Button
             variant="outline"
             nativeButton={false}
             render={<Link href="/farmer/assessments" />}
           >
-            Back to history
+            {t("asmtDetail.backShort")}
           </Button>
         </div>
       </div>
@@ -60,7 +62,7 @@ export default function AssessmentDetailPage({
         className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm"
       >
         <ArrowLeft className="size-3.5" />
-        Back to Assessment History
+        {t("asmtDetail.back")}
       </Link>
 
       <RiskResultCard assessment={assessment} />
@@ -72,7 +74,7 @@ export default function AssessmentDetailPage({
         nativeButton={false}
         render={<Link href={`/farmer/plants/${assessment.plant_id}`} />}
       >
-        View {assessment.plant_display_name}
+        {t("asmtDetail.view", { name: assessment.plant_display_name })}
       </Button>
     </div>
   );

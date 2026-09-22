@@ -8,6 +8,7 @@ import { RiskBadge } from "@/components/risk/risk-badge";
 import { AuthedImage } from "@/components/shared/authed-image";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendAssessment } from "@/lib/api/risk-api";
+import { useFarmerLanguage } from "@/lib/i18n";
 
 /**
  * Compact summary of one assessment. Used by both Farmer history and the
@@ -23,6 +24,7 @@ export function AssessmentRow({
   href?: string;
   showFarmer?: boolean;
 }) {
+  const { t, dateLocale } = useFarmerLanguage();
   const risk = assessment.risk;
   const level = risk?.risk_level;
   // Evidence photos are full-resolution uploads, so one is fetched only when
@@ -40,14 +42,14 @@ export function AssessmentRow({
             />
           ) : (
             <span className="text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
-              No reading
+              {t("row.noReading")}
             </span>
           )}
           <span className="text-sm font-medium">
             {assessment.crop_emoji} {assessment.plant_display_name}
           </span>
           <span className="text-muted-foreground text-xs">
-            day {assessment.plant_age_days}
+            {t("row.day", { n: assessment.plant_age_days })}
           </span>
         </div>
 
@@ -55,13 +57,13 @@ export function AssessmentRow({
           {risk?.status === "completed" && risk.summary
             ? risk.summary
             : (risk?.failure_reason ??
-              "AI risk analysis was not available for this assessment.")}
+              t("row.unavailable"))}
         </p>
 
         <div className="text-muted-foreground/70 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           <span className="flex items-center gap-1.5">
             <CalendarDays className="size-3" />
-            {new Date(assessment.assessment_date).toLocaleDateString()}
+            {new Date(assessment.assessment_date).toLocaleDateString(dateLocale)}
           </span>
           {assessment.evidence_image_url ? (
             <button
@@ -77,12 +79,12 @@ export function AssessmentRow({
               className="hover:text-foreground flex items-center gap-1.5 underline-offset-2 hover:underline"
             >
               <ImageIcon className="size-3" />
-              {showEvidence ? "Hide photo" : "View photo"}
+              {showEvidence ? t("row.hidePhoto") : t("row.viewPhoto")}
             </button>
           ) : (
             <span className="flex items-center gap-1.5">
               <ImageOff className="size-3" />
-              No photo
+              {t("row.noPhoto")}
             </span>
           )}
           {showFarmer && assessment.farmer && (
@@ -97,7 +99,7 @@ export function AssessmentRow({
           <div className="border-border overflow-hidden rounded-lg border">
             <AuthedImage
               src={assessment.evidence_image_url}
-              alt={`Plant condition evidence for ${assessment.plant_display_name}`}
+              alt={t("row.photoAlt", { name: assessment.plant_display_name })}
               className="bg-muted max-h-72 w-full object-contain"
             />
           </div>

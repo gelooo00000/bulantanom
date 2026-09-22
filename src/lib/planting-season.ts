@@ -3,6 +3,7 @@ import type {
   PlantingAdviceStatus,
   PlantingWindow,
 } from "@/lib/api/plants-api";
+import { englishT, type MessageKey, type Translate } from "@/lib/i18n";
 
 /**
  * Turns a crop's planting window into a verdict for one month.
@@ -18,28 +19,15 @@ import type {
  * and for the verdict stored against a saved plant (`plant.planting_advice`).
  */
 
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-export function monthName(month: number): string {
-  return MONTH_NAMES[month - 1] ?? "";
+export function monthName(month: number, t: Translate = englishT): string {
+  if (!Number.isInteger(month) || month < 1 || month > 12) return "";
+  return t(`month.${month - 1}` as MessageKey);
 }
 
 export function adviseForMonth(
   window: PlantingWindow | null | undefined,
   month: number,
+  t: Translate = englishT,
 ): PlantingAdvice | null {
   if (!window || month < 1 || month > 12) return null;
 
@@ -47,22 +35,22 @@ export function adviseForMonth(
   const caution = window.caution_months ?? [];
   if (preferred.length === 0 && caution.length === 0) return null;
 
-  const name = monthName(month);
+  const name = monthName(month, t);
   let status: PlantingAdviceStatus;
   let headline: string;
   let detail: string;
 
   if (preferred.includes(month)) {
     status = "good";
-    headline = `${name} is a good month to plant this at Layuan Farm.`;
+    headline = t("season.goodHeadline", { month: name });
     detail = window.reason;
   } else if (caution.includes(month)) {
     status = "caution";
-    headline = `${name} is workable, but not the ideal window.`;
+    headline = t("season.cautionHeadline", { month: name });
     detail = [window.caution_note, window.risk].filter(Boolean).join(" ");
   } else {
     status = "poor";
-    headline = `${name} is outside the recommended planting window.`;
+    headline = t("season.poorHeadline", { month: name });
     detail = window.risk;
   }
 

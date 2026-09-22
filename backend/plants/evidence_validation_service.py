@@ -25,27 +25,16 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 
 from django.conf import settings
+
+from .gemini_models import generate_with_fallback
 
 logger = logging.getLogger(__name__)
 
 # Below this, a "match" is not trusted — reported as unclear rather than
 # accepted, so an ambiguous photo never passes as verified evidence.
 MIN_MATCH_CONFIDENCE = 0.55
-
-GEMINI_MAX_ATTEMPTS = 3
-GEMINI_RETRY_DELAY_SECONDS = 1.5
-_RETRYABLE_MARKERS = (
-    "429",
-    "503",
-    "504",
-    "UNAVAILABLE",
-    "DEADLINE_EXCEEDED",
-    "RESOURCE_EXHAUSTED",
-    "overloaded",
-)
 
 VERDICTS = ("match", "mismatch", "no_plant", "unclear")
 
@@ -102,16 +91,6 @@ Rules:
 
 def is_configured() -> bool:
     return bool(settings.GEMINI_API_KEY)
-
-
-def _is_retryable(exc: Exception) -> bool:
-    """True for transient upstream saturation, not timeouts or bad requests."""
-    if "timeout" in type(exc).__name__.lower():
-        return False
-    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
-    if code in (429, 503, 504):
-        return True
-    return any(marker in str(exc) for marker in _RETRYABLE_MARKERS)
 
 
 def build_context(crop) -> dict:
@@ -224,27 +203,14 @@ def validate_crop_evidence(crop, image_bytes: bytes, mime_type: str) -> dict | N
         ),
     )
 
-    response = None
-    for attempt in range(GEMINI_MAX_ATTEMPTS):
-        try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL, contents=parts, config=config
-            )
-            break
-        except Exception as exc:
-            retryable = _is_retryable(exc)
-            logger.warning(
-                "Evidence validation failed (attempt %d/%d, retryable=%s): %s: %s",
-                attempt + 1,
-                GEMINI_MAX_ATTEMPTS,
-                retryable,
-                type(exc).__name__,
-                exc,
-            )
-            if not retryable or attempt == GEMINI_MAX_ATTEMPTS - 1:
-                return None
-            time.sleep(GEMINI_RETRY_DELAY_SECONDS * (attempt + 1))
+    try:
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    except Exception as exc:
+        logger.warning("Gemini client could not be created: %s", type(exc).__name__)
+        return None
+    response, _model = generate_with_fallback(
+        client, contents=parts, config=config, label="evidence validation"
+    )
 
     if response is None:
         return None
