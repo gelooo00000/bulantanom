@@ -75,7 +75,9 @@ export default function AssessmentPage({
         <p className="text-muted-foreground mt-1 text-sm">
           {eligibility.can_assess
             ? t("asmt.intro", { name: plantLabel })
-            : t("asmt.alreadyDone", { name: plantLabel })}
+            : eligibility.too_young
+              ? t("young.why")
+              : t("asmt.alreadyDone", { name: plantLabel })}
         </p>
       </div>
 
@@ -91,6 +93,7 @@ export default function AssessmentPage({
           eligibility={eligibility}
           plantLabel={plantLabel}
           plantId={plant.id}
+          plantingDate={plant.planting_date}
         />
       )}
     </div>

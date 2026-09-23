@@ -19,24 +19,17 @@ export const harvest = defineMessages({
     bik: "Magdugang san tanom para mahiling an inaasahan na panahon san ani kaini.",
   },
   "harvestPage.ready": { en: "Ready to harvest", fil: "Handa nang anihin", bik: "Pwede na anihon" },
-  "harvestPage.within": {
-    en: "Within {n} days",
-    fil: "Sa loob ng {n} araw",
-    bik: "Sa sulod san {n} adlaw",
-  },
   "harvestPage.growing": { en: "Still growing", fil: "Lumalaki pa", bik: "Nagdadakula pa" },
-  "harvestPage.next": { en: "Next: {crop}", fil: "Susunod: {crop}", bik: "Masunod: {crop}" },
-  "harvestPage.noUpcoming": {
-    en: "No upcoming window",
-    fil: "Walang paparating na ani",
-    bik: "Waray maabot na ani",
-  },
   "harvestPage.approaching": {
-    en: "Approaching ({n} days)",
-    fil: "Malapit na ({n} araw)",
-    bik: "Harani na ({n} adlaw)",
+    en: "Ready within {n} days",
+    fil: "Handa sa loob ng {n} araw",
+    bik: "Pwede na sa sulod san {n} adlaw",
   },
-  "harvestPage.passed": { en: "Window passed", fil: "Lumipas na ang panahon", bik: "Naglihis na an panahon" },
+  "harvestPage.passed": {
+    en: "Harvest time passed",
+    fil: "Lumipas na ang anihan",
+    bik: "Naglihis na an pag-ani",
+  },
   "harvestPage.harvested": { en: "Harvested", fil: "Naani na", bik: "Naani na" },
   "harvestPage.note": {
     en: "Windows are calculated by BulanTanom from each crop's typical growing duration and your planting date. They are estimates — real timing shifts with weather, soil and variety, so check the plant before harvesting.",

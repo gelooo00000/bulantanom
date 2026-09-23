@@ -3,7 +3,12 @@ import type { BackendPlant } from "@/lib/api/plants-api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
-export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
+/**
+ * INCONCLUSIVE is a real answer, not a missing one: a plant in its first
+ * weeks has no growth history to judge, so the AI says so instead of
+ * inventing LOW. It is counted as "no reading yet", never as a risk.
+ */
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "INCONCLUSIVE";
 export type RiskStatus = "pending" | "completed" | "failed";
 
 export type RiskFactor = { factor: string; severity: string; explanation: string };
@@ -22,6 +27,8 @@ export type BackendRisk = {
   limitations: string[];
   next_assessment_days: number | null;
   image_analyzed: boolean;
+  /** The photo and the recorded planting date cannot both be right. */
+  date_mismatch: boolean;
   model_name: string;
   failure_reason: string;
   generated_at: string;
@@ -35,6 +42,11 @@ export type AssessmentEligibility = {
    * assess yet, and `next_assessment_date` is the planting date.
    */
   planned?: boolean;
+  /**
+   * Planted less than a week ago: in the ground, but with nothing to judge
+   * yet, so the first assessment has not opened.
+   */
+  too_young?: boolean;
   last_assessment_date: string | null;
   next_assessment_date: string | null;
   days_remaining: number;

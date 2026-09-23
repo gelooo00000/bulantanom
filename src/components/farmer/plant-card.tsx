@@ -84,6 +84,15 @@ export function PlantCard({
             <CalendarClock className="size-3.5 shrink-0" />
             {t("card.plannedAssess", { date: date(plant.planting_date) })}
           </span>
+        ) : plant.assessment_eligibility.too_young &&
+          plant.assessment_eligibility.next_assessment_date ? (
+          // Planted, but not yet worth judging: the first check has a date.
+          <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+            <CalendarClock className="size-3.5 shrink-0" />
+            {t("young.first", {
+              date: date(plant.assessment_eligibility.next_assessment_date),
+            })}
+          </span>
         ) : plant.assessment_eligibility.can_assess ? (
           <span className="text-primary flex items-center gap-1.5 text-xs font-medium">
             <ClipboardList className="size-3.5 shrink-0" />

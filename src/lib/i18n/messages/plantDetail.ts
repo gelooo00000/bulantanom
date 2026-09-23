@@ -23,14 +23,14 @@ export const plantDetail = defineMessages({
   "detail.assessments": { en: "Assessments", fil: "Mga Pagsusuri", bik: "Mga Pagsusi" },
   "detail.about": { en: "About {name}", fil: "Tungkol sa {name}", bik: "Manungod sa {name}" },
   "detail.typical": {
-    en: "Typical growing period {growing} days, with a harvest window of about {window} days. Actual timing varies with weather, soil and plant health.",
-    fil: "Karaniwang tagal ng paglaki ay {growing} araw, at ang panahon ng ani ay mga {window} araw. Nag-iiba ang aktwal na panahon depende sa panahon, lupa at kalusugan ng tanim.",
-    bik: "Normal na kaluwagan san pagdakula {growing} adlaw, asin an panahon san ani mga {window} adlaw. Nagbabago an totoo na panahon segun sa klima, daga asin salud san tanom.",
+    en: "Usually takes {growing} to be ready, and can be harvested for {window}. Actual timing varies with weather, soil and plant health.",
+    fil: "Karaniwang umaabot ng {growing} bago handa, at puwedeng anihin nang {window}. Nag-iiba ang aktwal na panahon depende sa panahon, lupa at kalusugan ng tanim.",
+    bik: "Kadalasan naghahaloy nin {growing} bago pwede anihon, asin pwede anihon sulod san {window}. Nagbabago an totoo na panahon segun sa klima, daga asin salud san tanom.",
   },
   "detail.typicalNoVariety": {
-    en: "Typical growing period {growing} days, with a harvest window of about {window} days. Actual timing varies with variety, weather, soil and plant health.",
-    fil: "Karaniwang tagal ng paglaki ay {growing} araw, at ang panahon ng ani ay mga {window} araw. Nag-iiba ang aktwal na panahon depende sa uri, panahon, lupa at kalusugan ng tanim.",
-    bik: "Normal na kaluwagan san pagdakula {growing} adlaw, asin an panahon san ani mga {window} adlaw. Nagbabago an totoo na panahon segun sa klase, klima, daga asin salud san tanom.",
+    en: "Usually takes {growing} to be ready, and can be harvested for {window}. Actual timing varies with variety, weather, soil and plant health.",
+    fil: "Karaniwang umaabot ng {growing} bago handa, at puwedeng anihin nang {window}. Nag-iiba ang aktwal na panahon depende sa uri, panahon, lupa at kalusugan ng tanim.",
+    bik: "Kadalasan naghahaloy nin {growing} bago pwede anihon, asin pwede anihon sulod san {window}. Nagbabago an totoo na panahon segun sa klase, klima, daga asin salud san tanom.",
   },
   "detail.noAssessment": {
     en: "No assessment yet",

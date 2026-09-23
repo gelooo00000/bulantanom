@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CalendarDays, ImageOff, ImageIcon, User } from "lucide-react";
 import { useState } from "react";
 
-import { RiskBadge } from "@/components/risk/risk-badge";
+import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { AuthedImage } from "@/components/shared/authed-image";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendAssessment } from "@/lib/api/risk-api";
@@ -37,7 +37,7 @@ export function AssessmentRow({
         <div className="flex flex-wrap items-center gap-2">
           {level ? (
             <RiskBadge
-              level={level.toLowerCase() as "low" | "medium" | "high"}
+              level={level.toLowerCase() as BadgeLevel}
               size="sm"
             />
           ) : (

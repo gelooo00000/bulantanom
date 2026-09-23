@@ -23,14 +23,29 @@ import logging
 
 from django.conf import settings
 
+from .durations import human_duration
 from .gemini_models import generate_with_fallback
 
 logger = logging.getLogger(__name__)
 
+# A plant this young is still establishing: "nothing wrong yet" is not the
+# same as "healthy", so the AI may answer INCONCLUSIVE instead of LOW.
+EARLY_STAGE_DAYS = 14
+
 RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
-        "risk_level": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]},
+        "risk_level": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH", "INCONCLUSIVE"],
+        },
+        "planting_date_mismatch": {
+            "type": "boolean",
+            "description": (
+                "True only when the photo clearly shows a plant at a very "
+                "different stage from the recorded age."
+            ),
+        },
         "summary": {"type": "string"},
         "reality_vs_expectation": {
             "type": "object",
@@ -67,6 +82,7 @@ RESPONSE_SCHEMA = {
         "risk_factors",
         "recommended_actions",
         "next_assessment_days",
+        "planting_date_mismatch",
     ],
 }
 
@@ -98,13 +114,37 @@ Rules you must follow:
 - If no image is supplied, leave `visual_observations` empty and note the
   absence in `limitations`.
 - Weigh the whole picture. Do not escalate to HIGH on a single symptom.
-    LOW    = developing broadly as expected, no significant warning signs.
-    MEDIUM = some deviation from expectation, or moderate warning signs
-             that warrant monitoring.
-    HIGH   = significant deviation, several concerning observations, or
-             severe visible warning signs needing prompt attention.
+    LOW          = developing broadly as expected, no significant warning
+                   signs.
+    MEDIUM       = some deviation from expectation, or moderate warning
+                   signs that warrant monitoring.
+    HIGH         = significant deviation, several concerning observations,
+                   or severe visible warning signs needing prompt attention.
+    INCONCLUSIVE = there is not enough to judge yet. Use this, and say why
+                   in `summary`, when the plant is in its first weeks and
+                   the farmer reports no problem: a seedling that has barely
+                   emerged has no growth history to compare against, so LOW
+                   would overstate what you actually know. You are told when
+                   the plant is in this early stage. Do NOT use INCONCLUSIVE
+                   as a way to avoid reporting a real problem — if the
+                   farmer reports pests, disease, wilting or damage, or the
+                   photo shows it, give a real level however young the plant
+                   is.
+- `planting_date_mismatch`: set this true when the photo clearly shows a
+  plant at a very different stage from the age you were given — mature fruit
+  on a plant recorded as days old, or bare soil for one recorded as months
+  old. When you do, set `risk_level` to INCONCLUSIVE and explain in
+  `summary` that the planting date or the photo may be wrong. A mismatch is
+  a record-keeping problem, not a danger to the crop: never report it as
+  HIGH risk. Ordinary variation in growth is NOT a mismatch — only use this
+  when the two cannot both be true.
 - Do not claim to replace an agricultural extension officer or agronomist.
 - Keep advice practical and specific for a working smallholder farmer.
+- Say durations the way a farmer says them — "about 4 years", "three
+  months" — using the readable forms given to you. Never quote raw day
+  counts like "1460 days".
+- A tree crop years away from its first harvest is behaving normally. Judge
+  it on how the young tree is establishing, not on the absence of fruit.
 - `risk_level` must be exactly LOW, MEDIUM or HIGH.
 """.strip()
 
@@ -142,6 +182,9 @@ def build_context(assessment) -> dict:
             "name": crop.name,
             "category": crop.get_category_display(),
             "growing_duration_days": crop.growing_duration_days,
+            # How to say it. A tree crop is years from harvest, and "1460
+            # days" is not how anyone reports that.
+            "growing_duration_readable": human_duration(crop.growing_duration_days),
             "harvest_window_days": crop.harvest_window_days,
             "expected_growth_stage": _expected_stage(crop, assessment.plant_age_days),
             "expected_harvest_start": plant.expected_harvest_start.isoformat(),
@@ -152,6 +195,10 @@ def build_context(assessment) -> dict:
             "planting_date": plant.planting_date.isoformat(),
             "assessment_date": assessment.assessment_date.isoformat(),
             "age_days": assessment.plant_age_days,
+            "age_readable": human_duration(assessment.plant_age_days),
+            # Below this the plant is still establishing and an absent
+            # problem is not yet evidence that all is well.
+            "early_establishment_stage": assessment.plant_age_days <= EARLY_STAGE_DAYS,
         },
         "farmer_assessment": {
             "plant_height_cm": (
@@ -187,7 +234,7 @@ def _validate(payload) -> dict | None:
         return None
 
     level = payload.get("risk_level")
-    if level not in ("LOW", "MEDIUM", "HIGH"):
+    if level not in ("LOW", "MEDIUM", "HIGH", "INCONCLUSIVE"):
         # Never coerce — an unusable level means the evaluation failed.
         return None
 
@@ -226,8 +273,11 @@ def _validate(payload) -> dict | None:
     if not isinstance(next_days, int) or not (1 <= next_days <= 60):
         next_days = 7
 
+    mismatch = payload.get("planting_date_mismatch") is True
+
     return {
-        "risk_level": level,
+        "risk_level": "INCONCLUSIVE" if mismatch else level,
+        "date_mismatch": mismatch,
         "summary": summary.strip(),
         "reality_vs_expectation": {
             "expected": str(rve.get("expected", "")).strip(),

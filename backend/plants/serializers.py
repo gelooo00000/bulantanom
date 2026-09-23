@@ -293,6 +293,7 @@ class RiskAssessmentSerializer(serializers.ModelSerializer):
             "limitations",
             "next_assessment_days",
             "image_analyzed",
+            "date_mismatch",
             "model_name",
             "failure_reason",
             "generated_at",

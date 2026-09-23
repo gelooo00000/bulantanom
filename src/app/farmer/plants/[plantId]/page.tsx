@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { fetchPlant, type BackendPlant } from "@/lib/api/plants-api";
 import { fetchPlantAssessments } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { humanDuration } from "@/lib/duration";
 import { useLanguage } from "@/lib/i18n";
 import { plantStatusLabel } from "@/lib/plant-summary";
 
@@ -85,7 +86,7 @@ export default function PlantDetailPage({
         <PlantStat
           icon={Clock}
           label={t("detail.age")}
-          value={t("detail.ageValue", { n: plant.age_days })}
+          value={humanDuration(plant.age_days, t)}
         />
         <PlantStat
           icon={Sprout}
@@ -129,9 +130,14 @@ export default function PlantDetailPage({
               </p>
               <p className="text-muted-foreground mt-3 text-sm">
                 {t(plant.variant ? "detail.typical" : "detail.typicalNoVariety", {
-                  growing:
+                  growing: humanDuration(
                     plant.variant?.growing_duration_days ?? plant.crop.growing_duration_days,
-                  window: plant.variant?.harvest_window_days ?? plant.crop.harvest_window_days,
+                    t,
+                  ),
+                  window: humanDuration(
+                    plant.variant?.harvest_window_days ?? plant.crop.harvest_window_days,
+                    t,
+                  ),
                 })}
               </p>
 

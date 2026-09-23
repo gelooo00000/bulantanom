@@ -251,6 +251,7 @@ def _run_risk_evaluation(assessment):
         limitations=result["limitations"],
         next_assessment_days=result["next_assessment_days"],
         image_analyzed=result["image_analyzed"],
+        date_mismatch=result.get("date_mismatch", False),
         # A fallback model may have answered when GEMINI_MODEL was busy.
         model_name=result.get("model_name", settings.GEMINI_MODEL),
     )
@@ -419,6 +420,12 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
                         f"{schedule['next_assessment_date']} and is not in the ground "
                         "yet. You can assess it from that day."
                         if schedule.get("planned")
+                        # Newly planted: there is nothing to judge yet, so the
+                        # first assessment waits a week rather than producing a
+                        # risk level with nothing behind it.
+                        else "This plant was only just planted. Its first assessment "
+                        f"opens on {schedule['next_assessment_date']}."
+                        if schedule.get("too_young")
                         else "You have already completed this week's assessment for "
                         f"this plant. The next one is available on "
                         f"{schedule['next_assessment_date']}."

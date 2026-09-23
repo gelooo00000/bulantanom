@@ -33,6 +33,7 @@ import {
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
+import { humanDuration } from "@/lib/duration";
 import { useLanguage } from "@/lib/i18n";
 import { adviseForMonth, monthFromIsoDate } from "@/lib/planting-season";
 
@@ -250,7 +251,7 @@ export default function AddPlantPage() {
                 <p className="text-muted-foreground mt-1 text-sm">
                   {t("add.windowPlanted", {
                     date: date(window.planting_date),
-                    n: window.growing_duration_days,
+                    n: humanDuration(window.growing_duration_days, t),
                   })}
                 </p>
                 <p className="text-muted-foreground/70 mt-2 flex items-start gap-1.5 text-xs">
@@ -441,12 +442,16 @@ export default function AddPlantPage() {
                   </p>
                   <p className="text-muted-foreground mt-2">
                     {t("add.typical", {
-                      growing:
+                      growing: humanDuration(
                         selectedVariant?.growing_duration_days ??
-                        selectedCrop.growing_duration_days,
-                      window:
+                          selectedCrop.growing_duration_days,
+                        t,
+                      ),
+                      window: humanDuration(
                         selectedVariant?.harvest_window_days ??
-                        selectedCrop.harvest_window_days,
+                          selectedCrop.harvest_window_days,
+                        t,
+                      ),
                     })}
                   </p>
                 </div>

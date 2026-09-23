@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  CalendarX,
   Eye,
   Info,
   LoaderCircle,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { RiskBadge } from "@/components/risk/risk-badge";
+import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { AuthedImage } from "@/components/shared/authed-image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,8 +27,8 @@ const SEVERITY_CLASS: Record<string, string> = {
   high: "text-risk-high",
 };
 
-function toLevel(level: string): "low" | "medium" | "high" {
-  return level.toLowerCase() as "low" | "medium" | "high";
+function toLevel(level: string): BadgeLevel {
+  return level.toLowerCase() as BadgeLevel;
 }
 
 function Section({ title, items }: { title: string; items: string[] }) {
@@ -120,6 +121,18 @@ export function RiskResultCard({
           </div>
         )}
 
+        {/* The photo and the recorded date disagree — a record to correct,
+            never reported as danger to the crop. */}
+        {risk?.date_mismatch && (
+          <div className="border-risk-medium/30 bg-risk-medium/5 flex items-start gap-3 rounded-xl border p-4">
+            <CalendarX className="text-risk-medium mt-0.5 size-4 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">{t("mismatch.title")}</p>
+              <p className="text-muted-foreground mt-1 text-sm">{t("mismatch.text")}</p>
+            </div>
+          </div>
+        )}
+
         {!risk || risk.status !== "completed" ? (
           <div className="border-risk-medium/30 bg-risk-medium/5 flex items-start gap-3 rounded-xl border p-4">
             <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
@@ -151,6 +164,15 @@ export function RiskResultCard({
           </div>
         ) : (
           <>
+            {/* No level to show: say plainly that it is too soon, rather
+                than leaving the card looking unfinished. */}
+            {risk.risk_level === "INCONCLUSIVE" && !risk.date_mismatch && (
+              <div className="border-border bg-muted/40 rounded-xl border p-4">
+                <p className="text-sm font-medium">{t("early.resultTitle")}</p>
+                <p className="text-muted-foreground mt-1 text-sm">{t("early.resultText")}</p>
+              </div>
+            )}
+
             <p className="text-sm leading-relaxed">{risk.summary}</p>
 
             {(risk.reality_vs_expectation?.expected ||

@@ -3,7 +3,7 @@
 import { ChevronDown, Sparkles, TriangleAlert } from "lucide-react";
 import { useId, useState } from "react";
 
-import { RiskBadge } from "@/components/risk/risk-badge";
+import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendAssessment } from "@/lib/api/risk-api";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,7 @@ export function HighRiskCaseCard({ assessment }: { assessment: BackendAssessment
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             {level ? (
-              <RiskBadge level={level.toLowerCase() as "low" | "medium" | "high"} size="sm" />
+              <RiskBadge level={level.toLowerCase() as BadgeLevel} size="sm" />
             ) : (
               <span className="text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
                 No reading

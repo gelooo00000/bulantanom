@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import {
-  CalendarDays,
-  Clock,
-  LoaderCircle,
-  Sprout,
-  TriangleAlert,
-  Wheat,
-} from "lucide-react";
+import { LoaderCircle, TriangleAlert, Wheat } from "lucide-react";
 
+import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -17,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { fetchPlants, type BackendPlant } from "@/lib/api/plants-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { humanDuration } from "@/lib/duration";
 import { useLanguage, type Translate } from "@/lib/i18n";
 import { plantStatusLabel } from "@/lib/plant-summary";
 import { cn } from "@/lib/utils";
@@ -71,17 +66,16 @@ function phaseLabel(plant: BackendPlant, phase: Phase, t: Translate): string {
     case "open":
       return toEnd === 0
         ? t("phase.lastDay")
-        : toEnd === 1
-          ? t("phase.readyLeftOne")
-          : t("phase.readyLeft", { n: toEnd });
+        : t("harvestCard.readyLeft", { time: humanDuration(toEnd, t) });
     case "approaching":
-      return toStart === 1 ? t("phase.startsTomorrow") : t("phase.startsIn", { n: toStart });
+      return toStart === 1
+        ? t("phase.startsTomorrow")
+        : t("harvestCard.startsIn", { time: humanDuration(toStart, t) });
     case "passed":
-      return Math.abs(toEnd) === 1
-        ? t("phase.closedOne")
-        : t("phase.closed", { n: Math.abs(toEnd) });
+      return t("harvestCard.closedAgo", { time: humanDuration(Math.abs(toEnd), t) });
     default:
-      return t("phase.toGo", { n: toStart });
+      // A tree crop is years away; "1460 days to go" is not an answer.
+      return t("harvestCard.toGo", { time: humanDuration(toStart, t) });
   }
 }
 
@@ -131,9 +125,9 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
           <div className="flex flex-col gap-1.5">
             <div className="text-muted-foreground flex justify-between text-xs">
               <span>
-                {t("harvestCard.dayOf", {
-                  n: plant.age_days,
-                  total: plant.crop.growing_duration_days,
+                {t("harvestCard.grown", {
+                  done: humanDuration(plant.age_days, t),
+                  total: humanDuration(plant.crop.growing_duration_days, t),
                 })}
               </span>
               <span>{percent}%</span>
@@ -160,18 +154,16 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
             <p className="text-sm">{date(plant.planting_date)}</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">{t("harvestCard.opens")}</p>
+            <p className="text-muted-foreground text-xs">{t("harvestCard.readyFrom")}</p>
             <p className="text-sm">{date(plant.expected_harvest_start)}</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">{t("harvestCard.closes")}</p>
+            <p className="text-muted-foreground text-xs">{t("harvestCard.readyUntil")}</p>
             <p className="text-sm">{date(plant.expected_harvest_end)}</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">{t("harvestCard.length")}</p>
-            <p className="text-sm">
-              {windowDays === 1 ? t("common.day", { n: 1 }) : t("common.days", { n: windowDays })}
-            </p>
+            <p className="text-muted-foreground text-xs">{t("harvestCard.lasts")}</p>
+            <p className="text-sm">{humanDuration(windowDays, t)}</p>
           </div>
         </div>
 
@@ -202,33 +194,9 @@ function Section({ title, plants }: { title: string; plants: BackendPlant[] }) {
   );
 }
 
-function Stat({
-  icon: Icon,
-  value,
-  label,
-  tone,
-}: {
-  icon: typeof Wheat;
-  value: string | number;
-  label: string;
-  tone?: string;
-}) {
-  return (
-    <Card className="gap-2 py-4">
-      <CardContent className="flex items-center justify-between gap-3 px-5">
-        <div>
-          <p className={cn("text-2xl font-medium tabular-nums", tone)}>{value}</p>
-          <p className="text-muted-foreground text-xs">{label}</p>
-        </div>
-        <Icon className="text-muted-foreground size-4 shrink-0" />
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function HarvestPage() {
   const { data: plants, loading, error, refetch } = useAuthedQuery(fetchPlants);
-  const { t, dateLocale } = useLanguage();
+  const { t } = useLanguage();
 
   const sorted = [...(plants ?? [])].sort((a, b) =>
     a.expected_harvest_start.localeCompare(b.expected_harvest_start),
@@ -240,9 +208,6 @@ export default function HarvestPage() {
   const growing = byPhase("growing");
   const passed = byPhase("passed");
   const harvested = byPhase("harvested");
-
-  // Soonest window that has not already opened or closed.
-  const next = approaching[0] ?? growing[0];
 
   return (
     <div className="flex flex-col gap-6">
@@ -271,30 +236,7 @@ export default function HarvestPage() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat
-              icon={Wheat}
-              value={open.length}
-              label={t("harvestPage.ready")}
-              tone={open.length > 0 ? "text-risk-low" : undefined}
-            />
-            <Stat
-              icon={Clock}
-              value={approaching.length}
-              label={t("harvestPage.within", { n: APPROACHING_WINDOW_DAYS })}
-              tone={approaching.length > 0 ? "text-risk-medium" : undefined}
-            />
-            <Stat icon={Sprout} value={growing.length} label={t("harvestPage.growing")} />
-            <Stat
-              icon={CalendarDays}
-              value={
-                next ? formatDisplayDate(next.expected_harvest_start, dateLocale) : "—"
-              }
-              label={
-                next ? t("harvestPage.next", { crop: next.crop.name }) : t("harvestPage.noUpcoming")
-              }
-            />
-          </div>
+          <HarvestCalendar plants={sorted} />
 
           <Section title={t("harvestPage.ready")} plants={open} />
           <Section

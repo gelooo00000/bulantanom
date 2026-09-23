@@ -23,6 +23,7 @@ import logging
 from django.conf import settings
 from django.utils import timezone
 
+from .durations import human_duration
 from .models import CropIntelligence
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,12 @@ Follow these rules strictly:
 - Prefer widely-accepted general horticultural knowledge. If a crop detail
   is genuinely contested or you are unsure, say so plainly.
 - Keep each list item to one short sentence.
+- Say how long things take the way a farmer says it — "about 4 years",
+  "about 3 months", "a few weeks". Never quote the system's raw day counts
+  back at them ("1460 days" means nothing to a reader), and never convert a
+  duration yourself: the readable form is given to you, so use it as-is.
+- A tree crop that takes years to bear is normal, not a warning. Say plainly
+  how long the wait is, and what the tree needs during it.
 """.strip()
 
 
@@ -102,11 +109,15 @@ def _build_prompt(crop, planting_date=None, harvest_start=None, harvest_end=None
     ]
     if crop.description:
         lines.append(f"System crop description: {crop.description}")
+    # Both forms: the number so the model has the fact, and the wording it
+    # must use so its answer matches what the Farmer sees on screen.
     lines.append(
-        f"System-configured typical growing duration: {crop.growing_duration_days} days"
+        f"System-configured typical growing duration: {crop.growing_duration_days} days "
+        f'— say this as "{human_duration(crop.growing_duration_days)}"'
     )
     lines.append(
-        f"System-configured typical harvest window length: {crop.harvest_window_days} days"
+        f"System-configured typical harvest window length: {crop.harvest_window_days} days "
+        f'— say this as "{human_duration(crop.harvest_window_days)}"'
     )
 
     if planting_date and harvest_start and harvest_end:

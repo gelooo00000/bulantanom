@@ -9,7 +9,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
-import { RiskBadge } from "@/components/risk/risk-badge";
+import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -84,9 +84,7 @@ export default function MonitoringPage() {
                     {latest?.risk?.risk_level && (
                       <RiskBadge
                         size="sm"
-                        level={
-                          latest.risk.risk_level.toLowerCase() as "low" | "medium" | "high"
-                        }
+                        level={latest.risk.risk_level.toLowerCase() as BadgeLevel}
                       />
                     )}
                   </p>

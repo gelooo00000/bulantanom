@@ -1,13 +1,15 @@
 "use client";
 
-import { Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
+import { Clock, Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
 
 import { useFarmerLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import type { RiskLevel } from "@/lib/mock-data";
+
+/** Lower-case so both the mock data and the API's levels fit. */
+export type BadgeLevel = "low" | "medium" | "high" | "inconclusive";
 
 const RISK_CONFIG: Record<
-  RiskLevel,
+  BadgeLevel,
   { label: MessageKey; icon: typeof Leaf; className: string }
 > = {
   low: {
@@ -25,10 +27,17 @@ const RISK_CONFIG: Record<
     icon: OctagonAlert,
     className: "bg-risk-high/15 text-risk-high border-risk-high/40",
   },
+  // Deliberately colourless: this is the absence of a reading, and giving it
+  // a risk hue would read as a mild verdict.
+  inconclusive: {
+    label: "early.badge",
+    icon: Clock,
+    className: "bg-muted text-muted-foreground border-border",
+  },
 };
 
 type RiskBadgeProps = {
-  level: RiskLevel;
+  level: BadgeLevel;
   size?: "sm" | "default";
   className?: string;
 };

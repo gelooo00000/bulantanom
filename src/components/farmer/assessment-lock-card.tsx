@@ -24,10 +24,13 @@ export function AssessmentLockCard({
   eligibility,
   plantLabel,
   plantId,
+  plantingDate,
 }: {
   eligibility: AssessmentEligibility;
   plantLabel: string;
   plantId: number;
+  /** Shown on the "just planted" state, where the date is the point. */
+  plantingDate?: string;
 }) {
   const { t, dateLocale } = useLanguage();
   const date = (iso: string) => formatDisplayDate(iso, dateLocale);
@@ -45,7 +48,24 @@ export function AssessmentLockCard({
             <Sprout className="size-5" />
           </span>
           <div>
-            {eligibility.planned ? (
+            {eligibility.too_young ? (
+              // In the ground, but only just: nothing has visibly happened
+              // yet, so a risk reading would have nothing behind it.
+              <>
+                <h2 className="font-medium">{t("young.title")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t("young.text", {
+                    name: plantLabel,
+                    date: plantingDate ? date(plantingDate) : t("lock.laterDate"),
+                    first: eligibility.next_assessment_date
+                      ? date(eligibility.next_assessment_date)
+                      : t("lock.laterDate"),
+                    when: daysLabel(eligibility.days_remaining, t),
+                  })}
+                </p>
+                <p className="text-muted-foreground/70 mt-2 text-xs">{t("young.why")}</p>
+              </>
+            ) : eligibility.planned ? (
               // A planned planting: not assessed yet, and not assessable
               // until the day it goes in the ground.
               <>
@@ -80,7 +100,7 @@ export function AssessmentLockCard({
               className="size-4"
               style={{ color: "var(--landing-accent)" }}
             />
-            {eligibility.planned ? t("lock.first") : t("lock.next")}
+            {eligibility.planned || eligibility.too_young ? t("lock.first") : t("lock.next")}
           </span>
           <span className="text-sm font-medium tabular-nums">
             {eligibility.next_assessment_date

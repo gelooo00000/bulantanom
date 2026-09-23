@@ -17,6 +17,14 @@ from django.utils import timezone
 # One completed assessment per plant per 7-day period.
 ASSESSMENT_INTERVAL_DAYS = 7
 
+# How long a newly planted crop is left alone before its first assessment.
+#
+# Without this a plant recorded today could be assessed on day 0, and the AI
+# had to answer LOW/MEDIUM/HIGH for a seed that has not visibly done anything
+# yet — a verdict with nothing behind it. A week is also what the rest of the
+# schedule runs on, so the first check simply falls on the normal cadence.
+FIRST_ASSESSMENT_AGE_DAYS = 7
+
 
 def last_assessment_date(plant):
     """Most recent assessment date for a plant, or None if never assessed."""
@@ -53,6 +61,17 @@ def eligibility(plant, today=None) -> dict:
     latest = last_assessment_date(plant)
 
     if latest is None:
+        # Too new to judge: the first assessment opens a week after planting.
+        first_date = plant.planting_date + timedelta(days=FIRST_ASSESSMENT_AGE_DAYS)
+        if today < first_date:
+            return {
+                "can_assess": False,
+                "too_young": True,
+                "last_assessment_date": None,
+                "next_assessment_date": first_date.isoformat(),
+                "days_remaining": (first_date - today).days,
+                "interval_days": ASSESSMENT_INTERVAL_DAYS,
+            }
         return {
             "can_assess": True,
             "last_assessment_date": None,

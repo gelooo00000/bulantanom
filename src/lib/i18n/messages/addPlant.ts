@@ -26,9 +26,9 @@ export const addPlant = defineMessages({
     bik: "Opsyonal. Magkalain-lain an kaluwagan san kada klase, kaya mas tama an panahon san ani kun mapili ka san saro.",
   },
   "add.typical": {
-    en: "Typical growing period: {growing} days · harvest window {window} days",
-    fil: "Karaniwang tagal ng paglaki: {growing} araw · panahon ng ani {window} araw",
-    bik: "Normal na kaluwagan san pagdakula: {growing} adlaw · panahon san ani {window} adlaw",
+    en: "Ready in {growing} · you can harvest for {window}",
+    fil: "Handa sa {growing} · puwedeng anihin nang {window}",
+    bik: "Pwede na sa {growing} · pwede anihon sulod san {window}",
   },
   "add.plantingDate": { en: "Planting date", fil: "Petsa ng pagtatanim", bik: "Petsa san pagtanom" },
   "add.selectDate": {
@@ -126,9 +126,9 @@ export const addPlant = defineMessages({
     bik: "Inaasahan na panahon san ani",
   },
   "add.windowPlanted": {
-    en: "Planted {date} · typical growing period {n} days",
-    fil: "Itinanim {date} · karaniwang tagal ng paglaki {n} araw",
-    bik: "Itinanom {date} · normal na kaluwagan san pagdakula {n} adlaw",
+    en: "Planted {date} · usually ready in {n}",
+    fil: "Itinanim {date} · karaniwang handa sa {n}",
+    bik: "Itinanom {date} · kadalasan pwede na sa {n}",
   },
   "add.windowNote": {
     en: "Calculated from BulanTanom's crop records — an estimate, not a guaranteed harvest date.",

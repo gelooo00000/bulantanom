@@ -132,7 +132,46 @@ class PlantCreationTests(PlantApiTestCase):
             format="json", **self.auth,
         )
         self.assertFalse(response.data["is_planned"])
-        self.assertTrue(response.data["assessment_eligibility"]["can_assess"])
+
+    def test_a_just_planted_crop_waits_a_week_for_its_first_assessment(self):
+        """
+        A panel review found the AI rating plants on the day they were
+        planted. A seed that has not visibly done anything cannot be LOW,
+        MEDIUM or HIGH risk, so the first assessment opens a week later.
+        """
+        today = timezone.localdate()
+        plant_id = self.client.post(
+            PLANTS_URL, {"crop_id": "guava", "planting_date": today.isoformat()},
+            format="json", **self.auth,
+        ).data["id"]
+
+        schedule = self.client.get(f"{PLANTS_URL}{plant_id}/", **self.auth).data[
+            "assessment_eligibility"
+        ]
+        self.assertFalse(schedule["can_assess"])
+        self.assertTrue(schedule["too_young"])
+        self.assertEqual(
+            schedule["next_assessment_date"], (today + timedelta(days=7)).isoformat()
+        )
+        self.assertEqual(schedule["days_remaining"], 7)
+
+        response = self.client.post(f"{PLANTS_URL}{plant_id}/assessments/", {}, **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("only just planted", response.data["detail"])
+
+    def test_a_week_old_plant_can_be_assessed(self):
+        plant_id = self.client.post(
+            PLANTS_URL,
+            {
+                "crop_id": "guava",
+                "planting_date": (timezone.localdate() - timedelta(days=7)).isoformat(),
+            },
+            format="json", **self.auth,
+        ).data["id"]
+        schedule = self.client.get(f"{PLANTS_URL}{plant_id}/", **self.auth).data[
+            "assessment_eligibility"
+        ]
+        self.assertTrue(schedule["can_assess"])
 
     def test_impossible_calendar_date_rejected(self):
         response = self.client.post(

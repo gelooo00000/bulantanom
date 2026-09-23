@@ -357,6 +357,11 @@ class RiskLevel(models.TextChoices):
     LOW = "LOW", "Low"
     MEDIUM = "MEDIUM", "Medium"
     HIGH = "HIGH", "High"
+    # A young plant with nothing visibly wrong has no risk level worth
+    # reporting: there is no growth history to compare it against yet. The
+    # AI returns this instead of guessing LOW, and it is counted as "no
+    # reading yet" rather than as a risk anywhere it is aggregated.
+    INCONCLUSIVE = "INCONCLUSIVE", "Too early to tell"
 
 
 class RiskStatus(models.TextChoices):
@@ -378,7 +383,7 @@ class RiskAssessment(models.Model):
         Assessment, on_delete=models.CASCADE, related_name="risk"
     )
     risk_level = models.CharField(
-        max_length=10, choices=RiskLevel.choices, null=True, blank=True
+        max_length=16, choices=RiskLevel.choices, null=True, blank=True
     )
     status = models.CharField(
         max_length=16, choices=RiskStatus.choices, default=RiskStatus.PENDING
@@ -395,6 +400,10 @@ class RiskAssessment(models.Model):
     next_assessment_days = models.PositiveIntegerField(null=True, blank=True)
 
     image_analyzed = models.BooleanField(default=False)
+    # The photo shows a plant far older or younger than the recorded
+    # planting date. That is a data problem for the Farmer to correct, not a
+    # danger to the crop, so it is flagged separately from `risk_level`.
+    date_mismatch = models.BooleanField(default=False)
     model_name = models.CharField(max_length=100, blank=True)
     failure_reason = models.TextField(blank=True)
     generated_at = models.DateTimeField(default=timezone.now)
