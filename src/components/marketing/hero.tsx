@@ -26,7 +26,8 @@ export function Hero() {
   return (
     <section id="overview" className="relative h-screen w-full overflow-hidden">
       <Image
-        src="/landing-bg.png"
+        src="/back_image1.jpg"
+        quality={90}
         alt=""
         aria-hidden="true"
         fill

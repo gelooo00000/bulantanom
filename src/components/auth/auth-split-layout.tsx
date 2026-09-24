@@ -18,7 +18,8 @@ function PanelBackground({ strong = false }: { strong?: boolean }) {
   return (
     <>
       <Image
-        src="/landing-bg.png"
+        src="/back_image1.jpg"
+        quality={90}
         alt=""
         aria-hidden="true"
         fill
