@@ -41,6 +41,7 @@ beforeEach(() => {
   plants = [plant(1, "Banana"), plant(2, "Avocado"), plant(3, "Pineapple")];
   deletePlant.mockReset();
   refetch.mockReset();
+  window.localStorage.clear();
 });
 
 async function startSelecting() {
@@ -142,5 +143,41 @@ describe("My Plants", () => {
     await user.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("toolbar")).toBeNull();
     expect(screen.getByRole("link", { name: /Banana/ })).toBeInTheDocument();
+  });
+});
+
+describe("My Plants guide", () => {
+  it("shows the how-to steps on a first visit", async () => {
+    render(<MyPlantsPage />);
+    const guide = await screen.findByRole("heading", { name: "How to use My Plants" });
+    expect(guide).toBeInTheDocument();
+    expect(screen.getByText("Add your plant")).toBeInTheDocument();
+    expect(screen.getByText("Check it every week")).toBeInTheDocument();
+    expect(screen.getByText(/tap “Start Weekly Assessment”/)).toBeInTheDocument();
+  });
+
+  it("hides on request, remembers it, and comes back from “How to use”", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<MyPlantsPage />);
+    await user.click(await screen.findByRole("button", { name: "Hide" }));
+    expect(screen.queryByText("How to use My Plants")).not.toBeInTheDocument();
+
+    // Still hidden on the next visit.
+    unmount();
+    render(<MyPlantsPage />);
+    await user.click(await screen.findByRole("button", { name: "How to use" }));
+    expect(screen.getByText("How to use My Plants")).toBeInTheDocument();
+  });
+
+  it("steps aside while plants are being selected", async () => {
+    await startSelecting();
+    expect(screen.queryByText("How to use My Plants")).not.toBeInTheDocument();
+  });
+
+  it("is there for a farmer with no plants yet", async () => {
+    plants = [];
+    render(<MyPlantsPage />);
+    expect(await screen.findByText("How to use My Plants")).toBeInTheDocument();
+    expect(screen.getByText("No plants added yet")).toBeInTheDocument();
   });
 });

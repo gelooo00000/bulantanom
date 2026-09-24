@@ -1,11 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { CircleCheck, LoaderCircle, Plus, Sprout, Trash2, TriangleAlert, X } from "lucide-react";
-import { useState } from "react";
+import {
+  CircleCheck,
+  CircleHelp,
+  LoaderCircle,
+  Plus,
+  Sprout,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { AddPlantButton } from "@/components/farmer/add-plant-button";
 import { AddPlantTile } from "@/components/farmer/add-plant-tile";
+import { MyPlantsGuide } from "@/components/farmer/my-plants-guide";
 import { PlantCard } from "@/components/farmer/plant-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -17,10 +27,48 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useLanguage } from "@/lib/i18n";
 import { plantTitle } from "@/lib/plant-summary";
 
+/**
+ * Remembers, per device, that the farmer hid the "How to use" guide. A
+ * convenience only: storage can throw in private modes, and then the guide
+ * simply shows again.
+ */
+const GUIDE_HIDDEN_KEY = "bulantanom_my_plants_guide_hidden";
+
+function guideHidden(): boolean {
+  try {
+    return window.localStorage.getItem(GUIDE_HIDDEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberGuideHidden(hidden: boolean) {
+  try {
+    if (hidden) window.localStorage.setItem(GUIDE_HIDDEN_KEY, "1");
+    else window.localStorage.removeItem(GUIDE_HIDDEN_KEY);
+  } catch {
+    // Storage unavailable — the guide just reappears next visit.
+  }
+}
+
 export default function MyPlantsPage() {
   const { accessToken } = useAuth();
   const { t } = useLanguage();
   const { data: plants, loading, error, refetch } = useAuthedQuery(fetchPlants);
+
+  // Open on a farmer's first visit, until they hide it. Read after mount,
+  // because the server cannot see localStorage; null renders nothing, so a
+  // farmer who hid it never sees it flash open.
+  const [showGuide, setShowGuide] = useState<boolean | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a one-time read of browser-only storage
+    setShowGuide(!guideHidden());
+  }, []);
+
+  function toggleGuide(show: boolean) {
+    setShowGuide(show);
+    rememberGuideHidden(!show);
+  }
 
   // Selection mode: tapping a card ticks it; the bar offers actions on the
   // ticked plants. Off by default, so a tap still opens a plant.
@@ -102,6 +150,12 @@ export default function MyPlantsPage() {
         }
         action={
           <div className="flex items-center gap-2">
+            {showGuide === false && !selecting && (
+              <Button variant="ghost" className="h-11 px-3" onClick={() => toggleGuide(true)}>
+                <CircleHelp className="size-4" />
+                {t("plantsGuide.open")}
+              </Button>
+            )}
             {hasPlants && !selecting && (
               <Button
                 variant="outline"
@@ -119,6 +173,8 @@ export default function MyPlantsPage() {
           </div>
         }
       />
+
+      {showGuide && !selecting && <MyPlantsGuide onClose={() => toggleGuide(false)} />}
 
       {notice && (
         <p
