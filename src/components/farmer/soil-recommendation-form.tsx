@@ -8,9 +8,10 @@ import {
   RotateCw,
   TriangleAlert,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { SoilResultCard } from "@/components/farmer/soil-result-card";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/client";
 import {
   createSoilRecommendation,
-  fetchLatestSoilRecommendation,
+  fetchSoilRecommendations,
   reanalyzeSoilRecommendation,
   type SoilRecommendationInput,
   type SoilRecommendation,
@@ -36,7 +37,6 @@ import {
 } from "@/lib/soil-options";
 
 type Status = "idle" | "analyzing" | "done";
-type SaveState = "idle" | "saving" | "saved";
 
 /**
  * One labelled numeric reading with its unit.
@@ -101,48 +101,29 @@ function SoilNumberField({
   );
 }
 
-/**
- * Remembers that the Farmer deliberately started a new assessment, so a
- * reload does not restore the one they just stepped away from. Cleared as
- * soon as they submit, since the fresh result then *is* the latest.
- *
- * sessionStorage rather than state: it must survive a page reload, but it is
- * a transient intent, not a saved preference, so it should not outlive the
- * tab. Wrapped because storage access throws in some privacy modes.
- */
-const NEW_ASSESSMENT_KEY = "bulantanom_soil_new_assessment";
-
-function wantsNewAssessment(): boolean {
-  try {
-    return window.sessionStorage.getItem(NEW_ASSESSMENT_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function setWantsNewAssessment(wants: boolean) {
-  try {
-    if (wants) window.sessionStorage.setItem(NEW_ASSESSMENT_KEY, "1");
-    else window.sessionStorage.removeItem(NEW_ASSESSMENT_KEY);
-  } catch {
-    // Storage unavailable — the in-memory reset still works for this view.
-  }
-}
-
 export function SoilRecommendationForm() {
   const { accessToken } = useAuth();
   const t = useSoilStrings();
-  const { t: translate } = useLanguage();
+  const { t: translate, dateLocale } = useLanguage();
 
   const [status, setStatus] = useState<Status>("idle");
-  const [result, setResult] = useState<SoilRecommendation | null>(null);
+  // Every saved assessment, newest first. A new one is added, never swapped
+  // in: older results stay reachable from "Result from".
+  const [history, setHistory] = useState<SoilRecommendation[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const result = history.find((item) => item.id === selectedId) ?? history[0] ?? null;
   const [error, setError] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<SaveState>("idle");
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
-  // Guards against a double-click firing two POSTs before React re-renders
-  // the disabled button — state alone is not synchronous enough.
-  const savingRef = useRef(false);
+
+  /** Adds or replaces one saved assessment, keeping newest first. */
+  function remember(item: SoilRecommendation) {
+    setHistory((prev) =>
+      [item, ...prev.filter((other) => other.id !== item.id)].sort((a, b) =>
+        b.created_at.localeCompare(a.created_at),
+      ),
+    );
+  }
 
   // Soil inputs. Everything defaults to "unknown" so a Farmer can submit
   // without being forced to supply measurements they do not have.
@@ -165,39 +146,22 @@ export function SoilRecommendationForm() {
   }
 
   /**
-   * Restores the last saved result on load — a plain database read that
-   * never triggers Gemini, so revisiting the page costs no quota.
+   * Loads every saved result on arrival — a plain database read that never
+   * triggers Gemini, so revisiting the page or browsing old results costs no
+   * quota.
    *
-   * Skipped while the "start a new assessment" flag is set. Without that
-   * check, clicking "Back to Soil Information" cleared the form but a reload
-   * immediately fetched the previous assessment back, dragging the Farmer
-   * into the old data they had just chosen to leave.
+   * The page still opens on a blank form: a farmer arriving here usually has
+   * new readings to enter. The saved results wait behind "See Result".
    */
   useEffect(() => {
     if (!accessToken) return;
-    if (wantsNewAssessment()) return;
 
     let cancelled = false;
     (async () => {
       try {
-        const latest = await fetchLatestSoilRecommendation(accessToken);
-        if (cancelled || !latest) return;
-        setResult(latest);
-        setStatus("done");
-        // Put the saved readings back in the inputs, so stepping back to
-        // "Soil Information" shows what was submitted rather than a blank
-        // form the Farmer would have to retype from the device.
-        if (latest.has_sensor_readings) {
-          setReadings(
-            Object.fromEntries(
-              SENSOR_FIELDS.map((field) => {
-                const value = latest[field.key];
-                return [field.key, value === null ? "" : String(value)];
-              }),
-            ),
-          );
-        }
-        setNotes(latest.notes ?? "");
+        const saved = await fetchSoilRecommendations(accessToken);
+        if (cancelled) return;
+        setHistory(saved);
       } catch {
         // A failed restore is not worth surfacing — the Farmer can simply
         // fill in the form as normal.
@@ -234,10 +198,10 @@ export function SoilRecommendationForm() {
       const created = await createSoilRecommendation(currentInput(), accessToken);
       // Django raised "Soil recommendation ready" — reflect it immediately.
       requestNotificationRefresh();
-      // This submission is now the latest, so restoring it on reload is
-      // exactly what the Farmer expects.
-      setWantsNewAssessment(false);
-      setResult(created);
+      // Straight to the result: the row is already saved, and the result is
+      // what the farmer submitted for.
+      remember(created);
+      setSelectedId(created.id);
       setStatus("done");
     } catch (err) {
       setStatus("idle");
@@ -261,7 +225,7 @@ export function SoilRecommendationForm() {
     try {
       const updated = await reanalyzeSoilRecommendation(accessToken, result.id);
       requestNotificationRefresh();
-      setResult(updated);
+      remember(updated);
       if (!updated.ai_generated) setRetryError(t.stillUnavailable);
     } catch (err) {
       setRetryError(err instanceof ApiError ? err.message : t.stillUnavailable);
@@ -283,169 +247,213 @@ export function SoilRecommendationForm() {
     return { ...numeric, notes };
   }
 
-  /** Clears every field so the Farmer starts a genuinely new assessment. */
-  function resetForNewAssessment() {
+  /**
+   * "Back to Soil Information" — a blank form for the next assessment.
+   *
+   * The result is already in MySQL (the POST commits the row before Gemini
+   * runs), so there is nothing to save here. It stays loaded, so "See
+   * Result" can bring it straight back.
+   */
+  function showForm() {
     setReadings({});
     setFieldErrors({});
     setNotes("");
-    setResult(null);
     setError(null);
     setRetryError(null);
     setStatus("idle");
-    setSaveState("idle");
-    savingRef.current = false;
-    // Survives a reload, so the blank form stays blank.
-    setWantsNewAssessment(true);
   }
 
-  /**
-   * "Back to Soil Information" — confirms, then opens a blank form.
-   *
-   * Only rendered on the result screen, where the assessment is already in
-   * MySQL (the POST commits the row before Gemini runs). So there is nothing
-   * left to save: this acknowledges the save and hands back a clean form,
-   * flagged so a reload does not drag the old assessment back.
-   */
-  function handleBack() {
-    if (savingRef.current) return;
-    savingRef.current = true;
-    setSaveState("saved");
-    window.setTimeout(resetForNewAssessment, 550);
+  /** "See Result" always opens the newest; older ones are a pick away. */
+  function showResult() {
+    setError(null);
+    setRetryError(null);
+    setSelectedId(history[0]?.id ?? null);
+    setStatus("done");
   }
 
-  /** Rendered on the result screen only. */
-  function backButton() {
-    return (
-      <Button
-        variant="outline"
-        className="self-start"
-        onClick={handleBack}
-        disabled={saveState !== "idle"}
-      >
-        {saveState === "saved" ? (
-          <>
-            <Check className="text-risk-low size-4" />
-            {t.saved}
-          </>
-        ) : (
-          <>
-            <ArrowLeft className="size-4 transition-transform duration-[250ms] group-hover/button:-translate-x-1" />
-            {t.backToSoilInfo}
-          </>
-        )}
+  function pickResult(id: number) {
+    setRetryError(null);
+    setSelectedId(id);
+  }
+
+  /** "September 24, 2026 · 2:28 PM · pH 5.40 (latest)" */
+  function historyLabel(item: SoilRecommendation, index: number): string {
+    const when = new Date(item.created_at).toLocaleString(dateLocale, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const parts = [when];
+    if (item.soil_ph !== null) parts.push(`pH ${item.soil_ph}`);
+    let label = parts.join(" · ");
+    if (!item.ai_generated) label += ` — ${t.notAnalyzedTag}`;
+    if (index === 0) label += ` (${t.latestTag})`;
+    return label;
+  }
+
+  let headerAction: ReactNode = null;
+  if (status === "idle" && history.length > 0) {
+    headerAction = (
+      <Button variant="outline" onClick={showResult}>
+        {t.seeResult}
+        <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
+      </Button>
+    );
+  } else if (status === "done") {
+    headerAction = (
+      <Button variant="outline" onClick={showForm}>
+        <ArrowLeft className="size-4 transition-transform duration-[250ms] group-hover/button:-translate-x-1" />
+        {t.backToSoilInfo}
       </Button>
     );
   }
 
+  const header = (
+    <PageHeader
+      title={translate("soilPage.title")}
+      description={translate("soilPage.description")}
+      action={headerAction}
+    />
+  );
+
   if (status === "analyzing") {
     return (
-      <div className="border-border flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-10 text-center">
-        <LoaderCircle className="text-primary size-6 animate-spin" />
-        <p className="text-sm font-medium">{t.analyzing}</p>
-        <p className="text-muted-foreground max-w-xs text-sm">{t.analyzingHint}</p>
-      </div>
+      <>
+        {header}
+        <div className="border-border flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-10 text-center">
+          <LoaderCircle className="text-primary size-6 animate-spin" />
+          <p className="text-sm font-medium">{t.analyzing}</p>
+          <p className="text-muted-foreground max-w-xs text-sm">{t.analyzingHint}</p>
+        </div>
+      </>
     );
   }
 
   if (status === "done" && result) {
     return (
-      <div className="flex flex-col gap-5">
-        {/*
-          Saved without an AI result. `failure_reason` is set only when Gemini
-          was actually called and failed, so a save-only row must not be
-          reported as an outage the Farmer never hit.
-        */}
-        {!result.ai_generated ? (
-          <div className="border-border flex gap-3 rounded-lg border border-dashed px-4 py-4">
-            <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">{t.assessmentSaved}</p>
-              <p className="text-muted-foreground text-sm">
-                {result.failure_reason
-                  ? `${t.aiUnavailable} ${t.retryHint}`
-                  : t.notAnalyzed}
-              </p>
-              {retryError ? (
-                <p className="text-risk-high text-sm">{retryError}</p>
-              ) : null}
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2 self-start"
-                onClick={handleRetry}
-                disabled={retrying}
+      <>
+        {header}
+        <div className="flex flex-col gap-5">
+          {/* Past results. Picking one is a lookup in what is already loaded,
+              so it costs no request and no Gemini quota. */}
+          {history.length > 1 && (
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+              <Label htmlFor="soil-history">{t.resultFrom}</Label>
+              <select
+                id="soil-history"
+                value={result.id}
+                onChange={(e) => pickResult(Number(e.target.value))}
+                className="border-border bg-background min-w-0 rounded-md border px-2 py-1.5 text-sm outline-none sm:max-w-md sm:flex-1"
               >
-                {retrying ? (
-                  <>
-                    <LoaderCircle className="size-3.5 animate-spin" />
-                    {t.retrying}
-                  </>
-                ) : (
-                  <>
-                    <RotateCw className="size-3.5" />
-                    {result.failure_reason ? t.tryAgain : t.submit}
-                  </>
-                )}
-              </Button>
+                {history.map((item, index) => (
+                  <option key={item.id} value={item.id}>
+                    {historyLabel(item, index)}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
-        ) : (
-          <SoilResultCard result={result} />
-        )}
+          )}
 
-        {error ? <p className="text-risk-high text-sm">{error}</p> : null}
+          {/*
+            Saved without an AI result. `failure_reason` is set only when Gemini
+            was actually called and failed, so a save-only row must not be
+            reported as an outage the Farmer never hit.
+          */}
+          {!result.ai_generated ? (
+            <div className="border-border flex gap-3 rounded-lg border border-dashed px-4 py-4">
+              <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-medium">{t.assessmentSaved}</p>
+                <p className="text-muted-foreground text-sm">
+                  {result.failure_reason
+                    ? `${t.aiUnavailable} ${t.retryHint}`
+                    : t.notAnalyzed}
+                </p>
+                {retryError ? (
+                  <p className="text-risk-high text-sm">{retryError}</p>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 self-start"
+                  onClick={handleRetry}
+                  disabled={retrying}
+                >
+                  {retrying ? (
+                    <>
+                      <LoaderCircle className="size-3.5 animate-spin" />
+                      {t.retrying}
+                    </>
+                  ) : (
+                    <>
+                      <RotateCw className="size-3.5" />
+                      {result.failure_reason ? t.tryAgain : t.submit}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <SoilResultCard result={result} />
+          )}
 
-        {/* The POST already committed this row, so say so plainly. */}
-        <p className="text-risk-low flex items-center gap-1.5 text-sm">
-          <Check className="size-4" />
-          {t.saveSuccess}
-        </p>
+          {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 
-        {backButton()}
-      </div>
+          {/* The POST already committed this row, so say so plainly. */}
+          <p className="text-risk-low flex items-center gap-1.5 text-sm">
+            <Check className="size-4" />
+            {t.saveSuccess}
+          </p>
+        </div>
+      </>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div>
-        <h2 className="text-sm font-medium">{t.sensorSectionTitle}</h2>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          {t.sensorSectionHint}
-        </p>
-      </div>
+    <>
+      {header}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <h2 className="text-sm font-medium">{t.sensorSectionTitle}</h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {t.sensorSectionHint}
+          </p>
+        </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {SENSOR_FIELDS.map((field) => (
-          <SoilNumberField
-            key={field.key}
-            field={field}
-            value={readings[field.key] ?? ""}
-            error={fieldErrors[field.key]}
-            onChange={(value) => setReading(field.key, value)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {SENSOR_FIELDS.map((field) => (
+            <SoilNumberField
+              key={field.key}
+              field={field}
+              value={readings[field.key] ?? ""}
+              error={fieldErrors[field.key]}
+              onChange={(value) => setReading(field.key, value)}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="notes">
+            {t.additionalInfo}{" "}
+            <span className="text-muted-foreground font-normal">({t.optional})</span>
+          </Label>
+          <Textarea
+            id="notes"
+            placeholder={t.additionalInfoHint}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
           />
-        ))}
-      </div>
+        </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="notes">
-          {t.additionalInfo}{" "}
-          <span className="text-muted-foreground font-normal">({t.optional})</span>
-        </Label>
-        <Textarea
-          id="notes"
-          placeholder={t.additionalInfoHint}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </div>
+        {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 
-      {error ? <p className="text-risk-high text-sm">{error}</p> : null}
-
-      <Button type="submit" size="lg" className="self-start">
-        {t.submit}
-        <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-      </Button>
-    </form>
+        <Button type="submit" size="lg" className="self-start">
+          {t.submit}
+          <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
+        </Button>
+      </form>
+    </>
   );
 }

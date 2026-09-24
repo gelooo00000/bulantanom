@@ -72,9 +72,9 @@ export const dashboard = defineMessages({
   "when.years": { en: "in {n} years", fil: "sa loob ng {n} taon", bik: "sa sulod san {n} taon" },
 
   "suited.title": {
-    en: "Suited to your soil",
-    fil: "Angkop sa iyong lupa",
-    bik: "Angay sa imo daga",
+    en: "Planted on your date",
+    fil: "Naitanim sa iyong petsa",
+    bik: "Natanom sa imo petsa",
   },
   "suited.pickDate": { en: "Pick a date", fil: "Pumili ng petsa", bik: "Pili san petsa" },
   "suited.addPlant": { en: "Add a plant", fil: "Magdagdag ng tanim", bik: "Magdugang san tanom" },

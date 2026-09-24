@@ -237,6 +237,10 @@ export const SOIL_STRINGS = {
 
   // "Back to Soil Information" button and its states
   backToSoilInfo: "Back to Soil Information",
+  seeResult: "See Result",
+  resultFrom: "Result from",
+  latestTag: "latest",
+  notAnalyzedTag: "not analyzed",
   saved: "Saved",
   saveSuccess: "Crop recommendation saved successfully.",
   newAssessmentReady: "Enter your soil information for a new assessment.",

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sprout } from "lucide-react";
 import { useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +39,7 @@ export function CropSuggestionsCard({ plants = [] }: { plants?: BackendPlant[] }
       <CardContent className="px-4">
         <div className="flex items-start justify-between gap-3">
           <h2 className="flex items-center gap-1.5 pt-1.5 text-sm font-medium">
-            <Sparkles
+            <Sprout
               className="size-4 shrink-0"
               style={{ color: "var(--landing-accent)" }}
               aria-hidden="true"
