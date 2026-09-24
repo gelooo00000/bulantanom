@@ -34,7 +34,18 @@ export function FarmerShell({ children }: { children: ReactNode }) {
         logOut: t("shell.logOut"),
         more: t("shell.more"),
         farm: t("shell.farm"),
-        weather: t("shell.weather"),
+        weather: {
+          clear: t("weather.clear"),
+          mostly_clear: t("weather.mostly_clear"),
+          partly_cloudy: t("weather.partly_cloudy"),
+          cloudy: t("weather.cloudy"),
+          fog: t("weather.fog"),
+          drizzle: t("weather.drizzle"),
+          light_rain: t("weather.light_rain"),
+          rain: t("weather.rain"),
+          heavy_rain: t("weather.heavy_rain"),
+          thunderstorm: t("weather.thunderstorm"),
+        },
       }}
     >
       {children}

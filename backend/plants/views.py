@@ -879,3 +879,18 @@ class AssessmentEvidenceView(APIView):
         # Never let a shared cache hold a per-user authorized image.
         response["Cache-Control"] = "private, max-age=0, no-store"
         return response
+
+
+@api_view(["GET"])
+def farm_weather(request):
+    """
+    GET /api/weather/ — current weather at Layuan Farm, for the header.
+
+    Any signed-in role may read it; the header is shared by all of them.
+    Served from a cache, so this never waits on Open-Meteo more than once
+    per cache window, and it never fails: an outage returns
+    `{"available": false}`.
+    """
+    from .weather_service import current_weather
+
+    return Response(current_weather())

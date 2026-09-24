@@ -21,11 +21,16 @@ export const shell = defineMessages({
   "shell.logOut": { en: "Log out", fil: "Mag-log out", bik: "Mag-log out" },
   "shell.more": { en: "More", fil: "Iba pa", bik: "Iba pa" },
   "shell.farm": { en: "Layuan Farm", fil: "Layuan Farm", bik: "Layuan Farm" },
-  "shell.weather": {
-    en: "28°C · Partly sunny",
-    fil: "28°C · Bahagyang maaraw",
-    bik: "28°C · Medyo mainit an adlaw",
-  },
+  "weather.clear": { en: "Clear", fil: "Maaliwalas", bik: "Maliwanag" },
+  "weather.mostly_clear": { en: "Mostly clear", fil: "Halos maaliwalas", bik: "Halos maliwanag" },
+  "weather.partly_cloudy": { en: "Partly cloudy", fil: "Bahagyang maulap", bik: "Medyo madampog" },
+  "weather.cloudy": { en: "Cloudy", fil: "Maulap", bik: "Madampog" },
+  "weather.fog": { en: "Foggy", fil: "Mahamog", bik: "Maalipuyo" },
+  "weather.drizzle": { en: "Drizzle", fil: "Ambon", bik: "Tagiti" },
+  "weather.light_rain": { en: "Light rain", fil: "Mahinang ulan", bik: "Luway na uran" },
+  "weather.rain": { en: "Rain", fil: "Ulan", bik: "Uran" },
+  "weather.heavy_rain": { en: "Heavy rain", fil: "Malakas na ulan", bik: "Makusog na uran" },
+  "weather.thunderstorm": { en: "Thunderstorm", fil: "Bagyong may kulog", bik: "Dalugdog asin uran" },
 
   "language.label": { en: "Language", fil: "Wika", bik: "Tataramon" },
   "language.change": {

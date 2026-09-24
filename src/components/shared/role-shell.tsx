@@ -3,27 +3,34 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { EllipsisVertical, LogOut, MapPin, Sun } from "lucide-react";
+import { EllipsisVertical, LogOut, MapPin } from "lucide-react";
 import type { ElementType, ReactNode } from "react";
 
 import { Avatar } from "@/components/shared/avatar";
+import { ENGLISH_WEATHER, FarmWeather } from "@/components/shared/farm-weather";
 import { Logo } from "@/components/shared/logo";
 import { NotificationBell } from "@/components/shared/notification-bell";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import type { NotificationScope } from "@/lib/api/notifications-api";
+import type { WeatherCondition } from "@/lib/api/weather-api";
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
 
 export type NavItem = { label: string; href: string; icon: ElementType };
 
 /** The shell's own words, for a role whose screens are translated. */
-export type ShellCopy = { logOut: string; more: string; farm: string; weather: string };
+export type ShellCopy = {
+  logOut: string;
+  more: string;
+  farm: string;
+  weather: Record<WeatherCondition, string>;
+};
 
 const ENGLISH_COPY: ShellCopy = {
   logOut: "Log out",
   more: "More",
   farm: "Layuan Farm",
-  weather: "28°C · Partly sunny",
+  weather: ENGLISH_WEATHER,
 };
 
 type RoleShellProps = {
@@ -119,10 +126,8 @@ export function RoleShell({
             <MapPin className="size-3.5" />
             {copy.farm}
           </span>
-          <span className="text-muted-foreground hidden items-center gap-1.5 sm:flex">
-            <Sun className="size-3.5" />
-            {copy.weather}
-          </span>
+          {/* Live, from Open-Meteo via Django; hidden when unavailable. */}
+          <FarmWeather labels={copy.weather} />
           <div className="ml-auto flex items-center gap-2">
             {headerActions}
             {/* Admin has no notification events of its own, so the bell is

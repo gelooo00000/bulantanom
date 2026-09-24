@@ -287,6 +287,16 @@ CORS_ALLOW_CREDENTIALS = True
 # Refresh token cookie (HttpOnly). The access token is returned in the JSON
 # body only and is never persisted by the backend; the frontend keeps it in
 # memory. The refresh token never reaches JavaScript.
+# Header weather (plants/weather_service.py), from Open-Meteo: free and
+# keyless, so there is no secret here. Defaults are Layuan Farm, Bulan,
+# Sorsogon. One upstream call is cached for everyone for 30 minutes; a failed
+# call is cached for 5, so an outage is not retried on every page load.
+FARM_LATITUDE = float(os.environ.get("FARM_LATITUDE", "12.67"))
+FARM_LONGITUDE = float(os.environ.get("FARM_LONGITUDE", "123.88"))
+WEATHER_CACHE_SECONDS = int(os.environ.get("WEATHER_CACHE_SECONDS", "1800"))
+WEATHER_FAILURE_CACHE_SECONDS = int(os.environ.get("WEATHER_FAILURE_CACHE_SECONDS", "300"))
+WEATHER_TIMEOUT_SECONDS = int(os.environ.get("WEATHER_TIMEOUT_SECONDS", "5"))
+
 # Gemini (Crop Intelligence). Server-side only — the key must never be
 # exposed to the browser or prefixed NEXT_PUBLIC_. If GEMINI_API_KEY is
 # empty the crop-intelligence service degrades gracefully and Farmers can
