@@ -1,0 +1,11 @@
+# Never ship secrets, local data or build leftovers into the image.
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.pyc
+media/
+staticfiles/
+db.sqlite3
