@@ -16,7 +16,7 @@ let nextId = 1;
 function plant(
   farmer: LguPlant["farmer"],
   crop: LguPlant["crop"],
-  level: "HIGH" | "MEDIUM" | "LOW" | null,
+  level: "HIGH" | "MEDIUM" | "LOW" | "INCONCLUSIVE" | null,
 ): LguPlant {
   const id = nextId++;
   return {
@@ -48,6 +48,13 @@ const PLANTS = [
 describe("risk statistics", () => {
   it("counts each plant once, by its latest reading", () => {
     expect(riskTally(PLANTS)).toEqual({ HIGH: 2, MEDIUM: 1, LOW: 2, NONE: 1 });
+  });
+
+  it("counts a too-early reading as no reading, not as a level of its own", () => {
+    // Regression: "INCONCLUSIVE" fell outside every bucket, so counts came
+    // out as NaN and badge lookups found nothing.
+    const early = plant(ANA, CORN, "INCONCLUSIVE");
+    expect(riskTally([...PLANTS, early])).toEqual({ HIGH: 2, MEDIUM: 1, LOW: 2, NONE: 2 });
   });
 
   it("ranks farmers to visit by high, then medium risk, and leaves out all-low farmers", () => {

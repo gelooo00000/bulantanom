@@ -13,8 +13,13 @@ export function livePlants(plants: LguPlant[]): LguPlant[] {
   return plants.filter((plant) => plant.status !== "ARCHIVED");
 }
 
+/**
+ * A "too early to tell" reading counts as no reading, as it does on the LGU
+ * dashboard, so every screen buckets a plant the same way.
+ */
 export function riskKey(plant: LguPlant): RiskKey {
-  return plant.latest_risk?.risk_level ?? "NONE";
+  const level = plant.latest_risk?.risk_level;
+  return level === "HIGH" || level === "MEDIUM" || level === "LOW" ? level : "NONE";
 }
 
 /** Plants per crop type (Fruit, Vegetables & Crops), largest first. */

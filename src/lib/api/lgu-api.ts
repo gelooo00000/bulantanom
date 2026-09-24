@@ -122,9 +122,13 @@ export type LguPlant = {
   status: string;
   status_label: string;
   age_days: number;
+  /** A future planting date: the plant is not in the ground yet. */
+  is_planned?: boolean;
+  /** The same weekly schedule the Farmer sees; `can_assess` means a check is due. */
+  assessment_eligibility?: { can_assess: boolean; days_remaining: number };
   farmer: { id: number; full_name: string; email: string };
   latest_risk: {
-    risk_level: "LOW" | "MEDIUM" | "HIGH" | null;
+    risk_level: "LOW" | "MEDIUM" | "HIGH" | "INCONCLUSIVE" | null;
     assessment_id: number;
     assessment_date: string;
     has_evidence: boolean;
