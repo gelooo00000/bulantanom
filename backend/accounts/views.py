@@ -16,6 +16,7 @@ from notifications.emails import (
     email_account_suspended,
     email_farmer_approved,
     email_farmer_rejected,
+    email_farmer_welcome,
     email_officer_welcome,
 )
 from notifications.services import (
@@ -150,6 +151,7 @@ class FarmerSignupView(generics.CreateAPIView):
         # Welcome notice + an LGU heads-up that a new Farmer has joined.
         # Both are queued until this transaction commits.
         notify_farmer_registered(user)
+        email_farmer_welcome(user)
         return _tokens_response(user, status_code=status.HTTP_201_CREATED)
 
 

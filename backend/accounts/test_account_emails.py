@@ -69,10 +69,10 @@ class AccountEmailTests(APITransactionTestCase):
 
     # ------------------------------------------------------- no premature mail
 
-    def test_registration_does_not_email_the_farmer(self):
+    def test_registration_sends_the_farmer_one_welcome_email(self):
         """
-        There is no approval step to announce, so there is no approval mail.
-        The in-app welcome notification is the only thing a signup raises.
+        Signup approves the account at once, so no approval email will ever
+        follow; the welcome email is the Farmer's only confirmation by mail.
         """
         response = self.client.post(
             SIGNUP_URL,
@@ -85,8 +85,18 @@ class AccountEmailTests(APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         created = User.objects.get(email="new@example.com")
         self.assertEqual(created.account_status, AccountStatus.APPROVED)
-        self.assertEqual(
-            [m for m in mail.outbox if "new@example.com" in m.to], []
+
+        sent = [m for m in mail.outbox if "new@example.com" in m.to]
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Welcome", sent[0].subject)
+        self.assertIn("New Farmer", sent[0].body)
+        self.assertIn("My Plants", sent[0].body)
+        self.assertIn("https://bulantanom.example/login", sent[0].body)
+        self.assertNotIn(PW, sent[0].body)
+        self.assertTrue(
+            EmailLog.objects.filter(
+                recipient=created, event_key="farmer_welcome", status=EmailStatus.SENT
+            ).exists()
         )
 
     def test_login_does_not_send_email(self):

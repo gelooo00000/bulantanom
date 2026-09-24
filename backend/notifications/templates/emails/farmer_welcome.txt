@@ -1,0 +1,16 @@
+Hello {{ name }},
+
+Welcome to BulanTanom! Your Farmer account has been created and is ready to use.
+
+Role: {{ role_label }}
+Account Status: Active
+
+You can now sign in and use:
+{% for feature in features %}  - {{ feature }}
+{% endfor %}
+Log in: {{ login_url }}
+
+If you did not create this account, please contact your LGU office.
+
+--
+BulanTanom will never ask you for your password by email.

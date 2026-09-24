@@ -138,6 +138,22 @@ def _queue(fn):
 # ---------------------------------------------------------------------------
 
 
+def email_farmer_welcome(farmer):
+    """
+    Signup approves a Farmer immediately, so no approval email will ever
+    follow. This is the only email confirming the account now exists.
+    """
+    _queue(
+        lambda: _send(
+            recipient=farmer,
+            event_key="farmer_welcome",
+            subject="Welcome to BulanTanom — Farmer Account Created 🌱",
+            template="farmer_welcome",
+            context={"role_label": "Farmer", "features": FARMER_FEATURES},
+        )
+    )
+
+
 def email_farmer_approved(farmer):
     _queue(
         lambda: _send(
