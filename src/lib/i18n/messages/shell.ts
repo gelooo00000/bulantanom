@@ -25,12 +25,12 @@ export const shell = defineMessages({
   "weather.mostly_clear": { en: "Mostly clear", fil: "Halos maaliwalas", bik: "Halos maliwanag" },
   "weather.partly_cloudy": { en: "Partly cloudy", fil: "Bahagyang maulap", bik: "Medyo madampog" },
   "weather.cloudy": { en: "Cloudy", fil: "Maulap", bik: "Madampog" },
-  "weather.fog": { en: "Foggy", fil: "Mahamog", bik: "Maalipuyo" },
+  "weather.fog": { en: "Foggy", fil: "Mahamog", bik: "Magabon" },
   "weather.drizzle": { en: "Drizzle", fil: "Ambon", bik: "Tagiti" },
   "weather.light_rain": { en: "Light rain", fil: "Mahinang ulan", bik: "Luway na uran" },
   "weather.rain": { en: "Rain", fil: "Ulan", bik: "Uran" },
   "weather.heavy_rain": { en: "Heavy rain", fil: "Malakas na ulan", bik: "Makusog na uran" },
-  "weather.thunderstorm": { en: "Thunderstorm", fil: "Bagyong may kulog", bik: "Dalugdog asin uran" },
+  "weather.thunderstorm": { en: "Thunderstorm", fil: "Kulog at kidlat", bik: "Dalugdog asin uran" },
 
   "language.label": { en: "Language", fil: "Wika", bik: "Tataramon" },
   "language.change": {

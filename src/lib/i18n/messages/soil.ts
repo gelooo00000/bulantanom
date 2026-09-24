@@ -121,7 +121,7 @@ export const soil = defineMessages({
   "soil.seeResult": { en: "See Result", fil: "Tingnan ang Resulta", bik: "Hilingon an Resulta" },
   "soil.resultFrom": { en: "Result from", fil: "Resulta noong", bik: "Resulta kan" },
   "soil.latestTag": { en: "latest", fil: "pinakabago", bik: "pinakabago" },
-  "soil.notAnalyzedTag": { en: "not analyzed", fil: "hindi pa nasuri", bik: "dai pa nasusi" },
+  "soil.notAnalyzedTag": { en: "not analyzed", fil: "hindi pa nasuri", bik: "dili pa nasusi" },
   "soil.saved": { en: "Saved", fil: "Na-save", bik: "Na-save" },
   "soil.saveSuccess": {
     en: "Crop recommendation saved successfully.",
