@@ -23,6 +23,7 @@ idna==3.19
 jmespath==1.1.0
 mysqlclient==2.2.8
 pillow==12.3.0
+psycopg[binary]==3.3.6
 pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pycparser==3.0

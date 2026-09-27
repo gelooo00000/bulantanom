@@ -1,0 +1,93 @@
+# Render Blueprint: Postgres + Django API (Docker) + Next.js frontend.
+# Apply it from the Render dashboard: New > Blueprint > pick this repo.
+#
+# The two public URLs below assume Render grants the service names as-is
+# (https://<name>.onrender.com). If a name was taken, Render adds a suffix:
+# update NEXT_PUBLIC_API_URL, CORS_ALLOWED_ORIGINS and FRONTEND_URL to the
+# real URLs, then redeploy the frontend (NEXT_PUBLIC_* is baked in at build).
+
+databases:
+  - name: bulantanom-db
+    plan: free
+    region: singapore
+    databaseName: bulantanom
+    user: bulantanom
+
+services:
+  - type: web
+    name: bulantanom-api
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      # RENDER_EXTERNAL_HOSTNAME is added to both automatically in settings.
+      - key: DJANGO_ALLOWED_HOSTS
+        value: localhost
+      - key: TRUST_PROXY_SSL_HEADER
+        value: "True"
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+      - key: DB_ENGINE
+        value: postgresql
+      - key: DB_HOST
+        fromDatabase: { name: bulantanom-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: bulantanom-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: bulantanom-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: bulantanom-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: bulantanom-db, property: password }
+
+      # *.onrender.com is a public suffix, so the frontend and API are
+      # cross-site: the refresh cookie must be SameSite=None + Secure.
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://bulantanom.onrender.com
+      - key: FRONTEND_URL
+        value: https://bulantanom.onrender.com
+      - key: REFRESH_COOKIE_SAMESITE
+        value: None
+      - key: REFRESH_COOKIE_SECURE
+        value: "True"
+
+      # Secrets: Render prompts for these when the Blueprint is applied.
+      - key: GEMINI_API_KEY
+        sync: false
+      # First Admin account, created on boot (no shell on the free tier).
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      - key: DJANGO_SUPERUSER_FIRST_NAME
+        value: Admin
+      - key: DJANGO_SUPERUSER_LAST_NAME
+        value: BulanTanom
+      # Leave EMAIL_HOST empty to log emails instead of sending them.
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+
+  - type: web
+    name: bulantanom
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NEXT_PUBLIC_API_URL
+        value: https://bulantanom-api.onrender.com/api

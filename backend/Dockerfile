@@ -21,4 +21,8 @@ COPY . .
 # --timeout 180: a soil recommendation waits on Gemini for up to
 # GEMINI_SOIL_TIMEOUT_SECONDS (120s). gunicorn's default 30s would kill the
 # worker mid-request and the farmer would get an error instead of a result.
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 180 --access-logfile -"]
+#
+# DJANGO_SUPERUSER_EMAIL/_PASSWORD/_FIRST_NAME/_LAST_NAME, when set, create
+# the first Admin on boot - hosts like Render's free tier have no shell to run
+# createsuperuser in. It is a no-op once that email exists.
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && { [ -z \"$DJANGO_SUPERUSER_EMAIL\" ] || python manage.py createsuperuser --noinput || true; } && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-2} --timeout 180 --access-logfile -"]
