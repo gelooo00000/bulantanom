@@ -29,6 +29,7 @@ from notifications.services import (
 )
 
 from . import dashboard_service, evidence_token
+from .ai_language import from_request
 from .assessment_schedule import eligibility, with_last_assessment_date
 from .crop_intelligence_service import get_or_create_crop_intelligence, is_configured
 from .soil_recommendation_service import (
@@ -55,9 +56,9 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
-UNAVAILABLE_MESSAGE = (
-    "Crop intelligence is temporarily unavailable. Your plant can still be added."
-)
+# The Add Plant screen follows this with its own translated "Your plant can
+# still be added", so it is not repeated here.
+UNAVAILABLE_MESSAGE = "Crop intelligence is temporarily unavailable."
 
 
 class CropListView(ListAPIView):
@@ -111,7 +112,7 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
 def crop_intelligence(request, crop_id):
     """
     GET /api/farmer/crops/{crop_id}/intelligence/
-        ?planting_date=YYYY-MM-DD&variant=<variant_id>
+        ?planting_date=YYYY-MM-DD&variant=<variant_id>&lang=<en|fil|bik>
 
     Returns the calculated harvest window (always, from the Crop table) plus
     cached Gemini crop intelligence (best-effort).
@@ -160,7 +161,10 @@ def crop_intelligence(request, crop_id):
             crop, planting_date, variant
         )
 
-    intelligence, generated_now = get_or_create_crop_intelligence(crop)
+    # The farmer's app language ("en", "fil" or "bik"); anything else is English.
+    intelligence, generated_now = get_or_create_crop_intelligence(
+        crop, variant=variant, language=from_request(request)
+    )
 
     return Response(
         {
@@ -212,9 +216,10 @@ def crop_intelligence(request, crop_id):
 # ---------------------------------------------------------------------------
 
 
-def _run_risk_evaluation(assessment):
+def _run_risk_evaluation(assessment, language="en"):
     """
-    Evaluates an assessment and persists the result.
+    Evaluates an assessment and persists the result, written in the
+    farmer's app `language`.
 
     On any Gemini failure the RiskAssessment row is still created, with
     status FAILED and risk_level left NULL — the farmer's assessment and
@@ -223,7 +228,7 @@ def _run_risk_evaluation(assessment):
     from .models import RiskAssessment, RiskStatus
     from .risk_evaluation_service import evaluate_assessment, is_configured
 
-    result = evaluate_assessment(assessment)
+    result = evaluate_assessment(assessment, language)
 
     if result is None:
         return RiskAssessment.objects.create(
@@ -235,6 +240,7 @@ def _run_risk_evaluation(assessment):
                 else "AI risk analysis is not configured on this server."
             ),
             model_name=settings.GEMINI_MODEL if is_configured() else "",
+            language=language,
         )
 
     return RiskAssessment.objects.create(
@@ -254,6 +260,7 @@ def _run_risk_evaluation(assessment):
         date_mismatch=result.get("date_mismatch", False),
         # A fallback model may have answered when GEMINI_MODEL was busy.
         model_name=result.get("model_name", settings.GEMINI_MODEL),
+        language=language,
     )
 
 
@@ -301,7 +308,7 @@ def _verify_evidence(request, plant, image) -> dict:
             },
         }
 
-    result = validate_crop_evidence(plant.crop, image_bytes, mime)
+    result = validate_crop_evidence(plant.crop, image_bytes, mime, from_request(request))
     if result is None:
         # Fail closed: an unavailable check is never treated as a pass.
         return {"outcome": "unavailable", "result": None}
@@ -361,7 +368,7 @@ def validate_plant_evidence(request, plant_id):
     from .evidence_validation_service import validate_crop_evidence
 
     image_bytes, mime = _read_upload(image)
-    result = validate_crop_evidence(plant.crop, image_bytes, mime)
+    result = validate_crop_evidence(plant.crop, image_bytes, mime, from_request(request))
 
     if result is None:
         return Response(
@@ -488,7 +495,7 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
         # 3. Only now does the risk evaluation run, on verified evidence. Its
         #    existing graceful failure is preserved: a Gemini outage records a
         #    FAILED risk rather than losing the farmer's assessment.
-        risk = _run_risk_evaluation(assessment)
+        risk = _run_risk_evaluation(assessment, from_request(request))
         assessment.refresh_from_db()
 
         # 4. Notify only once the assessment and its risk row are stored, and
@@ -542,7 +549,7 @@ def reanalyze_assessment(request, pk):
 
     if existing:
         existing.delete()
-    risk = _run_risk_evaluation(assessment)
+    risk = _run_risk_evaluation(assessment, from_request(request))
     assessment.refresh_from_db()
     # A retry that finally succeeds still notifies once — the earlier failed
     # attempt produced no risk notification, and the dedupe key makes a
@@ -735,7 +742,9 @@ class SoilRecommendationListCreateView(generics.ListCreateAPIView):
             notify_soil_warning(soil)
             return
 
-        analyzed = apply_recommendation(soil, generate_soil_recommendation(soil))
+        analyzed = apply_recommendation(
+            soil, generate_soil_recommendation(soil, from_request(self.request))
+        )
         notify_soil_recommendation(soil, analyzed=analyzed)
         notify_soil_warning(soil)
 
@@ -785,7 +794,7 @@ def reanalyze_soil_recommendation(request, pk):
     if soil.ai_generated:
         return Response(SoilRecommendationSerializer(soil).data)
 
-    if apply_recommendation(soil, generate_soil_recommendation(soil)):
+    if apply_recommendation(soil, generate_soil_recommendation(soil, from_request(request))):
         # Only a success is news - the save itself was announced when it was
         # submitted, so a retry that fails again stays quiet.
         notify_soil_recommendation(soil, analyzed=True)

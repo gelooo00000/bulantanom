@@ -251,7 +251,9 @@ export function RiskResultCard({
               <p className="text-muted-foreground/60 flex items-center gap-1.5 text-[11px]">
                 <Sparkles className="size-3" />
                 {t(risk.image_analyzed ? "result.aiNotePhoto" : "result.aiNote")}
-                {language !== "en" && ` ${t("result.aiText")}`}
+                {/* Only for findings written before results followed the app
+                    language, which are English whatever the screen says. */}
+                {(risk.language ?? "en") !== language && ` ${t("result.aiText")}`}
               </p>
             </div>
           </>

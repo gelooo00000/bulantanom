@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sprout } from "lucide-react";
+import { Sprout } from "lucide-react";
 import { useState } from "react";
 
+import { SlidePager } from "@/components/shared/slide-pager";
 import { Card, CardContent } from "@/components/ui/card";
 import { DatePicker, formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
@@ -14,7 +15,7 @@ import { useLanguage } from "@/lib/i18n";
  *
  * Picking a date shows only what was planted that day — or, for a future
  * day, what is planned for it — or says plainly that nothing is. It opens on
- * today, the earliest day the calendar offers.
+ * today, and reaches back to the start of the month of the first planting.
  */
 
 function todayIso(): string {
@@ -33,6 +34,13 @@ export function CropSuggestionsCard({ plants = [] }: { plants?: BackendPlant[] }
   const plantedOn = livePlants.filter((plant) => plant.planting_date === plantingDate);
   const hasPlants = livePlants.length > 0;
   const future = plantingDate > todayIso();
+
+  // Back as far as the month of the farm's first planting, and no further:
+  // a farm whose records start in September can open any September day,
+  // even from October, but not August, where there is nothing to find.
+  const plantingDays = [...new Set(livePlants.map((plant) => plant.planting_date))].sort();
+  const firstPlanting = plantingDays[0] ?? todayIso();
+  const earliest = `${(firstPlanting < todayIso() ? firstPlanting : todayIso()).slice(0, 7)}-01`;
 
   return (
     <Card className="gap-0 py-4">
@@ -54,6 +62,10 @@ export function CropSuggestionsCard({ plants = [] }: { plants?: BackendPlant[] }
                 id="suggestion-date"
                 value={plantingDate}
                 onChange={setPlantingDate}
+                min={earliest}
+                // A dot on every day something was planted, so they are
+                // easy to find.
+                marked={plantingDays}
                 placeholder={t("suited.pickDate")}
                 compact
                 // The trigger sits at the card's right edge, so the calendar
@@ -94,27 +106,28 @@ export function CropSuggestionsCard({ plants = [] }: { plants?: BackendPlant[] }
             </p>
 
             {plantedOn.length > 0 && (
-              <ul className="mt-2 flex flex-col" aria-label={t("suited.listLabel")}>
-                {plantedOn.map((plant) => (
-                  <li key={plant.id} className="border-border/60 border-t first:border-t-0">
-                    <Link
-                      href={`/farmer/plants/${plant.id}`}
-                      className="hover:bg-accent/40 -mx-1 flex items-center gap-2.5 rounded-lg px-1 py-2 transition-colors"
-                    >
-                      <span aria-hidden="true" className="text-base">
-                        {plant.crop.emoji}
+              // Four at a time; the rows are information only, not links.
+              // Keyed by date, so a new date starts on its first page.
+              <SlidePager
+                key={plantingDate}
+                className="mt-2"
+                items={plantedOn}
+                listLabel={t("suited.listLabel")}
+                getKey={(plant) => plant.id}
+                renderItem={(plant) => (
+                  <div className="flex items-center gap-2.5 py-2">
+                    <span aria-hidden="true" className="text-base">
+                      {plant.crop.emoji}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{plant.display_name}</span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {plant.is_planned ? t("plant.planned") : plant.status_label}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm">{plant.display_name}</span>
-                        <span className="text-muted-foreground block truncate text-xs">
-                          {plant.is_planned ? t("plant.planned") : plant.status_label}
-                        </span>
-                      </span>
-                      <ArrowRight className="text-muted-foreground size-3.5 shrink-0" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                    </span>
+                  </div>
+                )}
+              />
             )}
           </div>
         )}

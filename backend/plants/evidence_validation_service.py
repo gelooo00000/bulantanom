@@ -28,6 +28,7 @@ import logging
 
 from django.conf import settings
 
+from .ai_language import write_in
 from .gemini_models import generate_with_fallback
 
 logger = logging.getLogger(__name__)
@@ -164,9 +165,13 @@ def _validate(payload, crop) -> dict | None:
     }
 
 
-def validate_crop_evidence(crop, image_bytes: bytes, mime_type: str) -> dict | None:
+def validate_crop_evidence(
+    crop, image_bytes: bytes, mime_type: str, language: str = "en"
+) -> dict | None:
     """
-    Ask Gemini whether `image_bytes` plausibly shows `crop`.
+    Ask Gemini whether `image_bytes` plausibly shows `crop`. `reason` - the
+    sentence the farmer reads when a photo is turned down - comes back in
+    their app `language`; `verdict` stays one of the fixed English values.
 
     Returns the validated result dict, or None if the check could not be
     performed (not configured, SDK missing, upstream failure, unusable
@@ -191,6 +196,8 @@ def validate_crop_evidence(crop, image_bytes: bytes, mime_type: str) -> dict | N
         "Does this photo show the expected crop?\n\n" + json.dumps(context, indent=2),
         types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
     ]
+    if write_in(language):
+        parts.append(write_in(language))
 
     config = types.GenerateContentConfig(
         system_instruction=SYSTEM_INSTRUCTION,

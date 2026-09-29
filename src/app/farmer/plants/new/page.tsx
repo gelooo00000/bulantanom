@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Info,
   LoaderCircle,
+  RefreshCw,
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
@@ -109,6 +110,9 @@ export default function AddPlantPage() {
   const selectedCrop = crops?.find((crop) => crop.id === cropId) ?? null;
   const selectedVariant =
     selectedCrop?.variants.find((variant) => variant.id === variantId) ?? null;
+  // A crop with varieties on file needs one chosen before it can be added:
+  // they can be months apart at harvest.
+  const needsVariety = !!selectedCrop && selectedCrop.variants.length > 0 && !selectedVariant;
 
   const activeMonth = monthFromIsoDate(plantingDate);
   const seasonAdvice = adviseForMonth(selectedCrop?.planting_window, activeMonth, t);
@@ -131,12 +135,19 @@ export default function AddPlantPage() {
     setFormError(null);
 
     if (!cropId) return setFormError(t("add.errorCrop"));
+    if (needsVariety) return setFormError(t("add.errorVariety"));
     if (!plantingDate) return setFormError(t("add.errorDate"));
     if (plantingDate < todayIso()) {
       return setFormError(t("add.errorPast"));
     }
     if (!accessToken) return;
+    await analyze();
+  }
 
+  // Also behind "Try again" when the guidance was unavailable, so a busy
+  // moment at Google does not send the farmer back through the form.
+  async function analyze() {
+    if (!accessToken || !cropId) return;
     setAnalyzing(true);
     try {
       // The harvest window in this response is calculated by Django from the
@@ -144,7 +155,7 @@ export default function AddPlantPage() {
       // The variety travels with the request, so the window shown here is
       // the one the saved plant will actually get.
       setIntel(
-        await fetchCropIntelligence(accessToken, cropId, plantingDate, variantId),
+        await fetchCropIntelligence(accessToken, cropId, plantingDate, variantId, language),
       );
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t("add.errorIntel"));
@@ -165,7 +176,8 @@ export default function AddPlantPage() {
       });
       // Django raised "Plant added" — show it on the bell straight away.
       requestNotificationRefresh();
-      router.push(`/farmer/plants/${plant.id}`);
+      // Back to My Plants, which pops up the confirmation and marks the card.
+      router.push(`/farmer/plants?added=${plant.id}`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t("add.errorSave"));
       setSaving(false);
@@ -305,8 +317,9 @@ export default function AddPlantPage() {
                 )}
 
                 <p className="text-muted-foreground/60 border-border border-t pt-3 text-[11px]">
+                  {/* Gemini writes this in the farmer's language now, so the
+                      "the AI's findings are in English" caveat is gone. */}
                   {t("add.aiNote")}
-                  {language !== "en" && ` ${t("result.aiText")}`}
                 </p>
               </CardContent>
             </Card>
@@ -316,9 +329,22 @@ export default function AddPlantPage() {
               <div>
                 <p className="text-sm font-medium">{t("add.intelUnavailable")}</p>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  {intel.unavailable_reason ?? t("add.intelUnavailableDefault")}{" "}
+                  {/* The server's reason is English; other languages get the
+                      translated one, which says the same thing. */}
+                  {(language === "en" && intel.unavailable_reason) ||
+                    t("add.intelUnavailableDefault")}{" "}
                   {t("add.canStillAdd")}
                 </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={analyze}
+                  disabled={saving}
+                >
+                  <RefreshCw className="size-3.5" />
+                  {t("common.tryAgain")}
+                </Button>
               </div>
             </div>
           )}
@@ -490,7 +516,11 @@ export default function AddPlantPage() {
 
           {formError && <p className="text-destructive text-sm">{formError}</p>}
 
-          <Button type="submit" disabled={!cropId || !plantingDate} className="self-start">
+          <Button
+            type="submit"
+            disabled={!cropId || needsVariety || !plantingDate}
+            className="self-start"
+          >
             {t("common.continue")}
             <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>

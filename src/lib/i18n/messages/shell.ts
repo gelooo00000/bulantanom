@@ -11,12 +11,7 @@ export const shell = defineMessages({
   },
   "nav.risk": { en: "Risk Indicator", fil: "Antas ng Panganib", bik: "Tanda san Peligro" },
   "nav.harvest": { en: "Harvest", fil: "Anihan", bik: "Pag-ani" },
-  "nav.monitoring": { en: "Monitoring", fil: "Pagsubaybay", bik: "Pagbantay" },
-  "nav.history": {
-    en: "Assessment History",
-    fil: "Kasaysayan ng Pagsusuri",
-    bik: "Mga Nakaagi na Pagsusi",
-  },
+  "nav.assessments": { en: "Assessments", fil: "Mga Pagsusuri", bik: "Mga Pagsusi" },
   "shell.role": { en: "Farmer", fil: "Magsasaka", bik: "Parauma" },
   "shell.logOut": { en: "Log out", fil: "Mag-log out", bik: "Mag-log out" },
   "shell.more": { en: "More", fil: "Iba pa", bik: "Iba pa" },

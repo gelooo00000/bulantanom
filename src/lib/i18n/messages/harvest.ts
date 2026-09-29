@@ -79,7 +79,6 @@ export const harvest = defineMessages({
   "harvestCard.opens": { en: "Window opens", fil: "Simula ng ani", bik: "Poon san ani" },
   "harvestCard.closes": { en: "Window closes", fil: "Katapusan ng ani", bik: "Katapusan san ani" },
   "harvestCard.length": { en: "Window length", fil: "Haba ng panahon ng ani", bik: "Kaluwagan san ani" },
-  "harvestCard.view": { en: "View plant →", fil: "Tingnan ang tanim →", bik: "Hilingon an tanom →" },
 
   "category.fruit": { en: "Fruit", fil: "Prutas", bik: "Prutas" },
   "category.vegetable": { en: "Vegetable", fil: "Gulay", bik: "Gulay" },

@@ -217,6 +217,7 @@ export function ColumnChart({
   onHoverIndex,
   onSelectIndex,
   selectedIndex = null,
+  height = VIEW_H,
 }: {
   columns: Column[];
   /** Singular noun, e.g. "assessment". */
@@ -236,6 +237,8 @@ export function ColumnChart({
   onSelectIndex?: (index: number) => void;
   /** The column currently selected through `onSelectIndex`, if any. */
   selectedIndex?: number | null;
+  /** Drawing height in pixels, for a chart that is the page's main picture. */
+  height?: number;
 }) {
   const [active, setActive] = useState<number | null>(null);
   const [showTable, setShowTable] = useState(false);
@@ -260,8 +263,8 @@ export function ColumnChart({
 
   const peak = Math.max(...columns.map((c) => c.count), 1);
   const slot = viewW / columns.length;
-  const plotH = VIEW_H - PAD_TOP - PAD_BOTTOM;
-  const baseline = VIEW_H - PAD_BOTTOM;
+  const plotH = height - PAD_TOP - PAD_BOTTOM;
+  const baseline = height - PAD_BOTTOM;
   const barW = Math.min(BAR_W, slot * 0.6);
   const shown = active;
   // A selected column stays highlighted after the pointer leaves it.
@@ -282,7 +285,7 @@ export function ColumnChart({
 
       <div ref={boxRef} className="relative mt-3">
         <svg
-          viewBox={`0 0 ${viewW} ${VIEW_H}`}
+          viewBox={`0 0 ${viewW} ${height}`}
           className="h-auto w-full overflow-visible"
           role="img"
           aria-label={name}
@@ -331,7 +334,7 @@ export function ColumnChart({
                 })}
               >
                 {/* A hit target the full height of the slot, bigger than the bar. */}
-                <rect x={i * slot} y={0} width={slot} height={VIEW_H} fill="transparent" />
+                <rect x={i * slot} y={0} width={slot} height={height} fill="transparent" />
                 {path && (
                   <path
                     d={path}
@@ -353,7 +356,7 @@ export function ColumnChart({
                 {showAxis && (
                   <text
                     x={i * slot + slot / 2}
-                    y={VIEW_H - 4}
+                    y={height - 4}
                     textAnchor="middle"
                     className="fill-muted-foreground text-[9px]"
                   >

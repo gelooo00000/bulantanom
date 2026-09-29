@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Model order and the "try the next model" rule are shared with every other
 # Gemini feature; see gemini_models.py for why the same model is never retried.
+from .ai_language import language_code, write_in  # noqa: E402
 from .gemini_models import is_transient as _is_transient  # noqa: E402
 from .gemini_models import models as _models  # noqa: E402
 
@@ -324,12 +325,15 @@ def is_configured() -> bool:
     return bool(settings.GEMINI_API_KEY)
 
 
-def generate_soil_recommendation(soil) -> dict | None:
+def generate_soil_recommendation(soil, language: str = "en") -> dict | None:
     """
     Calls Gemini for one soil assessment and returns validated structured
     data, or None on any failure (missing key, quota, timeout, API error,
     malformed response). Callers must handle None as "temporarily
     unavailable" and must still keep the Farmer's saved soil information.
+
+    The advice is written in the farmer's app `language`; recommended crop
+    names stay copied from the English catalog so they still match it.
     """
     if not is_configured():
         logger.info("Soil recommendation skipped: GEMINI_API_KEY is not configured.")
@@ -349,7 +353,10 @@ def generate_soil_recommendation(soil) -> dict | None:
         logger.warning("Soil recommendation skipped: crop catalog is empty.")
         return None
 
+    language = language_code(language)
     prompt = _build_prompt(soil)
+    if write_in(language):
+        prompt += "\n\n" + write_in(language)
     config = types.GenerateContentConfig(
         system_instruction=SYSTEM_INSTRUCTION,
         response_mime_type="application/json",
@@ -404,6 +411,7 @@ def generate_soil_recommendation(soil) -> dict | None:
         logger.info("Soil recommendation answered by fallback model %s.", model)
     # The model that actually answered, so the saved row records it truthfully.
     validated["model_name"] = model
+    validated["language"] = language
     return validated
 
 
@@ -429,6 +437,7 @@ def apply_recommendation(soil, data: dict | None) -> bool:
     soil.important_warnings = data["important_warnings"]
     soil.ai_generated = True
     soil.model_name = data.get("model_name") or settings.GEMINI_MODEL
+    soil.language = data.get("language", "en")
     soil.failure_reason = ""
     soil.save()
     return True

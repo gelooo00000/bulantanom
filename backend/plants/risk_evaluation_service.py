@@ -23,6 +23,7 @@ import logging
 
 from django.conf import settings
 
+from .ai_language import write_in
 from .durations import human_duration
 from .gemini_models import generate_with_fallback
 
@@ -294,10 +295,13 @@ def _validate(payload) -> dict | None:
     }
 
 
-def evaluate_assessment(assessment) -> dict | None:
+def evaluate_assessment(assessment, language: str = "en") -> dict | None:
     """
     Runs the Gemini risk evaluation. Returns validated structured data, or
     None on any failure (caller must record FAILED, not a fake risk level).
+
+    `language` is the farmer's app language; the written findings come back
+    in it, while `risk_level` stays one of the fixed English values.
     """
     if not is_configured():
         logger.info("Risk evaluation skipped: GEMINI_API_KEY not configured.")
@@ -315,6 +319,8 @@ def evaluate_assessment(assessment) -> dict | None:
         "Evaluate this plant's condition against expectations for its crop and age.\n\n"
         + json.dumps(context, indent=2)
     ]
+    if write_in(language):
+        parts.append(write_in(language))
 
     image_analyzed = False
     if assessment.evidence_image:

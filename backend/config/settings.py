@@ -334,7 +334,10 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash").strip()
 # quota (429). The free tier's 20 requests a day is per model, and each model
 # has its own load, so a fallback keeps soil recommendations working while
 # the primary model is saturated.
-GEMINI_FALLBACK_MODELS = _env_list("GEMINI_FALLBACK_MODELS", "gemini-3.1-flash-lite")
+GEMINI_FALLBACK_MODELS = _env_list(
+    "GEMINI_FALLBACK_MODELS",
+    "gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3-flash-preview,gemini-flash-lite-latest",
+)
 # Passed to the API as the *server-side* deadline, so a value below the
 # model's real response time makes Google itself return 504 DEADLINE_EXCEEDED.
 # That still consumes a request from the daily quota, so a tight timeout
@@ -342,6 +345,12 @@ GEMINI_FALLBACK_MODELS = _env_list("GEMINI_FALLBACK_MODELS", "gemini-3.1-flash-l
 # gemini-3.6-flash ranged from 3s to 38s for the same prompt, so this is
 # sized for the slow tail rather than the median.
 GEMINI_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_TIMEOUT_SECONDS", "60"))
+# Crop intelligence only: after a model times out, the next fallback is still
+# tried while less than this many seconds have passed in total. A busy model
+# often times out rather than refusing, and the next one usually answers fast.
+GEMINI_INTELLIGENCE_BUDGET_SECONDS = int(
+    os.environ.get("GEMINI_INTELLIGENCE_BUDGET_SECONDS", "75")
+)
 # Risk evaluation sends a photo and asks for a long structured response, so
 # it legitimately takes far longer than the text-only crop-intelligence call.
 GEMINI_RISK_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_RISK_TIMEOUT_SECONDS", "60"))

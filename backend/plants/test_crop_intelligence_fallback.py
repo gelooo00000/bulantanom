@@ -76,6 +76,33 @@ class CropIntelligenceFallbackTests(TestCase):
         self.assertEqual(models, ["primary-model", "fallback-model"])
         self.assertIsNone(result)
 
+    def test_a_timed_out_primary_falls_back_within_the_budget(self):
+        """
+        Seen live: a busy primary timed out instead of refusing, and Add
+        Plant said "unavailable" while the next model answered in 9s.
+        """
+        result, models = self.run_with([
+            _FakeGeminiError(504, "DEADLINE_EXCEEDED"),
+            _FakeResponse(PAYLOAD),
+        ])
+        self.assertEqual(models, ["primary-model", "fallback-model"])
+        self.assertEqual(result["model_name"], "fallback-model")
+
+    @override_settings(GEMINI_INTELLIGENCE_BUDGET_SECONDS=0)
+    def test_a_timeout_past_the_budget_stops_there(self):
+        result, models = self.run_with([_FakeGeminiError(504, "DEADLINE_EXCEEDED")])
+        self.assertEqual(models, ["primary-model"])
+        self.assertIsNone(result)
+
+    def test_the_prompt_asks_about_the_variety_and_the_farm(self):
+        from .crop_intelligence_service import _build_prompt
+        from .models import CropVariant
+
+        variant = CropVariant.objects.get(pk="rambutan-rongrien")
+        prompt = _build_prompt(variant.crop, variant=variant)
+        self.assertIn(f"Crop: {variant.name}", prompt)
+        self.assertIn("Bulan, Sorsogon", prompt)
+
     def test_the_cache_records_the_model_that_actually_answered(self):
         with patch("google.genai.Client") as client_cls:
             client_cls.return_value.models.generate_content.side_effect = [

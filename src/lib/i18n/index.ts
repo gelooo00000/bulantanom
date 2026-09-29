@@ -35,6 +35,14 @@ function isLanguage(value: unknown): value is Language {
   return value === "en" || value === "fil" || value === "bik";
 }
 
+/**
+ * The chosen language, readable outside React — the API client sends it with
+ * every request so Gemini writes its results in it.
+ */
+export function currentLanguage(): Language {
+  return readLanguage();
+}
+
 function readLanguage(): Language {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -70,7 +78,11 @@ export function setLanguage(language: Language) {
 export type Vars = Record<string, string | number>;
 
 export function translate(language: Language, key: MessageKey, vars?: Vars): string {
-  const text = MESSAGES[key][language] || MESSAGES[key].en;
+  // The key itself when a message is missing - seen after a dev-server hot
+  // reload served a stale message file - rather than crashing the page.
+  const entry = MESSAGES[key];
+  if (!entry) return key;
+  const text = entry[language] || entry.en;
   if (!vars) return text;
   return text.replace(/\{(\w+)\}/g, (match, name: string) =>
     name in vars ? String(vars[name]) : match,

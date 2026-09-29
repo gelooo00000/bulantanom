@@ -1,5 +1,6 @@
 import { apiFetch, refreshAccessToken } from "@/lib/api/client";
 import type { BackendPlant } from "@/lib/api/plants-api";
+import { currentLanguage } from "@/lib/i18n";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
@@ -30,6 +31,8 @@ export type BackendRisk = {
   /** The photo and the recorded planting date cannot both be right. */
   date_mismatch: boolean;
   model_name: string;
+  /** The language Gemini wrote the findings in. */
+  language?: "en" | "fil" | "bik";
   failure_reason: string;
   generated_at: string;
 };
@@ -133,7 +136,8 @@ async function postMultipart<T>(
       method: "POST",
       credentials: "include",
       // No Content-Type header: the browser sets the multipart boundary.
-      headers: { Authorization: `Bearer ${token}` },
+      // The app language, so the photo check and risk findings use it.
+      headers: { Authorization: `Bearer ${token}`, "Accept-Language": currentLanguage() },
       body,
     });
 

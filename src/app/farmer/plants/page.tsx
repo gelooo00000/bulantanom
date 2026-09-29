@@ -65,6 +65,25 @@ export default function MyPlantsPage() {
     setShowGuide(!guideHidden());
   }, []);
 
+  // The plant just saved on the Add Plant page, carried in `?added=<id>`.
+  // Read once and dropped from the address, so a reload does not pop the
+  // confirmation up again.
+  const [addedId, setAddedId] = useState<number | null>(null);
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("added"));
+    if (!id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a one-time read of the address
+    setAddedId(id);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+  const [addedPopup, setAddedPopup] = useState(true);
+  useEffect(() => {
+    if (addedId === null) return;
+    const timer = window.setTimeout(() => setAddedPopup(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [addedId]);
+  const addedPlant = plants?.find((p) => p.id === addedId);
+
   function toggleGuide(show: boolean) {
     setShowGuide(show);
     rememberGuideHidden(!show);
@@ -256,6 +275,7 @@ export default function MyPlantsPage() {
               key={plant.id}
               plant={plant}
               selected={selected.has(plant.id)}
+              highlighted={plant.id === addedId}
               onToggle={selecting ? () => toggle(plant.id) : undefined}
             />
           ))}
@@ -263,6 +283,29 @@ export default function MyPlantsPage() {
               already is after reading the last card. Hidden while
               selecting, where it would be one more thing to tap by mistake. */}
           {!selecting && <AddPlantTile />}
+        </div>
+      )}
+
+      {/* "Plant added" pop-up, after arriving from the Add Plant page. */}
+      {addedPlant && addedPopup && (
+        <div
+          role="status"
+          className="bg-card border-risk-low/40 text-foreground animate-in fade-in slide-in-from-bottom-4 fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg"
+        >
+          <CircleCheck className="text-risk-low size-5 shrink-0" />
+          <span className="flex-1">
+            {t("myPlants.added", {
+              name: `${addedPlant.crop.emoji} ${plantTitle(addedPlant)}`,
+            })}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAddedPopup(false)}
+            aria-label={t("common.close")}
+            className="text-muted-foreground hover:text-foreground rounded p-1"
+          >
+            <X className="size-4" />
+          </button>
         </div>
       )}
 

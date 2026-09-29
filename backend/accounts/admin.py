@@ -17,6 +17,7 @@ from django.contrib.auth.forms import AdminPasswordChangeForm, ReadOnlyPasswordH
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
+from .lifecycle import announce_officer_created, announce_status_change
 from .models import AccountStatus, Farmer, LguOfficer, RegistrationNotification, User, UserRole
 
 
@@ -199,7 +200,20 @@ class RoleScopedAdmin(BaseAccountAdmin):
         obj.role = self.role
         if not change and not obj.account_status:
             obj.account_status = self.default_account_status
+        # Read before saving: the form has already written the new value
+        # onto `obj`, so only the stored row still knows the old one.
+        old_status = (
+            type(obj).objects.filter(pk=obj.pk).values_list("account_status", flat=True).first()
+            if change
+            else None
+        )
         super().save_model(request, obj, form, change)
+        # The same emails and notifications as BulanTanom's own Account
+        # Management screen — saving here used to tell nobody.
+        if change:
+            announce_status_change(
+                obj, old_status=old_status, new_status=obj.account_status, actor=request.user
+            )
 
 
 @admin.register(LguOfficer)
@@ -225,6 +239,9 @@ class LguOfficerAdmin(RoleScopedAdmin):
             obj.is_superuser = False
         super().save_model(request, obj, form, change)
         if creating:
+            # The welcome email, exactly as when an Admin adds an officer in
+            # BulanTanom itself.
+            announce_officer_created(obj, actor=request.user)
             messages.info(
                 request,
                 f"{obj.get_full_name() or obj.email} can now sign in to BulanTanom "

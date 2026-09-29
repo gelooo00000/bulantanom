@@ -61,6 +61,13 @@ type DatePickerProps = {
   onChange: (value: string) => void;
   /** ISO date; days after this are disabled. */
   max?: string;
+  /**
+   * ISO date; days before it are disabled and browsing stops at its month.
+   * Defaults to today, for pickers that choose a date still to come.
+   */
+  min?: string;
+  /** ISO dates to mark with a dot, e.g. the days something was planted. */
+  marked?: string[];
   placeholder?: string;
   /**
    * Shows "Sep 19" instead of "September 19, 2026". For a trigger sitting in
@@ -83,6 +90,8 @@ export function DatePicker({
   value,
   onChange,
   max,
+  min,
+  marked,
   placeholder,
   compact = false,
   align = "start",
@@ -111,12 +120,15 @@ export function DatePicker({
     };
   }, [open]);
 
-  // The calendar never goes back before the current month: it opens on this
-  // month at the earliest, and "Previous", the month list and the year list
-  // all stop there. Worked out from today's date on every render, so the
-  // limit moves forward on its own when the month changes.
+  // The calendar never goes back before the month of `min` - today's month
+  // unless a caller says otherwise: "Previous", the month list and the year
+  // list all stop there. Worked out on every render, so the default limit
+  // moves forward on its own when the month changes.
   const today = new Date();
-  const earliest = new Date(today.getFullYear(), today.getMonth(), 1);
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const minDate = (min ? parseIsoDate(min) : null) ?? startOfToday;
+  const earliest = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const markedDays = new Set(marked ?? []);
   // Browsing forward is allowed for a year — September on to January and
   // beyond. `max` does not stop the browsing; it only greys out the days
   // after it.
@@ -154,12 +166,10 @@ export function DatePicker({
     return first < earliest || first > latest;
   }
 
-  // The first day that can be picked is today: tomorrow, today's date greys
-  // out on its own. Days after `max`, when a caller passes one, are also out.
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
+  // The first day that can be picked is `min` (today by default). Days after
+  // `max`, when a caller passes one, are also out.
   function isDisabled(date: Date) {
-    if (date < startOfToday) return true;
+    if (date < minDate) return true;
     return maxDate ? date > maxDate : false;
   }
 
@@ -283,7 +293,24 @@ export function DatePicker({
                     disabled && "text-muted-foreground/40 cursor-not-allowed hover:bg-transparent",
                   )}
                 >
-                  {date.getDate()}
+                  <span className="flex flex-col items-center leading-none">
+                    {date.getDate()}
+                    {/* A dot under a marked day; room kept either way so
+                        the rows stay even. */}
+                    {marked && (
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "mt-0.5 size-1 rounded-full",
+                          markedDays.has(iso)
+                            ? isSelected
+                              ? "bg-primary-foreground"
+                              : "bg-primary"
+                            : "bg-transparent",
+                        )}
+                      />
+                    )}
+                  </span>
                 </button>
               );
             })}

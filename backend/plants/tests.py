@@ -311,6 +311,71 @@ class CropIntelligenceEndpointTests(PlantApiTestCase):
         self.assertEqual(mock_generate.call_count, 1)
         self.assertEqual(CropIntelligence.objects.filter(crop_id="guava").count(), 1)
 
+    @patch("plants.crop_intelligence_service.generate_crop_intelligence")
+    def test_a_variety_gets_its_own_intelligence(self, mock_generate):
+        """
+        Seen live: Pechay is filed under "Lemongrass / Leafy Greens", and its
+        review screen showed Gemini's text about lemongrass, cached for the
+        whole crop. A variety is asked about, and cached, as itself.
+        """
+        mock_generate.side_effect = lambda crop, variant=None, **_: {
+            "crop_overview": f"About {variant.name if variant else crop.name}.",
+            "growing_notes": [],
+            "care_guidance": [],
+            "harvest_guidance": "",
+            "important_factors": [],
+        }
+        url = "/api/farmer/crops/lemongrass/intelligence/"
+
+        pechay = self.client.get(f"{url}?variant=greens-pechay", **self.auth)
+        crop = self.client.get(url, **self.auth)
+        again = self.client.get(f"{url}?variant=greens-pechay", **self.auth)
+
+        self.assertEqual(pechay.data["intelligence"]["crop_overview"], "About Pechay.")
+        self.assertEqual(
+            crop.data["intelligence"]["crop_overview"], "About Lemongrass / Leafy Greens."
+        )
+        # Each is cached on its own, so the repeat did not call Gemini again.
+        self.assertFalse(again.data["intelligence_generated_now"])
+        self.assertEqual(mock_generate.call_count, 2)
+
+    @patch("plants.crop_intelligence_service.generate_crop_intelligence")
+    def test_guidance_is_written_and_cached_in_the_farmers_language(self, mock_generate):
+        """A Bikol or Filipino screen gets guidance in that language, not English."""
+        mock_generate.side_effect = lambda crop, variant=None, language="en", **_: {
+            "crop_overview": f"[{language}] {crop.name}",
+            "growing_notes": [],
+            "care_guidance": [],
+            "harvest_guidance": "",
+            "important_factors": [],
+        }
+
+        bik = self.client.get(f"{self.url}?lang=bik", **self.auth)
+        en = self.client.get(self.url, **self.auth)
+        bik_again = self.client.get(f"{self.url}?lang=bik", **self.auth)
+        unknown = self.client.get(f"{self.url}?lang=xx", **self.auth)
+
+        self.assertEqual(bik.data["intelligence"]["crop_overview"], "[bik] Guava")
+        self.assertEqual(en.data["intelligence"]["crop_overview"], "[en] Guava")
+        # Each language is cached on its own; an unknown one falls back to English.
+        self.assertFalse(bik_again.data["intelligence_generated_now"])
+        self.assertEqual(unknown.data["intelligence"]["crop_overview"], "[en] Guava")
+        self.assertEqual(mock_generate.call_count, 2)
+
+    def test_the_prompt_names_the_language_to_write_in(self):
+        from .crop_intelligence_service import _build_prompt
+
+        guava = Crop.objects.get(pk="guava")
+        self.assertIn("Bulan, Sorsogon", _build_prompt(guava, language="bik").split("Write")[-1])
+        self.assertIn("Filipino (Tagalog)", _build_prompt(guava, language="fil"))
+        self.assertNotIn("Write every field", _build_prompt(guava))
+
+    @patch("plants.crop_intelligence_service.generate_crop_intelligence", return_value=None)
+    def test_unavailable_reason_does_not_repeat_the_add_anyway_line(self, _mock):
+        """The Add Plant screen adds its own translated "can still be added"."""
+        response = self.client.get(self.url, **self.auth)
+        self.assertNotIn("can still be added", response.data["unavailable_reason"])
+
     def test_invalid_crop_returns_404(self):
         response = self.client.get("/api/farmer/crops/not-real/intelligence/", **self.auth)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

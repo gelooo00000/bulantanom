@@ -1,4 +1,5 @@
 import { setAccessToken } from "@/lib/auth/token-storage";
+import { currentLanguage } from "@/lib/i18n";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
@@ -214,6 +215,9 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        // The farmer's app language, so AI results come back in it. A
+        // CORS-safelisted header, unlike a custom one.
+        "Accept-Language": currentLanguage(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

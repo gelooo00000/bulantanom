@@ -230,6 +230,16 @@ class DashboardServiceTests(APITestCase):
             messages,
         )
 
+    def test_assess_alerts_open_risk_indicator(self):
+        """Its "Assess now" is per plant there; My Plants has none."""
+        self._plant()
+        assess = [
+            a for a in dashboard_service.alerts(self.farmer, self.today)
+            if a["action"] == "Assess"
+        ]
+        self.assertTrue(assess)
+        self.assertTrue(all(a["href"] == "/farmer/risk-indicator" for a in assess))
+
     def test_missing_soil_reading_is_reported_once_a_farm_exists(self):
         self._plant()
         messages = [a["message"] for a in dashboard_service.alerts(self.farmer, self.today)]

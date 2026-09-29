@@ -23,53 +23,17 @@ export const pages = defineMessages({
     fil: "Magdagdag ng tanim, saka magsumite ng lingguhang pagsusuri para makakuha ng resulta ng panganib mula sa AI.",
     bik: "Magdugang san tanom, dayon magsumite san pagsusi kada semana para makakua san resulta san peligro hali sa AI.",
   },
-  "riskPage.notYet": {
-    en: "No assessment submitted yet — day {n}.",
-    fil: "Wala pang naisumiteng pagsusuri — ika-{n} araw.",
-    bik: "Waray pa naisumite na pagsusi — ika-{n} adlaw.",
+  "riskPage.details": { en: "Details", fil: "Detalye", bik: "Detalye" },
+  // Short forms for the plant tiles, which are half a phone wide.
+  "riskPage.checked": { en: "Checked {date}", fil: "Nasuri {date}", bik: "Nasusi {date}" },
+  "riskPage.nextInOne": { en: "Next in 1 day", fil: "Susunod: bukas", bik: "Masunod: buwas" },
+  "riskPage.nextIn": {
+    en: "Next in {n} days",
+    fil: "Susunod sa {n} araw",
+    bik: "Masunod sa {n} adlaw",
   },
   "riskPage.assessNow": { en: "Assess now", fil: "Suriin ngayon", bik: "Susiha yana" },
 
-  "monitor.title": { en: "Monitoring", fil: "Pagsubaybay", bik: "Pagbantay" },
-  "monitor.description": {
-    en: "Keep track of upcoming assessments for each plant.",
-    fil: "Subaybayan ang mga paparating na pagsusuri ng bawat tanim.",
-    bik: "Bantayan an mga maabot na pagsusi san kada tanom.",
-  },
-  "monitor.empty": {
-    en: "No plants to monitor yet",
-    fil: "Wala pang tanim na susubaybayan",
-    bik: "Waray pa tanom na babantayan",
-  },
-  "monitor.lastToday": { en: "Last assessed today", fil: "Huling nasuri ngayon", bik: "Huri na nasusi yana" },
-  "monitor.lastYesterday": {
-    en: "Last assessed yesterday",
-    fil: "Huling nasuri kahapon",
-    bik: "Huri na nasusi kahapon",
-  },
-  "monitor.lastDays": {
-    en: "Last assessed {n} days ago",
-    fil: "Huling nasuri {n} araw na ang nakalipas",
-    bik: "Huri na nasusi {n} adlaw na an naagi",
-  },
-  "monitor.due": {
-    en: " · due for a weekly check",
-    fil: " · oras na para sa lingguhang pagsusuri",
-    bik: " · oras na para sa pagsusi kada semana",
-  },
-  "monitor.start": { en: "Start Assessment", fil: "Simulan ang Pagsusuri", bik: "Poonan an Pagsusi" },
-  "monitor.nextOne": { en: "Next in 1 day", fil: "Susunod: bukas", bik: "Masunod: buwas" },
-  "monitor.nextDays": {
-    en: "Next in {n} days",
-    fil: "Susunod sa loob ng {n} araw",
-    bik: "Masunod sa sulod san {n} adlaw",
-  },
-
-  "history.title": {
-    en: "Assessment History",
-    fil: "Kasaysayan ng Pagsusuri",
-    bik: "Mga Nakaagi na Pagsusi",
-  },
   "history.description": {
     en: "All weekly assessments you have submitted, newest first.",
     fil: "Lahat ng lingguhang pagsusuring naisumite mo, pinakabago muna.",
@@ -139,5 +103,4 @@ export const pages = defineMessages({
     fil: "Bumalik sa Kasaysayan ng Pagsusuri",
     bik: "Balik sa Mga Nakaagi na Pagsusi",
   },
-  "asmtDetail.view": { en: "View {name}", fil: "Tingnan ang {name}", bik: "Hilingon an {name}" },
 });

@@ -83,6 +83,11 @@ export const plants = defineMessages({
     fil: "Wala pang naidagdag na tanim",
     bik: "Waray pa naidugang na tanom",
   },
+  "myPlants.added": {
+    en: "{name} was added successfully.",
+    fil: "Matagumpay na naidagdag ang {name}.",
+    bik: "Naidugang na an {name}.",
+  },
   "myPlants.deletedOne": {
     en: "1 plant deleted.",
     fil: "Nabura ang 1 tanim.",

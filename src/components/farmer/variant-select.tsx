@@ -13,12 +13,10 @@ import { useLanguage } from "@/lib/i18n";
 /**
  * Variety picker, shown only for crops that have varieties on file.
  *
- * Choosing one is optional, and "Not specified" is a real choice rather than
- * an empty state: a farmer who knows they planted corn but not which corn
- * should be able to say so, and get the crop's own harvest window.
+ * Required when shown: varieties of one crop can be months apart at harvest,
+ * so the plant is not added until one is chosen. It starts empty, showing
+ * "Choose a variety", rather than on a stand-in choice.
  */
-
-const UNSPECIFIED = "__unspecified__";
 
 type VariantSelectProps = {
   id?: string;
@@ -37,22 +35,18 @@ export function VariantSelect({
   const { t } = useLanguage();
 
   return (
-    <Select
-      value={value ?? UNSPECIFIED}
-      onValueChange={(next) =>
-        onValueChange(next === UNSPECIFIED ? null : (next as string))
-      }
-    >
+    <Select value={value} onValueChange={(next) => onValueChange((next as string) ?? null)}>
       <SelectTrigger id={id}>
-        <SelectValue placeholder={t("variant.none")}>
-          {() => selected?.name ?? t("variant.none")}
+        <SelectValue placeholder={t("variant.choose")}>
+          {() =>
+            selected?.name ?? (
+              <span className="text-muted-foreground">{t("variant.choose")}</span>
+            )
+          }
         </SelectValue>
       </SelectTrigger>
 
-      <SelectContent className="max-h-80 w-[var(--anchor-width)] min-w-64">
-        <SelectItem value={UNSPECIFIED}>
-          <span className="text-muted-foreground">{t("variant.none")}</span>
-        </SelectItem>
+      <SelectContent maxHeight="20rem" className="w-[var(--anchor-width)] min-w-64">
         {variants.map((variant) => (
           <SelectItem key={variant.id} value={variant.id}>
             <span className="flex flex-col items-start gap-0.5 text-left">

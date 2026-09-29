@@ -11,6 +11,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from . import crop_calendar
+from .ai_language import LANGUAGE_CHOICES
 
 
 class CropCategory(models.TextChoices):
@@ -405,6 +406,8 @@ class RiskAssessment(models.Model):
     # danger to the crop, so it is flagged separately from `risk_level`.
     date_mismatch = models.BooleanField(default=False)
     model_name = models.CharField(max_length=100, blank=True)
+    # The farmer's app language when Gemini wrote this; the free text is in it.
+    language = models.CharField(max_length=3, choices=LANGUAGE_CHOICES, default="en")
     failure_reason = models.TextField(blank=True)
     generated_at = models.DateTimeField(default=timezone.now)
 
@@ -421,11 +424,26 @@ class CropIntelligence(models.Model):
 
     Deliberately separate from `Crop` so generated text can never overwrite
     the authoritative agronomic metadata the harvest calculation depends on.
-    Cached per-crop because "about guava" is identical for every Farmer —
-    only the harvest window is personalised, and that is computed in Django.
+    Cached per crop, variety *and language*: "about guava" is identical for
+    every Farmer, but Pechay is not "Lemongrass / Leafy Greens" and Ube is
+    not a sweet potato, so a variety gets its own row, and so does each
+    language it is read in. `variant` is null for the crop itself. Only the
+    harvest window is personalised, in Django.
     """
 
-    crop = models.OneToOneField(Crop, on_delete=models.CASCADE, related_name="intelligence")
+    crop = models.ForeignKey(
+        Crop, on_delete=models.CASCADE, related_name="intelligence_entries"
+    )
+    variant = models.ForeignKey(
+        CropVariant,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="intelligence_entries",
+    )
+    # The language it was written in - the farmer's chosen app language, so
+    # a Filipino or Bikol screen gets Filipino or Bikol guidance.
+    language = models.CharField(max_length=3, choices=LANGUAGE_CHOICES, default="en")
     overview = models.TextField()
     growing_notes = models.JSONField(default=list)
     care_guidance = models.JSONField(default=list)
@@ -436,9 +454,15 @@ class CropIntelligence(models.Model):
 
     class Meta:
         verbose_name_plural = "Crop intelligence"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["crop", "variant", "language"],
+                name="unique_intelligence_per_crop_variant_language",
+            )
+        ]
 
     def __str__(self):
-        return f"Intelligence: {self.crop.name}"
+        return f"Intelligence: {self.variant.name if self.variant else self.crop.name}"
 
 
 @receiver(post_delete, sender=Assessment)
@@ -609,6 +633,8 @@ class SoilRecommendation(models.Model):
 
     ai_generated = models.BooleanField(default=False)
     model_name = models.CharField(max_length=100, blank=True)
+    # The farmer's app language when Gemini wrote this; the free text is in it.
+    language = models.CharField(max_length=3, choices=LANGUAGE_CHOICES, default="en")
     failure_reason = models.TextField(blank=True)
 
     created_at = models.DateTimeField(default=timezone.now)

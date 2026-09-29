@@ -117,6 +117,7 @@ export function HarvestCalendar({
         name={t("calendarChart.name")}
         labelIndex={total > 0 ? peak : undefined}
         axisEvery={2}
+        height={190}
         onHoverIndex={setHovered}
         onSelectIndex={(i) => setPinned((current) => (current === i ? null : i))}
         selectedIndex={pinned}

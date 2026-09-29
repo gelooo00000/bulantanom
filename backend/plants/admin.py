@@ -106,9 +106,10 @@ class PlantAdmin(admin.ModelAdmin):
 class CropIntelligenceAdmin(admin.ModelAdmin):
     """AI-generated content — read-only so it can never overwrite Crop metadata."""
 
-    list_display = ("crop", "model_name", "generated_at")
+    list_display = ("crop", "variant", "model_name", "generated_at")
     readonly_fields = (
         "crop",
+        "variant",
         "overview",
         "growing_notes",
         "care_guidance",

@@ -21,9 +21,9 @@ export const addPlant = defineMessages({
   "add.crop": { en: "Crop", fil: "Pananim", bik: "Tanom" },
   "add.variety": { en: "Variety", fil: "Uri", bik: "Klase" },
   "add.varietyHint": {
-    en: "Optional. Varieties differ in how long they take, so naming one gives a more accurate harvest window.",
-    fil: "Opsyonal. Magkakaiba ang tagal ng bawat uri, kaya mas tumpak ang panahon ng ani kung pipili ka ng isa.",
-    bik: "Opsyonal. Magkalain-lain an kaluwagan san kada klase, kaya mas tama an panahon san ani kun mapili ka san saro.",
+    en: "Required. Varieties differ in how long they take, so the harvest window depends on which one you planted.",
+    fil: "Kailangan. Magkakaiba ang tagal ng bawat uri, kaya nakadepende ang panahon ng ani sa uring itinanim mo.",
+    bik: "Kaipuhan. Magkalain-lain an kaluwagan san kada klase, kaya an panahon san ani nakadepende sa klase na itinanom mo.",
   },
   "add.typical": {
     en: "Ready in {growing} · you can harvest for {window}",
@@ -45,6 +45,11 @@ export const addPlant = defineMessages({
     en: "You already recorded {name} planted on this date. Add another only if this is a separate planting.",
     fil: "Naitala mo na ang {name} na itinanim sa petsang ito. Magdagdag lamang kung hiwalay itong pagtatanim.",
     bik: "Nairekord mo na an {name} na itinanom sa petsa na ini. Magdugang sana kun iba ini na pagtanom.",
+  },
+  "add.errorVariety": {
+    en: "Please choose a variety.",
+    fil: "Pumili ng uri.",
+    bik: "Pili tabi san klase.",
   },
   "add.errorCrop": {
     en: "Please select a valid crop.",
@@ -262,7 +267,7 @@ export const addPlant = defineMessages({
     fil: "Walang pananim na tugma sa “{query}”.",
     bik: "Waray tanom na angay sa “{query}”.",
   },
-  "variant.none": { en: "Not specified", fil: "Hindi tinukoy", bik: "Dili tinukoy" },
+  "variant.choose": { en: "Choose a variety", fil: "Pumili ng uri", bik: "Pumili san klase" },
   "variant.days": {
     en: "about {n} days to harvest",
     fil: "mga {n} araw bago anihin",

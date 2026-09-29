@@ -2,26 +2,14 @@
 
 import Link from "next/link";
 import { use } from "react";
-import {
-  ArrowRight,
-  CalendarCheck,
-  CalendarDays,
-  Clock,
-  LoaderCircle,
-  Sprout,
-  TriangleAlert,
-} from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, LoaderCircle, Sprout, TriangleAlert } from "lucide-react";
 
 import { PlantingSeasonNote } from "@/components/farmer/planting-season-note";
-import { AssessmentRow } from "@/components/risk/assessment-row";
-import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
-import { fetchPlant, type BackendPlant } from "@/lib/api/plants-api";
-import { fetchPlantAssessments } from "@/lib/api/risk-api";
+import { fetchPlant } from "@/lib/api/plants-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { humanDuration } from "@/lib/duration";
 import { useLanguage } from "@/lib/i18n";
@@ -37,10 +25,6 @@ export default function PlantDetailPage({
   const date = (iso: string) => formatDisplayDate(iso, dateLocale);
   const { data: plant, loading, error, refetch } = useAuthedQuery(
     (token) => fetchPlant(token, plantId),
-    [plantId],
-  );
-  const { data: assessments, loading: assessmentsLoading } = useAuthedQuery(
-    (token) => fetchPlantAssessments(token, plantId),
     [plantId],
   );
 
@@ -75,10 +59,21 @@ export default function PlantDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* A link, not router.back(): it returns to My Plants even when the
+          farmer arrived from a bookmark or a notification. */}
+      <Link
+        href="/farmer/plants"
+        className="text-muted-foreground hover:text-foreground -mb-2 flex items-center gap-1.5 self-start text-sm"
+      >
+        <ArrowLeft className="size-3.5" />
+        {t("add.back")}
+      </Link>
+
+      {/* Facts about the plant only. Its weekly assessment is started from
+          Risk Indicator, and past results are in Assessment History. */}
       <PageHeader
         title={`${plant.crop.emoji} ${plant.display_name}`}
         description={`${plant.crop.name} · Layuan Farm`}
-        action={<AssessmentCta plant={plant} />}
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -105,117 +100,39 @@ export default function PlantDetailPage({
         />
       </div>
 
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTab value="overview">{t("detail.overview")}</TabsTab>
-          <TabsTab value="assessments">{t("detail.assessments")}</TabsTab>
-        </TabsList>
+      <Card className="gap-3 py-5">
+        <CardContent className="px-5">
+          <h2 className="text-sm font-medium">
+            {t("detail.about", {
+              name: plant.variant ? plant.variant.name : plant.crop.name,
+            })}
+            {plant.variant && (
+              <span className="text-muted-foreground font-normal">
+                {" "}
+                ({plant.crop.name})
+              </span>
+            )}
+          </h2>
+          <p className="text-muted-foreground mt-1.5 text-sm">
+            {plant.variant?.description || plant.crop.description}
+          </p>
+          <p className="text-muted-foreground mt-3 text-sm">
+            {t(plant.variant ? "detail.typical" : "detail.typicalNoVariety", {
+              growing: humanDuration(
+                plant.variant?.growing_duration_days ?? plant.crop.growing_duration_days,
+                t,
+              ),
+              window: humanDuration(
+                plant.variant?.harvest_window_days ?? plant.crop.harvest_window_days,
+                t,
+              ),
+            })}
+          </p>
 
-        <TabsPanel value="overview">
-          <Card className="gap-3 py-5">
-            <CardContent className="px-5">
-              <h2 className="text-sm font-medium">
-                {t("detail.about", {
-                  name: plant.variant ? plant.variant.name : plant.crop.name,
-                })}
-                {plant.variant && (
-                  <span className="text-muted-foreground font-normal">
-                    {" "}
-                    ({plant.crop.name})
-                  </span>
-                )}
-              </h2>
-              <p className="text-muted-foreground mt-1.5 text-sm">
-                {plant.variant?.description || plant.crop.description}
-              </p>
-              <p className="text-muted-foreground mt-3 text-sm">
-                {t(plant.variant ? "detail.typical" : "detail.typicalNoVariety", {
-                  growing: humanDuration(
-                    plant.variant?.growing_duration_days ?? plant.crop.growing_duration_days,
-                    t,
-                  ),
-                  window: humanDuration(
-                    plant.variant?.harvest_window_days ?? plant.crop.harvest_window_days,
-                    t,
-                  ),
-                })}
-              </p>
-
-              {/* How the month it was actually planted in suits this crop. */}
-              <PlantingSeasonNote advice={plant.planting_advice} className="mt-4" />
-            </CardContent>
-          </Card>
-        </TabsPanel>
-
-        <TabsPanel value="assessments">
-          {assessmentsLoading ? (
-            <div className="flex min-h-[20vh] items-center justify-center">
-              <LoaderCircle className="text-primary size-5 animate-spin" />
-            </div>
-          ) : !assessments || assessments.length === 0 ? (
-            <EmptyState
-              icon={Sprout}
-              title={t("detail.noAssessment")}
-              description={t("detail.noAssessmentText")}
-              action={
-                <Button
-                  nativeButton={false}
-                  render={<Link href={`/farmer/plants/${plant.id}/assessment`} />}
-                >
-                  {t("detail.start")}
-                  <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-                </Button>
-              }
-            />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {assessments.map((assessment) => (
-                <AssessmentRow
-                  key={assessment.id}
-                  assessment={assessment}
-                  href={`/farmer/assessments/${assessment.id}`}
-                />
-              ))}
-            </div>
-          )}
-        </TabsPanel>
-      </Tabs>
-    </div>
-  );
-}
-
-/**
- * Start / locked state for the weekly assessment. The disabled state and its
- * countdown both come from the server's `assessment_eligibility`, so the
- * button reflects what the API will actually accept.
- */
-function AssessmentCta({ plant }: { plant: BackendPlant }) {
-  const { can_assess, days_remaining } = plant.assessment_eligibility;
-  const { t } = useLanguage();
-
-  if (can_assess) {
-    return (
-      <Button
-        nativeButton={false}
-        render={<Link href={`/farmer/plants/${plant.id}/assessment`} />}
-      >
-        {t("detail.start")}
-        <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-      </Button>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-1">
-      <Button disabled>
-        <CalendarCheck className="size-4" />
-        {t("detail.completed")}
-      </Button>
-      <span className="text-muted-foreground text-xs">
-        {days_remaining === 1
-          ? t("detail.nextInOne")
-          : t("detail.nextIn", { n: days_remaining })}
-      </span>
+          {/* How the month it was actually planted in suits this crop. */}
+          <PlantingSeasonNote advice={plant.planting_advice} className="mt-4" />
+        </CardContent>
+      </Card>
     </div>
   );
 }

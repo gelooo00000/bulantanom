@@ -23,6 +23,7 @@ import logging
 from django.conf import settings
 from django.utils import timezone
 
+from .ai_language import language_code, write_in
 from .durations import human_duration
 from .models import CropIntelligence
 
@@ -35,17 +36,17 @@ RESPONSE_SCHEMA = {
     "properties": {
         "crop_overview": {
             "type": "string",
-            "description": "2-4 sentence plain-language overview of the crop.",
+            "description": "2-4 sentences on this specific crop or variety: what it is, what sets it apart, and how it fits a lowland Sorsogon farm.",
         },
         "growing_notes": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "3-5 short practical growing characteristics.",
+            "description": "3-5 specific growing facts with typical figures where standard (spacing, depth, soil pH, sun, how it is propagated).",
         },
         "care_guidance": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "3-5 short, actionable care tips for a smallholder farmer.",
+            "description": "3-5 concrete care actions with timing (e.g. when and what to fertilise, pruning, watering in dry spells, the named pests or diseases to watch for).",
         },
         "harvest_guidance": {
             "type": "string",
@@ -57,7 +58,7 @@ RESPONSE_SCHEMA = {
         "important_factors": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "3-5 factors that can shift harvest timing or yield.",
+            "description": "3-5 specific factors that shift this crop's harvest timing or yield on this farm (e.g. typhoon season, heavy November-January rain, a named disease).",
         },
     },
     "required": [
@@ -75,7 +76,22 @@ farmers at Layuan Nature Integrated Farm in Bulan, Sorsogon, Philippines.
 
 Follow these rules strictly:
 
-- Do NOT fabricate exact scientific values, yields, or precise dates.
+- Be precise and specific, not generic. Every item must be something this
+  farmer can act on for THIS crop or variety — never advice that would fit
+  any plant ("water regularly", "use good soil", "monitor for pests").
+- When a variety is named, describe that variety itself: what sets it apart
+  from other varieties of the same crop (fruit or leaf traits, size, how
+  soon it bears, known strengths or weaknesses) where that is well
+  established.
+- Give concrete numbers where agronomic practice has a well-established
+  typical range — plant spacing in metres or centimetres, planting depth,
+  how often to water in dry spells, when to fertilise relative to growth
+  stage or flowering, signs and timing of ripeness — stated as a typical
+  range ("usually 8-10 m apart"), and name the specific pests or diseases
+  this crop is known for, with what to look for.
+- Do NOT fabricate figures you are not confident are standard practice, nor
+  yields, prices, or exact dates. If a value genuinely varies, say so
+  instead of guessing.
 - The expected harvest window is supplied to you and was calculated by the
   system from its own crop database. Treat it as given. Never contradict it,
   never compute your own harvest date, and never state a single exact
@@ -100,24 +116,46 @@ Follow these rules strictly:
 """.strip()
 
 
-def _build_prompt(crop, planting_date=None, harvest_start=None, harvest_end=None) -> str:
+def _build_prompt(
+    crop,
+    planting_date=None,
+    harvest_start=None,
+    harvest_end=None,
+    variant=None,
+    language="en",
+) -> str:
+    # A variety is described as itself: the catalog files Pechay under
+    # "Lemongrass / Leafy Greens", and asking about the parent crop got an
+    # answer about lemongrass.
+    subject = variant or crop
     lines = [
         "Provide crop information for a farmer who is tracking this crop.",
         "",
-        f"Crop: {crop.name}",
+        # Given as fact so the advice fits the place, without asking the
+        # model to guess local conditions it was not told.
+        "Farm: Layuan Nature Integrated Farm, Bulan, Sorsogon, Philippines "
+        "(lowland, humid tropics; Type II climate - no distinct dry season, "
+        "heaviest rain November to January; exposed to typhoons).",
+        "",
+        f"Crop: {subject.name}",
         f"Category: {crop.get_category_display()}",
     ]
-    if crop.description:
-        lines.append(f"System crop description: {crop.description}")
+    if variant:
+        lines.append(
+            f'(Listed in the system\'s catalog under "{crop.name}". Describe '
+            f"{variant.name} itself, not the other crops in that group.)"
+        )
+    if subject.description:
+        lines.append(f"System crop description: {subject.description}")
     # Both forms: the number so the model has the fact, and the wording it
     # must use so its answer matches what the Farmer sees on screen.
     lines.append(
-        f"System-configured typical growing duration: {crop.growing_duration_days} days "
-        f'— say this as "{human_duration(crop.growing_duration_days)}"'
+        f"System-configured typical growing duration: {subject.growing_duration_days} days "
+        f'— say this as "{human_duration(subject.growing_duration_days)}"'
     )
     lines.append(
-        f"System-configured typical harvest window length: {crop.harvest_window_days} days "
-        f'— say this as "{human_duration(crop.harvest_window_days)}"'
+        f"System-configured typical harvest window length: {subject.harvest_window_days} days "
+        f'— say this as "{human_duration(subject.harvest_window_days)}"'
     )
 
     if planting_date and harvest_start and harvest_end:
@@ -131,6 +169,9 @@ def _build_prompt(crop, planting_date=None, harvest_start=None, harvest_end=None
             "Explain what this window means and what could shift it. Do not state a",
             "single guaranteed harvest date.",
         ]
+
+    if write_in(language):
+        lines += ["", write_in(language)]
 
     return "\n".join(lines)
 
@@ -170,7 +211,12 @@ def is_configured() -> bool:
 
 
 def generate_crop_intelligence(
-    crop, planting_date=None, harvest_start=None, harvest_end=None
+    crop,
+    planting_date=None,
+    harvest_start=None,
+    harvest_end=None,
+    variant=None,
+    language="en",
 ) -> dict | None:
     """
     Calls Gemini and returns validated structured data, or None on any
@@ -200,17 +246,21 @@ def generate_crop_intelligence(
 
     response, model = generate_with_fallback(
         client,
-        contents=_build_prompt(crop, planting_date, harvest_start, harvest_end),
+        contents=_build_prompt(
+            crop, planting_date, harvest_start, harvest_end, variant, language_code(language)
+        ),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
             response_mime_type="application/json",
             response_schema=RESPONSE_SCHEMA,
-            temperature=0.3,
+            # Low: this is reference material, where consistency beats variety.
+            temperature=0.2,
             http_options=types.HttpOptions(
                 timeout=settings.GEMINI_TIMEOUT_SECONDS * 1000
             ),
         ),
         label="crop intelligence",
+        slow_budget_seconds=settings.GEMINI_INTELLIGENCE_BUDGET_SECONDS,
     )
 
     if response is None:
@@ -239,25 +289,34 @@ def generate_crop_intelligence(
     return validated
 
 
-def get_or_create_crop_intelligence(crop, force_refresh: bool = False):
+def get_or_create_crop_intelligence(
+    crop, force_refresh: bool = False, variant=None, language: str = "en"
+):
     """
-    Crop-level cache. "About guava" is identical for every Farmer, so it is
-    generated once per crop and reused; only the harvest window (computed in
-    Django) is personalised per plant.
+    Per crop-and-variety cache. "About guava" is identical for every Farmer,
+    so it is generated once and reused; only the harvest window (computed in
+    Django) is personalised per plant. A variety has its own entry, since
+    Pechay and lemongrass share a catalog crop but not a description, and
+    each language has its own, written in that language by Gemini.
 
     Returns (CropIntelligence | None, generated_now: bool).
     """
+    language = language_code(language)
     if not force_refresh:
-        cached = CropIntelligence.objects.filter(crop=crop).first()
+        cached = CropIntelligence.objects.filter(
+            crop=crop, variant=variant, language=language
+        ).first()
         if cached:
             return cached, False
 
-    data = generate_crop_intelligence(crop)
+    data = generate_crop_intelligence(crop, variant=variant, language=language)
     if data is None:
         return None, False
 
     intelligence, _ = CropIntelligence.objects.update_or_create(
         crop=crop,
+        variant=variant,
+        language=language,
         defaults={
             # Map the API's `crop_overview` onto the model's `overview` field.
             "overview": data["crop_overview"],

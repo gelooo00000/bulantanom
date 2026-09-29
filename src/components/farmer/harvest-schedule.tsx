@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import { SlidePager } from "@/components/shared/slide-pager";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { UpcomingHarvest } from "@/lib/api/dashboard-api";
@@ -58,33 +59,32 @@ export function HarvestSchedule({ harvests }: HarvestScheduleProps) {
             {t("harvest.none")}
           </p>
         ) : (
-          <ul className="mt-2 flex flex-col">
-            {harvests.map((h) => (
-              <li key={h.plant_id} className="border-border/60 border-t first:border-t-0">
-                <Link
-                  href={`/farmer/plants/${h.plant_id}`}
-                  className="hover:bg-accent/40 -mx-1 flex items-center gap-2.5 rounded-lg px-1 py-2 transition-colors"
+          // Four at a time; the rows are information only, not links.
+          <SlidePager
+            className="mt-2"
+            items={harvests}
+            getKey={(h) => h.plant_id}
+            renderItem={(h) => (
+              <div className="flex items-center gap-2.5 py-2">
+                <span aria-hidden="true" className="text-base">
+                  {h.emoji}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">{h.name}</span>
+                  <span className="text-muted-foreground block text-xs">
+                    {formatDisplayDate(h.expected_harvest_start, dateLocale)}
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 text-xs ${
+                    h.in_window ? "text-risk-low font-medium" : "text-muted-foreground"
+                  }`}
                 >
-                  <span aria-hidden="true" className="text-base">
-                    {h.emoji}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">{h.name}</span>
-                    <span className="text-muted-foreground block text-xs">
-                      {formatDisplayDate(h.expected_harvest_start, dateLocale)}
-                    </span>
-                  </span>
-                  <span
-                    className={`shrink-0 text-xs ${
-                      h.in_window ? "text-risk-low font-medium" : "text-muted-foreground"
-                    }`}
-                  >
-                    {whenLabel(h, t)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  {whenLabel(h, t)}
+                </span>
+              </div>
+            )}
+          />
         )}
       </CardContent>
     </Card>

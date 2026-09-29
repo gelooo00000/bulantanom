@@ -67,15 +67,6 @@ export default function AssessmentDetailPage({
 
       <RiskResultCard assessment={assessment} />
       <RiskInfoNote />
-
-      <Button
-        variant="outline"
-        className="self-start"
-        nativeButton={false}
-        render={<Link href={`/farmer/plants/${assessment.plant_id}`} />}
-      >
-        {t("asmtDetail.view", { name: assessment.plant_display_name })}
-      </Button>
     </div>
   );
 }

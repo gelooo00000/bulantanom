@@ -33,5 +33,8 @@ export function humanDuration(days: number, t: Translate = englishT): string {
   if (months <= 1) {
     return years === 1 ? t("duration.year") : t("duration.years", { n: years });
   }
-  return t("duration.yearsMonths", { years, months });
+  // "about 1 years 3 months" read wrong on every pineapple.
+  return years === 1
+    ? t("duration.yearMonths", { months })
+    : t("duration.yearsMonths", { years, months });
 }

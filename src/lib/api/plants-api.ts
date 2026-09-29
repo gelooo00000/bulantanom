@@ -126,8 +126,10 @@ export function fetchCropIntelligence(
    * Sweet Corn against Corn.
    */
   variantId?: string | null,
+  /** The app language; Gemini writes the guidance in it. */
+  language: "en" | "fil" | "bik" = "en",
 ): Promise<CropIntelligenceResponse> {
-  const params = new URLSearchParams({ planting_date: plantingDate });
+  const params = new URLSearchParams({ planting_date: plantingDate, lang: language });
   if (variantId) params.set("variant", variantId);
   return apiFetch(`/farmer/crops/${cropId}/intelligence/?${params}`, { accessToken });
 }

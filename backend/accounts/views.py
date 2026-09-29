@@ -10,24 +10,10 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from notifications.emails import (
-    email_account_deleted,
-    email_account_reactivated,
-    email_account_suspended,
-    email_farmer_approved,
-    email_farmer_rejected,
-    email_farmer_welcome,
-    email_officer_welcome,
-)
-from notifications.services import (
-    notify_account_deleted,
-    notify_account_reactivated,
-    notify_officer_created,
-    notify_account_status_changed,
-    notify_farmer_approved,
-    notify_farmer_registered,
-)
+from notifications.emails import email_account_deleted, email_farmer_welcome
+from notifications.services import notify_account_deleted, notify_farmer_registered
 
+from .lifecycle import announce_officer_created, announce_status_change
 from .models import AccountStatus, RegistrationNotification, User, UserRole
 from .permissions import IsAdmin, IsApproved
 from .serializers import (
@@ -391,30 +377,12 @@ def _transition(request, user_id, allowed_from, new_status, role=UserRole.FARMER
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    was_suspended = user.account_status == AccountStatus.SUSPENDED
+    old_status = user.account_status
     user.account_status = new_status
     user.save(update_fields=["account_status", "updated_at"])
-
-    # Clear the pending-registration notification once acted upon.
-    if new_status in (AccountStatus.APPROVED, AccountStatus.REJECTED):
-        RegistrationNotification.objects.filter(user=user, is_read=False).update(is_read=True)
-
-    # Approval is announced farm-wide; rejection and suspension are not
-    # broadcast to Officers, but the Farmer and the Admin group are told —
-    # an account that silently stops working is the worst outcome here.
-    if new_status == AccountStatus.APPROVED:
-        if was_suspended:
-            notify_account_reactivated(user, actor=request.user)
-            email_account_reactivated(user)
-        else:
-            notify_farmer_approved(user)
-            email_farmer_approved(user)
-    else:
-        notify_account_status_changed(user, new_status=new_status, actor=request.user)
-        if new_status == AccountStatus.SUSPENDED:
-            email_account_suspended(user)
-        elif new_status == AccountStatus.REJECTED:
-            email_farmer_rejected(user)
+    announce_status_change(
+        user, old_status=old_status, new_status=new_status, actor=request.user
+    )
 
     return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
 
@@ -463,8 +431,7 @@ class AdminCreateLguOfficerView(generics.CreateAPIView):
         user = serializer.save()
         # The officer has no registration path, so this is their only signal
         # that an account exists. Admins get an audit copy.
-        notify_officer_created(user, actor=request.user)
-        email_officer_welcome(user)
+        announce_officer_created(user, actor=request.user)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 

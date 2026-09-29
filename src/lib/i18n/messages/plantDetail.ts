@@ -19,8 +19,6 @@ export const plantDetail = defineMessages({
   "detail.status": { en: "Status", fil: "Kalagayan", bik: "Kamutangan" },
   "detail.harvestFrom": { en: "Harvest from", fil: "Ani mula", bik: "Ani poon" },
   "detail.harvestUntil": { en: "Harvest until", fil: "Ani hanggang", bik: "Ani sagkod" },
-  "detail.overview": { en: "Overview", fil: "Pangkalahatan", bik: "Kabuuan" },
-  "detail.assessments": { en: "Assessments", fil: "Mga Pagsusuri", bik: "Mga Pagsusi" },
   "detail.about": { en: "About {name}", fil: "Tungkol sa {name}", bik: "Manungod sa {name}" },
   "detail.typical": {
     en: "Usually takes {growing} to be ready, and can be harvested for {window}. Actual timing varies with weather, soil and plant health.",
@@ -31,36 +29,6 @@ export const plantDetail = defineMessages({
     en: "Usually takes {growing} to be ready, and can be harvested for {window}. Actual timing varies with variety, weather, soil and plant health.",
     fil: "Karaniwang umaabot ng {growing} bago handa, at puwedeng anihin nang {window}. Nag-iiba ang aktwal na panahon depende sa uri, panahon, lupa at kalusugan ng tanim.",
     bik: "Kadalasan naghahaloy nin {growing} bago pwede anihon, asin pwede anihon sulod san {window}. Nagbabago an totoo na panahon segun sa klase, klima, daga asin salud san tanom.",
-  },
-  "detail.noAssessment": {
-    en: "No assessment yet",
-    fil: "Wala pang pagsusuri",
-    bik: "Waray pa pagsusi",
-  },
-  "detail.noAssessmentText": {
-    en: "Start this plant's first weekly assessment to get an AI risk reading.",
-    fil: "Simulan ang unang lingguhang pagsusuri ng tanim na ito para makakuha ng resulta ng panganib mula sa AI.",
-    bik: "Poonan an enot na pagsusi kada semana san tanom na ini para makakua san resulta san peligro hali sa AI.",
-  },
-  "detail.start": {
-    en: "Start Weekly Assessment",
-    fil: "Simulan ang Lingguhang Pagsusuri",
-    bik: "Poonan an Pagsusi kada Semana",
-  },
-  "detail.completed": {
-    en: "Assessment Completed",
-    fil: "Tapos na ang Pagsusuri",
-    bik: "Tapos na an Pagsusi",
-  },
-  "detail.nextIn": {
-    en: "Next assessment in {n} days",
-    fil: "Susunod na pagsusuri sa loob ng {n} araw",
-    bik: "Masunod na pagsusi sa sulod san {n} adlaw",
-  },
-  "detail.nextInOne": {
-    en: "Next assessment in 1 day",
-    fil: "Susunod na pagsusuri bukas",
-    bik: "Masunod na pagsusi buwas",
   },
 
   "lock.today": { en: "today", fil: "ngayon", bik: "yana" },

@@ -298,3 +298,55 @@ class DeactivationTests(APITestCase):
         self.assertEqual(
             reverse("admin:accounts_lguofficer_changelist"), LGU_LIST_URL
         )
+
+
+class AdminPanelEmailTests(TestCase):
+    """
+    Saving an account in the Django admin tells the account holder, the same
+    as BulanTanom's own Account Management screen. It used to tell nobody: an
+    officer created here got no welcome email, and a farmer approved here was
+    never told they could sign in.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.admin = make_superuser()
+        self.client.login(username="root@example.com", password=PW)
+
+    def test_an_officer_created_here_gets_the_welcome_email(self):
+        from django.core import mail
+
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(LGU_ADD_URL, NEW_OFFICER, follow=True)
+
+        self.assertEqual([m.to for m in mail.outbox], [["test.officer@layuan.gov.ph"]])
+        self.assertIn("LGU Officer Account Created", mail.outbox[0].subject)
+
+    def _save_status(self, user, new_status):
+        from django.contrib.admin.sites import site
+        from django.test import RequestFactory
+
+        model_admin = site._registry[Farmer]
+        request = RequestFactory().post("/")
+        request.user = self.admin
+        farmer = Farmer.objects.get(pk=user.pk)
+        farmer.account_status = new_status
+        with self.captureOnCommitCallbacks(execute=True):
+            model_admin.save_model(request, farmer, form=None, change=True)
+
+    def test_approving_a_farmer_here_emails_them(self):
+        from django.core import mail
+
+        pending = make_user("pending@example.com", account_status=AccountStatus.PENDING)
+        self._save_status(pending, AccountStatus.APPROVED)
+
+        self.assertEqual([m.to for m in mail.outbox], [["pending@example.com"]])
+        self.assertIn("Approved", mail.outbox[0].subject)
+
+    def test_saving_without_a_status_change_emails_nobody(self):
+        from django.core import mail
+
+        farmer = make_user("same@example.com")
+        self._save_status(farmer, AccountStatus.APPROVED)
+
+        self.assertEqual(mail.outbox, [])

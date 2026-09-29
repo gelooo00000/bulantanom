@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { LoaderCircle, TriangleAlert, Wheat } from "lucide-react";
 
 import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
@@ -79,9 +78,29 @@ function phaseLabel(plant: BackendPlant, phase: Phase, t: Translate): string {
   }
 }
 
+/** Whole days from one ISO date to another. */
+function daysBetween(from: string, to: string): number {
+  return Math.round(
+    (new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86_400_000,
+  );
+}
+
+/**
+ * Read from the plant's own saved dates, not `plant.crop`: a variety has its
+ * own durations (Oyster Mushroom's harvest window is 21 days, the generic
+ * Mushroom's shorter), and those are what Django used for the dates.
+ */
+function growingDays(plant: BackendPlant): number {
+  return daysBetween(plant.planting_date, plant.expected_harvest_start);
+}
+
+function harvestWindowDays(plant: BackendPlant): number {
+  return daysBetween(plant.expected_harvest_start, plant.expected_harvest_end);
+}
+
 /** How far through the growing period this plant is, 0–100. */
 function growthPercent(plant: BackendPlant): number {
-  const total = plant.crop.growing_duration_days;
+  const total = growingDays(plant);
   if (!total || total <= 0) return 0;
   return Math.max(0, Math.min(100, Math.round((plant.age_days / total) * 100)));
 }
@@ -91,17 +110,17 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
   const date = (iso: string) => formatDisplayDate(iso, dateLocale);
   const phase = phaseOf(plant);
   const percent = growthPercent(plant);
-  const windowDays = plant.crop.harvest_window_days;
+  const windowDays = harvestWindowDays(plant);
 
   return (
-    <Card className="gap-2 py-4">
-      <CardContent className="flex flex-col gap-3 px-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <Card className="h-full min-w-0 gap-2 py-4">
+      <CardContent className="flex h-full flex-col gap-3 px-4 sm:px-5">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-medium">
+            <p className="line-clamp-2 font-medium break-words">
               <span aria-hidden="true">{plant.crop.emoji}</span> {plant.display_name}
             </p>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground truncate text-sm">
               {plant.crop.name} ·{" "}
               {plant.crop.category === "fruit"
                 ? t("category.fruit")
@@ -112,7 +131,8 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
           </div>
           <span
             className={cn(
-              "rounded-full border px-2.5 py-0.5 text-xs font-medium",
+              // May wrap rather than push the card past a phone's edge.
+              "max-w-[55%] rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium",
               PHASE_STYLE[phase],
             )}
           >
@@ -120,14 +140,14 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
           </span>
         </div>
 
-        {/* Progress through the growing period, from the crop's own duration. */}
+        {/* Progress through the growing period, from the plant's own dates. */}
         {phase !== "harvested" && (
           <div className="flex flex-col gap-1.5">
             <div className="text-muted-foreground flex justify-between text-xs">
               <span>
                 {t("harvestCard.grown", {
                   done: humanDuration(plant.age_days, t),
-                  total: humanDuration(plant.crop.growing_duration_days, t),
+                  total: humanDuration(growingDays(plant), t),
                 })}
               </span>
               <span>{percent}%</span>
@@ -148,7 +168,9 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
           </div>
         )}
 
-        <div className="border-border grid grid-cols-2 gap-3 border-t pt-3 sm:grid-cols-4">
+        {/* Two by two: the cards sit side by side, so four across no longer
+            fits. Pinned to the bottom so the dates line up across a row. */}
+        <div className="border-border mt-auto grid grid-cols-2 gap-x-3 gap-y-2.5 border-t pt-3">
           <div>
             <p className="text-muted-foreground text-xs">{t("harvestCard.planted")}</p>
             <p className="text-sm">{date(plant.planting_date)}</p>
@@ -166,14 +188,6 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
             <p className="text-sm">{humanDuration(windowDays, t)}</p>
           </div>
         </div>
-
-        <Link
-          href={`/farmer/plants/${plant.id}`}
-          className="text-sm"
-          style={{ color: "var(--landing-accent)" }}
-        >
-          {t("harvestCard.view")}
-        </Link>
       </CardContent>
     </Card>
   );
@@ -187,9 +201,13 @@ function Section({ title, plants }: { title: string; plants: BackendPlant[] }) {
         {title}{" "}
         <span className="text-muted-foreground font-normal">({plants.length})</span>
       </h2>
-      {plants.map((plant) => (
-        <PlantHarvestCard key={plant.id} plant={plant} />
-      ))}
+      {/* Side by side from tablet width up; one per row on a phone, where
+          half the screen is too narrow for four dates. */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {plants.map((plant) => (
+          <PlantHarvestCard key={plant.id} plant={plant} />
+        ))}
+      </div>
     </div>
   );
 }

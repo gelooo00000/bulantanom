@@ -10,6 +10,11 @@ export const duration = defineMessages({
   "duration.months": { en: "about {n} months", fil: "mga {n} buwan", bik: "mga {n} bulan" },
   "duration.year": { en: "about 1 year", fil: "mga 1 taon", bik: "mga 1 taon" },
   "duration.years": { en: "about {n} years", fil: "mga {n} taon", bik: "mga {n} taon" },
+  "duration.yearMonths": {
+    en: "about 1 year {months} months",
+    fil: "mga 1 taon {months} buwan",
+    bik: "mga 1 taon {months} bulan",
+  },
   "duration.yearsMonths": {
     en: "about {years} years {months} months",
     fil: "mga {years} taon {months} buwan",

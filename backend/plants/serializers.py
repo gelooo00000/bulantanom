@@ -295,6 +295,7 @@ class RiskAssessmentSerializer(serializers.ModelSerializer):
             "image_analyzed",
             "date_mismatch",
             "model_name",
+            "language",
             "failure_reason",
             "generated_at",
         ]
@@ -455,6 +456,7 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
             "important_warnings",
             "ai_generated",
             "ai_available",
+            "language",
             "failure_reason",
             "created_at",
             "updated_at",
@@ -478,6 +480,7 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
             "important_warnings",
             "ai_generated",
             "ai_available",
+            "language",
             "failure_reason",
             "created_at",
             "updated_at",

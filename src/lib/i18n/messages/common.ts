@@ -5,6 +5,14 @@ export const common = defineMessages({
   "common.loading": { en: "Loading…", fil: "Naglo-load…", bik: "Hulat anay…" },
   "common.tryAgain": { en: "Try again", fil: "Subukan muli", bik: "Probaran liwat" },
   "common.cancel": { en: "Cancel", fil: "Kanselahin", bik: "Kanselahon" },
+  // The page-at-a-time lists on the dashboard.
+  "pager.previous": { en: "Previous", fil: "Nakaraan", bik: "Nakaagi" },
+  "pager.next": { en: "Next", fil: "Susunod", bik: "Masunod" },
+  "pager.range": {
+    en: "{from}–{to} of {total}",
+    fil: "{from}–{to} sa {total}",
+    bik: "{from}–{to} sa {total}",
+  },
   "common.save": { en: "Save", fil: "I-save", bik: "I-save" },
   "common.back": { en: "Back", fil: "Bumalik", bik: "Balik" },
   "common.continue": { en: "Continue", fil: "Magpatuloy", bik: "Padayon" },

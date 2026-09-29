@@ -110,12 +110,29 @@ describe("CropSuggestionsCard", () => {
     renderOn("2026-09-19");
     expect(screen.getByText("Planted on September 19, 2026 · 2 plants")).toBeInTheDocument();
     const list = screen.getByRole("list", { name: "Planted on this date" });
-    expect(within(list).getByRole("link", { name: /Pineapple/ })).toHaveAttribute(
-      "href",
-      "/farmer/plants/7",
-    );
-    expect(within(list).getByRole("link", { name: /Banana/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Okra/ })).not.toBeInTheDocument();
+    expect(within(list).getByText("Pineapple")).toBeInTheDocument();
+    expect(within(list).getByText("Banana")).toBeInTheDocument();
+    expect(within(list).queryByText("Okra")).not.toBeInTheDocument();
+    // Information only: tapping a row went to the plant page, which read as
+    // a detour rather than an answer.
+    expect(within(list).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("shows four plants at a time and pages through the rest", async () => {
+    const many = [1, 2, 3, 4, 5, 6].map((n) => plantedOn(n, `Plant ${n}`, "2026-09-19"));
+    renderOn("2026-09-19", many);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    expect(screen.getByText("1–4 of 6")).toBeInTheDocument();
+    expect(screen.getByText("Plant 4")).toBeInTheDocument();
+    expect(screen.queryByText("Plant 5")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(await screen.findByText("Plant 5")).toBeInTheDocument();
+    expect(screen.getByText("5–6 of 6")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 
   it("no longer lists crops to plant — only what was planted", () => {
@@ -153,7 +170,22 @@ describe("CropSuggestionsCard", () => {
 
   it("leaves archived plants out", () => {
     renderOn("2026-09-19", [plantedOn(7, "Pineapple", "2026-09-19", "ARCHIVED")]);
-    expect(screen.queryByRole("link", { name: /Pineapple/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Pineapple")).not.toBeInTheDocument();
+  });
+
+  it("reaches back to the first planting's month, and no further", async () => {
+    // From October, a September planting can still be found; August, before
+    // any record, cannot be browsed to.
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderOn("2026-10-05");
+    await user.click(screen.getByRole("button", { name: /Oct 5/ }));
+    await user.click(screen.getByRole("button", { name: "Previous month" }));
+
+    expect(screen.getByRole("button", { name: "Previous month" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "1" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "19" }));
+    expect(screen.getByText("Planted on September 19, 2026 · 2 plants")).toBeInTheDocument();
   });
 
   it("offers the calendar, opening on today", () => {
@@ -228,6 +260,19 @@ describe("HarvestSchedule", () => {
   it("says so when nothing is scheduled", () => {
     render(<HarvestSchedule harvests={[]} />);
     expect(screen.getByText(/No harvests scheduled/)).toBeInTheDocument();
+  });
+
+  it("shows four harvests at a time, as plain rows rather than links", async () => {
+    const five = [1, 2, 3, 4, 5].map((n) => ({ ...HARVEST, plant_id: n, name: `Crop ${n}` }));
+    render(<HarvestSchedule harvests={five} />);
+
+    expect(screen.getByText("Crop 4")).toBeInTheDocument();
+    expect(screen.queryByText("Crop 5")).not.toBeInTheDocument();
+    // The only link is "All harvests"; the rows themselves go nowhere.
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Crop 5")).toBeInTheDocument();
   });
 });
 

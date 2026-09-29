@@ -72,6 +72,31 @@ describe("Add a Plant", () => {
     expect(screen.getByRole("button", { name: /Continue/ })).toBeEnabled();
   });
 
+  it("keeps Continue off until a crop with varieties has one chosen", () => {
+    // Crop and date alone are not enough: varieties can be months apart at
+    // harvest, and "Not specified" used to let the form through.
+    catalog.data = [
+      {
+        ...PINEAPPLE,
+        variants: [
+          {
+            id: "pineapple-queen",
+            name: "Queen (Formosa)",
+            description: "",
+            growing_duration_days: 450,
+            harvest_window_days: 30,
+          },
+        ],
+      },
+    ];
+    window.history.replaceState(null, "", `/?crop=pineapple&date=${dayFromToday(3)}`);
+    render(<AddPlantPage />);
+
+    expect(screen.getByText("Choose a variety")).toBeInTheDocument();
+    expect(screen.queryByText("Not specified")).toBeNull();
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
+  });
+
   it("ignores a link's unknown crop and past date", () => {
     catalog.data = [PINEAPPLE];
     window.history.replaceState(null, "", `/?crop=durian&date=${dayFromToday(-3)}`);

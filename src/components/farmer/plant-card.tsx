@@ -21,10 +21,13 @@ import { cn } from "@/lib/utils";
 export function PlantCard({
   plant,
   selected = false,
+  highlighted = false,
   onToggle,
 }: {
   plant: BackendPlant;
   selected?: boolean;
+  /** The plant the farmer just added, marked so it is easy to spot. */
+  highlighted?: boolean;
   /** Selection mode: tapping the card toggles it instead of opening it. */
   onToggle?: () => void;
 }) {
@@ -41,6 +44,7 @@ export function PlantCard({
             ? "border-primary ring-primary/30 ring-2"
             : "hover:border-primary/50"
           : "hover:border-primary/50 hover:shadow-primary/10 hover:-translate-y-0.5 hover:shadow-lg",
+        highlighted && !selecting && "border-risk-low ring-risk-low/30 ring-2",
       )}
     >
       {selecting && (

@@ -47,8 +47,12 @@ SOIL_STALE_DAYS = 90
 # Harvests inside this window are called out as imminent.
 HARVEST_SOON_DAYS = 14
 
-# Upcoming harvests shown on the dashboard. The Harvest page has them all.
-MAX_UPCOMING_HARVESTS = 5
+# Upcoming harvests shown on the dashboard, four to a page with next /
+# previous buttons. The Harvest page has them all.
+MAX_UPCOMING_HARVESTS = 12
+# How many of the soonest harvests may raise a "Needs attention" alert, so a
+# big farm's alerts are not a wall of harvest notices.
+MAX_HARVEST_ALERTS = 5
 
 # Suggested crops shown before the card gets too long to scan.
 MAX_CROP_SUGGESTIONS = 8
@@ -243,7 +247,7 @@ def alerts(farmer, today=None):
         )
 
     # Harvest windows opening imminently, or already open.
-    for h in upcoming_harvests(farmer, today=today, limit=MAX_UPCOMING_HARVESTS):
+    for h in upcoming_harvests(farmer, today=today, limit=MAX_HARVEST_ALERTS):
         if h["in_window"]:
             out.append(
                 {
@@ -273,7 +277,8 @@ def alerts(farmer, today=None):
             {
                 "severity": "info",
                 "message": f"{n} {_plural(n, 'plant')} still {_plural(n, 'needs', 'need')} a first assessment.",
-                "href": "/farmer/plants",
+                # Risk Indicator is where each plant's "Assess now" is.
+                "href": "/farmer/risk-indicator",
                 "action": "Assess",
             }
         )
@@ -290,7 +295,8 @@ def alerts(farmer, today=None):
             {
                 "severity": "info",
                 "message": f"{n} {_plural(n, 'plant')} {_plural(n, 'is', 'are')} due for a weekly assessment.",
-                "href": "/farmer/plants",
+                # Risk Indicator is where each plant's "Assess now" is.
+                "href": "/farmer/risk-indicator",
                 "action": "Assess",
             }
         )

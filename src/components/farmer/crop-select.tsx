@@ -105,7 +105,7 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
         </SelectValue>
       </SelectTrigger>
 
-      <SelectContent className="max-h-80 w-[var(--anchor-width)] min-w-64 p-0">
+      <SelectContent maxHeight="20rem" className="w-[var(--anchor-width)] min-w-64 p-0">
         <div className="border-border bg-popover sticky top-0 z-10 border-b p-2">
           <div className="relative">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />

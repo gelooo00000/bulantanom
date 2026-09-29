@@ -123,12 +123,14 @@ export default function FarmerDashboardPage() {
             </section>
           )}
 
+          {/* The two plant lists side by side, the activity chart under them
+              across the full width. */}
           <div className="grid gap-3 lg:grid-cols-2">
-            <AssessmentTrendChart trend={assessment_trend} />
             <HarvestSchedule harvests={upcoming_harvests} />
+            <CropSuggestionsCard plants={plants ?? []} />
           </div>
 
-          <CropSuggestionsCard plants={plants ?? []} />
+          <AssessmentTrendChart trend={assessment_trend} />
         </>
       )}
     </div>

@@ -35,8 +35,40 @@ const TILES: {
  * Counts are taken verbatim from the API, which derives them from the
  * latest assessment per plant. Nothing here is estimated client-side.
  */
-export function RiskCountsRow({ counts }: { counts: RiskCounts }) {
+export function RiskCountsRow({
+  counts,
+  compact = false,
+}: {
+  counts: RiskCounts;
+  /** One slim strip of four, for pages where the plants are the point. */
+  compact?: boolean;
+}) {
   const { t } = useFarmerLanguage();
+
+  if (compact) {
+    return (
+      <div className="grid grid-cols-4 gap-2">
+        {TILES.map((tile) => (
+          <div
+            key={tile.key}
+            className="bg-card border-border flex flex-col items-center gap-0.5 rounded-lg border px-1.5 py-2 text-center sm:flex-row sm:justify-center sm:gap-2 sm:py-2.5"
+          >
+            <span className="text-lg leading-none font-medium tabular-nums">{counts[tile.key]}</span>
+            <span
+              className={cn(
+                "flex items-center gap-1 text-[11px] leading-tight font-medium sm:text-xs",
+                tile.className,
+              )}
+            >
+              <tile.icon className="hidden size-3.5 shrink-0 sm:block" />
+              {t(tile.label)}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {TILES.map((tile) => (

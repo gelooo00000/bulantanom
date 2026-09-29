@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ClipboardList, FlaskConical, LayoutDashboard, Radar, Sprout, Wheat } from "lucide-react";
+import { ClipboardList, FlaskConical, LayoutDashboard, Radar, Sprout, Wheat } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
@@ -19,8 +19,8 @@ export function FarmerShell({ children }: { children: ReactNode }) {
     { label: t("nav.cropRecommendation"), href: "/farmer/soil-recommendation", icon: FlaskConical },
     { label: t("nav.risk"), href: "/farmer/risk-indicator", icon: Radar },
     { label: t("nav.harvest"), href: "/farmer/harvest", icon: Wheat },
-    { label: t("nav.monitoring"), href: "/farmer/monitoring", icon: Activity },
-    { label: t("nav.history"), href: "/farmer/assessments", icon: ClipboardList },
+    // Past results only. What is due this week is on Risk Indicator.
+    { label: t("nav.assessments"), href: "/farmer/assessments", icon: ClipboardList },
   ];
 
   return (
