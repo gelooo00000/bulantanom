@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import type { Role } from "@/lib/auth/types";
 
 export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, signedOutTo } = useAuth();
   const router = useRouter();
   // Whether this page ever had a signed-in user. A session that expires while
   // in use goes to /login so the user can sign straight back in; arriving with
@@ -21,13 +21,15 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
     if (currentUser) hadSession.current = true;
     if (loading) return;
     if (!currentUser) {
-      router.replace(hadSession.current ? "/login" : "/");
+      // A deliberate logout may name where to go (Admin returns to the
+      // landing page); otherwise an ended session goes to sign in again.
+      router.replace(signedOutTo ?? (hadSession.current ? "/login" : "/"));
       return;
     }
     if (currentUser.role !== role) {
       router.replace(DASHBOARD_BY_ROLE[currentUser.role]);
     }
-  }, [loading, currentUser, role, router]);
+  }, [loading, currentUser, role, router, signedOutTo]);
 
   if (loading || !currentUser || currentUser.role !== role) {
     return (

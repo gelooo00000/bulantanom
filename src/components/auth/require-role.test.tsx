@@ -5,7 +5,7 @@ import { RequireRole } from "@/components/auth/require-role";
 import type { AuthUser } from "@/lib/auth/types";
 
 const replace = vi.fn();
-let auth: { currentUser: AuthUser | null; loading: boolean };
+let auth: { currentUser: AuthUser | null; loading: boolean; signedOutTo?: string | null };
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => auth }));
@@ -51,6 +51,16 @@ describe("RequireRole", () => {
     auth = { currentUser: null, loading: false };
     rerender(guarded());
     expect(replace).toHaveBeenCalledWith("/login");
+  });
+
+  it("follows a logout that names where to go (Admin: the landing page)", () => {
+    auth = { currentUser: farmer, loading: false };
+    const { rerender } = render(guarded());
+
+    auth = { currentUser: null, loading: false, signedOutTo: "/" };
+    rerender(guarded());
+    expect(replace).toHaveBeenLastCalledWith("/");
+    expect(replace).not.toHaveBeenCalledWith("/login");
   });
 
   it("does not redirect while the session is still being restored", () => {

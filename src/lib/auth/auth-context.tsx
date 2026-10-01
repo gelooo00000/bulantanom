@@ -34,7 +34,13 @@ type AuthContextValue = {
     email: string;
     password: string;
   }) => Promise<AuthUser>;
-  logout: () => void;
+  /**
+   * Signs out. `redirectTo` is where the page goes afterwards; without it a
+   * protected page falls back to /login, as it does when a session expires.
+   */
+  logout: (redirectTo?: string) => void;
+  /** Where the last deliberate logout asked to go, if it named a page. */
+  signedOutTo: string | null;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -72,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [tokenVersion, setTokenVersion] = useState(0);
+  const [signedOutTo, setSignedOutTo] = useState<string | null>(null);
 
   useEffect(() => {
     // The access token lives only in memory, so a full page reload loses it.
@@ -133,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(access);
       const mapped = mapBackendUser(user);
       markTabSignedIn();
+      setSignedOutTo(null);
       setCurrentUser(mapped);
       setTokenVersion((v) => v + 1);
       return mapped;
@@ -162,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(access);
       const mapped = mapBackendUser(user);
       markTabSignedIn();
+      setSignedOutTo(null);
       setCurrentUser(mapped);
       setTokenVersion((v) => v + 1);
       return mapped;
@@ -170,10 +179,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function logout() {
+  function logout(redirectTo?: string) {
     // Clear local state immediately so the UI reacts (RequireRole redirects
-    // to /login) without waiting on the network; the server-side blacklist
-    // call fires in the background best-effort.
+    // to `redirectTo`, or /login) without waiting on the network; the
+    // server-side blacklist call fires in the background best-effort.
+    setSignedOutTo(redirectTo ?? null);
     clearTabSignedIn();
     setAccessToken(null);
     setCurrentUser(null);
@@ -193,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout,
+        signedOutTo,
       }}
     >
       {children}

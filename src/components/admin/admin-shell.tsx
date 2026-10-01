@@ -18,6 +18,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
       navItems={ADMIN_NAV_ITEMS}
       homeHref="/admin"
       notificationScope="admin"
+      // Admin signs in from the landing page's Admin button, not the
+      // Farmer / LGU sign-in, so logging out returns there.
+      logoutRedirect="/"
     >
       {children}
     </RoleShell>
