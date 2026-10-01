@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Leaf, MapPin, ShieldUser, UserRound } from "lucide-react";
+import { Leaf, MapPin, ShieldUser, UserRound } from "lucide-react";
 
+import { HeroCta } from "@/components/marketing/hero-cta";
 import { AnimatedHeading } from "@/components/motion/animated-heading";
 import { FadeIn } from "@/components/motion/fade-in";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -119,14 +120,7 @@ export function Hero() {
         </FadeIn>
 
         <FadeIn delay={1100} duration={1000} className="mt-10">
-          <Link
-            href="/signup"
-            className="group inline-flex h-12 items-center gap-2.5 rounded-full border border-[#8be883]/70 bg-[linear-gradient(180deg,#3fae52_0%,#2a8a3c_100%)] px-6 text-base font-semibold text-white shadow-[0_12px_32px_-10px_rgba(80,200,100,0.7)] transition-all duration-200 outline-none hover:-translate-y-0.5 hover:brightness-110 focus-visible:ring-3 focus-visible:ring-white/70 active:translate-y-0"
-          >
-            <Leaf className="size-4 fill-current" />
-            Get started now
-            <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover:translate-x-1" />
-          </Link>
+          <HeroCta />
         </FadeIn>
       </div>
     </section>
