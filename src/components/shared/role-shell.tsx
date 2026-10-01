@@ -194,6 +194,20 @@ export function RoleShell({
               </MenuPrimitive.Portal>
             </MenuPrimitive.Root>
           )}
+
+          {/* Log out normally lives in the "More" menu. A role with no
+              overflow pages (Admin has one) has no such menu, so on a phone
+              it would have no way to sign out at all. */}
+          {overflowTabs.length === 0 && (
+            <button
+              type="button"
+              onClick={logout}
+              className="text-muted-foreground hover:text-foreground flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] font-medium transition-colors"
+            >
+              <LogOut className="size-5" />
+              {copy.logOut}
+            </button>
+          )}
         </nav>
       </div>
     </div>
