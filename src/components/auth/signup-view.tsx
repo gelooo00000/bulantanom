@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Lock, LoaderCircle, Mail, Sprout, User } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
+import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth } from "@/lib/auth/auth-context";
+import type { AuthUser } from "@/lib/auth/types";
 
 export function SignupView() {
   const router = useRouter();
@@ -24,9 +26,15 @@ export function SignupView() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set once the account is created: the form gives way to the same
+  // "Preparing your dashboard..." screen a Farmer sees after signing in.
+  const [preparingFor, setPreparingFor] = useState<AuthUser | null>(null);
+  // True while this form is creating the account, so the effect below does
+  // not race the loading screen to the dashboard once the user is set.
+  const signingUp = useRef(false);
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !signingUp.current) {
       router.replace(DASHBOARD_BY_ROLE[currentUser.role]);
     }
   }, [currentUser, router]);
@@ -45,17 +53,32 @@ export function SignupView() {
     }
 
     setSubmitting(true);
+    signingUp.current = true;
     try {
-      // Signing up signs the Farmer in, so this goes straight to their own
-      // dashboard rather than a waiting screen.
+      // Signing up signs the Farmer in; the loading screen then opens their
+      // own dashboard.
       const user = await signup({ name: fullName, email, password });
-      router.replace(DASHBOARD_BY_ROLE[user.role]);
+      setPreparingFor(user);
     } catch (err) {
+      // A failed sign-up never shows the loading screen.
+      signingUp.current = false;
       setError(err instanceof Error ? err.message : "Something went wrong.");
-      // Only on failure: on success the redirect unmounts this component,
+      // Only on failure: on success the loading screen replaces the form,
       // and clearing the flag first would flash the button back to idle.
       setSubmitting(false);
     }
+  }
+
+  if (preparingFor) {
+    return (
+      <AuthSplitLayout>
+        <DashboardLoadingScreen
+          destination={DASHBOARD_BY_ROLE[preparingFor.role]}
+          firstName={preparingFor.firstName}
+          newAccount
+        />
+      </AuthSplitLayout>
+    );
   }
 
   return (

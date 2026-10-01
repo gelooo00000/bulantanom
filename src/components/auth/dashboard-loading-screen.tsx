@@ -32,15 +32,19 @@ export const LOADING_CROPS: [emoji: string, name: string][] = [
 
 /**
  * The short "Preparing your dashboard..." step shown after a Farmer or LGU
- * Officer signs in. It sits in the sign-in layout in place of the form, and
- * opens `destination` after exactly DASHBOARD_LOADING_MS. Admin skips it.
+ * Officer signs in, and after a Farmer creates an account. It sits in the
+ * sign-in layout in place of the form, and opens `destination` after
+ * exactly DASHBOARD_LOADING_MS. Admin skips it.
  */
 export function DashboardLoadingScreen({
   destination,
   firstName,
+  newAccount = false,
 }: {
   destination: string;
   firstName?: string;
+  /** A just-created account is welcomed in, not welcomed back. */
+  newAccount?: boolean;
 }) {
   const router = useRouter();
   // Starts empty and fills over the full duration; set on the next frame so
@@ -110,7 +114,12 @@ export function DashboardLoadingScreen({
               Preparing your dashboard...
             </p>
             <p className="text-muted-foreground mt-1.5 text-sm">
-              {firstName ? `Welcome back, ${firstName}. ` : ""}This only takes a moment.
+              {firstName
+                ? newAccount
+                  ? `Welcome to BulanTanom, ${firstName}. `
+                  : `Welcome back, ${firstName}. `
+                : ""}
+              This only takes a moment.
             </p>
           </div>
 
