@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Lock, LoaderCircle, Mail, Shield, ShieldCheck, Sprout } from "lucide-react";
-import { useEffect, useState, type ElementType, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ElementType, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
+import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth } from "@/lib/auth/auth-context";
+import type { AuthUser } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
 type SelectableRole = "farmer" | "lgu" | "admin";
@@ -82,9 +84,15 @@ export function LoginView() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const justSignedUp = searchParams.get("signedUp") === "1";
+  // Set once a Farmer or LGU Officer signs in: the form gives way to the
+  // "Preparing your dashboard..." screen, which opens the dashboard itself.
+  const [preparingFor, setPreparingFor] = useState<AuthUser | null>(null);
+  // True while this form is signing someone in, so the effect below does not
+  // race the loading screen to the dashboard the moment the user is set.
+  const signingIn = useRef(false);
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !signingIn.current) {
       router.replace(DASHBOARD_BY_ROLE[currentUser.role]);
     }
   }, [currentUser, router]);
@@ -94,13 +102,32 @@ export function LoginView() {
 
     setSubmitting(true);
     setError(null);
+    signingIn.current = true;
     try {
       const user = await login(email, password, selectedRole);
-      router.push(DASHBOARD_BY_ROLE[user.role]);
+      if (user.role === "admin") {
+        // Admin goes straight in; the loading screen is for Farmers and Officers.
+        router.push(DASHBOARD_BY_ROLE[user.role]);
+      } else {
+        setPreparingFor(user);
+      }
     } catch (err) {
+      // A failed sign-in never shows the loading screen.
+      signingIn.current = false;
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setSubmitting(false);
     }
+  }
+
+  if (preparingFor) {
+    return (
+      <AuthSplitLayout>
+        <DashboardLoadingScreen
+          destination={DASHBOARD_BY_ROLE[preparingFor.role]}
+          firstName={preparingFor.firstName}
+        />
+      </AuthSplitLayout>
+    );
   }
 
   const roleCard = ROLE_CARDS.find((r) => r.role === selectedRole);
