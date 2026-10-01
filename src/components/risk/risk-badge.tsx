@@ -50,7 +50,7 @@ export function RiskBadge({ level, size = "default", className }: RiskBadgeProps
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-medium",
+        "font-heading inline-flex items-center gap-1.5 rounded-full border",
         config.className,
         size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm",
         className,

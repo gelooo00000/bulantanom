@@ -68,7 +68,7 @@ export function Hero() {
         <div className="contents text-white md:flex md:flex-col lg:flex-row lg:items-center lg:gap-3">
           <Link
             href="/"
-            className="py-2 text-base leading-tight font-semibold tracking-tight md:py-1.5 md:text-lg lg:py-2"
+            className="font-heading py-2 text-lg leading-tight md:py-1.5 md:text-xl lg:py-2"
           >
             BulanTanom
           </Link>
@@ -80,7 +80,7 @@ export function Hero() {
         <div className="flex items-center gap-1.5 md:gap-2">
           <Link
             href="/login"
-            className={`flex h-10 items-center gap-2.5 rounded-full px-3 text-sm font-medium whitespace-nowrap sm:px-4 md:px-5 ${TOP_BAR_PILL}`}
+            className={`font-heading flex h-10 items-center gap-2.5 rounded-full px-3 text-sm tracking-wide whitespace-nowrap sm:px-4 md:px-5 ${TOP_BAR_PILL}`}
           >
             Sign In
             <UserRound className="hidden size-4 fill-current sm:block" />
@@ -88,7 +88,7 @@ export function Hero() {
           <Link
             href="/login?role=admin"
             aria-label="Admin sign in"
-            className={`flex h-10 items-center gap-2 rounded-full px-3 text-sm font-medium whitespace-nowrap md:px-5 ${TOP_BAR_PILL}`}
+            className={`font-heading flex h-10 items-center gap-2 rounded-full px-3 text-sm tracking-wide whitespace-nowrap md:px-5 ${TOP_BAR_PILL}`}
           >
             <ShieldUser className="size-4" />
             <span className="hidden sm:inline">Admin</span>
@@ -108,7 +108,7 @@ export function Hero() {
         <AnimatedHeading
           text={"Grow with confidence.\nHarvest on time."}
           lineClassNames={["text-white", LEAF]}
-          className="text-3xl leading-[1.12] font-bold tracking-[-0.025em] sm:text-4xl md:text-5xl lg:text-6xl 2xl:text-7xl"
+          className="text-4xl leading-[1.1] tracking-[0.01em] sm:text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl"
         />
 
         <FadeIn delay={800} duration={1000} className="mt-7">

@@ -19,7 +19,7 @@ function StatTile({ stat }: { stat: ReportStat }) {
     <div className="border-border rounded-lg border px-3 py-2.5">
       <p
         className={cn(
-          "text-xl font-medium tabular-nums",
+          "font-heading text-xl tabular-nums",
           stat.tone ? TONE_CLASS[stat.tone] : undefined,
         )}
       >

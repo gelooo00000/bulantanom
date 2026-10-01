@@ -32,7 +32,7 @@ export function IconStatCard({ icon: Icon, label, value, tone = "primary", class
     <Card className={cn("gap-3 py-4", className)}>
       <CardContent className="flex items-start justify-between px-4">
         <div>
-          <p className={cn("text-2xl font-medium tabular-nums", TONE_VALUE_CLASS[tone])}>{value}</p>
+          <p className={cn("font-heading text-2xl tabular-nums", TONE_VALUE_CLASS[tone])}>{value}</p>
           <p className="text-muted-foreground text-xs">{label}</p>
         </div>
         {Icon && (

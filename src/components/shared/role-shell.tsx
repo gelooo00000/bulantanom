@@ -72,7 +72,7 @@ export function RoleShell({
     // inherit them; the shell only paints its own surface.
     <div className="bg-background text-foreground flex min-h-screen">
       <aside className="border-border bg-card/60 sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r px-4 py-6 lg:flex">
-        <Link href={homeHref} className="flex items-center gap-2 px-2 font-medium tracking-tight">
+        <Link href={homeHref} className="font-heading flex items-center gap-2 px-2 text-lg">
           <Logo className="size-8" px={32} />
           BulanTanom
         </Link>
@@ -86,7 +86,7 @@ export function RoleShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all",
+                  "group font-heading flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-all",
                   active
                     ? "bg-primary text-primary-foreground shadow-[0_0_14px_-2px_var(--primary)]"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -115,7 +115,7 @@ export function RoleShell({
           <button
             type="button"
             onClick={logout}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
+            className="text-muted-foreground hover:text-foreground font-heading flex items-center gap-1.5 text-sm transition-colors"
           >
             <LogOut className="size-3.5" />
             {copy.logOut}
@@ -151,7 +151,7 @@ export function RoleShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] font-medium transition-colors",
+                  "font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
@@ -163,7 +163,7 @@ export function RoleShell({
 
           {overflowTabs.length > 0 && (
             <MenuPrimitive.Root>
-              <MenuPrimitive.Trigger className="text-muted-foreground flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] font-medium">
+              <MenuPrimitive.Trigger className="text-muted-foreground font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px]">
                 <EllipsisVertical className="size-5" />
                 {copy.more}
               </MenuPrimitive.Trigger>
@@ -205,7 +205,7 @@ export function RoleShell({
             <button
               type="button"
               onClick={logout}
-              className="text-muted-foreground hover:text-foreground flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] font-medium transition-colors"
+              className="text-muted-foreground hover:text-foreground font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] transition-colors"
             >
               <LogOut className="size-5" />
               {copy.logOut}

@@ -53,7 +53,7 @@ export function RiskCountsRow({
             key={tile.key}
             className="bg-card border-border flex flex-col items-center gap-0.5 rounded-lg border px-1.5 py-2 text-center sm:flex-row sm:justify-center sm:gap-2 sm:py-2.5"
           >
-            <span className="text-lg leading-none font-medium tabular-nums">{counts[tile.key]}</span>
+            <span className="font-heading text-lg leading-none tabular-nums">{counts[tile.key]}</span>
             <span
               className={cn(
                 "flex items-center gap-1 text-[11px] leading-tight font-medium sm:text-xs",
@@ -83,7 +83,7 @@ export function RiskCountsRow({
               <tile.icon className="size-3.5" />
               {t(tile.label)}
             </span>
-            <p className="mt-1.5 text-2xl font-medium tabular-nums">{counts[tile.key]}</p>
+            <p className="font-heading mt-1.5 text-2xl tabular-nums">{counts[tile.key]}</p>
           </CardContent>
         </Card>
       ))}

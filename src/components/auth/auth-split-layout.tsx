@@ -53,7 +53,7 @@ export function AuthSplitLayout({ children }: { children: ReactNode }) {
         {/* The farm line sits beside the name when there is room and drops
             under it on a narrow screen, rather than disappearing. */}
         <div className="flex flex-col text-white sm:flex-row sm:items-center sm:gap-3">
-          <Link href="/" className="py-1 text-base font-semibold tracking-tight sm:py-2 md:text-lg">
+          <Link href="/" className="font-heading py-1 text-lg sm:py-2 md:text-xl">
             BulanTanom
           </Link>
           <p className="flex items-center gap-1.5 text-xs text-white/80 sm:border-l sm:border-white/30 sm:pl-3 sm:text-sm">
@@ -75,7 +75,7 @@ export function AuthSplitLayout({ children }: { children: ReactNode }) {
             <Leaf className={`size-3.5 fill-current ${LEAF}`} />
             Smarter farming. A greener Bulan.
           </span>
-          <p className="mt-3 text-2xl leading-[1.12] font-bold tracking-[-0.025em] sm:mt-4 sm:text-4xl lg:mt-7 xl:text-5xl 2xl:text-6xl">
+          <p className="font-heading mt-3 text-3xl leading-[1.1] tracking-[0.01em] sm:mt-4 sm:text-5xl lg:mt-7 xl:text-6xl 2xl:text-7xl">
             One farm.
             <span className={`block ${LEAF}`}>Smarter decisions.</span>
           </p>

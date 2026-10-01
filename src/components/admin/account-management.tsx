@@ -576,7 +576,7 @@ function Overview({
     <>
       <Icon className={cn("size-4 shrink-0", tone ?? "text-muted-foreground")} />
       <span className="min-w-0">
-        <span className={cn("block text-lg leading-tight font-medium tabular-nums", tone)}>{value}</span>
+        <span className={cn("font-heading block text-lg leading-tight tabular-nums", tone)}>{value}</span>
         <span className="text-muted-foreground block truncate text-xs">{label}</span>
       </span>
     </>

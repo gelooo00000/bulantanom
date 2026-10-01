@@ -165,7 +165,7 @@ export function LoginView() {
                           setError(null);
                         }}
                         className={cn(
-                          "focus-visible:ring-ring/50 flex h-9 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors outline-none focus-visible:ring-3",
+                          "focus-visible:ring-ring/50 font-heading flex h-9 items-center justify-center gap-2 rounded-lg text-sm tracking-wide transition-colors outline-none focus-visible:ring-3",
                           active
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground",

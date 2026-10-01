@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Lilita_One, Nunito } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme/theme-context";
 
-const inter = Inter({
-  variable: "--font-inter",
+// Lilita One is the display face: headings, titles, buttons, navigation,
+// big numbers and badges. It has a single heavy weight, so running text uses
+// Nunito, a rounded sans that keeps forms, tables and AI results easy to read
+// while matching Lilita's soft shapes.
+const lilita = Lilita_One({
+  variable: "--font-lilita",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: "400",
+});
+
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -26,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // this markup starts in the same state the script will confirm.
     <html
       lang="en"
-      className={`dark landing-dark ${inter.variable} h-full antialiased`}
+      className={`dark landing-dark ${lilita.variable} ${nunito.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
