@@ -2,14 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { FadeIn } from "@/components/motion/fade-in";
-import { Logo } from "@/components/shared/logo";
 
 /** How long the screen stays up before opening the dashboard. */
 export const DASHBOARD_LOADING_MS = 5000;
+
+/** How long each crop stays in the ring: about ten crops over the 5 seconds. */
+export const CROP_STEP_MS = 500;
+
+/** Layuan Farm's own crops, as on the landing page's crop strip. */
+export const LOADING_CROPS: [emoji: string, name: string][] = [
+  ["🌽", "Corn"],
+  ["🍅", "Tomato"],
+  ["🥬", "Pechay"],
+  ["🍆", "Eggplant"],
+  ["🥭", "Mango"],
+  ["🍌", "Banana"],
+  ["🍍", "Pineapple"],
+  ["🥥", "Coconut"],
+  ["🍈", "Papaya"],
+  ["🍠", "Ube"],
+  ["🥒", "Okra"],
+  ["🍉", "Watermelon"],
+];
 
 /**
  * The short "Preparing your dashboard..." step shown after a Farmer or LGU
@@ -27,6 +46,14 @@ export function DashboardLoadingScreen({
   // Starts empty and fills over the full duration; set on the next frame so
   // the width change is animated rather than applied at once.
   const [filled, setFilled] = useState(false);
+  const [cropIndex, setCropIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
+  const [emoji, cropName] = LOADING_CROPS[cropIndex % LOADING_CROPS.length];
+
+  useEffect(() => {
+    const ticker = window.setInterval(() => setCropIndex((i) => i + 1), CROP_STEP_MS);
+    return () => window.clearInterval(ticker);
+  }, []);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setFilled(true));
@@ -45,15 +72,37 @@ export function DashboardLoadingScreen({
           aria-live="polite"
           className="flex flex-col items-center gap-5 py-4 text-center sm:py-6"
         >
-          <div className="relative flex size-24 items-center justify-center sm:size-28">
-            {/* The spinner rings the logo, so the mark stays still and legible. */}
-            <LoaderCircle
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative flex size-24 items-center justify-center sm:size-28">
+              <LoaderCircle
+                aria-hidden="true"
+                strokeWidth={1.5}
+                className="absolute inset-0 size-full animate-spin"
+                style={{ color: "var(--landing-accent)" }}
+              />
+              {/* One crop at a time pops into the ring; keyed so each swap
+                  replays the entrance. */}
+              <motion.span
+                key={cropIndex}
+                aria-hidden="true"
+                className="text-4xl leading-none select-none sm:text-5xl"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.4, rotate: -20 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, rotate: 0 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0.2 }
+                    : { type: "spring", stiffness: 420, damping: 18 }
+                }
+              >
+                {emoji}
+              </motion.span>
+            </div>
+            <span
               aria-hidden="true"
-              strokeWidth={1.5}
-              className="absolute inset-0 size-full animate-spin"
-              style={{ color: "var(--landing-accent)" }}
-            />
-            <Logo px={56} className="size-14 rounded-xl sm:size-16" />
+              className="text-muted-foreground h-4 text-xs font-medium tracking-wide"
+            >
+              {cropName}
+            </span>
           </div>
 
           <div>
