@@ -37,15 +37,6 @@ export type ReportTable = {
   wide?: boolean;
 };
 
-export type ReportDetail = {
-  /** SoilRecommendation primary key - the heading alone is not unique. */
-  id: number;
-  heading: string;
-  analysed: boolean;
-  unavailable: string;
-  sections: { label: string; text: string }[];
-};
-
 export type ReportDocument = {
   slug: string;
   title: string;
@@ -64,7 +55,6 @@ export type ReportDocument = {
   generated_at: string;
   stats: ReportStat[];
   tables: ReportTable[];
-  details: ReportDetail[];
 };
 
 export type ReportFilterOptions = {

@@ -17,6 +17,7 @@ and how much). Nothing here claims otherwise: this counts windows that are
 open or approaching, never yield.
 """
 
+from django.conf import settings
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from rest_framework import generics, status
@@ -363,7 +364,14 @@ def lgu_farm_overview(request):
     counts = _farmer_counts()
     return Response(
         {
-            "farm": {"name": FARM_NAME, "location": FARM_LOCATION},
+            "farm": {
+                "name": FARM_NAME,
+                "location": FARM_LOCATION,
+                # Where the farm map centres. The same coordinates the
+                # weather reading uses (FARM_LATITUDE / FARM_LONGITUDE).
+                "latitude": settings.FARM_LATITUDE,
+                "longitude": settings.FARM_LONGITUDE,
+            },
             "farmers": {"active": counts["approved"], "total": counts["total"]},
             "plants": _plant_counts(),
             "unavailable_metrics": UNAVAILABLE_METRICS,
@@ -495,34 +503,6 @@ def lgu_assessment_history(request):
         .order_by("-assessment_date", "-created_at")
     )
     return Response([_serialize_case(a, request) for a in assessments])
-
-
-class LguSoilRecommendationListView(generics.ListAPIView):
-    """
-    GET /api/lgu/soil-recommendations/            — all approved Farmers' records
-    GET /api/lgu/soil-recommendations/?farmer=<id> — one Farmer's records
-
-    Read-only monitoring, newest first. Restricted to approved Farmers so the
-    list matches the active-Farmer figure shown beside it on the dashboard.
-    """
-
-    permission_classes = [IsLguOfficer]
-
-    def get_serializer_class(self):
-        from plants.serializers import LguSoilRecommendationSerializer
-
-        return LguSoilRecommendationSerializer
-
-    def get_queryset(self):
-        from plants.models import SoilRecommendation
-
-        queryset = SoilRecommendation.objects.select_related("farmer").filter(
-            farmer__account_status=AccountStatus.APPROVED
-        )
-        farmer_id = self.request.query_params.get("farmer")
-        if farmer_id and farmer_id.isdigit():
-            queryset = queryset.filter(farmer_id=int(farmer_id))
-        return queryset
 
 
 @api_view(["GET"])

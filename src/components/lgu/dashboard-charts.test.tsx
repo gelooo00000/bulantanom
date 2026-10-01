@@ -49,6 +49,45 @@ describe("HorizontalBars", () => {
       screen.getByRole("listitem", { name: "High risk: 0 plants, 0%" }),
     ).toBeInTheDocument();
   });
+
+  // Seven crops, 28 plants in all, most planted first.
+  const CROPS = ["Pineapple", "Mango", "Banana", "Eggplant", "Corn", "Pechay", "Ube"].map(
+    (name, i) => ({ key: name, label: name, value: 7 - i, color: "green" }),
+  );
+
+  it("shows five rows at a time and slides to the rest", async () => {
+    const user = userEvent.setup();
+    render(<HorizontalBars rows={CROPS} unit="plant" label="Plants per crop" pageSize={5} />);
+
+    expect(screen.getByText("1–5 of 7")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Corn: /)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Pechay: /)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("6–7 of 7")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Pechay: /)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Ube: /)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  });
+
+  it("keeps the scale and the shares of the whole chart on a later page", async () => {
+    const user = userEvent.setup();
+    render(<HorizontalBars rows={CROPS} unit="plant" label="Plants per crop" pageSize={5} />);
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    // Ube is 1 of 28 plants (4%), drawn against Pineapple's 7, not as the
+    // longest bar on its own page.
+    const ube = await screen.findByLabelText("Ube: 1 plant, 4%");
+    const bar = ube.querySelector("[style*='width']") as HTMLElement;
+    expect(parseFloat(bar.style.width)).toBeCloseTo(100 / 7, 1);
+  });
+
+  it("has no slide buttons when every row already fits", () => {
+    render(<HorizontalBars rows={RISK} unit="plant" label="Plants by risk" pageSize={5} />);
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+  });
 });
 
 const WEEKS = [

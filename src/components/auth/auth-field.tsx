@@ -6,9 +6,12 @@ import { cn } from "@/lib/utils";
 
 /* Token-driven so the auth form works on both palettes. `--input` and
    `--card` already carry the right value per theme, so this needs no
-   dark:/light: variants. */
+   dark:/light: variants.
+
+   16px text on phones: iOS Safari zooms the whole page in when a focused
+   field's text is any smaller. */
 export const AUTH_INPUT_CLASSES =
-  "border-input bg-card/70 text-foreground placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-primary/30";
+  "border-input bg-card/70 text-base text-foreground md:text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-primary/30";
 
 type AuthIconInputProps = ComponentProps<typeof Input> & { icon: ElementType };
 

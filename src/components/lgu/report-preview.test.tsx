@@ -6,12 +6,12 @@ import type { ReportDocument } from "@/lib/api/reports-api";
 
 function makeReport(overrides: Partial<ReportDocument> = {}): ReportDocument {
   return {
-    slug: "soil-assessment",
-    title: "Soil Assessment Report",
-    category: "Agricultural Guidance",
-    description: "Soil properties reported by farmers.",
-    icon: "flask",
-    supports: ["period", "farmer"],
+    slug: "plant-crop",
+    title: "Plant & Crop Report",
+    category: "Performance Report",
+    description: "Every registered plant with planting date, age, status and harvest window.",
+    icon: "sprout",
+    supports: ["period", "farmer", "crop"],
     farm: { name: "Layuan Farm", location: "Bulan, Sorsogon" },
     period: {
       key: "all_time",
@@ -23,7 +23,6 @@ function makeReport(overrides: Partial<ReportDocument> = {}): ReportDocument {
     generated_at: "2026-09-09T10:00:00Z",
     stats: [],
     tables: [],
-    details: [],
     ...overrides,
   };
 }
@@ -36,90 +35,14 @@ describe("ReportPreview", () => {
   it("renders the report identity an officer needs on a printed page", () => {
     render(<ReportPreview report={makeReport()} />);
 
-    expect(screen.getByText("Soil Assessment Report")).toBeInTheDocument();
-    expect(screen.getByText("Agricultural Guidance")).toBeInTheDocument();
+    expect(screen.getByText("Plant & Crop Report")).toBeInTheDocument();
+    expect(screen.getByText("Performance Report")).toBeInTheDocument();
     expect(screen.getByText(/Layuan Farm/)).toBeInTheDocument();
     expect(screen.getByText(/All records to date/)).toBeInTheDocument();
     // The brand mark, so a printed report is attributable.
     expect(
       screen.getByAltText("Layuan Nature Integrated Farm"),
     ).toHaveAttribute("src", "/layuan.jpg");
-  });
-
-  /**
-   * The bug this suite exists for.
-   *
-   * Detail headings are "<farmer> - <date>", which collides when one farmer
-   * submits twice on the same day. Keyed on the heading, React rendered a
-   * single card and an officer silently lost a record. Keying on the row id
-   * fixes it, and this fails if anyone reverts that.
-   */
-  it("renders both records when one farmer submits twice on the same day", () => {
-    const shared = "Frank Xavier Latonero - 2026-08-27";
-    const report = makeReport({
-      details: [
-        {
-          id: 11,
-          heading: shared,
-          analysed: true,
-          unavailable: "",
-          sections: [{ label: "Suitable Fruits", text: "Banana" }],
-        },
-        {
-          id: 12,
-          heading: shared,
-          analysed: true,
-          unavailable: "",
-          sections: [{ label: "Suitable Fruits", text: "Cacao" }],
-        },
-      ],
-    });
-
-    // Asserting only that two cards appear proves nothing: React renders
-    // duplicate-keyed siblings anyway and merely warns, so that assertion
-    // passes with the bug present. The warning is the actual signal, so the
-    // test fails on it directly.
-    const errors: string[] = [];
-    const spy = vi
-      .spyOn(console, "error")
-      .mockImplementation((...args: unknown[]) => {
-        errors.push(args.map(String).join(" "));
-      });
-
-    render(<ReportPreview report={report} />);
-    spy.mockRestore();
-
-    expect(
-      errors.filter((e) => /same key/i.test(e)),
-      "duplicate React keys - a record can be dropped from the report",
-    ).toHaveLength(0);
-
-    expect(screen.getAllByText(shared)).toHaveLength(2);
-    // Both payloads survive, not just both headings.
-    expect(screen.getByText("Banana")).toBeInTheDocument();
-    expect(screen.getByText("Cacao")).toBeInTheDocument();
-  });
-
-  it("says an AI reading is unavailable rather than inventing one", () => {
-    const report = makeReport({
-      details: [
-        {
-          id: 1,
-          heading: "Angelo Gloriane - 2026-09-09",
-          analysed: false,
-          unavailable: "AI recommendation is temporarily unavailable.",
-          sections: [{ label: "Suitable Fruits", text: "Banana" }],
-        },
-      ],
-    });
-
-    render(<ReportPreview report={report} />);
-
-    expect(
-      screen.getByText("AI recommendation is temporarily unavailable."),
-    ).toBeInTheDocument();
-    // The stored sections must not leak into an unanalysed record.
-    expect(screen.queryByText("Banana")).not.toBeInTheDocument();
   });
 
   it("shows an empty-state line instead of a bare table when nothing matched", () => {

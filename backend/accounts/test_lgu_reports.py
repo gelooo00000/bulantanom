@@ -159,7 +159,8 @@ class ReportPermissionTests(LguReportsTestBase):
         slugs = {r["slug"] for r in response.data["reports"]}
         self.assertIn("agricultural-summary", slugs)
         self.assertIn("risk-assessment", slugs)
-        self.assertEqual(len(slugs), 6)
+        self.assertEqual(len(slugs), 5)
+        self.assertNotIn("soil-assessment", slugs)
 
 
 class ReportDataAccuracyTests(LguReportsTestBase):
@@ -212,31 +213,6 @@ class ReportDataAccuracyTests(LguReportsTestBase):
     def test_missing_evidence_is_reported_not_invented(self):
         _, data = self._stats("risk-assessment", period="all_time")
         self.assertEqual(data["tables"][0]["rows"][0]["evidence"], "No evidence submitted")
-
-    def test_soil_details_are_uniquely_identified(self):
-        """
-        One Farmer can submit two soil assessments on the same day. The detail
-        heading is "<farmer> - <date>", so it collides for those two rows; the
-        payload must carry the primary key for React to key on, or the second
-        card is dropped from the page.
-        """
-        from plants.models import SoilRecommendation
-
-        for _ in range(2):
-            SoilRecommendation.objects.create(
-                farmer=self.farmer,
-                soil_temperature=Decimal("28.0"),
-                soil_moisture=Decimal("65"),
-                soil_conductivity=850,
-            )
-
-        _, data = self._stats("soil-assessment", period="all_time")
-        details = data["details"]
-        self.assertEqual(len(details), 2)
-        # Same heading, different ids - which is exactly the collision.
-        self.assertEqual(details[0]["heading"], details[1]["heading"])
-        self.assertNotEqual(details[0]["id"], details[1]["id"])
-        self.assertEqual(len({d["id"] for d in details}), len(details))
 
     def test_empty_report_state(self):
         """A period with no rows returns zeroes and an empty table, not an error."""
@@ -303,7 +279,6 @@ class ReportPdfTests(LguReportsTestBase):
         for slug in (
             "agricultural-summary",
             "risk-assessment",
-            "soil-assessment",
             "plant-crop",
             "farm-monitoring",
             "farmer-registration",

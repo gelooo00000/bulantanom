@@ -69,7 +69,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     """
 
     first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
+    # Optional: many farmers sign up with a single name. Requiring one here
+    # is what made the sign-up form repeat the first name as the last name.
+    last_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.FARMER)
     account_status = models.CharField(

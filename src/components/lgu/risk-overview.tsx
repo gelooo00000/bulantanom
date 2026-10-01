@@ -4,7 +4,7 @@ import { CircleHelp, Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
 import type { ElementType, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 
-import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
+import { CROP_PAGE_SIZE, HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { FarmersToVisit, type Presence } from "@/components/lgu/farmers-to-visit";
 import { NO_FILTERS, PlantDirectory, type PlantFilters } from "@/components/lgu/plant-directory";
 import { DonutChart } from "@/components/lgu/risk-pie";
@@ -176,7 +176,8 @@ export function PlantRisk({
 
       {/* Below the pie on narrow screens, beside it on wide ones.
 
-          A fixed height that scrolls inside. It used to grow with the list,
+          A fixed height, showing five crops at a time with slide buttons to
+          the rest. It used to grow with the list,
           and "Not assessed" (usually the longest) made the page ~450px
           taller on hover. That added a scrollbar and made the browser adjust
           the page, moving things under the pointer; the list closed, the
@@ -184,7 +185,7 @@ export function PlantRisk({
           never changes size cannot start that loop. */}
       <div
         data-testid="risk-level-crops"
-        className="border-border flex h-64 flex-col border-t pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
+        className="border-border flex h-96 flex-col border-t pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
         aria-live="polite"
       >
         {level ? (
@@ -204,14 +205,15 @@ export function PlantRisk({
               <p className="text-muted-foreground text-xs">No plants at this level.</p>
             ) : (
               <>
-                <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-2">
-                  <HorizontalBars
-                    rows={rows}
-                    unit="plant"
-                    label={`Crops at ${level.label.toLowerCase()}`}
-                    onSelect={(cropId) => onShow(level.key, cropId)}
-                  />
-                </div>
+                {/* Keyed by level, so another level starts on its first crops. */}
+                <HorizontalBars
+                  key={level.key}
+                  rows={rows}
+                  unit="plant"
+                  label={`Crops at ${level.label.toLowerCase()}`}
+                  onSelect={(cropId) => onShow(level.key, cropId)}
+                  pageSize={CROP_PAGE_SIZE}
+                />
                 <button
                   type="button"
                   onClick={() => onShow(level.key, null)}

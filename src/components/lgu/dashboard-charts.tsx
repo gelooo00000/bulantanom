@@ -3,6 +3,7 @@
 import type { ElementType } from "react";
 import { useEffect, useRef, useState } from "react";
 
+import { SlidePager } from "@/components/shared/slide-pager";
 import { formatDisplayDate, formatShortDate } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +30,18 @@ export type BarRow = {
 };
 
 /**
+ * How many crops a crop list shows at a time on the LGU screens. The rest
+ * are a slide away, so a card stays one size however many crops a farm grows.
+ */
+export const CROP_PAGE_SIZE = 5;
+
+/**
  * Horizontal bars sharing one scale, each with its label and value always
  * visible, so the chart doubles as its own table.
+ *
+ * With `pageSize`, a long chart shows that many rows at a time and slides to
+ * the next ones, using the same pager as the Farmer screens. The scale and
+ * the percentages still cover every row, not just the ones showing.
  */
 export function HorizontalBars({
   rows,
@@ -39,6 +50,7 @@ export function HorizontalBars({
   onSelect,
   selectedKey,
   onHoverKey,
+  pageSize,
 }: {
   rows: BarRow[];
   /** Singular noun for the tooltip, e.g. "plant". */
@@ -51,100 +63,132 @@ export function HorizontalBars({
   selectedKey?: string | null;
   /** Called with a row key as the pointer or focus enters it, null as it leaves. */
   onHoverKey?: (key: string | null) => void;
+  /** Show this many rows at a time, with slide navigation to the rest. */
+  pageSize?: number;
 }) {
   const [active, setActive] = useState<string | null>(null);
   const total = rows.reduce((sum, row) => sum + row.value, 0);
   // Never divide by zero; an all-zero chart keeps its labels and empty tracks.
   const max = Math.max(...rows.map((row) => row.value), 1);
 
+  // `as` is the element that carries a plain (non-button) row: the `<li>`
+  // itself in the full list, a `<div>` inside the pager's own `<li>`.
+  const renderRow = (row: BarRow, as: "li" | "div") => {
+    const share = total > 0 ? Math.round((row.value / total) * 100) : 0;
+    const isActive = active === row.key || selectedKey === row.key;
+    const dimmed = (active || selectedKey) && !isActive;
+    const name = `${row.label}: ${row.value} ${plural(unit, row.value)}, ${share}%`;
+    const hover = {
+      onMouseEnter: () => {
+        setActive(row.key);
+        onHoverKey?.(row.key);
+      },
+      onMouseLeave: () => {
+        setActive(null);
+        onHoverKey?.(null);
+      },
+      onFocus: () => {
+        setActive(row.key);
+        onHoverKey?.(row.key);
+      },
+      onBlur: () => {
+        setActive(null);
+        onHoverKey?.(null);
+      },
+    };
+    const content = (
+      <>
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span className="flex min-w-0 items-center gap-1.5">
+            {row.icon && (
+              <row.icon
+                className="size-3.5 shrink-0"
+                style={{ color: row.color }}
+                aria-hidden="true"
+              />
+            )}
+            {row.emoji && (
+              <span aria-hidden="true" className="text-sm">
+                {row.emoji}
+              </span>
+            )}
+            <span className="truncate">{row.label}</span>
+          </span>
+          <span className="shrink-0 font-medium tabular-nums">
+            {row.value}
+            <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+              {share}%
+            </span>
+          </span>
+        </div>
+        {/* Track then bar. A zero stays a zero-width bar, never a sliver. */}
+        <div className="bg-muted mt-1 h-2.5 overflow-hidden rounded-r-[4px]">
+          <div
+            className={cn(
+              "h-full rounded-r-[4px] transition-[width,opacity] duration-300",
+              dimmed && "opacity-60",
+            )}
+            style={{
+              width: `${(row.value / max) * 100}%`,
+              backgroundColor: row.color,
+            }}
+          />
+        </div>
+      </>
+    );
+    const ring =
+      "focus-visible:ring-ring/50 relative rounded-md outline-none focus-visible:ring-3";
+
+    if (onSelect) {
+      const button = (
+        <button
+          type="button"
+          {...hover}
+          onClick={() => onSelect(row.key)}
+          aria-pressed={selectedKey === row.key}
+          aria-label={name}
+          className={cn(ring, "hover:bg-accent/40 -mx-1 block w-[calc(100%+0.5rem)] px-1 py-0.5 text-left")}
+        >
+          {content}
+        </button>
+      );
+      return as === "li" ? <li key={row.key}>{button}</li> : button;
+    }
+    // Keyboard users reach the same detail a pointer gets on hover.
+    const Row = as;
+    return (
+      <Row key={row.key} tabIndex={0} {...hover} className={ring} aria-label={name}>
+        {content}
+      </Row>
+    );
+  };
+
+  if (pageSize && rows.length > pageSize) {
+    return (
+      <SlidePager
+        items={rows}
+        pageSize={pageSize}
+        getKey={(row) => row.key}
+        renderItem={(row) => renderRow(row, "div")}
+        listLabel={label}
+        listClassName="flex flex-col gap-2.5 px-2 py-1"
+        itemClassName=""
+        // The frame clips the slide; this leaves room inside it for a row's
+        // hover background and focus ring.
+        frameClassName="-mx-2 -my-1"
+        // The pointer leaving a row that slid away fires no event, so the
+        // hover is cleared here or the new page would stay dimmed.
+        onPageChange={() => {
+          setActive(null);
+          onHoverKey?.(null);
+        }}
+      />
+    );
+  }
+
   return (
     <ul aria-label={label} className="flex flex-col gap-2.5">
-      {rows.map((row) => {
-        const share = total > 0 ? Math.round((row.value / total) * 100) : 0;
-        const isActive = active === row.key || selectedKey === row.key;
-        const dimmed = (active || selectedKey) && !isActive;
-        const name = `${row.label}: ${row.value} ${plural(unit, row.value)}, ${share}%`;
-        const hover = {
-          onMouseEnter: () => {
-            setActive(row.key);
-            onHoverKey?.(row.key);
-          },
-          onMouseLeave: () => {
-            setActive(null);
-            onHoverKey?.(null);
-          },
-          onFocus: () => {
-            setActive(row.key);
-            onHoverKey?.(row.key);
-          },
-          onBlur: () => {
-            setActive(null);
-            onHoverKey?.(null);
-          },
-        };
-        const content = (
-          <>
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="flex min-w-0 items-center gap-1.5">
-                {row.icon && (
-                  <row.icon
-                    className="size-3.5 shrink-0"
-                    style={{ color: row.color }}
-                    aria-hidden="true"
-                  />
-                )}
-                {row.emoji && (
-                  <span aria-hidden="true" className="text-sm">
-                    {row.emoji}
-                  </span>
-                )}
-                <span className="truncate">{row.label}</span>
-              </span>
-              <span className="shrink-0 font-medium tabular-nums">
-                {row.value}
-                <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                  {share}%
-                </span>
-              </span>
-            </div>
-            {/* Track then bar. A zero stays a zero-width bar, never a sliver. */}
-            <div className="bg-muted mt-1 h-2.5 overflow-hidden rounded-r-[4px]">
-              <div
-                className={cn(
-                  "h-full rounded-r-[4px] transition-[width,opacity] duration-300",
-                  dimmed && "opacity-60",
-                )}
-                style={{
-                  width: `${(row.value / max) * 100}%`,
-                  backgroundColor: row.color,
-                }}
-              />
-            </div>
-          </>
-        );
-        const ring =
-          "focus-visible:ring-ring/50 relative rounded-md outline-none focus-visible:ring-3";
-
-        return onSelect ? (
-          <li key={row.key}>
-            <button
-              type="button"
-              {...hover}
-              onClick={() => onSelect(row.key)}
-              aria-pressed={selectedKey === row.key}
-              aria-label={name}
-              className={cn(ring, "hover:bg-accent/40 -mx-1 block w-[calc(100%+0.5rem)] px-1 py-0.5 text-left")}
-            >
-              {content}
-            </button>
-          </li>
-        ) : (
-          // Keyboard users reach the same detail a pointer gets on hover.
-          <li key={row.key} tabIndex={0} {...hover} className={ring} aria-label={name}>
-            {content}
-          </li>
-        );
-      })}
+      {rows.map((row) => renderRow(row, "li"))}
     </ul>
   );
 }

@@ -4,7 +4,12 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import { ColumnChart, HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
+import {
+  ColumnChart,
+  CROP_PAGE_SIZE,
+  HorizontalBars,
+  type BarRow,
+} from "@/components/lgu/dashboard-charts";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import { Card, CardContent } from "@/components/ui/card";
 import type { LguPlant } from "@/lib/api/lgu-api";
@@ -24,9 +29,11 @@ import {
  * already filtered to the crop.
  */
 
-// Past this many crops the tail folds into one "Other" bar.
-const CROP_ROWS = 6;
 const OUTLOOK_MONTHS = 6;
+
+// Tall enough for a heading, five crop rows and the slide buttons, so the
+// panel is one size whether a type has two crops or twenty.
+const CROP_PANEL_HEIGHT = "h-[21rem]";
 
 // Colour follows the crop type, never its rank, so Fruit is always blue.
 // The pair is validated for colour-blind separation in both themes.
@@ -102,22 +109,13 @@ export function CropsPlanted({
     const byType = new Map<string, BarRow[]>();
     for (const type of typeRows) {
       const crops = cropCounts(plants.filter((p) => p.crop.category_label === type.key));
-      const rows: BarRow[] = crops.slice(0, CROP_ROWS).map((crop) => ({
+      const rows: BarRow[] = crops.map((crop) => ({
         key: crop.id,
         label: crop.name,
         emoji: crop.emoji,
         value: crop.count,
         color: type.color,
       }));
-      const rest = crops.slice(CROP_ROWS);
-      if (rest.length > 0) {
-        rows.push({
-          key: "other",
-          label: `Other (${rest.length} crop${rest.length === 1 ? "" : "s"})`,
-          value: rest.reduce((sum, crop) => sum + crop.count, 0),
-          color: "var(--muted-foreground)",
-        });
-      }
       byType.set(type.key, rows);
     }
     return byType;
@@ -150,10 +148,10 @@ export function CropsPlanted({
         />
       </div>
 
-      {/* Fixed height, scrolling inside: a panel that grew with the list
-          resized the page on hover, which could move the chart under the
-          pointer and set off an open/close loop (see the Risk overview). */}
-      <div className="border-border mt-4 flex h-56 flex-col border-t pt-3" aria-live="polite">
+      {/* Fixed height, five crops at a time: a panel that grew with the
+          list resized the page on hover, which could move the chart under
+          the pointer and set off an open/close loop (see the Risk overview). */}
+      <div className={`border-border mt-4 flex flex-col border-t pt-3 ${CROP_PANEL_HEIGHT}`} aria-live="polite">
         {shownType ? (
           <>
             <p className="mb-2 flex shrink-0 items-baseline justify-between gap-3 text-xs">
@@ -166,16 +164,15 @@ export function CropsPlanted({
                   : "Click the type to keep this open"}
               </span>
             </p>
-            <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-2">
-              <HorizontalBars
-                rows={shownRows}
-                unit="plant"
-                label={`${shownType} crops`}
-                onSelect={(key) => {
-                  if (key !== "other") onPickCrop(key);
-                }}
-              />
-            </div>
+            {/* Keyed by type, so another type starts on its first crops. */}
+            <HorizontalBars
+              key={shownType}
+              rows={shownRows}
+              unit="plant"
+              label={`${shownType} crops`}
+              onSelect={onPickCrop}
+              pageSize={CROP_PAGE_SIZE}
+            />
           </>
         ) : (
           <p className="text-muted-foreground text-xs">
@@ -260,8 +257,8 @@ export function HarvestOutlook({
         selectedIndex={pinnedMonth}
       />
 
-      {/* Fixed height, scrolling inside, for the same reason as Crops planted. */}
-      <div className="border-border mt-4 flex h-56 flex-col border-t pt-3" aria-live="polite">
+      {/* Fixed height, five crops at a time, for the same reason as Crops planted. */}
+      <div className={`border-border mt-4 flex flex-col border-t pt-3 ${CROP_PANEL_HEIGHT}`} aria-live="polite">
         {shown ? (
           <>
             <p className="mb-2 flex shrink-0 items-baseline justify-between gap-3 text-xs">
@@ -278,14 +275,14 @@ export function HarvestOutlook({
             {shown.count === 0 ? (
               <p className="text-muted-foreground text-xs">Nothing is due for harvest this month.</p>
             ) : (
-              <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-2">
-                <HorizontalBars
-                  rows={outlook.cropRows[shownMonth!]}
-                  unit="plant"
-                  label={`Crops due in ${monthName(shown.month, "long")}`}
-                  onSelect={onPickCrop}
-                />
-              </div>
+              <HorizontalBars
+                key={shownMonth}
+                rows={outlook.cropRows[shownMonth!]}
+                unit="plant"
+                label={`Crops due in ${monthName(shown.month, "long")}`}
+                onSelect={onPickCrop}
+                pageSize={CROP_PAGE_SIZE}
+              />
             )}
           </>
         ) : (

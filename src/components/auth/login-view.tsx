@@ -13,25 +13,27 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth } from "@/lib/auth/auth-context";
+import { cn } from "@/lib/utils";
 
 type SelectableRole = "farmer" | "lgu" | "admin";
 
 /**
- * Only Farmer and LGU get a full card. Admin is reachable from the discreet
- * link beneath them (and still from /login?role=admin), deliberately kept as
- * a tertiary control: there is no public Admin or LGU registration anywhere
- * in the product, so promoting it would misrepresent who the page is for.
+ * The form opens straight away, signing in as a Farmer unless the link says
+ * otherwise; Farmer and LGU share it through the switch at the top. Admin is
+ * not on that switch: its entry point is the Admin button on the landing
+ * page, which opens /login?role=admin directly. There is no public Admin or
+ * LGU registration anywhere in the product, so promoting Admin here would
+ * misrepresent who the page is for.
  *
- * The link is an entry point, not an authorization step — the backend still
- * rejects a non-Admin at /api/auth/admin/login/.
+ * The role is an entry point, not an authorization step — each role signs in
+ * at its own endpoint and the backend rejects an account of another role.
  */
 const PUBLIC_ROLES: SelectableRole[] = ["farmer", "lgu"];
 
 const ROLE_CARDS: {
   role: SelectableRole;
+  /** Short name, as shown on the role switch. */
   title: string;
-  description: string;
-  cta: string;
   icon: ElementType;
   loginHeading: string;
   loginSupporting: string;
@@ -40,9 +42,6 @@ const ROLE_CARDS: {
   {
     role: "farmer",
     title: "Farmer",
-    description:
-      "Manage crops, plant assessments, risk indicators, crop recommendations, and harvest information.",
-    cta: "Continue as Farmer",
     icon: Sprout,
     loginHeading: "Welcome back, Farmer.",
     loginSupporting:
@@ -51,10 +50,7 @@ const ROLE_CARDS: {
   },
   {
     role: "lgu",
-    title: "LGU Agricultural Officer",
-    description:
-      "Monitor farmer activity, plant health, risk assessments, and agricultural activity at Layuan Farm.",
-    cta: "Continue as Officer",
+    title: "LGU Officer",
     icon: Shield,
     loginHeading: "Welcome back, LGU Officer.",
     loginSupporting:
@@ -64,8 +60,6 @@ const ROLE_CARDS: {
   {
     role: "admin",
     title: "Administrator",
-    description: "System maintenance and account management.",
-    cta: "Continue as Administrator",
     icon: ShieldCheck,
     loginHeading: "Administrator sign in.",
     loginSupporting:
@@ -80,10 +74,8 @@ export function LoginView() {
   const { currentUser, login } = useAuth();
 
   const initialRole = searchParams.get("role");
-  const [selectedRole, setSelectedRole] = useState<SelectableRole | null>(
-    initialRole === "farmer" || initialRole === "lgu" || initialRole === "admin"
-      ? initialRole
-      : null,
+  const [selectedRole, setSelectedRole] = useState<SelectableRole>(
+    initialRole === "lgu" || initialRole === "admin" ? initialRole : "farmer",
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -99,7 +91,6 @@ export function LoginView() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!selectedRole) return;
 
     setSubmitting(true);
     setError(null);
@@ -112,67 +103,6 @@ export function LoginView() {
     }
   }
 
-  if (!selectedRole) {
-    return (
-      <AuthSplitLayout>
-        <FadeIn duration={500}>
-          <div className="flex flex-col gap-6">
-            <div className="text-center">
-              <h1 className="text-2xl font-medium tracking-tight text-foreground">
-                Welcome to BulanTanom
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Choose how you access the agricultural intelligence platform.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {ROLE_CARDS.filter((card) => PUBLIC_ROLES.includes(card.role)).map(({ role, title, description, cta, icon: Icon }) => (
-                <div
-                  key={role}
-                  className="liquid-glass flex flex-col items-start gap-3 rounded-2xl p-5"
-                >
-                  <span
-                    className="flex size-10 shrink-0 items-center justify-center rounded-lg border"
-                    style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
-                  >
-                    <Icon className="size-5" />
-                  </span>
-                  <div>
-                    <p className="font-medium text-foreground">{title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-                  </div>
-                  <Button
-                    className="mt-1"
-                    onClick={() => setSelectedRole(role)}
-                  >
-                    {cta}
-                    <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => setSelectedRole("admin")}
-                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
-              >
-                <ShieldCheck className="size-3.5 shrink-0" />
-                Admin Login
-              </button>
-            </div>
-
-            <p className="text-center text-xs text-muted-foreground/70">
-              Secure access. Protected data. BulanTanom is built for Layuan Farm.
-            </p>
-          </div>
-        </FadeIn>
-      </AuthSplitLayout>
-    );
-  }
-
   const roleCard = ROLE_CARDS.find((r) => r.role === selectedRole);
   if (!roleCard) return null;
 
@@ -181,29 +111,60 @@ export function LoginView() {
       <FadeIn duration={500}>
         <AuthCard>
           <div>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedRole(null);
-                setError(null);
-              }}
-              className="text-sm transition-colors hover:text-foreground"
+            <Link
+              href="/"
+              className="-my-2 inline-block py-2 text-sm transition-colors hover:text-foreground"
               style={{ color: "var(--landing-accent)" }}
             >
-              ← Back to role selection
-            </button>
-            <div className="mt-3 flex items-center gap-2.5">
+              ← Back to home
+            </Link>
+
+            {PUBLIC_ROLES.includes(selectedRole) && (
+              <div
+                role="group"
+                aria-label="Sign in as"
+                className="mt-3 grid grid-cols-2 gap-1 rounded-xl sm:mt-4 border border-[var(--glass-divider)] bg-[var(--glass-tile)] p-1"
+              >
+                {ROLE_CARDS.filter((card) => PUBLIC_ROLES.includes(card.role)).map(
+                  ({ role, title, icon: Icon }) => {
+                    const active = role === selectedRole;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => {
+                          setSelectedRole(role);
+                          setError(null);
+                        }}
+                        className={cn(
+                          "focus-visible:ring-ring/50 flex h-9 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors outline-none focus-visible:ring-3",
+                          active
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Icon className="size-4" />
+                        {title}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center gap-2.5 sm:mt-5">
               <span
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg border"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
                 style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
               >
                 <roleCard.icon className="size-4" />
               </span>
-              <h1 className="text-2xl font-medium tracking-tight text-foreground">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 {roleCard.loginHeading}
               </h1>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">{roleCard.loginSupporting}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground sm:mt-2">{roleCard.loginSupporting}</p>
           </div>
 
           {justSignedUp && selectedRole === "farmer" && (

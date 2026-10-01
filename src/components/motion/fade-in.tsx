@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion, MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
 
 type FadeInProps = {
@@ -18,24 +18,24 @@ export function FadeIn({
   y = 12,
   className,
 }: FadeInProps) {
-  const reduceMotion = useReducedMotion();
-
-  if (reduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
-
+  // `reducedMotion="user"` drops the movement for people who ask for less
+  // motion and keeps the fade. The markup is the same either way: branching
+  // on the preference instead renders differently on the server and in the
+  // browser, which left the content stuck invisible for those users.
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        delay: delay / 1000,
-        duration: duration / 1000,
-        ease: "easeOut",
-      }}
-    >
-      {children}
-    </motion.div>
+    <MotionConfig reducedMotion="user">
+      <motion.div
+        className={className}
+        initial={{ opacity: 0, y }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          delay: delay / 1000,
+          duration: duration / 1000,
+          ease: "easeOut",
+        }}
+      >
+        {children}
+      </motion.div>
+    </MotionConfig>
   );
 }

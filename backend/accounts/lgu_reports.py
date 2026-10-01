@@ -138,17 +138,6 @@ def _approved_farmers():
     return User.objects.filter(**APPROVED_FARMER)
 
 
-def _soil_value(value) -> str:
-    """
-    A sensor reading for a report cell.
-
-    Bare number, no unit: the unit is in the column header, and repeating it
-    in every cell makes a wide table harder to scan down. Pre-detector rows
-    have no readings, and say so rather than showing a blank.
-    """
-    return "Not recorded" if value is None else f"{value}"
-
-
 def _display_name(user) -> str:
     return user.get_full_name() or user.email
 
@@ -439,114 +428,6 @@ def _build_monitoring(period: Period, filters: dict) -> dict:
     }
 
 
-def _crop_names(items) -> str:
-    names = [i.get("name", "") for i in items if isinstance(i, dict)]
-    return ", ".join(n for n in names if n)
-
-
-def _advice_lines(items) -> str:
-    out = []
-    for i in items:
-        if isinstance(i, dict):
-            text = i.get("recommendation", "")
-        else:
-            text = str(i)
-        if text:
-            out.append(text)
-    return " | ".join(out)
-
-
-def _build_soil(period: Period, filters: dict) -> dict:
-    from plants.models import SoilRecommendation
-
-    queryset = SoilRecommendation.objects.filter(
-        farmer__account_status=AccountStatus.APPROVED
-    ).select_related("farmer")
-    queryset = _apply_period(queryset, "created_at__date", period)
-    if filters.get("farmer_id"):
-        queryset = queryset.filter(farmer_id=filters["farmer_id"])
-
-    rows = []
-    details = []
-    for r in queryset.order_by("-created_at")[:500]:
-        rows.append(
-            {
-                "farmer": _display_name(r.farmer),
-                "date": r.created_at.date().isoformat(),
-                "temperature": _soil_value(r.soil_temperature),
-                "moisture": _soil_value(r.soil_moisture),
-                "conductivity": _soil_value(r.soil_conductivity),
-                "ph": _soil_value(r.soil_ph),
-                "n": _soil_value(r.nitrogen),
-                "p": _soil_value(r.phosphorus),
-                "k": _soil_value(r.potassium),
-                "fertility": _soil_value(r.soil_fertility),
-                "notes": r.notes.strip() or "No notes",
-            }
-        )
-        # The six result categories the Farmer-facing screen already uses,
-        # kept in the same order so both surfaces read alike.
-        details.append(
-            {
-                # The row's own primary key. The heading is not unique - one
-                # Farmer can submit two soil assessments on the same day, and
-                # using it as a React key collapsed them into one card.
-                "id": r.pk,
-                "heading": f"{_display_name(r.farmer)} - {r.created_at.date().isoformat()}",
-                "analysed": r.ai_generated,
-                "unavailable": ""
-                if r.ai_generated
-                else (r.failure_reason or "AI recommendation not available"),
-                "sections": [
-                    {"label": "Suitable Fruits", "text": _crop_names(r.suitable_fruits)},
-                    {"label": "Suitable Vegetables", "text": _crop_names(r.suitable_vegetables)},
-                    {"label": "Suitable Crops", "text": _crop_names(r.suitable_crops)},
-                    {"label": "Fertilizer Recommendations", "text": _advice_lines(r.fertilizer_recommendations)},
-                    {
-                        "label": "Soil Improvement & Watering Considerations",
-                        "text": _advice_lines(r.soil_improvement_watering),
-                    },
-                    {"label": "Important Warnings", "text": _advice_lines(r.important_warnings)},
-                ],
-            }
-        )
-
-    totals = queryset.aggregate(
-        total=Count("id"), analysed=Count("id", filter=Q(ai_generated=True))
-    )
-
-    return {
-        "stats": [
-            {"label": "Soil Assessments", "value": totals["total"]},
-            {"label": "AI Analyzed", "value": totals["analysed"], "tone": "low"},
-            {
-                "label": "Not Analyzed",
-                "value": totals["total"] - totals["analysed"],
-                "tone": "medium",
-            },
-        ],
-        "tables": [
-            {
-                "title": "Soil Assessments",
-                # Units are in the headers, so each cell stays a bare
-                # number and the columns line up when read down.
-                "columns": [
-                    "Farmer", "Date", "Temp (°C)", "Moisture (%)",
-                    "Conductivity (µS/cm)", "pH", "N (mg/kg)",
-                    "P (mg/kg)", "K (mg/kg)", "Fertility (mg/kg)", "Notes",
-                ],
-                "keys": [
-                    "farmer", "date", "temperature", "moisture",
-                    "conductivity", "ph", "n", "p", "k", "fertility", "notes",
-                ],
-                "rows": rows,
-                "wide": True,
-            }
-        ],
-        "details": details,
-    }
-
-
 def _build_summary(period: Period, filters: dict) -> dict:
     from plants.models import Assessment, Plant, PlantStatus, SoilRecommendation
 
@@ -658,14 +539,6 @@ REPORTS = {
         "builder": _build_risk,
         "supports": ["period", "farmer", "crop", "risk_level"],
     },
-    "soil-assessment": {
-        "title": "Soil Assessment Report",
-        "category": "Agricultural Guidance",
-        "description": "Soil properties reported by farmers with the stored AI crop and fertilizer recommendations.",
-        "icon": "flask",
-        "builder": _build_soil,
-        "supports": ["period", "farmer"],
-    },
     "plant-crop": {
         "title": "Plant & Crop Report",
         "category": "Performance Report",
@@ -698,7 +571,7 @@ def _latest_activity(slug: str):
     The most recent record the report covers, so the catalog can show a real
     "updated" date instead of the time the page happened to be opened.
     """
-    from plants.models import Assessment, Plant, SoilRecommendation
+    from plants.models import Assessment, Plant
 
     if slug == "farmer-registration":
         row = _approved_farmers().order_by("-date_joined").values_list("date_joined", flat=True).first()
@@ -710,14 +583,6 @@ def _latest_activity(slug: str):
             .values_list("planting_date", flat=True)
             .first()
         )
-    if slug == "soil-assessment":
-        row = (
-            SoilRecommendation.objects.filter(farmer__account_status=AccountStatus.APPROVED)
-            .order_by("-created_at")
-            .values_list("created_at", flat=True)
-            .first()
-        )
-        return row.date() if row else None
     # risk, monitoring and the summary all track the assessment table.
     return (
         Assessment.objects.filter(plant__farmer__account_status=AccountStatus.APPROVED)
@@ -773,7 +638,6 @@ def build(slug: str, period: Period, filters: dict) -> dict:
         "generated_at": timezone.now().isoformat(),
         "stats": payload.get("stats", []),
         "tables": payload.get("tables", []),
-        "details": payload.get("details", []),
     }
 
 

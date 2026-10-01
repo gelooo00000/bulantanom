@@ -92,6 +92,17 @@ class FarmerSignupTests(APITestCase):
         )
         self.assertEqual(again.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_signup_accepts_a_single_name(self):
+        """A farmer who gives one name gets one name, not the same one twice."""
+        response = self.client.post(
+            SIGNUP_URL,
+            {**VALID_SIGNUP, "first_name": "Nonong", "last_name": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["user"]["full_name"], "Nonong")
+        self.assertEqual(User.objects.get(email="juan@example.com").last_name, "")
+
     def test_signup_never_returns_password_or_hash(self):
         response = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
         body = response.content.decode()

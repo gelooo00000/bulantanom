@@ -22,7 +22,6 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
-    PageBreak,
     Paragraph,
     Spacer,
     Table,
@@ -221,22 +220,6 @@ def render(report: dict) -> bytes:
     for spec in report.get("tables", []):
         story.append(Paragraph(spec["title"], styles["h2"]))
         story += _table(spec, styles, doc.width)
-
-    details = report.get("details", [])
-    if details:
-        story.append(PageBreak())
-        story.append(Paragraph("Crop Recommendation Details", styles["h2"]))
-        for d in details:
-            story.append(Paragraph(d["heading"], styles["h3"]))
-            if not d["analysed"]:
-                story.append(Paragraph(d["unavailable"], styles["muted"]))
-            else:
-                for section in d["sections"]:
-                    text = section["text"] or "None recorded"
-                    story.append(
-                        Paragraph(f"<b>{section['label']}:</b> {text}", styles["body"])
-                    )
-            story.append(Spacer(1, 6))
 
     if not stats and not report.get("tables"):
         story.append(Paragraph("No data available for this period.", styles["muted"]))

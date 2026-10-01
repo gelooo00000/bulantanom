@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, FileText, FlaskConical, LayoutDashboard, MapPin, Radar, Sprout, TriangleAlert, Users, Wheat } from "lucide-react";
+import { ClipboardList, FileText, LayoutDashboard, MapPin, Radar, Sprout, TriangleAlert, Users, Wheat } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { RoleShell, type NavItem } from "@/components/shared/role-shell";
@@ -13,7 +13,6 @@ const LGU_NAV_ITEMS: NavItem[] = [
   { label: "High-Risk Cases", href: "/lgu/high-risk", icon: TriangleAlert },
   { label: "Assessment History", href: "/lgu/assessments", icon: ClipboardList },
   { label: "Harvest & Monitoring", href: "/lgu/harvest", icon: Wheat },
-  { label: "Crop Recommendations", href: "/lgu/soil-recommendations", icon: FlaskConical },
   { label: "Detailed Reports", href: "/lgu/reports", icon: FileText },
   { label: "Layuan Farm", href: "/lgu/farm", icon: MapPin },
 ];

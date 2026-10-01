@@ -2,17 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  FlaskConical,
-  Lock,
-  LoaderCircle,
-  Mail,
-  Radar,
-  Sprout,
-  User,
-} from "lucide-react";
-import { useEffect, useState, type ElementType, type FormEvent } from "react";
+import { ArrowRight, Lock, LoaderCircle, Mail, Sprout, User } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
@@ -22,24 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth } from "@/lib/auth/auth-context";
-
-const FEATURES: { icon: ElementType; title: string; description: string }[] = [
-  {
-    icon: Sprout,
-    title: "Plant Monitoring",
-    description: "Track crop growth and plant conditions.",
-  },
-  {
-    icon: FlaskConical,
-    title: "Soil Intelligence",
-    description: "Record soil properties and receive plant recommendations.",
-  },
-  {
-    icon: Radar,
-    title: "Risk Monitoring",
-    description: "Understand low, medium, and high plant risk conditions.",
-  },
-];
 
 export function SignupView() {
   const router = useRouter();
@@ -92,16 +65,16 @@ export function SignupView() {
           <div>
             <div className="flex items-center gap-2.5">
               <span
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg border"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
                 style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
               >
                 <Sprout className="size-4" />
               </span>
-              <h1 className="text-2xl font-medium tracking-tight text-foreground">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 Create your Farmer account.
               </h1>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-1.5 text-sm text-muted-foreground sm:mt-2">
               Manage your plants, assessments, risk monitoring, crop recommendations, and
               harvest tracking — all in one place for Layuan Farm.
             </p>
@@ -182,16 +155,6 @@ export function SignupView() {
               Sign in
             </Link>
           </p>
-
-          <div className="grid grid-cols-1 gap-4 border-border border-t pt-4 sm:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, description }) => (
-              <div key={title}>
-                <Icon className="size-4" style={{ color: "var(--landing-accent)" }} />
-                <p className="mt-1.5 text-xs font-medium text-foreground">{title}</p>
-                <p className="text-[11px] text-muted-foreground">{description}</p>
-              </div>
-            ))}
-          </div>
         </AuthCard>
       </FadeIn>
     </AuthSplitLayout>

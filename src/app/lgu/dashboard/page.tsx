@@ -11,7 +11,12 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
-import { HorizontalBars, WeeklyColumns, type BarRow } from "@/components/lgu/dashboard-charts";
+import {
+  CROP_PAGE_SIZE,
+  HorizontalBars,
+  WeeklyColumns,
+  type BarRow,
+} from "@/components/lgu/dashboard-charts";
 import { LguError, LguLoading, NotAvailableNotice } from "@/components/lgu/lgu-states";
 import { RiskPie } from "@/components/lgu/risk-pie";
 import { PageHeader } from "@/components/shared/page-header";
@@ -31,10 +36,6 @@ import { useAuth } from "@/lib/auth/auth-context";
  *
  * Every figure is read from MySQL by `/api/lgu/dashboard/`.
  */
-
-// Past this many crops the tail folds into one "Other" bar, so the chart
-// stays scannable instead of growing a row per rarely-planted crop.
-const CROP_ROWS = 6;
 
 export default function LguDashboardPage() {
   const { currentUser } = useAuth();
@@ -59,22 +60,15 @@ export default function LguDashboardPage() {
     : [];
 
   const crops = data.crops ?? [];
-  const cropRows: BarRow[] = crops.slice(0, CROP_ROWS).map((crop) => ({
+  // Every crop, five at a time: the chart slides to the rest rather than
+  // folding them into an "Other" bar that names none of them.
+  const cropRows: BarRow[] = crops.map((crop) => ({
     key: crop.name,
     label: crop.name,
     emoji: crop.emoji,
     value: crop.count,
     color: "var(--primary)",
   }));
-  const otherCrops = crops.slice(CROP_ROWS);
-  if (otherCrops.length > 0) {
-    cropRows.push({
-      key: "other",
-      label: `Other (${otherCrops.length} crop${otherCrops.length === 1 ? "" : "s"})`,
-      value: otherCrops.reduce((sum, crop) => sum + crop.count, 0),
-      color: "var(--muted-foreground)",
-    });
-  }
 
   // Pending is the only account state that needs someone to act.
   const farmerRows: BarRow[] = [
@@ -160,7 +154,12 @@ export default function LguDashboardPage() {
           linkLabel="All plants"
         >
           {cropRows.length > 0 ? (
-            <HorizontalBars rows={cropRows} unit="plant" label="Plants per crop" />
+            <HorizontalBars
+              rows={cropRows}
+              unit="plant"
+              label="Plants per crop"
+              pageSize={CROP_PAGE_SIZE}
+            />
           ) : (
             <p className="text-muted-foreground text-sm">No plants recorded yet.</p>
           )}

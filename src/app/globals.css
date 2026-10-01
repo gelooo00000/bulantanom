@@ -63,15 +63,18 @@
  * agricultural product rather than a generic white admin dashboard. Cards sit
  * a shade *above* the page background (near-white on a tinted canvas), which
  * is the light-mode equivalent of dark mode's raised cards.
+ *
+ * Nothing here is pure white: the canvas and cards are held a step below it
+ * (lightness 0.955 / 0.98) so a full screen of Light Mode is not glaring.
  */
 :root {
   color-scheme: light;
 
-  --background: oklch(0.985 0.006 150);
+  --background: oklch(0.955 0.012 150);
   --foreground: oklch(0.22 0.03 155);
-  --card: oklch(1 0.002 150);
+  --card: oklch(0.98 0.007 150);
   --card-foreground: oklch(0.22 0.03 155);
-  --popover: oklch(1 0.002 150);
+  --popover: oklch(0.98 0.007 150);
   --popover-foreground: oklch(0.22 0.03 155);
   --primary: oklch(0.46 0.14 152);
   --primary-foreground: oklch(0.99 0.005 150);
@@ -82,15 +85,15 @@
   --risk-medium: oklch(0.63 0.14 72);
   --risk-high: oklch(0.55 0.19 30);
   --risk-foreground: oklch(0.99 0.005 150);
-  --secondary: oklch(0.955 0.01 150);
+  --secondary: oklch(0.925 0.014 150);
   --secondary-foreground: oklch(0.26 0.03 155);
-  --muted: oklch(0.955 0.01 150);
-  --muted-foreground: oklch(0.48 0.02 150);
-  --accent: oklch(0.94 0.015 150);
+  --muted: oklch(0.925 0.014 150);
+  --muted-foreground: oklch(0.45 0.02 150);
+  --accent: oklch(0.91 0.018 150);
   --accent-foreground: oklch(0.26 0.03 155);
   --destructive: oklch(0.55 0.2 27);
-  --border: oklch(0.89 0.012 150);
-  --input: oklch(0.89 0.012 150);
+  --border: oklch(0.86 0.015 150);
+  --input: oklch(0.86 0.015 150);
   --ring: oklch(0.62 0.08 150);
   --chart-1: oklch(0.46 0.14 152);
   --chart-2: oklch(0.58 0.12 150);
@@ -102,13 +105,13 @@
   --chart-series-1: #2a78d6;
   --chart-series-2: oklch(0.46 0.14 152);
   --radius: 0.625rem;
-  --sidebar: oklch(0.97 0.01 150);
+  --sidebar: oklch(0.94 0.014 150);
   --sidebar-foreground: oklch(0.22 0.03 155);
   --sidebar-primary: oklch(0.46 0.14 152);
   --sidebar-primary-foreground: oklch(0.99 0.005 150);
-  --sidebar-accent: oklch(0.93 0.018 150);
+  --sidebar-accent: oklch(0.9 0.02 150);
   --sidebar-accent-foreground: oklch(0.26 0.03 155);
-  --sidebar-border: oklch(0.89 0.012 150);
+  --sidebar-border: oklch(0.86 0.015 150);
   --sidebar-ring: oklch(0.62 0.08 150);
   /* Fallback so the primary Button gradient (which reads --landing-accent)
      still renders correctly outside a `.landing-*` ancestor. */
@@ -193,13 +196,14 @@
   --btn-glow-ring-hover: oklch(0.8 0.19 130 / 0.3);
   --btn-glow-shadow-hover: oklch(0.8 0.19 130 / 0.65);
 
-  /* Hero photo scrims. Heavy here so white headline text clears the image. */
-  --hero-scrim-strong: oklch(0.08 0.02 155 / 0.82);
-  --hero-scrim-mid: oklch(0.08 0.02 155 / 0.55);
-  --hero-scrim-soft: oklch(0.08 0.02 155 / 0.15);
-  --hero-scrim-faint: oklch(0.08 0.02 155 / 0.05);
-  --hero-scrim-top: oklch(0.08 0.02 155 / 0.5);
-  --hero-scrim-bottom: oklch(0.08 0.02 155 / 0.45);
+  /* Hero photo scrims. The photograph is already dark on the left where the
+     text sits, so these only deepen it; Dark Mode is the heavier of the two. */
+  --hero-scrim-strong: oklch(0.08 0.02 155 / 0.62);
+  --hero-scrim-mid: oklch(0.08 0.02 155 / 0.4);
+  --hero-scrim-soft: oklch(0.08 0.02 155 / 0.12);
+  --hero-scrim-faint: oklch(0.08 0.02 155 / 0);
+  --hero-scrim-top: oklch(0.08 0.02 155 / 0.45);
+  --hero-scrim-bottom: oklch(0.08 0.02 155 / 0.6);
 
   /* Glass panels floating over the photo, and the text that sits on them.
      Smoked glass with white text in Dark Mode. */
@@ -213,6 +217,9 @@
   --glass-fg-faint: oklch(1 0 0 / 0.45);
   --glass-divider: oklch(1 0 0 / 0.1);
   --glass-tile: oklch(1 0 0 / 0.05);
+  /* The sign-in panel: darker than the other glass, because it carries a
+     whole form over the brightest part of the photograph. */
+  --auth-panel-bg: oklch(0.1 0.02 155 / 0.76);
 }
 
 /*
@@ -226,8 +233,8 @@
  * property of the photograph, not of the theme).
  */
 .landing-light {
-  --landing-bg: oklch(0.975 0.008 150);
-  --landing-surface: oklch(1 0.002 150 / 0.75);
+  --landing-bg: oklch(0.95 0.012 150);
+  --landing-surface: oklch(0.985 0.006 150 / 0.75);
   --landing-border: oklch(0.4 0.03 150 / 0.14);
   --landing-accent: oklch(0.58 0.16 138);
   --btn-glow-ring: oklch(0.55 0.16 140 / 0.18);
@@ -235,21 +242,19 @@
   --btn-glow-ring-hover: oklch(0.55 0.16 140 / 0.35);
   --btn-glow-shadow-hover: oklch(0.55 0.16 140 / 0.42);
 
-  /* Lighter than Dark Mode: the frosted panels below supply the contrast
-     their text needs, so the scrim only has to keep the photo from
-     overwhelming the composition. */
-  --hero-scrim-strong: oklch(0.25 0.03 155 / 0.3);
-  --hero-scrim-mid: oklch(0.25 0.03 155 / 0.16);
-  --hero-scrim-soft: oklch(0.2 0.03 155 / 0.08);
-  --hero-scrim-faint: oklch(0.2 0.03 155 / 0.02);
-  --hero-scrim-top: oklch(0.16 0.03 155 / 0.28);
-  /* Fades the photo into the light canvas below instead of a dark band. */
-  --hero-scrim-bottom: oklch(0.975 0.008 150 / 0.85);
+  /* Lighter than Dark Mode, so the photo reads brighter, but still dark: the
+     white hero text sits straight on the photograph in both themes. */
+  --hero-scrim-strong: oklch(0.2 0.03 155 / 0.44);
+  --hero-scrim-mid: oklch(0.2 0.03 155 / 0.28);
+  --hero-scrim-soft: oklch(0.2 0.03 155 / 0.12);
+  --hero-scrim-faint: oklch(0.2 0.03 155 / 0.06);
+  --hero-scrim-top: oklch(0.16 0.03 155 / 0.34);
+  --hero-scrim-bottom: oklch(0.16 0.03 155 / 0.45);
 
   /* Frosted white glass with dark text — the light-mode counterpart of the
      smoked panel, opaque enough that body copy stays readable over a bright
      sunrise photograph. */
-  --glass-bg: rgba(255, 255, 255, 0.74);
+  --glass-bg: oklch(0.95 0.012 150 / 0.78);
   --glass-inset: rgba(255, 255, 255, 0.9);
   --glass-edge-strong: rgba(255, 255, 255, 0.85);
   --glass-edge-soft: rgba(255, 255, 255, 0.4);
@@ -258,7 +263,8 @@
   --glass-fg-subtle: oklch(0.42 0.025 152);
   --glass-fg-faint: oklch(0.52 0.02 150);
   --glass-divider: oklch(0.3 0.03 150 / 0.16);
-  --glass-tile: oklch(1 0 0 / 0.55);
+  --glass-tile: oklch(0.985 0.006 150 / 0.5);
+  --auth-panel-bg: oklch(0.935 0.014 150 / 0.9);
 }
 
 /* Browser autofill (saved credentials) forces its own background; keep it on
@@ -276,7 +282,7 @@
 .landing-light input:-webkit-autofill:hover,
 .landing-light input:-webkit-autofill:focus {
   -webkit-text-fill-color: oklch(0.22 0.03 155);
-  -webkit-box-shadow: 0 0 0px 1000px oklch(0.99 0.004 150) inset;
+  -webkit-box-shadow: 0 0 0px 1000px oklch(0.97 0.008 150) inset;
   caret-color: oklch(0.22 0.03 155);
   transition: background-color 9999s ease-in-out 0s;
 }
@@ -329,6 +335,19 @@
   mask-composite: exclude;
   pointer-events: none;
 }
+
+/* The sign-in / sign-up panel (see auth-card.tsx). Same glass edge as above,
+   but more opaque and far more blurred so a form stays readable wherever it
+   lands on the photograph. */
+.liquid-glass.auth-panel {
+  background: var(--auth-panel-bg, rgba(0, 0, 0, 0.66));
+  backdrop-filter: blur(22px) saturate(1.3);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow:
+    inset 0 1px 1px var(--glass-inset, rgba(255, 255, 255, 0.1)),
+    0 30px 80px -30px rgba(0, 0, 0, 0.65);
+}
+
 /* --------------------------------------------------------------------------
    Print / PDF-via-browser styling for LGU Detailed Reports.
 
@@ -444,4 +463,43 @@
   .report-sheet h3 {
     page-break-after: avoid;
   }
+}
+
+/* Landing page: the scrolling crop ribbon (see crop-marquee.tsx). The track
+   holds two identical rows, so sliding it by half loops without a seam. */
+@keyframes crop-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.crop-marquee-track {
+  animation: crop-marquee 45s linear infinite;
+}
+
+.crop-marquee:hover .crop-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crop-marquee-track {
+    animation: none;
+  }
+}
+
+/* The farm map (see farm-map.tsx). MapLibre draws its own controls on white
+   in both themes, but their plain text inherits the page colour — white, in
+   Dark Mode — so it is pinned dark here. */
+.farm-map .maplibregl-ctrl-attrib,
+.farm-map .maplibregl-ctrl-scale,
+.farm-map .maplibregl-cooperative-gesture-screen {
+  font-family: inherit;
+}
+
+.farm-map .maplibregl-ctrl-attrib,
+.farm-map .maplibregl-ctrl-scale {
+  color: #333;
 }

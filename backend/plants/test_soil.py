@@ -24,9 +24,7 @@ from .models import Crop, SoilRecommendation
 LIST_URL = "/api/farmer/soil-recommendations/"
 SAVE_ONLY_URL = "/api/farmer/soil-recommendations/?analyze=0"
 LATEST_URL = "/api/farmer/soil-recommendations/latest/"
-LGU_URL = "/api/lgu/soil-recommendations/"
 FARMER_LOGIN_URL = "/api/auth/farmer/login/"
-LGU_LOGIN_URL = "/api/auth/lgu/login/"
 PW = "SecurePassword123!"
 
 # The six sections the Farmer UI renders — and nothing else.
@@ -384,46 +382,6 @@ class SoilOwnershipTests(SoilTestCase):
     def test_latest_is_scoped_to_the_caller(self):
         response = self.client.get(LATEST_URL, **self.auth("other@example.com"))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-    def test_farmer_cannot_use_the_lgu_endpoint(self):
-        response = self.client.get(LGU_URL, **self.auth("farmer@example.com"))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-
-class SoilLguAccessTests(SoilTestCase):
-    """Officers monitor approved Farmers' soil records; Farmers cannot."""
-
-    def setUp(self):
-        super().setUp()
-        SoilRecommendation.objects.create(
-            farmer=self.farmer, soil_ph=Decimal("7.2"), soil_temperature=Decimal("29.0"),
-            ai_generated=True
-        )
-
-    def test_officer_sees_records_with_the_farmer_identified(self):
-        response = self.client.get(
-            LGU_URL, **self.auth("officer@example.com", LGU_LOGIN_URL)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["farmer_email"], "farmer@example.com")
-        self.assertEqual(str(response.data[0]["soil_ph"]), "7.20")
-
-    def test_officer_does_not_see_unapproved_farmers(self):
-        self.farmer.account_status = AccountStatus.SUSPENDED
-        self.farmer.save(update_fields=["account_status"])
-        response = self.client.get(
-            LGU_URL, **self.auth("officer@example.com", LGU_LOGIN_URL)
-        )
-        self.assertEqual(response.data, [])
-
-    def test_officer_view_is_read_only(self):
-        response = self.client.post(
-            LGU_URL, VALID_SOIL, format="json",
-            **self.auth("officer@example.com", LGU_LOGIN_URL),
-        )
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-
 
 class _FakeGeminiError(Exception):
     """Stands in for google.genai's ServerError, which carries `.code`."""

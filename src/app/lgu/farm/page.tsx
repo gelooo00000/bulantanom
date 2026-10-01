@@ -2,6 +2,7 @@
 
 import { Leaf, Sprout, Users } from "lucide-react";
 
+import { FarmMap } from "@/components/lgu/farm-map";
 import { LguError, LguLoading, NotAvailableNotice } from "@/components/lgu/lgu-states";
 import { IconStatCard } from "@/components/shared/icon-stat-card";
 import { PageHeader } from "@/components/shared/page-header";
@@ -38,6 +39,22 @@ export default function LguFarmOverviewPage() {
         <IconStatCard icon={Users} label="Active Farmers" value={data.farmers.active} />
         <IconStatCard icon={Sprout} label="Total registrations" value={data.farmers.total} />
       </div>
+
+      <section aria-labelledby="farm-map-heading" className="flex flex-col gap-3">
+        <div>
+          <h2 id="farm-map-heading" className="text-sm font-medium">
+            The farm in 3D
+          </h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Satellite view over the real terrain around {data.farm.name}.
+          </p>
+        </div>
+        <FarmMap
+          name={data.farm.name}
+          latitude={data.farm.latitude}
+          longitude={data.farm.longitude}
+        />
+      </section>
 
       <NotAvailableNotice metrics={data.unavailable_metrics} />
     </div>

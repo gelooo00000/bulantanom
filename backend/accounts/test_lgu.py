@@ -61,6 +61,15 @@ class LguAuthorizationTests(APITestCase):
         response = self.client.get(DASHBOARD_URL, HTTP_AUTHORIZATION=f"Bearer {token}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_farm_overview_says_where_the_farm_is(self):
+        """The farm map centres on these, so they must come from settings."""
+        token = self._token(LGU_LOGIN_URL, "officer@example.com")
+        with self.settings(FARM_LATITUDE=12.5, FARM_LONGITUDE=123.75):
+            response = self.client.get(FARM_URL, HTTP_AUTHORIZATION=f"Bearer {token}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["farm"]["latitude"], 12.5)
+        self.assertEqual(response.data["farm"]["longitude"], 123.75)
+
     def test_suspended_officer_loses_access(self):
         officer = User.objects.get(email="officer@example.com")
         token = self._token(LGU_LOGIN_URL, "officer@example.com")

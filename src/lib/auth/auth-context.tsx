@@ -153,7 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // creation, so this establishes a session exactly as login does.
       const { access, user } = await signupFarmer({
         first_name: firstName || input.name,
-        last_name: lastName || firstName || input.name,
+        // A single name has no last name; it is sent empty, never repeated.
+        last_name: lastName,
         email: input.email,
         password: input.password,
         password_confirm: input.password,

@@ -56,11 +56,6 @@ lgu_urlpatterns = [
         plant_views.AssessmentEvidenceView.as_view(),
         name="lgu-assessment-evidence",
     ),
-    path(
-        "soil-recommendations/",
-        lgu_views.LguSoilRecommendationListView.as_view(),
-        name="lgu-soil-recommendations",
-    ),
     # Same views as the Farmer mount; the recipient is always request.user.
     path("reports/", lgu_views.lgu_report_catalog, name="lgu-reports"),
     path("reports/<slug:slug>/", lgu_views.lgu_report_detail, name="lgu-report-detail"),

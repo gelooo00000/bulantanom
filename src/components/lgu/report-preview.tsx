@@ -128,31 +128,6 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
           </div>
         ))}
 
-        {report.details.length > 0 && (
-          <div>
-            <h3 className="text-sm font-medium">{t.soilDetails}</h3>
-            <div className="mt-2 flex flex-col gap-3">
-              {report.details.map((d) => (
-                <div key={d.id} className="border-border rounded-lg border px-4 py-3">
-                  <p className="text-sm font-medium">{d.heading}</p>
-                  {!d.analysed ? (
-                    <p className="text-muted-foreground mt-1 text-sm">{d.unavailable}</p>
-                  ) : (
-                    <dl className="mt-2 flex flex-col gap-1.5">
-                      {d.sections.map((s) => (
-                        <div key={s.label} className="text-sm">
-                          <dt className="text-muted-foreground text-xs">{s.label}</dt>
-                          <dd>{s.text || t.noneRecorded}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="border-border text-muted-foreground/70 flex flex-wrap items-center gap-1.5 border-t pt-3 text-[11px]">
           <Sparkles className="size-3 shrink-0" />
           <span>

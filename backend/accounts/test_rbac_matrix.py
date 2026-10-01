@@ -127,7 +127,6 @@ class RbacMatrixBase(APITestCase):
             "/api/lgu/risk/overview/",
             "/api/lgu/risk/high-risk/",
             "/api/lgu/assessments/history/",
-            "/api/lgu/soil-recommendations/",
             "/api/lgu/reports/",
             "/api/lgu/reports/agricultural-summary/",
             "/api/lgu/reports/agricultural-summary/pdf/",

@@ -62,55 +62,6 @@ export type SoilRecommendationCounts = {
   pending_analysis: number;
 };
 
-/** One Farmer's soil assessment plus its AI result, as the LGU sees it. */
-export type LguSoilRecommendation = {
-  id: number;
-  farmer_id: number;
-  farmer_name: string;
-  farmer_email: string;
-
-  // Soil detector readings. Decimals arrive as strings from DRF.
-  soil_temperature: string | null;
-  soil_moisture: string | null;
-  soil_conductivity: number | null;
-  soil_ph: string | null;
-  nitrogen: number | null;
-  phosphorus: number | null;
-  potassium: number | null;
-  soil_fertility: number | null;
-  has_sensor_readings: boolean;
-  notes: string;
-
-  // Pre-detector categorical answers, with their display labels.
-  legacy_soil_type_label: string;
-  legacy_soil_texture_label: string;
-  legacy_drainage_label: string;
-  legacy_soil_moisture_label: string;
-  legacy_nitrogen_label: string;
-  legacy_phosphorus_label: string;
-  legacy_potassium_label: string;
-  legacy_organic_matter_label: string;
-
-  suitable_fruits: { id: string; name: string; emoji: string; reason: string }[];
-  suitable_vegetables: { id: string; name: string; emoji: string; reason: string }[];
-  suitable_crops: { id: string; name: string; emoji: string; reason: string }[];
-  fertilizer_recommendations: { recommendation: string }[];
-  soil_improvement_watering: { recommendation: string }[];
-  important_warnings: { recommendation: string }[];
-
-  ai_generated: boolean;
-  created_at: string;
-};
-
-/** Read-only monitoring list, newest first. Optionally one Farmer's records. */
-export function fetchLguSoilRecommendations(
-  accessToken: string,
-  farmerId?: number,
-): Promise<LguSoilRecommendation[]> {
-  const query = farmerId ? `?farmer=${farmerId}` : "";
-  return apiFetch(`/lgu/soil-recommendations/${query}`, { accessToken });
-}
-
 /** One plant as the LGU sees it: the farmer record plus its latest reading. */
 export type LguPlant = {
   id: number;
@@ -173,7 +124,7 @@ export function fetchLguFarmerDetail(
 }
 
 export function fetchLguFarmOverview(accessToken: string): Promise<{
-  farm: { name: string; location: string };
+  farm: { name: string; location: string; latitude: number; longitude: number };
   farmers: { active: number; total: number };
   plants: { total: number; growing: number; ready_for_harvest: number; harvested: number } | null;
   unavailable_metrics: UnavailableMetric[];

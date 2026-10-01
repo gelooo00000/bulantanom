@@ -1,78 +1,82 @@
 import Link from "next/link";
-import { ArrowRight, Leaf, ShieldCheck, Sprout } from "lucide-react";
-import type { ElementType } from "react";
+import { ArrowRight } from "lucide-react";
 
-import { FadeIn } from "@/components/motion/fade-in";
+import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 
-const ROLES: {
-  icon: ElementType;
-  title: string;
-  description: string;
-  cta: string;
-  href: string;
-}[] = [
+const ROLES = [
   {
-    icon: Sprout,
-    title: "Farmer",
+    emoji: "👩‍🌾",
+    title: "I'm a farmer",
     description:
-      "Monitor plants, submit assessments, and get AI-backed risk indicators and crop recommendations for your soil.",
+      "Add your plants, do the weekly check with a photo, and get risk readings, crop advice for your soil and your harvest dates.",
     cta: "Continue as Farmer",
     href: "/login?role=farmer",
+    extra: { label: "New here? Create a free account", href: "/signup" },
   },
   {
-    icon: ShieldCheck,
-    title: "LGU Agricultural Officer",
+    emoji: "🏛️",
+    title: "I'm an LGU agricultural officer",
     description:
-      "Review farmer plant data, crop recommendation records, and risk trends across Layuan Farm.",
+      "See every farmer's plants, risk trends and harvest windows across Layuan Farm, and download reports.",
     cta: "Continue as Officer",
     href: "/login?role=lgu",
+    extra: null,
   },
 ];
 
 export function RoleAccessSection() {
   return (
-    <section className="px-6 pt-16 pb-24 md:px-12 md:pt-20 lg:px-16">
+    <section id="get-started" className="scroll-mt-6 px-6 pt-16 md:px-12 md:pt-24 lg:px-16">
       <div className="mx-auto max-w-6xl">
-        <FadeIn duration={600} className="flex items-center justify-center gap-3">
-          <Leaf className="size-3.5" style={{ color: "var(--landing-accent)" }} />
-          <p className="text-muted-foreground text-xs font-medium tracking-[0.2em] uppercase">
-            Built for everyone working at Layuan Farm
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <p
+            className="text-xs font-medium tracking-[0.2em] uppercase"
+            style={{ color: "var(--landing-accent)" }}
+          >
+            Get started
           </p>
-          <Leaf className="size-3.5 -scale-x-100" style={{ color: "var(--landing-accent)" }} />
-        </FadeIn>
+          <h2 className="text-foreground mt-3 text-3xl font-normal tracking-[-0.03em] md:text-4xl">
+            Built for everyone working at Layuan Farm
+          </h2>
+        </Reveal>
 
-        <div
-          className="mt-8 grid grid-cols-1 divide-y overflow-hidden rounded-2xl border lg:grid-cols-2 lg:divide-x lg:divide-y-0"
-          style={{
-            background: "var(--landing-surface)",
-            borderColor: "var(--landing-border)",
-          }}
-        >
-          {ROLES.map(({ icon: Icon, title, description, cta, href }, index) => (
-            <FadeIn key={title} delay={index * 150} duration={700}>
+        <div className="mt-10 grid gap-4 lg:grid-cols-2">
+          {ROLES.map(({ emoji, title, description, cta, href, extra }, index) => (
+            <Reveal key={title} delay={index * 150} className="h-full">
               <div
-                className="flex h-full flex-col items-start gap-4 p-8 md:p-10"
-                style={{ borderColor: "var(--landing-border)" }}
+                className="flex h-full flex-col items-start gap-4 rounded-2xl border p-8 transition-shadow duration-300 hover:shadow-lg md:p-10"
+                style={{
+                  background: "var(--landing-surface)",
+                  borderColor: "var(--landing-border)",
+                }}
               >
                 <span
-                  className="flex size-11 items-center justify-center rounded-full border"
-                  style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
+                  aria-hidden="true"
+                  className="flex size-14 items-center justify-center rounded-2xl text-3xl"
+                  style={{ background: "var(--landing-bg)" }}
                 >
-                  <Icon className="size-5" />
+                  {emoji}
                 </span>
                 <h3 className="text-foreground text-xl font-medium">{title}</h3>
                 <p className="text-muted-foreground text-sm">{description}</p>
-                <Button
-                  className="mt-2"
-                  nativeButton={false}
-                  render={<Link href={href} />}
-                >
-                  {cta}
-                  <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-                </Button>
+                <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-2">
+                  <Button nativeButton={false} render={<Link href={href} />}>
+                    {cta}
+                    <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
+                  </Button>
+                  {extra && (
+                    <Link
+                      href={extra.href}
+                      className="text-sm font-medium underline-offset-4 hover:underline"
+                      style={{ color: "var(--landing-accent)" }}
+                    >
+                      {extra.label}
+                    </Link>
+                  )}
+                </div>
               </div>
-            </FadeIn>
+            </Reveal>
           ))}
         </div>
       </div>

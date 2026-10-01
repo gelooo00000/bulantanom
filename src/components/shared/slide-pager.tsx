@@ -22,6 +22,10 @@ export function SlidePager<T>({
   renderItem,
   listLabel,
   className,
+  listClassName = "flex flex-col",
+  itemClassName = "border-border/60 border-t first:border-t-0",
+  frameClassName,
+  onPageChange,
 }: {
   items: T[];
   pageSize?: number;
@@ -30,6 +34,14 @@ export function SlidePager<T>({
   /** Accessible name for the list. */
   listLabel?: string;
   className?: string;
+  /** Layout of the list itself; a plain divided column unless overridden. */
+  listClassName?: string;
+  /** Classes for each row's `<li>`; the dividing rule unless overridden. */
+  itemClassName?: string;
+  /** Extra classes for the clipping frame, e.g. room for a row's focus ring. */
+  frameClassName?: string;
+  /** Called when the page changes, e.g. to clear a hover the old page held. */
+  onPageChange?: () => void;
 }) {
   const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
@@ -39,8 +51,10 @@ export function SlidePager<T>({
   const page = Math.min(state.page, pages - 1);
   const shown = items.slice(page * pageSize, page * pageSize + pageSize);
 
-  const go = (direction: 1 | -1) =>
+  const go = (direction: 1 | -1) => {
     setState({ page: Math.min(pages - 1, Math.max(0, page + direction)), direction });
+    onPageChange?.();
+  };
 
   const offset = reduceMotion ? 0 : 32;
 
@@ -59,14 +73,14 @@ export function SlidePager<T>({
           out over it, so the list never waits on an animation to finish. */}
       <div
         ref={listRef}
-        className="relative overflow-hidden"
+        className={cn("relative overflow-hidden", frameClassName)}
         style={minHeight ? { minHeight } : undefined}
       >
         <AnimatePresence mode="popLayout" initial={false} custom={state.direction}>
           <motion.ul
             key={page}
             aria-label={listLabel}
-            className="flex flex-col"
+            className={listClassName}
             custom={state.direction}
             initial={{ opacity: 0, x: state.direction * offset }}
             animate={{ opacity: 1, x: 0 }}
@@ -74,7 +88,7 @@ export function SlidePager<T>({
             transition={{ duration: reduceMotion ? 0 : 0.22, ease: "easeOut" }}
           >
             {shown.map((item) => (
-              <li key={getKey(item)} className="border-border/60 border-t first:border-t-0">
+              <li key={getKey(item)} className={itemClassName}>
                 {renderItem(item)}
               </li>
             ))}
