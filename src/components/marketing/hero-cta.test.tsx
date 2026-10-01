@@ -7,12 +7,12 @@ const auth = vi.hoisted(() => ({ currentUser: null as { role: string } | null })
 vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => auth }));
 
 describe("HeroCta", () => {
-  it("starts a Farmer sign-up when nobody is signed in", () => {
+  it("opens the Farmer / LGU Officer sign-in when nobody is signed in", () => {
     auth.currentUser = null;
     render(<HeroCta />);
     expect(screen.getByRole("link", { name: /Get started now/ })).toHaveAttribute(
       "href",
-      "/signup",
+      "/login",
     );
   });
 

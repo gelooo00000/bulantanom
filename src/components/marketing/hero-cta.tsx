@@ -7,14 +7,14 @@ import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth } from "@/lib/auth/auth-context";
 
 /**
- * The hero's main button. Signed out it starts a Farmer sign-up; signed in
- * it says where it goes instead. Sign-up sends a signed-in user to their
- * dashboard anyway, so "Get started now" quietly landing somewhere else read
- * as a broken link.
+ * The hero's main button. Signed out it opens the shared Farmer / LGU
+ * Officer sign-in (Farmers can register from there); signed in it says
+ * where it goes instead, since sign-in would only bounce them to their
+ * dashboard.
  */
 export function HeroCta() {
   const { currentUser } = useAuth();
-  const href = currentUser ? DASHBOARD_BY_ROLE[currentUser.role] : "/signup";
+  const href = currentUser ? DASHBOARD_BY_ROLE[currentUser.role] : "/login";
   return (
     <Link
       href={href}
