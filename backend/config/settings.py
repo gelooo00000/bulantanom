@@ -140,6 +140,11 @@ if DB_ENGINE == "postgresql":
             "PORT": os.environ.get("DB_PORT", "5432"),
             "CONN_MAX_AGE": 60,
             "CONN_HEALTH_CHECKS": True,
+            # Hosted Postgres such as Neon only accepts TLS: set
+            # DB_SSLMODE=require there. Left unset, libpq's default applies.
+            "OPTIONS": (
+                {"sslmode": os.environ["DB_SSLMODE"]} if os.environ.get("DB_SSLMODE") else {}
+            ),
         }
     }
 else:

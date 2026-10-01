@@ -1,17 +1,12 @@
-# Render Blueprint: Postgres + Django API (Docker) + Next.js frontend.
+# Render Blueprint: Django API (Docker) + Next.js frontend.
+# The database is an external Neon Postgres (free tier): Render allows only
+# one free database per account, and this account's is already in use.
 # Apply it from the Render dashboard: New > Blueprint > pick this repo.
 #
 # The two public URLs below assume Render grants the service names as-is
 # (https://<name>.onrender.com). If a name was taken, Render adds a suffix:
 # update NEXT_PUBLIC_API_URL, CORS_ALLOWED_ORIGINS and FRONTEND_URL to the
 # real URLs, then redeploy the frontend (NEXT_PUBLIC_* is baked in at build).
-
-databases:
-  - name: bulantanom-db
-    plan: free
-    region: singapore
-    databaseName: bulantanom
-    user: bulantanom
 
 services:
   - type: web
@@ -37,16 +32,20 @@ services:
 
       - key: DB_ENGINE
         value: postgresql
+      # Neon connection details, entered when the Blueprint is applied.
+      # Use the direct (non "-pooler") host.
       - key: DB_HOST
-        fromDatabase: { name: bulantanom-db, property: host }
+        sync: false
       - key: DB_PORT
-        fromDatabase: { name: bulantanom-db, property: port }
+        value: "5432"
       - key: DB_NAME
-        fromDatabase: { name: bulantanom-db, property: database }
+        sync: false
       - key: DB_USER
-        fromDatabase: { name: bulantanom-db, property: user }
+        sync: false
       - key: DB_PASSWORD
-        fromDatabase: { name: bulantanom-db, property: password }
+        sync: false
+      - key: DB_SSLMODE
+        value: require
 
       # *.onrender.com is a public suffix, so the frontend and API are
       # cross-site: the refresh cookie must be SameSite=None + Secure.
