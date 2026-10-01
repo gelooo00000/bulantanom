@@ -53,7 +53,7 @@ describe("RequireRole", () => {
     expect(replace).toHaveBeenCalledWith("/login");
   });
 
-  it("follows a logout that names where to go (Admin: the landing page)", () => {
+  it("follows a logout that names where to go (the landing page)", () => {
     auth = { currentUser: farmer, loading: false };
     const { rerender } = render(guarded());
 

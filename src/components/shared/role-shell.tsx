@@ -42,8 +42,6 @@ type RoleShellProps = {
   copy?: ShellCopy;
   /** Extra header controls, placed before the bell. */
   headerActions?: ReactNode;
-  /** Where Log out goes. Omitted, the role's sign-in page. */
-  logoutRedirect?: string;
   children: ReactNode;
 };
 
@@ -54,12 +52,13 @@ export function RoleShell({
   notificationScope,
   copy = ENGLISH_COPY,
   headerActions,
-  logoutRedirect,
   children,
 }: RoleShellProps) {
   const pathname = usePathname();
   const { currentUser, logout: endSession } = useAuth();
-  const logout = () => endSession(logoutRedirect);
+  // Every role returns to the landing page on Log out. Only a session that
+  // ends by itself goes to /login, so the user can sign straight back in.
+  const logout = () => endSession("/");
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);

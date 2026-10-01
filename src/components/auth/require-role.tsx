@@ -21,7 +21,7 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
     if (currentUser) hadSession.current = true;
     if (loading) return;
     if (!currentUser) {
-      // A deliberate logout may name where to go (Admin returns to the
+      // A deliberate logout names where to go (Log out returns to the
       // landing page); otherwise an ended session goes to sign in again.
       router.replace(signedOutTo ?? (hadSession.current ? "/login" : "/"));
       return;

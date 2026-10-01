@@ -27,14 +27,14 @@ describe("RoleShell on a phone", () => {
   it("gives a one-page role (Admin) a Log out button in the bottom bar", () => {
     const items: NavItem[] = [{ label: "Account Management", href: "/admin", icon: Users }];
     render(
-      <RoleShell roleLabel="Administrator" navItems={items} homeHref="/admin" logoutRedirect="/">
+      <RoleShell roleLabel="Administrator" navItems={items} homeHref="/admin">
         <p>page</p>
       </RoleShell>,
     );
 
     const button = within(bottomBar()).getByRole("button", { name: "Log out" });
     fireEvent.click(button);
-    // Admin's logout returns to the landing page, not the Farmer / LGU sign-in.
+    // Log out returns to the landing page, not the Farmer / LGU sign-in.
     expect(logout).toHaveBeenCalledWith("/");
   });
 
