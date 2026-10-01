@@ -512,6 +512,27 @@ class LguRiskAggregationTests(RiskTestCase):
         data = self.client.get("/api/lgu/assessments/history/", **self.auth).data
         self.assertEqual(len(data), 3)
 
+    def test_one_assessment_opens_with_its_result_and_farmer(self):
+        assessment = Assessment.objects.get(plant__farmer__email="fb@example.com")
+        response = self.client.get(f"/api/lgu/assessments/{assessment.pk}/", **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], assessment.pk)
+        self.assertEqual(response.data["risk"]["risk_level"], "HIGH")
+        self.assertEqual(response.data["farmer"]["email"], "fb@example.com")
+
+    def test_unapproved_farmers_assessment_is_not_found(self):
+        """Same rule as the history list: only approved Farmers' records."""
+        assessment = Assessment.objects.get(plant__farmer__email="fb@example.com")
+        User.objects.filter(email="fb@example.com").update(
+            account_status=AccountStatus.SUSPENDED
+        )
+        response = self.client.get(f"/api/lgu/assessments/{assessment.pk}/", **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_missing_assessment_is_not_found(self):
+        response = self.client.get("/api/lgu/assessments/999999/", **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_farmer_detail_counts_only_that_farmers_records(self):
         """Per-Farmer figures must not leak another Farmer's assessments."""
         high_risk_farmer = User.objects.get(email="fb@example.com")
@@ -536,6 +557,7 @@ class LguRiskAggregationTests(RiskTestCase):
             "/api/lgu/risk/overview/",
             "/api/lgu/risk/high-risk/",
             "/api/lgu/assessments/history/",
+            f"/api/lgu/assessments/{Assessment.objects.first().pk}/",
         ):
             self.assertEqual(
                 self.client.get(url, **farmer_auth).status_code,

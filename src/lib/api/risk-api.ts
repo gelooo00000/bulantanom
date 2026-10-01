@@ -291,3 +291,10 @@ export function fetchLguAssessmentHistory(
 ): Promise<BackendAssessment[]> {
   return apiFetch("/lgu/assessments/history/", { accessToken });
 }
+
+export function fetchLguAssessment(
+  accessToken: string,
+  assessmentId: number | string,
+): Promise<BackendAssessment> {
+  return apiFetch(`/lgu/assessments/${assessmentId}/`, { accessToken });
+}

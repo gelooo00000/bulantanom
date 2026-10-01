@@ -507,6 +507,31 @@ def lgu_assessment_history(request):
 
 @api_view(["GET"])
 @permission_classes([IsLguOfficer])
+def lgu_assessment_detail(request, pk):
+    """
+    GET /api/lgu/assessments/{id}/ — one assessment with its full AI result.
+
+    Limited to approved Farmers, like the history list it is opened from, so
+    an assessment that is not on that list is a 404 here too.
+    """
+    from plants.models import Assessment
+
+    assessment = (
+        Assessment.objects.filter(
+            pk=pk,
+            plant__farmer__role=UserRole.FARMER,
+            plant__farmer__account_status=AccountStatus.APPROVED,
+        )
+        .select_related("plant", "plant__crop", "plant__farmer", "risk")
+        .first()
+    )
+    if assessment is None:
+        return Response({"detail": "Assessment not found."}, status=status.HTTP_404_NOT_FOUND)
+    return Response(_serialize_case(assessment, request))
+
+
+@api_view(["GET"])
+@permission_classes([IsLguOfficer])
 def lgu_plants(request):
     """
     GET /api/lgu/plants/ — every plant belonging to an approved Farmer.

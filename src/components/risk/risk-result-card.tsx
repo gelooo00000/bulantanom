@@ -55,8 +55,11 @@ function Section({ title, items }: { title: string; items: string[] }) {
  */
 export function RiskResultCard({
   assessment: initial,
+  readOnly = false,
 }: {
   assessment: BackendAssessment;
+  /** For LGU Officers: no "run again", which only the Farmer can do. */
+  readOnly?: boolean;
 }) {
   const { accessToken } = useAuth();
   const { t, language, dateLocale } = useFarmerLanguage();
@@ -140,26 +143,28 @@ export function RiskResultCard({
               <div>
                 <p className="text-sm font-medium">{t("result.unavailableTitle")}</p>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  {risk?.failure_reason ?? t("result.unavailableDefault")}{" "}
-                  {t("result.saved")}
+                  {risk?.failure_reason ?? t("result.unavailableDefault")}
+                  {!readOnly && <> {t("result.saved")}</>}
                 </p>
                 {retryError && (
                   <p className="text-destructive mt-1 text-sm">{retryError}</p>
                 )}
               </div>
-              <Button size="sm" variant="outline" onClick={retryAnalysis} disabled={retrying}>
-                {retrying ? (
-                  <>
-                    <LoaderCircle className="size-3.5 animate-spin" />
-                    {t("result.analyzing")}
-                  </>
-                ) : (
-                  <>
-                    <RotateCw className="size-3.5" />
-                    {t("result.retry")}
-                  </>
-                )}
-              </Button>
+              {!readOnly && (
+                <Button size="sm" variant="outline" onClick={retryAnalysis} disabled={retrying}>
+                  {retrying ? (
+                    <>
+                      <LoaderCircle className="size-3.5 animate-spin" />
+                      {t("result.analyzing")}
+                    </>
+                  ) : (
+                    <>
+                      <RotateCw className="size-3.5" />
+                      {t("result.retry")}
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         ) : (

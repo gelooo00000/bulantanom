@@ -52,6 +52,11 @@ lgu_urlpatterns = [
     path("risk/high-risk/", lgu_views.lgu_high_risk, name="lgu-high-risk"),
     path("assessments/history/", lgu_views.lgu_assessment_history, name="lgu-assessments"),
     path(
+        "assessments/<int:pk>/",
+        lgu_views.lgu_assessment_detail,
+        name="lgu-assessment-detail",
+    ),
+    path(
         "assessments/<int:pk>/evidence/",
         plant_views.AssessmentEvidenceView.as_view(),
         name="lgu-assessment-evidence",
