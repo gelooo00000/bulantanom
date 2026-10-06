@@ -1,23 +1,18 @@
 {% extends "emails/_base.html" %}
+{% block preheader %}Your LGU Officer account is ready. Your administrator will give you your password.{% endblock %}
 {% block content %}
-<p style="margin:0 0 14px;font-size:16px;">Hello {{ name }},</p>
-<p style="margin:0 0 18px;font-size:15px;line-height:1.6;">
-  Your BulanTanom LGU Officer account has been created by an administrator.
-  LGU Officer accounts are provisioned rather than self-registered.
+{% include "emails/_status.html" with tone="good" label="Account created" icon="🛡️" headline="Welcome, LGU Officer!" %}
+<p style="margin:10px 0 0;font-size:15px;line-height:1.7;color:#3a4a3c;">
+  An administrator has created your BulanTanom LGU Officer account. LGU
+  Officer accounts are provided by administrators rather than self-registered.
 </p>
-<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;background:#e4efe4;border-radius:8px;">
-  <tr><td style="padding:12px 16px;font-size:14px;">
-    <strong>Role:</strong> {{ role_label }}<br>
-    <strong>Account Status:</strong> Active
+{% include "emails/_details.html" with status="Active" status_color="#23753a" %}
+{% include "emails/_features.html" with intro="From the LGU Officer dashboard you can review:" %}
+{% include "emails/_button.html" %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;background:#f4f8f1;border-left:4px solid #3fa34d;border-radius:10px;">
+  <tr><td style="padding:14px 18px;font-size:14px;line-height:1.6;color:#3a4a3c;">
+    🔑 <strong>About your password:</strong> your administrator will give it to you
+    separately. For your security, it is never sent by email.
   </td></tr>
 </table>
-<p style="margin:0 0 8px;font-size:15px;">From the LGU Officer dashboard you can review:</p>
-<ul style="margin:0 0 4px;padding-left:20px;font-size:15px;line-height:1.8;">
-  {% for feature in features %}<li>{{ feature }}</li>{% endfor %}
-</ul>
-{% include "emails/_button.html" %}
-<p style="margin:14px 0 0;font-size:14px;line-height:1.6;color:#4b5347;">
-  Your administrator will give you your password separately. For your security,
-  it is never sent by email.
-</p>
 {% endblock %}

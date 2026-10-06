@@ -1,0 +1,13 @@
+{% comment %}
+Status pill, headline and greeting at the top of every email.
+
+  {% include "emails/_status.html" with tone="good" label="Approved" icon="✅" headline="You're in!" %}
+
+tone: good (green) · warn (amber) · bad (red)
+{% endcomment %}
+{% if tone == "bad" %}{% firstof "#fdecea" as pill_bg %}{% firstof "#b42318" as pill_fg %}{% firstof "#f5c2bd" as pill_border %}
+{% elif tone == "warn" %}{% firstof "#fdf3df" as pill_bg %}{% firstof "#a15c07" as pill_fg %}{% firstof "#f3d9a4" as pill_border %}
+{% else %}{% firstof "#e6f4e4" as pill_bg %}{% firstof "#23753a" as pill_fg %}{% firstof "#bfe3c2" as pill_border %}{% endif %}
+<span style="display:inline-block;background:{{ pill_bg }};color:{{ pill_fg }};border:1px solid {{ pill_border }};border-radius:999px;padding:6px 14px;font-size:12px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;">{{ icon }}&nbsp; {{ label }}</span>
+<h1 class="bt-headline" style="margin:16px 0 0;font-family:'Lilita One','Arial Rounded MT Bold','Nunito',Arial,sans-serif;font-weight:400;font-size:27px;line-height:1.2;color:#14301b;letter-spacing:0.01em;">{{ headline }}</h1>
+<p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#1d2a1f;">Hello <strong>{{ name }}</strong>,</p>

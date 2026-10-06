@@ -1,28 +1,26 @@
 {% extends "emails/_base.html" %}
+{% block preheader %}Your BulanTanom account was deleted on {{ deleted_on }}.{% endblock %}
 {% block content %}
-<p style="margin:0 0 14px;font-size:16px;">Hello {{ name }},</p>
-<p style="margin:0 0 18px;font-size:15px;line-height:1.6;">
-  Your BulanTanom {{ role_label }} account has been deleted by an administrator
-  on {{ deleted_on }}. You can no longer sign in with it.
+{% include "emails/_status.html" with tone="bad" label="Deleted" icon="🗑️" headline="Your account has been deleted" %}
+<p style="margin:10px 0 0;font-size:15px;line-height:1.7;color:#3a4a3c;">
+  Your BulanTanom {{ role_label }} account was deleted by an administrator on
+  <strong>{{ deleted_on }}</strong>. You can no longer sign in with it.
 </p>
-<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;background:#f7e5e1;border-radius:8px;">
-  <tr><td style="padding:12px 16px;font-size:14px;">
-    <strong>Account Status:</strong> Deleted<br>
-    <strong>Role:</strong> {{ role_label }}
+{% include "emails/_details.html" with status="Deleted" status_color="#b42318" %}
+{% if records %}
+<p style="margin:24px 0 10px;font-size:15px;font-weight:700;color:#14301b;">These records were permanently deleted with the account:</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fdf4f3;border:1px solid #f5d5d1;border-radius:12px;">
+  {% for record in records %}<tr><td style="padding:{% if forloop.first %}14px{% else %}4px{% endif %} 18px {% if forloop.last %}14px{% else %}4px{% endif %};font-size:15px;line-height:1.5;color:#3a4a3c;">
+    <span style="color:#b42318;font-weight:800;">✕</span>&nbsp; {{ record }}
+  </td></tr>{% endfor %}
+</table>
+{% else %}
+<p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#3a4a3c;">The account had no farm records.</p>
+{% endif %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;background:#f4f8f1;border-left:4px solid #3fa34d;border-radius:10px;">
+  <tr><td style="padding:14px 18px;font-size:14px;line-height:1.6;color:#3a4a3c;">
+    💬 <strong>Think this is a mistake?</strong> Contact your farm administrator.
+    Deleted records cannot be restored, but you can register a new account.
   </td></tr>
 </table>
-{% if records %}
-<p style="margin:0 0 6px;font-size:15px;line-height:1.6;">
-  These records were permanently deleted with the account:
-</p>
-<ul style="margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.6;">
-  {% for record in records %}<li>{{ record }}</li>{% endfor %}
-</ul>
-{% else %}
-<p style="margin:0 0 18px;font-size:15px;line-height:1.6;">The account had no farm records.</p>
-{% endif %}
-<p style="margin:0 0 8px;font-size:15px;line-height:1.6;">
-  If you believe this is a mistake, contact your farm administrator. Deleted
-  records cannot be restored, but you can register a new account.
-</p>
 {% endblock %}

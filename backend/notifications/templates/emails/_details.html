@@ -1,0 +1,17 @@
+{% comment %}
+Two-up account summary card: Role and Account status.
+
+  {% include "emails/_details.html" with status="Active" status_color="#23753a" %}
+{% endcomment %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 0;background:#f4f8f1;border:1px solid #dde8d7;border-radius:14px;">
+  <tr>
+    <td class="bt-col" width="50%" style="padding:16px 20px;vertical-align:top;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#6b7a68;">Role</div>
+      <div style="margin-top:4px;font-size:17px;font-weight:800;color:#14301b;">{{ role_label }}</div>
+    </td>
+    <td class="bt-col" width="50%" style="padding:16px 20px;vertical-align:top;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#6b7a68;">Account status</div>
+      <div style="margin-top:4px;font-size:17px;font-weight:800;color:{{ status_color|default:'#14301b' }};">● {{ status }}</div>
+    </td>
+  </tr>
+</table>

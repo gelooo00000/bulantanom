@@ -56,6 +56,15 @@ def login_url() -> str:
     return f"{settings.FRONTEND_URL}/login"
 
 
+def _brand_context() -> dict:
+    """What the shared email layout needs: the site's address for the header
+    photograph and the footer link, plus the bare host to display."""
+    return {
+        "frontend_url": settings.FRONTEND_URL,
+        "frontend_host": settings.FRONTEND_URL.split("://", 1)[-1],
+    }
+
+
 def _send(*, recipient, event_key, subject, template, context) -> bool:
     """
     Sends one lifecycle email at most once per recipient per event.
@@ -94,6 +103,7 @@ def _send(*, recipient, event_key, subject, template, context) -> bool:
         "name": recipient.get_full_name() or recipient.email,
         "login_url": login_url(),
         "site_name": "BulanTanom",
+        **_brand_context(),
         **context,
     }
 
@@ -233,6 +243,7 @@ def email_account_deleted(*, name, email, role, history):
         "role_label": role_label,
         "records": records,
         "deleted_on": timezone.localdate().strftime("%B %d, %Y").replace(" 0", " "),
+        **_brand_context(),
     }
 
     def send():

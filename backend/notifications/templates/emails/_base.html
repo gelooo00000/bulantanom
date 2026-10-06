@@ -1,30 +1,68 @@
 {% comment %}
 Shared shell for every lifecycle email. Table-based and inline-styled on
-purpose: email clients strip <style> blocks and ignore flexbox, so the
+purpose: email clients strip most <style> rules and ignore flexbox, so the
 app's Tailwind tokens cannot be reused here.
+
+It echoes the sign-in screen: the farm photograph behind the brand name in
+Lilita One, the leaf-green tagline, and Nunito for the text. Clients that
+block web fonts (Gmail, Outlook) fall back to a rounded system stack, and
+clients that block images keep the dark green behind the header.
+
+Child templates fill:
+  preheader  — the grey preview line shown next to the subject in the inbox
+  content    — the body
 {% endcomment %}
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f6f8f3;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1c2119;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8f3;padding:24px 12px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #dbe0d4;border-radius:12px;overflow:hidden;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @media (max-width: 600px) {
+      .bt-pad { padding-left: 22px !important; padding-right: 22px !important; }
+      .bt-hero { padding: 34px 22px 30px !important; }
+      .bt-brand { font-size: 30px !important; }
+      .bt-headline { font-size: 23px !important; }
+      .bt-col { display: block !important; width: 100% !important; }
+      .bt-btn a { display: block !important; text-align: center !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#eaf0e6;font-family:'Nunito','Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d2a1f;-webkit-font-smoothing:antialiased;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{% block preheader %}{% endblock %}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
 
-        <tr><td style="background:#2f6b3d;padding:20px 28px;">
-          <span style="color:#ffffff;font-size:18px;font-weight:600;letter-spacing:-0.01em;">🌱 BulanTanom</span>
-          <div style="color:#cfe4d4;font-size:12px;margin-top:2px;">Layuan Nature Integrated Farm</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eaf0e6;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(20,48,27,0.10);">
+
+        {# Header: the farm photograph under a dark green wash. #}
+        <tr><td class="bt-hero" background="{{ frontend_url }}/landing-hero.jpg" bgcolor="#0f2a17" style="background:#0f2a17 url('{{ frontend_url }}/landing-hero.jpg') center/cover no-repeat;padding:40px 36px 34px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(8,26,13,0.55);border-radius:14px;">
+            <tr><td style="padding:22px 24px;">
+              <span style="display:inline-block;background:rgba(6,40,20,0.85);border:1px solid rgba(139,232,131,0.35);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:#8be883;letter-spacing:0.02em;">🌿 Smarter farming. A greener Bulan.</span>
+              <div class="bt-brand" style="font-family:'Lilita One','Arial Rounded MT Bold','Nunito',Arial,sans-serif;font-size:36px;line-height:1.1;color:#ffffff;margin-top:14px;letter-spacing:0.01em;">BulanTanom</div>
+              <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:6px;">📍 Layuan Nature Integrated Farm · Bulan, Sorsogon</div>
+            </td></tr>
+          </table>
         </td></tr>
 
-        <tr><td style="padding:28px;">
+        <tr><td class="bt-pad" style="padding:34px 40px 30px;">
           {% block content %}{% endblock %}
         </td></tr>
 
-        <tr><td style="background:#eef1e9;padding:16px 28px;border-top:1px solid #dbe0d4;">
-          <p style="margin:0;font-size:12px;line-height:1.6;color:#767e71;">
-            This message was sent because your BulanTanom account changed status.
-            BulanTanom will never ask you for your password by email.
-            If you did not expect this, contact your farm administrator.
+        {# Footer #}
+        <tr><td class="bt-pad" style="background:#0f2a17;padding:26px 40px;">
+          <div style="font-family:'Lilita One','Arial Rounded MT Bold','Nunito',Arial,sans-serif;font-size:18px;color:#ffffff;letter-spacing:0.01em;">BulanTanom</div>
+          <div style="font-size:12px;color:#8be883;margin-top:2px;font-weight:700;">One farm. Smarter decisions.</div>
+          <p style="margin:14px 0 0;font-size:12px;line-height:1.7;color:rgba(255,255,255,0.68);">
+            You received this because your BulanTanom account changed status.
+            BulanTanom will never ask for your password by email.
+            If you did not expect this message, contact your farm administrator.
+          </p>
+          <p style="margin:12px 0 0;font-size:12px;">
+            <a href="{{ frontend_url }}" style="color:#8be883;text-decoration:none;font-weight:700;">{{ frontend_host }}</a>
           </p>
         </td></tr>
 
