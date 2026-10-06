@@ -62,12 +62,12 @@ export function PlantCard({
       )}
       <CardContent className="flex flex-col gap-3 px-5">
         <div className={cn("min-w-0", selecting && "pr-7")}>
-          <p className="truncate font-medium">
+          <p className="font-heading truncate text-[17px] leading-snug">
             <span aria-hidden="true">{plant.crop.emoji}</span> {plantTitle(plant)}
           </p>
-          <p className="text-muted-foreground truncate text-sm">{plantSubtitle(plant, t)}</p>
+          <p className="text-muted-foreground mt-0.5 truncate text-sm">{plantSubtitle(plant, t)}</p>
         </div>
-        <div className="text-muted-foreground flex flex-col gap-1 text-xs">
+        <div className="text-foreground/75 flex flex-col gap-1 text-[13px]">
           <span>
             {t(plant.is_planned ? "card.plantingOn" : "card.planted", {
               date: date(plant.planting_date),
@@ -84,26 +84,26 @@ export function PlantCard({
             state was already on every plant - it just was not shown, so the
             only way to find an assessable plant was to open each one. */}
         {plant.is_planned ? (
-          <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+          <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
             <CalendarClock className="size-3.5 shrink-0" />
             {t("card.plannedAssess", { date: date(plant.planting_date) })}
           </span>
         ) : plant.assessment_eligibility.too_young &&
           plant.assessment_eligibility.next_assessment_date ? (
           // Planted, but not yet worth judging: the first check has a date.
-          <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+          <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
             <CalendarClock className="size-3.5 shrink-0" />
             {t("young.first", {
               date: date(plant.assessment_eligibility.next_assessment_date),
             })}
           </span>
         ) : plant.assessment_eligibility.can_assess ? (
-          <span className="text-primary flex items-center gap-1.5 text-xs font-medium">
+          <span className="font-heading text-primary flex items-center gap-1.5 text-xs font-medium tracking-wide">
             <ClipboardList className="size-3.5 shrink-0" />
             {t("card.ready")}
           </span>
         ) : plant.assessment_eligibility.next_assessment_date ? (
-          <span className="text-muted-foreground/70 flex items-center gap-1.5 text-xs">
+          <span className="font-heading text-muted-foreground/70 flex items-center gap-1.5 text-xs font-medium tracking-wide">
             <CircleCheck className="size-3.5 shrink-0" />
             {t("card.assessedNext", {
               date: date(plant.assessment_eligibility.next_assessment_date),

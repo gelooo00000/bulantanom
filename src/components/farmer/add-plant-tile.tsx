@@ -30,7 +30,7 @@ export function AddPlantTile({ className }: { className?: string }) {
       <span className="border-primary/40 text-primary group-hover:bg-primary/10 flex size-10 items-center justify-center rounded-full border transition-colors">
         <Plus className="size-5" />
       </span>
-      <span className="mt-1 text-sm font-medium">{t("addTile.title")}</span>
+      <span className="font-heading mt-1 text-base">{t("addTile.title")}</span>
       <span className="text-muted-foreground max-w-[22ch] text-xs">
         {t("addTile.hint")}
       </span>
