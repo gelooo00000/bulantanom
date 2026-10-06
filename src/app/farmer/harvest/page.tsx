@@ -117,10 +117,10 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
       <CardContent className="flex h-full flex-col gap-3 px-4 sm:px-5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="line-clamp-2 font-medium break-words">
+            <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
               <span aria-hidden="true">{plant.crop.emoji}</span> {plant.display_name}
             </p>
-            <p className="text-muted-foreground truncate text-sm">
+            <p className="text-muted-foreground mt-0.5 truncate text-sm">
               {plant.crop.name} ·{" "}
               {plant.crop.category === "fruit"
                 ? t("category.fruit")
@@ -132,7 +132,7 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
           <span
             className={cn(
               // May wrap rather than push the card past a phone's edge.
-              "max-w-[55%] rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium",
+              "font-heading max-w-[55%] rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
               PHASE_STYLE[phase],
             )}
           >
@@ -143,14 +143,14 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
         {/* Progress through the growing period, from the plant's own dates. */}
         {phase !== "harvested" && (
           <div className="flex flex-col gap-1.5">
-            <div className="text-muted-foreground flex justify-between text-xs">
+            <div className="text-foreground/75 flex items-baseline justify-between text-[13px]">
               <span>
                 {t("harvestCard.grown", {
                   done: humanDuration(plant.age_days, t),
                   total: humanDuration(growingDays(plant), t),
                 })}
               </span>
-              <span>{percent}%</span>
+              <span className="font-heading text-foreground text-sm tabular-nums">{percent}%</span>
             </div>
             <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
               <div
@@ -173,19 +173,19 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
         <div className="border-border mt-auto grid grid-cols-2 gap-x-3 gap-y-2.5 border-t pt-3">
           <div>
             <p className="text-muted-foreground text-xs">{t("harvestCard.planted")}</p>
-            <p className="text-sm">{date(plant.planting_date)}</p>
+            <p className="font-heading text-[15px] font-medium">{date(plant.planting_date)}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">{t("harvestCard.readyFrom")}</p>
-            <p className="text-sm">{date(plant.expected_harvest_start)}</p>
+            <p className="font-heading text-[15px] font-medium">{date(plant.expected_harvest_start)}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">{t("harvestCard.readyUntil")}</p>
-            <p className="text-sm">{date(plant.expected_harvest_end)}</p>
+            <p className="font-heading text-[15px] font-medium">{date(plant.expected_harvest_end)}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">{t("harvestCard.lasts")}</p>
-            <p className="text-sm">{humanDuration(windowDays, t)}</p>
+            <p className="font-heading text-[15px] font-medium">{humanDuration(windowDays, t)}</p>
           </div>
         </div>
       </CardContent>
@@ -197,9 +197,9 @@ function Section({ title, plants }: { title: string; plants: BackendPlant[] }) {
   if (plants.length === 0) return null;
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium">
+      <h2 className="text-lg">
         {title}{" "}
-        <span className="text-muted-foreground font-normal">({plants.length})</span>
+        <span className="text-muted-foreground font-sans text-sm font-normal">({plants.length})</span>
       </h2>
       {/* Side by side from tablet width up; one per row on a phone, where
           half the screen is too narrow for four dates. */}
