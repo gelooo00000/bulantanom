@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
+  ChevronDown,
   Info,
   LoaderCircle,
   RefreshCw,
@@ -70,6 +71,7 @@ export default function AddPlantPage() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [intel, setIntel] = useState<CropIntelligenceResponse | null>(null);
+  const [showFullGuidance, setShowFullGuidance] = useState(false);
   const [saving, setSaving] = useState(false);
 
   /**
@@ -149,6 +151,7 @@ export default function AddPlantPage() {
   async function analyze() {
     if (!accessToken || !cropId) return;
     setAnalyzing(true);
+    setShowFullGuidance(false);
     try {
       // The harvest window in this response is calculated by Django from the
       // crop table. Gemini only explains it — see the backend service.
@@ -224,6 +227,12 @@ export default function AddPlantPage() {
   if (intel) {
     const window = intel.harvest_window;
     const ai = intel.intelligence;
+    const hasDetail =
+      !!ai &&
+      (ai.growing_notes.length > 0 ||
+        ai.care_guidance.length > 0 ||
+        !!ai.harvest_guidance ||
+        ai.important_factors.length > 0);
 
     return (
       <FadeIn duration={400}>
@@ -295,25 +304,48 @@ export default function AddPlantPage() {
                   </div>
                 </div>
 
-                {ai.growing_notes.length > 0 && (
-                  <Section title={t("add.growing")} items={ai.growing_notes} />
-                )}
-                {ai.care_guidance.length > 0 && (
-                  <Section title={t("add.care")} items={ai.care_guidance} />
-                )}
-                {ai.harvest_guidance && (
-                  <div>
-                    <h3 className="text-sm font-medium">{t("add.harvestGuidance")}</h3>
-                    <p className="text-muted-foreground mt-1.5 text-sm">
-                      {ai.harvest_guidance}
-                    </p>
+                {/* The overview stands alone; the detail is a click away so
+                    the card reads as a summary first rather than a wall of
+                    bullet points. */}
+                {showFullGuidance && (
+                  <div id="full-guidance" className="flex flex-col gap-5">
+                    {ai.growing_notes.length > 0 && (
+                      <Section title={t("add.growing")} items={ai.growing_notes} />
+                    )}
+                    {ai.care_guidance.length > 0 && (
+                      <Section title={t("add.care")} items={ai.care_guidance} />
+                    )}
+                    {ai.harvest_guidance && (
+                      <div>
+                        <h3 className="text-sm font-medium">{t("add.harvestGuidance")}</h3>
+                        <p className="text-muted-foreground mt-1.5 text-sm">
+                          {ai.harvest_guidance}
+                        </p>
+                      </div>
+                    )}
+                    {ai.important_factors.length > 0 && (
+                      <Section
+                        title={t("add.factors")}
+                        items={ai.important_factors}
+                      />
+                    )}
                   </div>
                 )}
-                {ai.important_factors.length > 0 && (
-                  <Section
-                    title={t("add.factors")}
-                    items={ai.important_factors}
-                  />
+
+                {hasDetail && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFullGuidance((open) => !open)}
+                    aria-expanded={showFullGuidance}
+                    aria-controls="full-guidance"
+                    className="hover:bg-muted flex items-center gap-1.5 self-start rounded-md px-2 py-1 -mx-2 text-sm font-medium transition-colors"
+                    style={{ color: "var(--landing-accent)" }}
+                  >
+                    {showFullGuidance ? t("add.seeLess") : t("add.seeMore")}
+                    <ChevronDown
+                      className={`size-4 transition-transform duration-200 ${showFullGuidance ? "rotate-180" : ""}`}
+                    />
+                  </button>
                 )}
 
                 <p className="text-muted-foreground/60 border-border border-t pt-3 text-[11px]">

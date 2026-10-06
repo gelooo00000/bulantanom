@@ -153,6 +153,12 @@ export const addPlant = defineMessages({
     fil: "Mga bagay na makaaapekto sa panahon",
     bik: "Mga bagay na makaapekto sa panahon",
   },
+  "add.seeMore": {
+    en: "See full guidance",
+    fil: "Tingnan ang buong gabay",
+    bik: "Hilingon an bilog na giya",
+  },
+  "add.seeLess": { en: "Show less", fil: "Ipakita nang mas kaunti", bik: "Ipahiling an mas dikit" },
   "add.aiNote": {
     en: "AI-generated guidance for reference only. It does not diagnose plant disease or replace an agricultural officer.",
     fil: "Gabay na gawa ng AI para sa sanggunian lamang. Hindi ito nagdidiyagnos ng sakit ng halaman at hindi kapalit ng agricultural officer.",
