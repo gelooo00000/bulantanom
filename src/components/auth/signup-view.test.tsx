@@ -62,6 +62,30 @@ describe("creating a Farmer account", () => {
     expect(router.replace).toHaveBeenCalledWith("/farmer/dashboard");
   });
 
+  it("locks the whole screen while the account is being created", async () => {
+    signup.mockReturnValue(new Promise(() => {}));
+    render(<SignupView />);
+    await createAccount();
+
+    // The fields and the "Sign in" link all sit inside the inert page.
+    expect(screen.getByText("Sign in").closest("[inert]")).not.toBeNull();
+    expect(document.getElementById("password")!.closest("[inert]")).not.toBeNull();
+
+    // A second submit before the first answers sends nothing more.
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText(/email/i).closest("form")!);
+    });
+    expect(signup).toHaveBeenCalledTimes(1);
+  });
+
+  it("unlocks the screen when sign-up fails", async () => {
+    signup.mockRejectedValue(new Error("An account with this email already exists."));
+    render(<SignupView />);
+    await createAccount();
+
+    expect(screen.getByText("Sign in").closest("[inert]")).toBeNull();
+  });
+
   it("never shows the loading screen when sign-up fails", async () => {
     signup.mockRejectedValue(new Error("An account with this email already exists."));
     render(<SignupView />);

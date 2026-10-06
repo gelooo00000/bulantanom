@@ -41,6 +41,8 @@ export function SignupView() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    // A second Enter before the first request answers must not send another.
+    if (submitting) return;
     setError(null);
 
     if (password !== confirmPassword) {
@@ -82,7 +84,7 @@ export function SignupView() {
   }
 
   return (
-    <AuthSplitLayout>
+    <AuthSplitLayout busy={submitting}>
       <FadeIn duration={500}>
         <AuthCard>
           <div>
