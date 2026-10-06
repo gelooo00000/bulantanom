@@ -128,7 +128,7 @@ export function HarvestCalendar({
       <div className="border-border mt-4 flex h-40 flex-col border-t pt-3" aria-live="polite">
         {shown ? (
           <>
-            <p className="mb-2 shrink-0 text-xs font-medium">
+            <p className="font-heading mb-2 shrink-0 text-xs font-medium">
               {t("calendarChart.due", {
                 month: monthLabel(shown.month, true),
                 n: count(shown.plants.length),

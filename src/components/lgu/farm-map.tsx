@@ -217,7 +217,7 @@ export function FarmMap({
         {status === "failed" && (
           <div className="bg-card absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
             <MapPinOff className="text-muted-foreground size-6" />
-            <p className="text-sm font-medium">The 3D map could not be shown</p>
+            <p className="font-heading text-sm font-medium">The 3D map could not be shown</p>
             <p className="text-muted-foreground max-w-sm text-sm">
               This browser or device does not support 3D graphics (WebGL). The farm is at{" "}
               {coordinates}.

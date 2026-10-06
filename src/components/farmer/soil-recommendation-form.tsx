@@ -324,7 +324,7 @@ export function SoilRecommendationForm() {
         {header}
         <div className="border-border flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-10 text-center">
           <LoaderCircle className="text-primary size-6 animate-spin" />
-          <p className="text-sm font-medium">{t.analyzing}</p>
+          <p className="font-heading text-sm font-medium">{t.analyzing}</p>
           <p className="text-muted-foreground max-w-xs text-sm">{t.analyzingHint}</p>
         </div>
       </>
@@ -365,7 +365,7 @@ export function SoilRecommendationForm() {
             <div className="border-border flex gap-3 rounded-lg border border-dashed px-4 py-4">
               <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
               <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">{t.assessmentSaved}</p>
+                <p className="font-heading text-sm font-medium">{t.assessmentSaved}</p>
                 <p className="text-muted-foreground text-sm">
                   {result.failure_reason
                     ? `${t.aiUnavailable} ${t.retryHint}`

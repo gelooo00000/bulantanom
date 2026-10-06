@@ -191,7 +191,7 @@ export function PlantRisk({
         {level ? (
           <>
             <p className="mb-2 flex shrink-0 items-baseline justify-between gap-3 text-xs">
-              <span className="flex items-center gap-1.5 font-medium">
+              <span className="font-heading flex items-center gap-1.5 font-medium">
                 <level.icon className="size-3.5" style={{ color: level.color }} aria-hidden="true" />
                 {level.label} · {count} plant{count === 1 ? "" : "s"}
               </span>

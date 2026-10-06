@@ -66,7 +66,7 @@ export function ConfirmDialog({
           )}
         >
           <div className="flex flex-col gap-1.5">
-            <Dialog.Title className="text-base font-medium">{title}</Dialog.Title>
+            <Dialog.Title className="font-heading text-lg font-semibold">{title}</Dialog.Title>
             <Dialog.Description className="text-muted-foreground text-sm">
               {description}
             </Dialog.Description>

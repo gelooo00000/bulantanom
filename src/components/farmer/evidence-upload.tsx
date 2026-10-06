@@ -129,11 +129,11 @@ export function EvidenceUpload({ file, onChange, ref }: EvidenceUploadProps) {
           >
             <Sprout className="size-6" />
           </span>
-          <span className="text-sm font-medium">{t("upload.title")}</span>
+          <span className="font-heading text-sm font-medium">{t("upload.title")}</span>
           <span className="text-muted-foreground max-w-xs text-sm">
             {t("upload.hint")}
           </span>
-          <span className="border-primary/40 text-primary mt-1 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium">
+          <span className="font-heading border-primary/40 text-primary mt-1 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium">
             <ImageUp className="size-4" />
             {t("upload.choose")}
           </span>

@@ -45,7 +45,7 @@ export function ActionsMenu({
         disabled={item.disabled}
         onClick={item.onSelect}
         className={cn(
-          "flex cursor-default items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors outline-none select-none",
+          "font-heading flex cursor-default items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors outline-none select-none",
           "data-[highlighted]:bg-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
           item.destructive
             ? "text-destructive data-[highlighted]:bg-destructive/10"

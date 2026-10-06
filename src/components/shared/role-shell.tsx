@@ -108,7 +108,7 @@ export function RoleShell({
           <div className="flex items-center gap-2.5">
             <Avatar name={currentUser?.name ?? "?"} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{currentUser?.name}</p>
+              <p className="font-heading truncate text-sm font-medium">{currentUser?.name}</p>
               <p className="text-muted-foreground text-xs">{roleLabel}</p>
             </div>
           </div>
@@ -125,7 +125,7 @@ export function RoleShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-border bg-background/80 sticky top-0 z-10 flex items-center gap-4 border-b px-6 py-2.5 text-sm backdrop-blur-md">
-          <span className="text-muted-foreground flex items-center gap-1.5">
+          <span className="font-heading text-muted-foreground flex items-center gap-1.5 font-medium">
             <MapPin className="size-3.5" />
             {copy.farm}
           </span>
@@ -177,7 +177,7 @@ export function RoleShell({
                           key={item.href}
                           closeOnClick
                           render={<Link href={item.href} />}
-                          className="hover:bg-accent flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm outline-none"
+                          className="font-heading hover:bg-accent flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium outline-none"
                         >
                           <Icon className="size-4" />
                           {item.label}
@@ -187,7 +187,7 @@ export function RoleShell({
                     <div className="bg-border my-1 h-px" />
                     <MenuPrimitive.Item
                       onClick={logout}
-                      className="hover:bg-accent flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm outline-none"
+                      className="font-heading hover:bg-accent flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium outline-none"
                     >
                       <LogOut className="size-4" />
                       {copy.logOut}

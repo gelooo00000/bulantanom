@@ -162,7 +162,7 @@ export function InSeasonCrops({
             </p>
             {caution.length > 0 && (
               <>
-                <p className="text-muted-foreground mt-2.5 text-xs font-medium">
+                <p className="font-heading text-muted-foreground mt-2.5 text-xs font-medium">
                   {t("inSeason.workable")}
                 </p>
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">

@@ -63,7 +63,7 @@ export function MyPlantsGuide({ onClose }: { onClose: () => void }) {
                 <Icon className="size-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-medium">
+                <p className="font-heading text-sm font-medium">
                   <span className="text-muted-foreground mr-1">{index + 1}.</span>
                   {t(title)}
                 </p>

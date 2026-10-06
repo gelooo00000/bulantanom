@@ -70,7 +70,7 @@ export function HarvestSchedule({ harvests }: HarvestScheduleProps) {
                   {h.emoji}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm">{h.name}</span>
+                  <span className="font-heading block truncate text-sm font-medium">{h.name}</span>
                   <span className="text-muted-foreground block text-xs">
                     {formatDisplayDate(h.expected_harvest_start, dateLocale)}
                   </span>

@@ -119,7 +119,7 @@ function PlantCard({ plant }: { plant: LguPlant }) {
       <CardContent className="flex flex-col gap-3 px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-medium">
+            <p className="font-heading font-medium">
               <span aria-hidden="true">{plant.crop.emoji}</span> {plant.display_name}
             </p>
             <p className="text-muted-foreground truncate text-sm">{plant.farmer.full_name}</p>
@@ -156,7 +156,7 @@ function PlantCard({ plant }: { plant: LguPlant }) {
             <span className="text-muted-foreground">No risk reading yet</span>
           )}
           {checkDue && (
-            <span className="border-risk-medium/30 bg-risk-medium/10 text-risk-medium rounded-full border px-2 py-0.5 font-medium">
+            <span className="font-heading border-risk-medium/30 bg-risk-medium/10 text-risk-medium rounded-full border px-2 py-0.5 font-medium">
               Weekly check due
             </span>
           )}

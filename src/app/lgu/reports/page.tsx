@@ -336,9 +336,9 @@ export default function LguReportsPage() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-sm font-medium">{item.title}</span>
+                      <span className="font-heading text-sm font-medium">{item.title}</span>
                       {item.latest && (
-                        <span className="bg-primary/10 text-primary rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+                        <span className="font-heading bg-primary/10 text-primary rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                           {t.latest}
                         </span>
                       )}

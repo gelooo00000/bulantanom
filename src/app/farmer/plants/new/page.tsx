@@ -197,7 +197,7 @@ export default function AddPlantPage() {
         <Card className="py-10" role="status" aria-live="polite">
           <CardContent className="flex flex-col items-center gap-4 px-6 text-center">
             <LoaderCircle className="text-primary size-7 animate-spin" />
-            <p className="font-medium">
+            <p className="font-heading font-medium">
               {t("add.analyzing", { crop: `${selectedCrop?.emoji ?? ""} ${selectedCrop?.name ?? ""}` })}
             </p>
             <ul className="text-muted-foreground space-y-1 text-sm">
@@ -359,7 +359,7 @@ export default function AddPlantPage() {
             <div className="border-risk-medium/30 bg-risk-medium/5 flex items-start gap-3 rounded-xl border p-4">
               <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
               <div>
-                <p className="text-sm font-medium">{t("add.intelUnavailable")}</p>
+                <p className="font-heading text-sm font-medium">{t("add.intelUnavailable")}</p>
                 <p className="text-muted-foreground mt-1 text-sm">
                   {/* The server's reason is English; other languages get the
                       translated one, which says the same thing. */}
@@ -427,7 +427,7 @@ export default function AddPlantPage() {
       ) : cropsError ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
+          <p className="font-heading text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground text-sm">{cropsError}</p>
           <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
@@ -486,7 +486,7 @@ export default function AddPlantPage() {
             <Card className="py-4">
               <CardContent className="flex flex-col gap-2 px-4 text-sm">
                 <div>
-                  <p className="font-medium">
+                  <p className="font-heading font-medium">
                     {selectedCrop.emoji} {selectedCrop.name}
                     {selectedVariant && (
                       <span className="text-muted-foreground font-normal">

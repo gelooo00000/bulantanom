@@ -221,7 +221,7 @@ function PlantRow({ plant }: { plant: LguPlant }) {
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium">
+        <p className="font-heading truncate font-medium">
           {plant.display_name}
           {showCrop && (
             <span className="text-muted-foreground font-normal"> · {plant.crop.name}</span>

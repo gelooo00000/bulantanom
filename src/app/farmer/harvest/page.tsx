@@ -242,7 +242,7 @@ export default function HarvestPage() {
       ) : error ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
+          <p className="font-heading text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground text-sm">{error}</p>
           <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>

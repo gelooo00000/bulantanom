@@ -633,7 +633,7 @@ function AccountRow({
 
       <div className="min-w-0 flex-1 basis-48">
         <p className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-medium">{user.full_name || user.email}</span>
+          <span className="font-heading truncate text-sm font-medium">{user.full_name || user.email}</span>
           {showRole && (
             <span className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-[11px]">
               {ROLE_LABEL[user.role]}
@@ -733,7 +733,7 @@ export function ActionConfirm({
   const who = (
     <>
       <p className="text-muted-foreground text-xs">{ROLE_LABEL[user.role]}</p>
-      <p className="text-sm font-medium">{user.full_name}</p>
+      <p className="font-heading text-sm font-medium">{user.full_name}</p>
       <p className="text-muted-foreground text-sm">{user.email}</p>
     </>
   );

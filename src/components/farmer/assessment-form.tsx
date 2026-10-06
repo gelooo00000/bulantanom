@@ -269,7 +269,7 @@ export function AssessmentForm({
     return (
       <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-10 text-center">
         <ScanEye className="text-primary size-6 animate-pulse" />
-        <p className="text-sm font-medium">{t("asmt.checking")}</p>
+        <p className="font-heading text-sm font-medium">{t("asmt.checking")}</p>
         <p className="text-muted-foreground max-w-sm text-sm">
           {t("asmt.checkingText")}
         </p>
@@ -283,7 +283,7 @@ export function AssessmentForm({
         {evidenceResult && <EvidenceVerdict result={evidenceResult} />}
         <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-10 text-center">
           <LoaderCircle className="text-primary size-6 animate-spin" />
-          <p className="text-sm font-medium">{t("asmt.evaluating", { name: plantLabel })}</p>
+          <p className="font-heading text-sm font-medium">{t("asmt.evaluating", { name: plantLabel })}</p>
           <ul className="text-muted-foreground space-y-1 text-sm">
             <li>{t("asmt.step1")}</li>
             <li>{t("asmt.step2")}</li>

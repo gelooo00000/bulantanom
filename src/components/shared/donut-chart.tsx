@@ -79,7 +79,7 @@ export function DonutChart({
       </svg>
       {(centerLabel || centerValue !== undefined) && (
         <div className="absolute flex flex-col items-center justify-center text-center">
-          {centerValue !== undefined && <span className="text-lg font-medium">{centerValue}</span>}
+          {centerValue !== undefined && <span className="font-heading text-lg font-medium">{centerValue}</span>}
           {centerLabel && <span className="text-muted-foreground text-[11px]">{centerLabel}</span>}
         </div>
       )}

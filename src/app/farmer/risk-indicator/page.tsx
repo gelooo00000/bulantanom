@@ -43,7 +43,7 @@ export default function RiskIndicatorPage() {
       ) : error ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
+          <p className="font-heading text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground text-sm">{error}</p>
           <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
@@ -116,7 +116,7 @@ function PlantRiskCard({
           <div className="min-w-0">
             {/* Two lines before cutting off: half a phone is too narrow for
                 "Oyster Mushroom" on one. */}
-            <p className="line-clamp-2 text-sm leading-snug font-medium break-words">
+            <p className="font-heading line-clamp-2 text-sm leading-snug font-medium break-words">
               {plant.display_name}
             </p>
             <p className="text-muted-foreground truncate text-xs">
@@ -131,7 +131,7 @@ function PlantRiskCard({
               the reason is in Details. */}
           {level && level !== "inconclusive" && <RiskBadge size="sm" level={level} />}
           {latest ? (
-            <span className="bg-muted text-foreground inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] leading-tight font-medium sm:px-2 sm:text-xs">
+            <span className="font-heading bg-muted text-foreground inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] leading-tight font-medium sm:px-2 sm:text-xs">
               <CalendarCheck className="size-3 shrink-0 sm:size-3.5" />
               {t("riskPage.checked", {
                 date: new Date(`${latest.assessment_date}T00:00:00`).toLocaleDateString(
@@ -142,7 +142,7 @@ function PlantRiskCard({
             </span>
           ) : (
             // Dashed, so it reads as "still to do" rather than as a level.
-            <span className="border-primary/50 bg-primary/10 text-primary inline-flex items-center gap-1 rounded-lg border border-dashed px-1.5 py-0.5 text-[11px] leading-tight font-medium sm:px-2 sm:text-xs">
+            <span className="font-heading border-primary/50 bg-primary/10 text-primary inline-flex items-center gap-1 rounded-lg border border-dashed px-1.5 py-0.5 text-[11px] leading-tight font-medium sm:px-2 sm:text-xs">
               <CircleHelp className="size-3 shrink-0 sm:size-3.5" />
               {t("riskCounts.noReading")}
             </span>
@@ -192,7 +192,7 @@ function WeeklyCheck({ plant }: { plant: BackendPlant }) {
     );
   }
   return (
-    <span className="bg-primary/10 text-primary flex items-center justify-center gap-1 rounded-md px-1.5 py-1.5 text-center text-[11px] leading-tight font-medium sm:px-2 sm:text-xs">
+    <span className="font-heading bg-primary/10 text-primary flex items-center justify-center gap-1 rounded-md px-1.5 py-1.5 text-center text-[11px] leading-tight font-medium sm:px-2 sm:text-xs">
       <CalendarClock className="size-3 shrink-0 sm:size-3.5" />
       {days_remaining === 1 ? t("riskPage.nextInOne") : t("riskPage.nextIn", { n: days_remaining })}
     </span>

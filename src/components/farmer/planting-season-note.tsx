@@ -66,7 +66,7 @@ export function PlantingSeasonNote({ advice, className }: PlantingSeasonNoteProp
       <div className="flex items-start gap-2.5">
         <Icon className={cn("mt-0.5 size-4 shrink-0", style.accent)} aria-hidden="true" />
         <div className="flex flex-col gap-1">
-          <p className="text-sm leading-snug font-medium">
+          <p className="font-heading text-sm leading-snug font-medium">
             <span className={cn("sr-only")}>{t(style.label)}. </span>
             {advice.headline}
           </p>

@@ -74,11 +74,11 @@ export function HighRiskCaseCard({ assessment }: { assessment: BackendAssessment
             {level ? (
               <RiskBadge level={level.toLowerCase() as BadgeLevel} size="sm" />
             ) : (
-              <span className="text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
+              <span className="font-heading text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
                 No reading
               </span>
             )}
-            <span className="truncate text-sm font-medium">
+            <span className="font-heading truncate text-sm font-medium">
               {assessment.crop_emoji} {assessment.plant_display_name}
             </span>
           </div>

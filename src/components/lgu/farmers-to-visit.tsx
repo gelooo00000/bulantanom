@@ -53,7 +53,7 @@ export function FarmersToVisit({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm" role="status">
-        <span className="font-medium">
+        <span className="font-heading font-medium">
           {farmers.length} farmer{farmers.length === 1 ? "" : "s"} to visit
         </span>
         {urgent > 0 && (
@@ -124,7 +124,7 @@ function FarmerCard({
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{farmer.name}</p>
+          <p className="font-heading truncate font-medium">{farmer.name}</p>
           <p className="text-muted-foreground truncate text-xs">
             {presence?.is_online ? (
               <span className="font-medium text-emerald-600 dark:text-emerald-400">Online now</span>
@@ -150,13 +150,13 @@ function FarmerCard({
       {/* Why: the counts, and the crops behind them. */}
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         {farmer.tally.HIGH > 0 && (
-          <span className="bg-risk-high/15 text-risk-high flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium">
+          <span className="font-heading bg-risk-high/15 text-risk-high flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium">
             <OctagonAlert className="size-3.5" />
             {farmer.tally.HIGH} high
           </span>
         )}
         {farmer.tally.MEDIUM > 0 && (
-          <span className="bg-risk-medium/15 text-risk-medium flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium">
+          <span className="font-heading bg-risk-medium/15 text-risk-medium flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium">
             <TriangleAlert className="size-3.5" />
             {farmer.tally.MEDIUM} medium
           </span>

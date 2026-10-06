@@ -213,7 +213,7 @@ export default function MyPlantsPage() {
           aria-label={t("myPlants.toolbar")}
           className="bg-card border-border sticky top-[calc(env(safe-area-inset-top,0px)+0.5rem)] z-20 flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 shadow-sm"
         >
-          <span className="text-sm font-medium" role="status">
+          <span className="font-heading text-sm font-medium" role="status">
             {selected.size === 0
               ? t("myPlants.tapToSelect")
               : t("myPlants.selected", { n: selected.size })}
@@ -257,7 +257,7 @@ export default function MyPlantsPage() {
       ) : error ? (
         <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
           <TriangleAlert className="text-risk-high size-5" />
-          <p className="text-sm font-medium">{t("dash.cantConnect")}</p>
+          <p className="font-heading text-sm font-medium">{t("dash.cantConnect")}</p>
           <p className="text-muted-foreground max-w-sm text-sm">{error}</p>
           <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>

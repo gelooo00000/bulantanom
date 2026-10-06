@@ -102,7 +102,7 @@ export function AssessmentLockCard({
             />
             {eligibility.planned || eligibility.too_young ? t("lock.first") : t("lock.next")}
           </span>
-          <span className="text-sm font-medium tabular-nums">
+          <span className="font-heading text-sm font-medium tabular-nums">
             {eligibility.next_assessment_date
               ? date(eligibility.next_assessment_date)
               : t("lock.availableNow")}

@@ -96,7 +96,7 @@ export default function LguDashboardPage() {
           <div className="flex items-start gap-3">
             <TriangleAlert className="text-risk-high mt-0.5 size-5 shrink-0" />
             <div>
-              <p className="text-risk-high text-sm font-medium">
+              <p className="font-heading text-risk-high text-sm font-medium">
                 {highRisk} plant{highRisk === 1 ? "" : "s"} reading high risk
               </p>
               <p className="text-muted-foreground mt-0.5 text-sm">

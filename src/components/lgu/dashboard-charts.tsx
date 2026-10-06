@@ -114,7 +114,7 @@ export function HorizontalBars({
             )}
             <span className="truncate">{row.label}</span>
           </span>
-          <span className="shrink-0 font-medium tabular-nums">
+          <span className="font-heading shrink-0 font-medium tabular-nums">
             {row.value}
             <span className="text-muted-foreground ml-1.5 text-xs font-normal">
               {share}%
@@ -421,7 +421,7 @@ export function ColumnChart({
             }}
           >
             <p className="text-muted-foreground">{columns[shown].title}</p>
-            <p className="font-medium tabular-nums">
+            <p className="font-heading font-medium tabular-nums">
               {columns[shown].count} {plural(unit, columns[shown].count)}
             </p>
           </div>

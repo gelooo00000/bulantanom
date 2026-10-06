@@ -137,7 +137,7 @@ function AssessmentTile({
           {assessment.crop_emoji}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm leading-snug font-medium break-words">
+          <p className="font-heading line-clamp-2 text-sm leading-snug font-medium break-words">
             {assessment.plant_display_name}
           </p>
           <p className="text-muted-foreground text-xs">

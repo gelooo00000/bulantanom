@@ -65,7 +65,7 @@ function CropGrid({ crops }: { crops: SoilCropSuggestion[] }) {
               <span aria-hidden className="text-lg leading-none">
                 {crop.emoji}
               </span>
-              <p className="font-medium">{crop.name}</p>
+              <p className="font-heading font-medium">{crop.name}</p>
             </div>
             {crop.reason ? (
               <p className="text-muted-foreground text-sm">{crop.reason}</p>

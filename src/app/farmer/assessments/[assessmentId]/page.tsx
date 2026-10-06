@@ -37,7 +37,7 @@ export default function AssessmentDetailPage({
     return (
       <div className="border-risk-high/30 bg-risk-high/5 flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
         <TriangleAlert className="text-risk-high size-5" />
-        <p className="text-sm font-medium">{t("asmtDetail.loadFailed")}</p>
+        <p className="font-heading text-sm font-medium">{t("asmtDetail.loadFailed")}</p>
         <p className="text-muted-foreground max-w-sm text-sm">
           {error ?? t("asmtDetail.notFound")}
         </p>

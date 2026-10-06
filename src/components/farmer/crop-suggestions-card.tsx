@@ -120,7 +120,7 @@ export function CropSuggestionsCard({ plants = [] }: { plants?: BackendPlant[] }
                       {plant.crop.emoji}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{plant.display_name}</span>
+                      <span className="font-heading block truncate text-sm font-medium">{plant.display_name}</span>
                       <span className="text-muted-foreground block truncate text-xs">
                         {plant.is_planned ? t("plant.planned") : plant.status_label}
                       </span>

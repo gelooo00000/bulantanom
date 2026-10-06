@@ -128,7 +128,7 @@ export function SoilSummaryCard({ soil }: { soil: SoilRecommendation | null }) {
           <div className="border-border flex gap-3 border-t pt-4">
             <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
             <div>
-              <p className="text-sm font-medium">{t.assessmentSaved}</p>
+              <p className="font-heading text-sm font-medium">{t.assessmentSaved}</p>
               <p className="text-muted-foreground text-sm">
                 {soil.failure_reason ? t.aiUnavailable : t.notAnalyzed}
               </p>

@@ -376,7 +376,7 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
       >
         <Bell className="size-4" />
         {unread > 0 && (
-          <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums">
+          <span className="font-heading bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -393,7 +393,7 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
           >
             <div className="border-border flex flex-col gap-2 border-b px-4 py-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">{t("bell.title")}</span>
+                <span className="font-heading text-sm font-medium">{t("bell.title")}</span>
                 <div className="flex items-center gap-3">
                   {unread > 0 && (
                     <button
@@ -459,7 +459,7 @@ export function NotificationBell({ scope }: { scope: NotificationScope }) {
               ) : items.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
                   <Bell className="text-muted-foreground/50 size-5" />
-                  <p className="text-sm font-medium">
+                  <p className="font-heading text-sm font-medium">
                     {unreadOnly ? t("bell.noneUnread") : t("bell.none")}
                   </p>
                   <p className="text-muted-foreground max-w-[15rem] text-sm">

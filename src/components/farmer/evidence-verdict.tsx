@@ -59,7 +59,7 @@ export function EvidenceVerdict({
       <Icon className={cn("mt-0.5 size-4 shrink-0", style.tone)} />
       <div className="flex flex-col items-start gap-3">
         <div>
-          <p className="text-sm font-medium">{t(style.title)}</p>
+          <p className="font-heading text-sm font-medium">{t(style.title)}</p>
           <p className="text-muted-foreground mt-1 text-sm">{result.reason}</p>
           {!result.evidence_valid && (
             <p className="text-muted-foreground mt-1 text-sm">{result.message}</p>

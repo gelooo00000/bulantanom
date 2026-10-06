@@ -22,7 +22,7 @@ export function LguError({ message, onRetry }: { message: string; onRetry: () =>
         <TriangleAlert className="size-5" />
       </span>
       <div>
-        <p className="text-sm font-medium">Unable to load farm data.</p>
+        <p className="font-heading text-sm font-medium">Unable to load farm data.</p>
         <p className="text-muted-foreground mt-1 max-w-sm text-sm">{message}</p>
       </div>
       <Button onClick={onRetry}>Try again</Button>
@@ -49,7 +49,7 @@ export function NotAvailableNotice({ metrics }: { metrics: UnavailableMetric[] }
   if (metrics.length === 0) return null;
   return (
     <div className="border-border bg-card/50 rounded-xl border p-4">
-      <p className="flex items-center gap-2 text-sm font-medium">
+      <p className="font-heading flex items-center gap-2 text-sm font-medium">
         <DatabaseZap className="text-muted-foreground size-4" />
         Not yet connected to the database
       </p>

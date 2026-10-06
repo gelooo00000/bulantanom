@@ -91,7 +91,7 @@ export function RiskResultCard({
             {risk?.risk_level ? (
               <RiskBadge level={toLevel(risk.risk_level)} />
             ) : (
-              <span className="text-muted-foreground bg-muted rounded-full px-3 py-1 text-sm font-medium">
+              <span className="font-heading text-muted-foreground bg-muted rounded-full px-3 py-1 text-sm font-medium">
                 {t("result.noReading")}
               </span>
             )}
@@ -130,7 +130,7 @@ export function RiskResultCard({
           <div className="border-risk-medium/30 bg-risk-medium/5 flex items-start gap-3 rounded-xl border p-4">
             <CalendarX className="text-risk-medium mt-0.5 size-4 shrink-0" />
             <div>
-              <p className="text-sm font-medium">{t("mismatch.title")}</p>
+              <p className="font-heading text-sm font-medium">{t("mismatch.title")}</p>
               <p className="text-muted-foreground mt-1 text-sm">{t("mismatch.text")}</p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export function RiskResultCard({
             <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />
             <div className="flex flex-col items-start gap-3">
               <div>
-                <p className="text-sm font-medium">{t("result.unavailableTitle")}</p>
+                <p className="font-heading text-sm font-medium">{t("result.unavailableTitle")}</p>
                 <p className="text-muted-foreground mt-1 text-sm">
                   {risk?.failure_reason ?? t("result.unavailableDefault")}
                   {!readOnly && <> {t("result.saved")}</>}
@@ -173,7 +173,7 @@ export function RiskResultCard({
                 than leaving the card looking unfinished. */}
             {risk.risk_level === "INCONCLUSIVE" && !risk.date_mismatch && (
               <div className="border-border bg-muted/40 rounded-xl border p-4">
-                <p className="text-sm font-medium">{t("early.resultTitle")}</p>
+                <p className="font-heading text-sm font-medium">{t("early.resultTitle")}</p>
                 <p className="text-muted-foreground mt-1 text-sm">{t("early.resultText")}</p>
               </div>
             )}

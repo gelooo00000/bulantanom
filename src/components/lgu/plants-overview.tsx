@@ -155,7 +155,7 @@ export function CropsPlanted({
         {shownType ? (
           <>
             <p className="mb-2 flex shrink-0 items-baseline justify-between gap-3 text-xs">
-              <span className="font-medium">
+              <span className="font-heading font-medium">
                 {shownType} · {shownTotal} plant{shownTotal === 1 ? "" : "s"}
               </span>
               <span className="text-muted-foreground">
@@ -262,7 +262,7 @@ export function HarvestOutlook({
         {shown ? (
           <>
             <p className="mb-2 flex shrink-0 items-baseline justify-between gap-3 text-xs">
-              <span className="font-medium">
+              <span className="font-heading font-medium">
                 Due in {monthName(shown.month, "long")} · {shown.count} plant
                 {shown.count === 1 ? "" : "s"}
               </span>

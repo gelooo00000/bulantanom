@@ -41,11 +41,11 @@ export function AssessmentRow({
               size="sm"
             />
           ) : (
-            <span className="text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
+            <span className="font-heading text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
               {t("row.noReading")}
             </span>
           )}
-          <span className="text-sm font-medium">
+          <span className="font-heading text-sm font-medium">
             {assessment.crop_emoji} {assessment.plant_display_name}
           </span>
           <span className="text-muted-foreground text-xs">

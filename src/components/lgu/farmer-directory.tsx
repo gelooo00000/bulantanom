@@ -222,7 +222,7 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
 
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2">
-          <span className="truncate font-medium">
+          <span className="font-heading truncate font-medium">
             <Highlight text={farmer.full_name || farmer.email} query={query} />
           </span>
           {/* Approved is the normal state, so only the exceptions get a badge. */}
