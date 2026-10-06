@@ -8,7 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-nunito);
-  --font-heading: var(--font-lilita);
+  --font-heading: var(--display-font);
+  --font-brand: var(--font-lilita);
   --color-risk-low: var(--risk-low);
   --color-risk-low-foreground: var(--risk-foreground);
   --color-risk-medium: var(--risk-medium);
@@ -297,9 +298,16 @@
   html {
     @apply font-sans;
   }
-  /* Display text uses Lilita One. It ships one weight, so faux bold is
-     switched off: a font-medium or font-semibold class keeps Lilita's own
-     shape instead of a smeared synthetic bold. */
+  /* Display text is Fredoka in the apps and Lilita One on the brand
+     surfaces (landing, sign-in), which set `.brand-type`. Defined as a
+     variable so dialogs and menus — portalled to <body>, outside any shell —
+     still get the app face. */
+  :root {
+    --display-font: var(--font-fredoka);
+  }
+  .brand-type {
+    --display-font: var(--font-lilita);
+  }
   h1,
   h2,
   h3,
@@ -309,9 +317,18 @@
   [data-slot="card-title"],
   [data-slot="button"],
   .font-heading {
-    font-family: var(--font-heading);
+    font-family: var(--display-font);
     font-synthesis: none;
     letter-spacing: 0.01em;
+  }
+  /* Fredoka has real weights; headings with no weight class of their own get
+     a confident semibold. Lilita ships one weight and ignores this. */
+  h1, h2, h3, h4, h5, h6, [data-slot="card-title"], .font-heading {
+    font-weight: 600;
+  }
+  .font-brand {
+    font-family: var(--font-lilita);
+    font-synthesis: none;
   }
 }
 

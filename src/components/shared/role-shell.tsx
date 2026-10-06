@@ -72,7 +72,7 @@ export function RoleShell({
     // inherit them; the shell only paints its own surface.
     <div className="bg-background text-foreground flex min-h-screen">
       <aside className="border-border bg-card/60 sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r px-4 py-6 lg:flex">
-        <Link href={homeHref} className="font-heading flex items-center gap-2 px-2 text-lg">
+        <Link href={homeHref} className="font-brand flex items-center gap-2 px-2 text-lg">
           <Logo className="size-8" px={32} />
           BulanTanom
         </Link>

@@ -562,7 +562,7 @@ export default function AddPlantPage() {
   );
 }
 
-/** Lilita One in the leaf accent, so each block reads like the rest of the app. */
+/** The display face in the leaf accent, so each block reads like the rest of the app. */
 function SectionHeading({ children }: { children: string }) {
   return (
     <h3 className="text-base tracking-wide" style={{ color: "var(--landing-accent)" }}>

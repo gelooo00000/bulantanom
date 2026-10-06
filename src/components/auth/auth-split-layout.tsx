@@ -31,7 +31,7 @@ export function AuthSplitLayout({
   return (
     <>
       <div
-        className="relative flex min-h-dvh flex-col"
+        className="brand-type relative flex min-h-dvh flex-col"
         inert={busy}
         aria-busy={busy}
       >
