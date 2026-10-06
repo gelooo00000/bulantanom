@@ -259,13 +259,13 @@ export default function AddPlantPage() {
             <Card className="gap-4 py-5">
               <CardContent className="px-5">
                 <p
-                  className="flex items-center gap-1.5 text-xs font-medium tracking-[0.15em] uppercase"
+                  className="font-heading flex items-center gap-1.5 text-sm tracking-wide"
                   style={{ color: "var(--landing-accent)" }}
                 >
-                  <CalendarDays className="size-3.5" />
+                  <CalendarDays className="size-4" />
                   {t("add.window")}
                 </p>
-                <p className="mt-2 text-lg font-medium">
+                <p className="font-heading mt-1.5 text-xl sm:text-2xl">
                   {date(window.expected_harvest_start)} —{" "}
                   {date(window.expected_harvest_end)}
                 </p>
@@ -297,8 +297,8 @@ export default function AddPlantPage() {
                     <Sparkles className="size-4" />
                   </span>
                   <div>
-                    <h2 className="font-medium">{t("add.intel")}</h2>
-                    <p className="text-muted-foreground mt-0.5 text-sm">
+                    <h2 className="text-lg leading-tight">{t("add.intel")}</h2>
+                    <p className="text-foreground/85 mt-1.5 text-[15px] leading-relaxed">
                       {ai.crop_overview}
                     </p>
                   </div>
@@ -317,8 +317,8 @@ export default function AddPlantPage() {
                     )}
                     {ai.harvest_guidance && (
                       <div>
-                        <h3 className="text-sm font-medium">{t("add.harvestGuidance")}</h3>
-                        <p className="text-muted-foreground mt-1.5 text-sm">
+                        <SectionHeading>{t("add.harvestGuidance")}</SectionHeading>
+                        <p className="text-foreground/80 mt-2 text-sm leading-relaxed">
                           {ai.harvest_guidance}
                         </p>
                       </div>
@@ -338,7 +338,7 @@ export default function AddPlantPage() {
                     onClick={() => setShowFullGuidance((open) => !open)}
                     aria-expanded={showFullGuidance}
                     aria-controls="full-guidance"
-                    className="hover:bg-muted flex items-center gap-1.5 self-start rounded-md px-2 py-1 -mx-2 text-sm font-medium transition-colors"
+                    className="font-heading hover:bg-muted -mx-2 flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-sm tracking-wide transition-colors"
                     style={{ color: "var(--landing-accent)" }}
                   >
                     {showFullGuidance ? t("add.seeLess") : t("add.seeMore")}
@@ -562,14 +562,26 @@ export default function AddPlantPage() {
   );
 }
 
+/** Lilita One in the leaf accent, so each block reads like the rest of the app. */
+function SectionHeading({ children }: { children: string }) {
+  return (
+    <h3 className="text-base tracking-wide" style={{ color: "var(--landing-accent)" }}>
+      {children}
+    </h3>
+  );
+}
+
 function Section({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <h3 className="text-sm font-medium">{title}</h3>
-      <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-sm">
+      <SectionHeading>{title}</SectionHeading>
+      <ul className="text-foreground/80 mt-2 space-y-2 text-sm leading-relaxed">
         {items.map((item) => (
-          <li key={item} className="flex gap-2">
-            <span className="bg-muted-foreground/50 mt-2 size-1 shrink-0 rounded-full" />
+          <li key={item} className="flex gap-2.5">
+            <span
+              className="mt-[0.55em] size-1.5 shrink-0 rounded-full"
+              style={{ background: "var(--landing-accent)" }}
+            />
             {item}
           </li>
         ))}
