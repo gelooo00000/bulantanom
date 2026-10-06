@@ -75,6 +75,23 @@ describe("signing in", () => {
     },
   );
 
+  it("locks the whole screen while the sign-in is in flight", async () => {
+    login.mockReturnValue(new Promise(() => {}));
+    render(<LoginView />);
+    await signIn();
+
+    // The role switch, links and fields all sit inside the inert page.
+    const lgu = screen.getByRole("button", { name: /LGU Officer/, hidden: true });
+    expect(lgu.closest("[inert]")).not.toBeNull();
+    expect(screen.getByText(/Back to home/).closest("[inert]")).not.toBeNull();
+
+    // A second submit before the first answers sends nothing more.
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText(/email/i).closest("form")!);
+    });
+    expect(login).toHaveBeenCalledTimes(1);
+  });
+
   it("sends Admin straight to the dashboard with no loading screen", async () => {
     roleParam = "admin";
     login.mockResolvedValue(user("admin"));

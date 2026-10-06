@@ -99,6 +99,8 @@ export function LoginView() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    // A second Enter before the first request answers must not send another.
+    if (submitting) return;
 
     setSubmitting(true);
     setError(null);
@@ -134,7 +136,7 @@ export function LoginView() {
   if (!roleCard) return null;
 
   return (
-    <AuthSplitLayout>
+    <AuthSplitLayout busy={submitting}>
       <FadeIn duration={500}>
         <AuthCard>
           <div>
