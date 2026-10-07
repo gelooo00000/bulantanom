@@ -57,6 +57,11 @@ export const soil = defineMessages({
     fil: "Tingnan ang iba pang pagpipilian",
     bik: "Hilingon an iba pang pagpipilian",
   },
+  "soil.seeMoreAdvice": {
+    en: "See more",
+    fil: "Tingnan pa",
+    bik: "Hilingon pa",
+  },
   "soil.seeLess": {
     en: "Show fewer",
     fil: "Ipakita nang mas kaunti",
@@ -129,11 +134,6 @@ export const soil = defineMessages({
     en: "Your soil information is saved — try again without re-entering anything.",
     fil: "Naka-save ang impormasyon ng iyong lupa — subukan muli nang hindi na naglalagay muli.",
     bik: "Naka-save an impormasyon san imo daga — probaran liwat na dili na magbutang liwat.",
-  },
-  "soil.updatingAdvice": {
-    en: "Updating this result with clearer advice…",
-    fil: "Ina-update ang resultang ito para mas madaling maintindihan…",
-    bik: "Ina-update an resulta na ini para mas madali masabutan…",
   },
   "soil.stillUnavailable": {
     en: "AI recommendation is still unavailable. Please try again in a few minutes.",

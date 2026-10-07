@@ -240,7 +240,6 @@ export function SoilRecommendationForm() {
    * first time the farmer opens it, so old results read like new ones. If
    * the rewrite fails the old advice simply stays.
    */
-  const [refreshingId, setRefreshingId] = useState<number | null>(null);
   const [refreshTried, setRefreshTried] = useState<number[]>([]);
   const staleId =
     status === "done" && result && isOutdatedAdvice(result) && !refreshTried.includes(result.id)
@@ -252,14 +251,11 @@ export function SoilRecommendationForm() {
     // the rewrite must still land when it comes back.
     (async () => {
       setRefreshTried((prev) => [...prev, staleId]);
-      setRefreshingId(staleId);
       try {
         const updated = await reanalyzeSoilRecommendation(accessToken, staleId);
         setHistory((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       } catch {
         // Keeping the old advice is fine; it is still correct, just wordier.
-      } finally {
-        setRefreshingId(null);
       }
     })();
   }, [accessToken, staleId]);
@@ -426,18 +422,7 @@ export function SoilRecommendationForm() {
               </div>
             </div>
           ) : (
-            <>
-              {refreshingId === result.id ? (
-                <p
-                  role="status"
-                  className="bg-primary/10 text-primary flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
-                >
-                  <LoaderCircle className="size-4 animate-spin" />
-                  {t.updatingAdvice}
-                </p>
-              ) : null}
-              <SoilResultCard result={result} />
-            </>
+            <SoilResultCard key={result.id} result={result} />
           )}
 
           {error ? <p className="text-risk-high text-sm">{error}</p> : null}

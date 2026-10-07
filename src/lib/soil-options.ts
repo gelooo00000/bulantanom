@@ -206,6 +206,7 @@ export const SOIL_STRINGS = {
   soilImprovement: "How to fix your soil and watering",
   warnings: "Be careful",
   seeMore: "See more options",
+  seeMoreAdvice: "See more",
   seeLess: "Show fewer",
   noWarnings: "No major warnings based on the information provided.",
 
@@ -234,7 +235,6 @@ export const SOIL_STRINGS = {
   tryAgain: "Try Again",
   retrying: "Analyzing…",
   retryHint: "Your soil information is saved — try again without re-entering anything.",
-  updatingAdvice: "Updating this result with clearer advice…",
   stillUnavailable:
     "AI recommendation is still unavailable. Please try again in a few minutes.",
 

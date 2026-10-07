@@ -56,53 +56,58 @@ function Section({
   );
 }
 
-/** How many crops a section shows before "See more options". */
+/** Crops each group shows, and advice items shown, before "See more". */
 const CROPS_SHOWN = 2;
+const ADVICE_SHOWN = 1;
 
-function CropGrid({
-  crops,
-  seeMore,
-  seeLess,
-}: {
-  crops: SoilCropSuggestion[];
-  seeMore: string;
-  seeLess: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const hidden = crops.length - CROPS_SHOWN;
-  const shown = expanded ? crops : crops.slice(0, CROPS_SHOWN);
+function CropGrid({ crops }: { crops: SoilCropSuggestion[] }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {shown.map((crop) => (
-          <Card key={crop.id} className="gap-2 py-4">
-            <CardContent className="flex flex-col gap-1.5 px-4">
-              <div className="flex items-center gap-2">
-                {/* The emoji is resolved server-side from the crop catalog. */}
-                <span aria-hidden className="text-lg leading-none">
-                  {crop.emoji}
-                </span>
-                <p className="font-heading font-medium">{crop.name}</p>
-              </div>
-              {crop.reason ? (
-                <p className="text-muted-foreground text-sm">{crop.reason}</p>
-              ) : null}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      {hidden > 0 ? (
-        <button
-          type="button"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((open) => !open)}
-          className="text-primary hover:bg-primary/10 flex items-center gap-1 self-start rounded-lg px-2 py-1 text-sm font-medium transition-colors"
-        >
-          {expanded ? seeLess : `${seeMore} (${hidden})`}
-          <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
-        </button>
-      ) : null}
+    <div className="grid gap-3 sm:grid-cols-2">
+      {crops.map((crop) => (
+        <Card key={crop.id} className="gap-2 py-4">
+          <CardContent className="flex flex-col gap-1.5 px-4">
+            <div className="flex items-center gap-2">
+              {/* The emoji is resolved server-side from the crop catalog. */}
+              <span aria-hidden className="text-lg leading-none">
+                {crop.emoji}
+              </span>
+              <p className="font-heading font-medium">{crop.name}</p>
+            </div>
+            {crop.reason ? (
+              <p className="text-muted-foreground text-sm">{crop.reason}</p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ))}
     </div>
+  );
+}
+
+/** The same "See more" toggle as the new-plant guidance. */
+function SeeMoreButton({
+  open,
+  onToggle,
+  more,
+  less,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  more: string;
+  less: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="font-heading hover:bg-muted -mx-2 -mt-2 flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-sm tracking-wide transition-colors"
+      style={{ color: "var(--landing-accent)" }}
+    >
+      {open ? less : more}
+      <ChevronDown
+        className={cn("size-4 transition-transform duration-200", open && "rotate-180")}
+      />
+    </button>
   );
 }
 
@@ -147,6 +152,24 @@ function WarningList({ items, emptyText }: { items: SoilAdvice[]; emptyText: str
 
 export function SoilResultCard({ result }: { result: SoilRecommendation }) {
   const t = useSoilStrings();
+  // One toggle for all three crop groups, one for the fertilizer advice.
+  // The parent keys this card by result, so both reset on a new result.
+  const [cropsOpen, setCropsOpen] = useState(false);
+  const [adviceOpen, setAdviceOpen] = useState(false);
+
+  const groups = [
+    { key: "fruits", icon: Apple, title: t.suitableFruits, crops: result.suitable_fruits },
+    { key: "vegetables", icon: Leaf, title: t.suitableVegetables, crops: result.suitable_vegetables },
+    { key: "crops", icon: Wheat, title: t.suitableCrops, crops: result.suitable_crops },
+  ].filter((group) => group.crops.length > 0);
+  const hiddenCrops = groups.reduce(
+    (sum, group) => sum + Math.max(0, group.crops.length - CROPS_SHOWN),
+    0,
+  );
+
+  const fertilizer = result.fertilizer_recommendations;
+  const hiddenAdvice = Math.max(0, fertilizer.length - ADVICE_SHOWN);
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2">
@@ -154,27 +177,31 @@ export function SoilResultCard({ result }: { result: SoilRecommendation }) {
         <h2 className="text-base font-medium">{t.resultTitle}</h2>
       </div>
 
-      {result.suitable_fruits.length > 0 ? (
-        <Section icon={Apple} title={t.suitableFruits}>
-          <CropGrid key={result.id} crops={result.suitable_fruits} seeMore={t.seeMore} seeLess={t.seeLess} />
+      {groups.map((group) => (
+        <Section key={group.key} icon={group.icon} title={group.title}>
+          <CropGrid crops={cropsOpen ? group.crops : group.crops.slice(0, CROPS_SHOWN)} />
         </Section>
+      ))}
+      {hiddenCrops > 0 ? (
+        <SeeMoreButton
+          open={cropsOpen}
+          onToggle={() => setCropsOpen((open) => !open)}
+          more={`${t.seeMore} (${hiddenCrops})`}
+          less={t.seeLess}
+        />
       ) : null}
 
-      {result.suitable_vegetables.length > 0 ? (
-        <Section icon={Leaf} title={t.suitableVegetables}>
-          <CropGrid key={result.id} crops={result.suitable_vegetables} seeMore={t.seeMore} seeLess={t.seeLess} />
-        </Section>
-      ) : null}
-
-      {result.suitable_crops.length > 0 ? (
-        <Section icon={Wheat} title={t.suitableCrops}>
-          <CropGrid key={result.id} crops={result.suitable_crops} seeMore={t.seeMore} seeLess={t.seeLess} />
-        </Section>
-      ) : null}
-
-      {result.fertilizer_recommendations.length > 0 ? (
+      {fertilizer.length > 0 ? (
         <Section icon={FlaskConical} title={t.fertilizer}>
-          <AdviceList items={result.fertilizer_recommendations} />
+          <AdviceList items={adviceOpen ? fertilizer : fertilizer.slice(0, ADVICE_SHOWN)} />
+          {hiddenAdvice > 0 ? (
+            <SeeMoreButton
+              open={adviceOpen}
+              onToggle={() => setAdviceOpen((open) => !open)}
+              more={`${t.seeMoreAdvice} (${hiddenAdvice})`}
+              less={t.seeLess}
+            />
+          ) : null}
         </Section>
       ) : null}
 
