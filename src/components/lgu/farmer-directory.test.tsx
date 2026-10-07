@@ -104,7 +104,7 @@ describe("FarmerDirectory", () => {
 
   it("lists the newest registered farmers first", () => {
     renderOn();
-    // Pending (Ana) is outside the default Approved view.
+    // Ana (inactive) is outside the default Approved view.
     expect(names()).toEqual(["Maria Santos", "Juan Cruz", "Pedro Reyes"]);
   });
 
@@ -132,7 +132,7 @@ describe("FarmerDirectory", () => {
   it("counts each status on its filter", () => {
     renderOn();
     expect(screen.getByRole("button", { name: /Approved\s*3/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Pending\s*1/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Pending/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /All\s*4/ })).toBeInTheDocument();
   });
 

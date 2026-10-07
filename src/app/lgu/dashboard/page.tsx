@@ -70,10 +70,9 @@ export default function LguDashboardPage() {
     color: "var(--primary)",
   }));
 
-  // Pending is the only account state that needs someone to act.
+  // Farmers are approved on sign-up, so there is no pending state to show.
   const farmerRows: BarRow[] = [
     { key: "approved", label: "Approved", value: farmers.active, color: "var(--primary)" },
-    { key: "pending", label: "Pending approval", value: farmers.pending, color: "var(--risk-medium)" },
     { key: "rejected", label: "Rejected", value: farmers.rejected, color: "var(--muted-foreground)" },
     { key: "suspended", label: "Suspended", value: farmers.suspended, color: "var(--muted-foreground)" },
   ];

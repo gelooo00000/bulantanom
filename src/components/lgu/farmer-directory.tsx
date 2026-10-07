@@ -16,17 +16,18 @@ import { cn } from "@/lib/utils";
  * right.
  */
 
-type StatusFilter = "APPROVED" | "PENDING" | "ALL";
+type StatusFilter = "APPROVED" | "ALL";
 
 const STATUS_LABEL: Record<BackendAccountStatus, string> = {
-  PENDING: "Pending approval",
+  // Farmers are approved on sign-up; PENDING only remains on older accounts.
+  PENDING: "Inactive",
   APPROVED: "Approved",
   REJECTED: "Rejected",
   SUSPENDED: "Suspended",
 };
 
 const STATUS_STYLE: Record<BackendAccountStatus, string> = {
-  PENDING: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
+  PENDING: "bg-muted text-muted-foreground border-border",
   APPROVED: "bg-risk-low/15 text-risk-low border-risk-low/30",
   REJECTED: "bg-risk-high/15 text-risk-high border-risk-high/30",
   SUSPENDED: "bg-risk-high/15 text-risk-high border-risk-high/30",
@@ -72,7 +73,6 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
   const counts = useMemo(
     () => ({
       APPROVED: farmers.filter((f) => f.account_status === "APPROVED").length,
-      PENDING: farmers.filter((f) => f.account_status === "PENDING").length,
       ALL: farmers.length,
     }),
     [farmers],
@@ -136,7 +136,6 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
           {(
             [
               ["APPROVED", "Approved"],
-              ["PENDING", "Pending"],
               ["ALL", "All"],
             ] as const
           ).map(([value, label]) => (
