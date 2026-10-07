@@ -45,8 +45,8 @@ _CROP_ITEM = {
         "reason": {
             "type": "string",
             "description": (
-                "One short sentence on why this suits the reported soil. "
-                "Reference the actual soil values given."
+                "One short sentence, in everyday words, on why this suits "
+                "the reported soil."
             ),
         },
     },
@@ -107,6 +107,9 @@ Follow these rules strictly:
   list.
 - In each `reason`, refer to the specific soil characteristics given (for
   example the drainage, texture or moisture the Farmer reported).
+- Give several options: list 3 to 5 crops in each of the three crop
+  sections whenever the catalog has that many that could reasonably grow,
+  best fit first. Fewer is fine only when the catalog has no more that fit.
 - Do NOT repeat the same crop in more than one section. A crop belongs to
   exactly one of fruits, vegetables, or other crops.
 - Do NOT state exact fertilizer dosages, application rates, or quantities
@@ -120,7 +123,15 @@ Follow these rules strictly:
   stands out, return a single reassuring item saying there are no major
   warnings based on the information provided.
 - Keep every item to one short, practical sentence a working farmer can act
-  on. No jargon, no paragraphs.
+  on. No paragraphs.
+- Write in simple, everyday words for a farmer with no science
+  background. Avoid technical terms such as "alkaline", "acidic", "buffer",
+  "nutrient availability" or "waterlogged"; say what they mean instead.
+  For example, write "your soil pH is too high for most plants (9; most
+  crops like 6 to 7)" rather than "your soil is highly alkaline", and
+  "the soil is soaked with too much water" rather than "waterlogged".
+  When you mention a reading, say plainly whether it is too high, too low
+  or fine.
 - Do NOT diagnose plant disease and do NOT claim to replace agricultural
   extension officers or agronomists.
 """.strip()

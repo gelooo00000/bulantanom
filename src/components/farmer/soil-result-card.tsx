@@ -2,6 +2,7 @@
 
 import {
   Apple,
+  ChevronDown,
   Droplets,
   FlaskConical,
   Leaf,
@@ -9,7 +10,7 @@ import {
   TriangleAlert,
   Wheat,
 } from "lucide-react";
-import type { ElementType, ReactNode } from "react";
+import { useState, type ElementType, type ReactNode } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import type {
@@ -18,6 +19,7 @@ import type {
   SoilRecommendation,
 } from "@/lib/api/soil-api";
 import { useSoilStrings } from "@/lib/soil-options";
+import { cn } from "@/lib/utils";
 
 /**
  * Renders exactly the six Gemini sections — nothing more. Each is a titled
@@ -54,25 +56,52 @@ function Section({
   );
 }
 
-function CropGrid({ crops }: { crops: SoilCropSuggestion[] }) {
+/** How many crops a section shows before "See more options". */
+const CROPS_SHOWN = 2;
+
+function CropGrid({
+  crops,
+  seeMore,
+  seeLess,
+}: {
+  crops: SoilCropSuggestion[];
+  seeMore: string;
+  seeLess: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const hidden = crops.length - CROPS_SHOWN;
+  const shown = expanded ? crops : crops.slice(0, CROPS_SHOWN);
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {crops.map((crop) => (
-        <Card key={crop.id} className="gap-2 py-4">
-          <CardContent className="flex flex-col gap-1.5 px-4">
-            <div className="flex items-center gap-2">
-              {/* The emoji is resolved server-side from the crop catalog. */}
-              <span aria-hidden className="text-lg leading-none">
-                {crop.emoji}
-              </span>
-              <p className="font-heading font-medium">{crop.name}</p>
-            </div>
-            {crop.reason ? (
-              <p className="text-muted-foreground text-sm">{crop.reason}</p>
-            ) : null}
-          </CardContent>
-        </Card>
-      ))}
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {shown.map((crop) => (
+          <Card key={crop.id} className="gap-2 py-4">
+            <CardContent className="flex flex-col gap-1.5 px-4">
+              <div className="flex items-center gap-2">
+                {/* The emoji is resolved server-side from the crop catalog. */}
+                <span aria-hidden className="text-lg leading-none">
+                  {crop.emoji}
+                </span>
+                <p className="font-heading font-medium">{crop.name}</p>
+              </div>
+              {crop.reason ? (
+                <p className="text-muted-foreground text-sm">{crop.reason}</p>
+              ) : null}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {hidden > 0 ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((open) => !open)}
+          className="text-primary hover:bg-primary/10 flex items-center gap-1 self-start rounded-lg px-2 py-1 text-sm font-medium transition-colors"
+        >
+          {expanded ? seeLess : `${seeMore} (${hidden})`}
+          <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -127,19 +156,19 @@ export function SoilResultCard({ result }: { result: SoilRecommendation }) {
 
       {result.suitable_fruits.length > 0 ? (
         <Section icon={Apple} title={t.suitableFruits}>
-          <CropGrid crops={result.suitable_fruits} />
+          <CropGrid key={result.id} crops={result.suitable_fruits} seeMore={t.seeMore} seeLess={t.seeLess} />
         </Section>
       ) : null}
 
       {result.suitable_vegetables.length > 0 ? (
         <Section icon={Leaf} title={t.suitableVegetables}>
-          <CropGrid crops={result.suitable_vegetables} />
+          <CropGrid key={result.id} crops={result.suitable_vegetables} seeMore={t.seeMore} seeLess={t.seeLess} />
         </Section>
       ) : null}
 
       {result.suitable_crops.length > 0 ? (
         <Section icon={Wheat} title={t.suitableCrops}>
-          <CropGrid crops={result.suitable_crops} />
+          <CropGrid key={result.id} crops={result.suitable_crops} seeMore={t.seeMore} seeLess={t.seeLess} />
         </Section>
       ) : null}
 

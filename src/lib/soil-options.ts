@@ -198,13 +198,15 @@ export function sensorLabel(field: SensorField, t: Translate = englishT): string
 }
 
 export const SOIL_STRINGS = {
-  resultTitle: "AI Crop Recommendation",
-  suitableFruits: "Suitable Fruits",
-  suitableVegetables: "Suitable Vegetables",
-  suitableCrops: "Suitable Crops",
-  fertilizer: "Fertilizer Recommendations",
-  soilImprovement: "Soil Improvement & Watering Considerations",
-  warnings: "Important Warnings",
+  resultTitle: "What to plant in your soil",
+  suitableFruits: "Fruits that will grow well",
+  suitableVegetables: "Vegetables that will grow well",
+  suitableCrops: "Other crops that will grow well",
+  fertilizer: "What to add to your soil",
+  soilImprovement: "How to fix your soil and watering",
+  warnings: "Be careful",
+  seeMore: "See more options",
+  seeLess: "Show fewer",
   noWarnings: "No major warnings based on the information provided.",
 
   soilType: "Soil Type",
