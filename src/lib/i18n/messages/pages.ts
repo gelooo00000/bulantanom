@@ -33,6 +33,71 @@ export const pages = defineMessages({
     bik: "Masunod sa {n} adlaw",
   },
   "riskPage.assessNow": { en: "Assess now", fil: "Suriin ngayon", bik: "Susiha yana" },
+  "riskPage.plant": { en: "plant", fil: "tanim", bik: "tanom" },
+  "riskPage.plants": { en: "plants", fil: "tanim", bik: "tanom" },
+  "riskPage.byLevel": {
+    en: "Risk by level",
+    fil: "Panganib ayon sa antas",
+    bik: "Peligro segun sa antas",
+  },
+  "riskPage.byLevelText": {
+    en: "Select a level to see its plants.",
+    fil: "Pumili ng antas para makita ang mga tanim nito.",
+    bik: "Pumili nin antas para mahiling an mga tanom kaini.",
+  },
+  "riskPage.thisWeek": {
+    en: "This week's checks",
+    fil: "Mga pagsusuri ngayong linggo",
+    bik: "Mga pagsusi ngunyan na semana",
+  },
+  "riskPage.thisWeekText": {
+    en: "Each plant is assessed once a week.",
+    fil: "Isang beses sa isang linggo sinusuri ang bawat tanim.",
+    bik: "Kada tanom sinusuri saro kada semana.",
+  },
+  "riskPage.dueOf": {
+    en: "of {total} due now",
+    fil: "sa {total} ang dapat suriin ngayon",
+    bik: "sa {total} an dapat susihon yana",
+  },
+  "riskPage.dueNow": { en: "Due now", fil: "Dapat suriin ngayon", bik: "Dapat susihon yana" },
+  "riskPage.doneThisWeek": {
+    en: "Done this week",
+    fil: "Tapos ngayong linggo",
+    bik: "Tapos ngunyan na semana",
+  },
+  "riskPage.notOpen": { en: "Not open yet", fil: "Hindi pa bukas", bik: "Dili pa bukas" },
+  "riskPage.nothingDue": {
+    en: "Nothing to assess right now.",
+    fil: "Walang kailangang suriin ngayon.",
+    bik: "Waray kinakaipuhan na susihon yana.",
+  },
+  "riskPage.more": { en: "+{n} more", fil: "+{n} pa", bik: "+{n} pa" },
+  "riskPage.all": { en: "All", fil: "Lahat", bik: "Gabos" },
+  "riskPage.search": { en: "Search plants", fil: "Maghanap ng tanim", bik: "Maghanap nin tanom" },
+  "riskPage.sort": { en: "Sort plants", fil: "Ayusin ang mga tanim", bik: "Ayuson an mga tanom" },
+  "riskPage.sortDue": {
+    en: "Due first",
+    fil: "Unahin ang dapat suriin",
+    bik: "Unahon an dapat susihon",
+  },
+  "riskPage.sortRisk": {
+    en: "Highest risk first",
+    fil: "Pinakamataas na panganib muna",
+    bik: "Pinakahataas na peligro enot",
+  },
+  "riskPage.sortName": { en: "Name A–Z", fil: "Pangalan A–Z", bik: "Ngaran A–Z" },
+  "riskPage.noMatchTitle": { en: "No plants here", fil: "Walang tanim dito", bik: "Waray tanom digdi" },
+  "riskPage.noMatchText": {
+    en: "Try another level or search.",
+    fil: "Subukan ang ibang antas o paghahanap.",
+    bik: "Probaran an iba na antas o paghanap.",
+  },
+  "riskPage.notChecked": {
+    en: "Not checked yet",
+    fil: "Hindi pa nasusuri",
+    bik: "Dili pa nasusi",
+  },
 
   "history.description": {
     en: "All weekly assessments you have submitted, newest first.",

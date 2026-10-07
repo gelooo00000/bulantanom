@@ -46,6 +46,7 @@ export const CROP_PAGE_SIZE = 5;
 export function HorizontalBars({
   rows,
   unit,
+  unitPlural,
   label,
   onSelect,
   selectedKey,
@@ -55,6 +56,8 @@ export function HorizontalBars({
   rows: BarRow[];
   /** Singular noun for the tooltip, e.g. "plant". */
   unit: string;
+  /** Plural of `unit` where adding "s" is wrong, e.g. a translated noun. */
+  unitPlural?: string;
   /** Accessible name for the whole chart. */
   label: string;
   /** Makes each row a toggle button, e.g. to filter a list by that row. */
@@ -77,7 +80,7 @@ export function HorizontalBars({
     const share = total > 0 ? Math.round((row.value / total) * 100) : 0;
     const isActive = active === row.key || selectedKey === row.key;
     const dimmed = (active || selectedKey) && !isActive;
-    const name = `${row.label}: ${row.value} ${plural(unit, row.value)}, ${share}%`;
+    const name = `${row.label}: ${row.value} ${plural(unit, row.value, unitPlural)}, ${share}%`;
     const hover = {
       onMouseEnter: () => {
         setActive(row.key);
@@ -458,6 +461,6 @@ export function ColumnChart({
   );
 }
 
-function plural(noun: string, count: number): string {
-  return count === 1 ? noun : `${noun}s`;
+function plural(noun: string, count: number, many = `${noun}s`): string {
+  return count === 1 ? noun : many;
 }

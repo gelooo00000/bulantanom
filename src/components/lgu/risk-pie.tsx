@@ -28,6 +28,7 @@ export function RiskPie({ rows }: { rows: BarRow[] }) {
 export function DonutChart({
   rows,
   unit,
+  unitPlural = `${unit}s`,
   name,
   onHoverKey,
   onSelectKey,
@@ -35,6 +36,8 @@ export function DonutChart({
   rows: BarRow[];
   /** Singular noun for the centre label and tooltip, e.g. "plant". */
   unit: string;
+  /** Plural of `unit` where adding "s" is wrong, e.g. a translated noun. */
+  unitPlural?: string;
   /** Accessible name, e.g. "Crop type share". */
   name: string;
   /** Called with a slice's row key as the pointer enters it, null as it leaves. */
@@ -61,7 +64,7 @@ export function DonutChart({
   });
 
   const options = useMemo<ApexOptions>(() => {
-    const plural = (n: number) => (n === 1 ? unit : `${unit}s`);
+    const plural = (n: number) => (n === 1 ? unit : unitPlural);
     const keyAt = (index: number) => rows[index]?.key ?? null;
     return {
       chart: {
@@ -130,12 +133,12 @@ export function DonutChart({
         },
       },
     };
-  }, [rows, colors, total, unit]);
+  }, [rows, colors, total, unit, unitPlural]);
 
   if (total === 0) {
     return (
       <div className="text-muted-foreground flex aspect-square items-center justify-center text-center text-sm">
-        No {unit}s to chart yet.
+        No {unitPlural} to chart yet.
       </div>
     );
   }
