@@ -79,7 +79,6 @@ describe("a newly planted crop", () => {
       <AssessmentLockCard
         eligibility={JUST_PLANTED.assessment_eligibility}
         plantLabel="Corn"
-        plantId={5}
         plantingDate={JUST_PLANTED.planting_date}
       />,
     );

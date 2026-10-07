@@ -46,7 +46,6 @@ describe("a planned plant", () => {
       <AssessmentLockCard
         eligibility={plant({}).assessment_eligibility}
         plantLabel="Corn"
-        plantId={5}
       />,
     );
     expect(screen.getByRole("heading", { name: "Not planted yet" })).toBeInTheDocument();

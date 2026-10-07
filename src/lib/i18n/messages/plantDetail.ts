@@ -59,7 +59,6 @@ export const plantDetail = defineMessages({
     fil: "Huling nasuri {date} · isang pagsusuri bawat {n} araw.",
     bik: "Huri na nasusi {date} · saro na pagsusi kada {n} adlaw.",
   },
-  "lock.backToPlant": { en: "Back to plant", fil: "Bumalik sa tanim", bik: "Balik sa tanom" },
   "lock.past": {
     en: "View past assessments",
     fil: "Tingnan ang mga nakaraang pagsusuri",

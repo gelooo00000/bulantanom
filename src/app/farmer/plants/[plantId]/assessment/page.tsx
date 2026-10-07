@@ -48,8 +48,8 @@ export default function AssessmentPage({
         </p>
         <div className="flex gap-2">
           <Button onClick={refetch}>{t("common.tryAgain")}</Button>
-          <Button variant="outline" nativeButton={false} render={<Link href="/farmer/plants" />}>
-            {t("add.back")}
+          <Button variant="outline" nativeButton={false} render={<Link href="/farmer/risk-indicator" />}>
+            {t("asmt.backToRisk")}
           </Button>
         </div>
       </div>
@@ -65,11 +65,11 @@ export default function AssessmentPage({
     <div className="mx-auto flex max-w-2xl flex-col gap-5">
       <div>
         <Link
-          href={`/farmer/plants/${plant.id}`}
+          href="/farmer/risk-indicator"
           className="text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1.5 text-sm"
         >
           <ArrowLeft className="size-3.5" />
-          {t("asmt.backTo", { name: plantLabel })}
+          {t("asmt.backToRisk")}
         </Link>
         <h1 className="text-2xl font-medium tracking-tight">{t("asmt.title")}</h1>
         <p className="text-muted-foreground mt-1 text-sm">
@@ -93,7 +93,6 @@ export default function AssessmentPage({
         <AssessmentLockCard
           eligibility={eligibility}
           plantLabel={plantLabel}
-          plantId={plant.id}
           plantingDate={plant.planting_date}
         />
       )}

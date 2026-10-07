@@ -318,16 +318,16 @@ export function AssessmentForm({
         <RiskResultCard assessment={result} />
         <RiskInfoNote />
         <div className="flex flex-wrap gap-2">
-          <Button nativeButton={false} render={<Link href={`/farmer/plants/${plantId}`} />}>
-            {t("lock.backToPlant")}
+          <Button nativeButton={false} render={<Link href="/farmer/risk-indicator" />}>
+            {t("asmt.backToRisk")}
             <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>
           <Button
             variant="outline"
             nativeButton={false}
-            render={<Link href="/farmer/risk-indicator" />}
+            render={<Link href="/farmer/assessments" />}
           >
-            {t("nav.risk")}
+            {t("lock.past")}
           </Button>
         </div>
       </div>

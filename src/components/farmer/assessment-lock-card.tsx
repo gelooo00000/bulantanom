@@ -23,12 +23,10 @@ function daysLabel(days: number, t: Translate) {
 export function AssessmentLockCard({
   eligibility,
   plantLabel,
-  plantId,
   plantingDate,
 }: {
   eligibility: AssessmentEligibility;
   plantLabel: string;
-  plantId: number;
   /** Shown on the "just planted" state, where the date is the point. */
   plantingDate?: string;
 }) {
@@ -119,8 +117,8 @@ export function AssessmentLockCard({
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button nativeButton={false} render={<Link href={`/farmer/plants/${plantId}`} />}>
-            {t("lock.backToPlant")}
+          <Button nativeButton={false} render={<Link href="/farmer/risk-indicator" />}>
+            {t("asmt.backToRisk")}
             <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>
           <Button

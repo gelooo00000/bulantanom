@@ -7,7 +7,12 @@ export const assessment = defineMessages({
     fil: "Lingguhang Pagsusuri",
     bik: "Pagsusi kada Semana",
   },
-  "asmt.backTo": { en: "Back to {name}", fil: "Bumalik sa {name}", bik: "Balik sa {name}" },
+  // The assessment is opened from the Risk Indicator, so every way back leads there.
+  "asmt.backToRisk": {
+    en: "Back to Risk Indicator",
+    fil: "Bumalik sa Antas ng Panganib",
+    bik: "Balik sa Tanda san Peligro",
+  },
   "asmt.intro": {
     en: "Answer a few questions about {name} to get an AI risk reading.",
     fil: "Sagutin ang ilang tanong tungkol sa {name} para makakuha ng resulta ng panganib mula sa AI.",
