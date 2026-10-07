@@ -56,9 +56,6 @@ function Section({
   );
 }
 
-/** Fertilizer tips shown before "See more". */
-const ADVICE_SHOWN = 1;
-
 function CropGrid({ crops }: { crops: SoilCropSuggestion[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -99,7 +96,8 @@ function SeeMoreButton({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="font-heading hover:bg-muted -mx-2 -mt-2 flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-sm tracking-wide transition-colors"
+      aria-controls="soil-details"
+      className="font-heading hover:bg-muted -mx-2 flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-sm tracking-wide transition-colors"
       style={{ color: "var(--landing-accent)" }}
     >
       {open ? less : more}
@@ -151,17 +149,15 @@ function WarningList({ items, emptyText }: { items: SoilAdvice[]; emptyText: str
 
 export function SoilResultCard({ result }: { result: SoilRecommendation }) {
   const t = useSoilStrings();
-  // The parent keys this card by result, so the toggle resets on a new result.
-  const [adviceOpen, setAdviceOpen] = useState(false);
+  // The crops are the answer; the soil advice and warnings sit behind one
+  // "See more". The parent keys this card by result, so it resets per result.
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const groups = [
     { key: "fruits", icon: Apple, title: t.suitableFruits, crops: result.suitable_fruits },
     { key: "vegetables", icon: Leaf, title: t.suitableVegetables, crops: result.suitable_vegetables },
     { key: "crops", icon: Wheat, title: t.suitableCrops, crops: result.suitable_crops },
   ].filter((group) => group.crops.length > 0);
-
-  const fertilizer = result.fertilizer_recommendations;
-  const hiddenAdvice = Math.max(0, fertilizer.length - ADVICE_SHOWN);
 
   return (
     <div className="flex flex-col gap-5">
@@ -176,30 +172,33 @@ export function SoilResultCard({ result }: { result: SoilRecommendation }) {
         </Section>
       ))}
 
-      {fertilizer.length > 0 ? (
-        <Section icon={FlaskConical} title={t.fertilizer}>
-          <AdviceList items={adviceOpen ? fertilizer : fertilizer.slice(0, ADVICE_SHOWN)} />
-          {hiddenAdvice > 0 ? (
-            <SeeMoreButton
-              open={adviceOpen}
-              onToggle={() => setAdviceOpen((open) => !open)}
-              more={`${t.seeMoreAdvice} (${hiddenAdvice})`}
-              less={t.seeLess}
-            />
+      {detailsOpen ? (
+        <div id="soil-details" className="flex flex-col gap-5">
+          {result.fertilizer_recommendations.length > 0 ? (
+            <Section icon={FlaskConical} title={t.fertilizer}>
+              <AdviceList items={result.fertilizer_recommendations} />
+            </Section>
           ) : null}
-        </Section>
+
+          {result.soil_improvement_watering.length > 0 ? (
+            <Section icon={Droplets} title={t.soilImprovement}>
+              <AdviceList items={result.soil_improvement_watering} />
+            </Section>
+          ) : null}
+
+          {/* Always rendered: an empty warnings list is itself information. */}
+          <Section icon={TriangleAlert} title={t.warnings}>
+            <WarningList items={result.important_warnings} emptyText={t.noWarnings} />
+          </Section>
+        </div>
       ) : null}
 
-      {result.soil_improvement_watering.length > 0 ? (
-        <Section icon={Droplets} title={t.soilImprovement}>
-          <AdviceList items={result.soil_improvement_watering} />
-        </Section>
-      ) : null}
-
-      {/* Always rendered: an empty warnings list is itself information. */}
-      <Section icon={TriangleAlert} title={t.warnings}>
-        <WarningList items={result.important_warnings} emptyText={t.noWarnings} />
-      </Section>
+      <SeeMoreButton
+        open={detailsOpen}
+        onToggle={() => setDetailsOpen((open) => !open)}
+        more={t.seeMoreAdvice}
+        less={t.seeLess}
+      />
     </div>
   );
 }

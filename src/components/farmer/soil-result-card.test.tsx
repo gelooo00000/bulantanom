@@ -28,12 +28,19 @@ describe("SoilResultCard", () => {
     expect(screen.queryByRole("button", { name: /See more options/ })).toBeNull();
   });
 
-  it("shows the first fertilizer tip, with See more for the rest", async () => {
+  it("keeps the soil advice and warnings behind See more", async () => {
     render(<SoilResultCard result={result} />);
-    expect(screen.getByText("Mix compost in.")).toBeInTheDocument();
-    expect(screen.queryByText("Ask the LGU for a soil test.")).toBeNull();
+    expect(screen.queryByText("Mix compost in.")).toBeNull();
+    expect(screen.queryByText("Let the soil dry out.")).toBeNull();
+    expect(screen.queryByText("Be careful")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "See more (1)" }));
+    await userEvent.click(screen.getByRole("button", { name: "See more" }));
+    expect(screen.getByText("Mix compost in.")).toBeInTheDocument();
     expect(screen.getByText("Ask the LGU for a soil test.")).toBeInTheDocument();
+    expect(screen.getByText("Let the soil dry out.")).toBeInTheDocument();
+    expect(screen.getByText("Be careful")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show fewer" }));
+    expect(screen.queryByText("Mix compost in.")).toBeNull();
   });
 });

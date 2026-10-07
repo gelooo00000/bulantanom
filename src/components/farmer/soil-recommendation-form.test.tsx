@@ -253,6 +253,8 @@ describe("SoilRecommendationForm outdated advice", () => {
     reanalyze.mockResolvedValue(reworded);
 
     await openSavedResult();
+    await waitFor(() => expect(reanalyze).toHaveBeenCalledTimes(1));
+    await userEvent.click(screen.getByRole("button", { name: "See more" }));
 
     expect(await screen.findByText("Mix compost into the soil.")).toBeInTheDocument();
     expect(reanalyze).toHaveBeenCalledTimes(1);
@@ -267,6 +269,7 @@ describe("SoilRecommendationForm outdated advice", () => {
     await openSavedResult();
 
     await waitFor(() => expect(reanalyze).toHaveBeenCalledTimes(1));
+    await userEvent.click(screen.getByRole("button", { name: "See more" }));
     expect(screen.getByText("Add organic compost.")).toBeInTheDocument();
   });
 });
