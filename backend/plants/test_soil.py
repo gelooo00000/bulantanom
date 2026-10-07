@@ -10,6 +10,7 @@ is ever invented, and that one Farmer cannot reach another's records.
 Gemini is always mocked. No test here spends real API quota.
 """
 
+from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -20,6 +21,7 @@ from rest_framework.test import APITestCase
 from accounts.models import AccountStatus, User, UserRole
 
 from .models import Crop, SoilRecommendation
+from .soil_recommendation_service import ADVICE_REVISED_AT
 
 LIST_URL = "/api/farmer/soil-recommendations/"
 SAVE_ONLY_URL = "/api/farmer/soil-recommendations/?analyze=0"
@@ -530,6 +532,48 @@ class SoilReanalyzeTests(SoilTestCase):
 
         gen.assert_not_called()
         self.assertTrue(response.data["ai_generated"])
+
+    def _create_old_result(self, headers):
+        with patch(
+            "plants.views.generate_soil_recommendation",
+            return_value=gemini_payload(self.fruit.name),
+        ):
+            soil_id = self.client.post(
+                LIST_URL, VALID_SOIL, format="json", **headers
+            ).data["id"]
+        # Written before the advice instructions changed.
+        SoilRecommendation.objects.filter(pk=soil_id).update(
+            updated_at=ADVICE_REVISED_AT - timedelta(days=1)
+        )
+        return soil_id
+
+    def test_outdated_result_is_rewritten_once(self):
+        headers = self.auth("farmer@example.com")
+        soil_id = self._create_old_result(headers)
+        payload = gemini_payload(self.fruit.name)
+        payload["fertilizer_recommendations"] = [{"recommendation": "Mix in compost."}]
+
+        response, gen = self._reanalyze(soil_id, headers, payload)
+
+        gen.assert_called_once()
+        self.assertEqual(
+            response.data["fertilizer_recommendations"][0]["recommendation"],
+            "Mix in compost.",
+        )
+        # Now current, so opening it again costs no quota.
+        _, again = self._reanalyze(soil_id, headers, payload)
+        again.assert_not_called()
+
+    def test_outdated_rewrite_that_fails_keeps_the_old_advice(self):
+        headers = self.auth("farmer@example.com")
+        soil_id = self._create_old_result(headers)
+
+        response, gen = self._reanalyze(soil_id, headers, None)
+
+        gen.assert_called_once()
+        self.assertTrue(response.data["ai_generated"])
+        self.assertEqual(response.data["failure_reason"], "")
+        self.assertEqual(response.data["suitable_fruits"][0]["name"], self.fruit.name)
 
     def test_other_farmer_cannot_retry_it(self):
         soil_id = self._create_failed(self.auth("farmer@example.com"))

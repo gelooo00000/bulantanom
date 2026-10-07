@@ -8,6 +8,7 @@ import type { SoilRecommendation } from "@/lib/api/soil-api";
 const fetchHistory = vi.fn();
 const reanalyze = vi.fn();
 const create = vi.fn();
+const outdated = vi.fn();
 
 vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => ({ accessToken: "token" }) }));
 vi.mock("@/lib/notification-refresh", () => ({ requestNotificationRefresh: vi.fn() }));
@@ -15,6 +16,7 @@ vi.mock("@/lib/api/soil-api", () => ({
   createSoilRecommendation: (...args: unknown[]) => create(...args),
   fetchSoilRecommendations: (...args: unknown[]) => fetchHistory(...args),
   reanalyzeSoilRecommendation: (...args: unknown[]) => reanalyze(...args),
+  isOutdatedAdvice: (...args: unknown[]) => outdated(...args),
 }));
 
 const failed: SoilRecommendation = {
@@ -62,6 +64,7 @@ beforeEach(() => {
   fetchHistory.mockReset().mockResolvedValue([failed]);
   reanalyze.mockReset();
   create.mockReset();
+  outdated.mockReset().mockReturnValue(false);
 });
 
 /** The page opens on the form; the saved result is behind "See Result". */
@@ -235,5 +238,35 @@ describe("SoilRecommendationForm past results", () => {
 
     expect(await screen.findByText("Mango")).toBeInTheDocument();
     expect(screen.queryByLabelText("Result from")).not.toBeInTheDocument();
+  });
+});
+
+describe("SoilRecommendationForm outdated advice", () => {
+  it("rewrites an old result with the current advice when it is opened", async () => {
+    const reworded = {
+      ...analyzed,
+      updated_at: "2026-10-08T02:00:00Z",
+      fertilizer_recommendations: [{ recommendation: "Mix compost into the soil." }],
+    };
+    fetchHistory.mockResolvedValue([analyzed]);
+    outdated.mockImplementation((soil: SoilRecommendation) => soil.updated_at < "2026-10-07T17:35:00Z");
+    reanalyze.mockResolvedValue(reworded);
+
+    await openSavedResult();
+
+    expect(await screen.findByText("Mix compost into the soil.")).toBeInTheDocument();
+    expect(reanalyze).toHaveBeenCalledTimes(1);
+    expect(reanalyze).toHaveBeenCalledWith("token", analyzed.id);
+  });
+
+  it("keeps the old advice when the rewrite fails", async () => {
+    fetchHistory.mockResolvedValue([analyzed]);
+    outdated.mockReturnValue(true);
+    reanalyze.mockRejectedValue(new Error("down"));
+
+    await openSavedResult();
+
+    await waitFor(() => expect(reanalyze).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("Add organic compost.")).toBeInTheDocument();
   });
 });

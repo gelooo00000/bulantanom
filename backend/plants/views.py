@@ -35,6 +35,7 @@ from .crop_intelligence_service import get_or_create_crop_intelligence, is_confi
 from .soil_recommendation_service import (
     apply_recommendation,
     generate_soil_recommendation,
+    is_outdated,
 )
 from .models import (
     Assessment,
@@ -867,9 +868,16 @@ def reanalyze_soil_recommendation(request, pk):
     AI result - its analysis failed, or it was saved with `analyze=0`. The
     stored soil information is reused untouched, so this is a pure retry and
     never a way to edit an assessment. One that already has a recommendation
-    is returned as it is, without spending quota.
+    is returned as it is, without spending quota - unless it was written
+    with older advice instructions, in which case it is rewritten once.
     """
     soil = get_object_or_404(SoilRecommendation, pk=pk, farmer=request.user)
+    if is_outdated(soil):
+        data = generate_soil_recommendation(soil, from_request(request))
+        # A rewrite that fails keeps the advice the farmer already has.
+        if data is not None:
+            apply_recommendation(soil, data)
+        return Response(SoilRecommendationSerializer(soil).data)
     if soil.ai_generated:
         return Response(SoilRecommendationSerializer(soil).data)
 

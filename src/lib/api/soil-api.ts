@@ -132,9 +132,21 @@ export async function fetchLatestSoilRecommendation(
 }
 
 /**
+ * When the advice instructions last changed (plain words, more crop
+ * options). Mirrors ADVICE_REVISED_AT in soil_recommendation_service.py.
+ */
+export const SOIL_ADVICE_REVISED_AT = "2026-10-07T17:35:00Z";
+
+/** A saved result written with older advice instructions. */
+export function isOutdatedAdvice(soil: SoilRecommendation): boolean {
+  return soil.ai_generated && Date.parse(soil.updated_at) < Date.parse(SOIL_ADVICE_REVISED_AT);
+}
+
+/**
  * Re-runs Gemini for a saved assessment that has no AI result. The stored
  * soil information is reused untouched, so the Farmer never re-enters it; an
- * assessment that already has a recommendation comes back unchanged.
+ * assessment that already has a recommendation comes back unchanged, unless
+ * it is outdated (see isOutdatedAdvice), which is rewritten once.
  */
 export function reanalyzeSoilRecommendation(
   accessToken: string,

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 
 from django.conf import settings
 
@@ -330,6 +331,17 @@ def _validate(payload, catalog: dict[str, Crop]) -> dict | None:
         return None
 
     return result
+
+
+# When the advice instructions last changed (plain words, 3 to 5 crops per
+# group). A result written before this is rewritten once, when the farmer
+# opens it. Mirrored as SOIL_ADVICE_REVISED_AT in src/lib/api/soil-api.ts.
+ADVICE_REVISED_AT = datetime(2026, 10, 7, 17, 35, tzinfo=timezone.utc)
+
+
+def is_outdated(soil) -> bool:
+    """True for a saved result written with older advice instructions."""
+    return soil.ai_generated and soil.updated_at < ADVICE_REVISED_AT
 
 
 def is_configured() -> bool:

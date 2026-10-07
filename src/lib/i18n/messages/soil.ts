@@ -130,6 +130,11 @@ export const soil = defineMessages({
     fil: "Naka-save ang impormasyon ng iyong lupa — subukan muli nang hindi na naglalagay muli.",
     bik: "Naka-save an impormasyon san imo daga — probaran liwat na dili na magbutang liwat.",
   },
+  "soil.updatingAdvice": {
+    en: "Updating this result with clearer advice…",
+    fil: "Ina-update ang resultang ito para mas madaling maintindihan…",
+    bik: "Ina-update an resulta na ini para mas madali masabutan…",
+  },
   "soil.stillUnavailable": {
     en: "AI recommendation is still unavailable. Please try again in a few minutes.",
     fil: "Hindi pa rin available ang rekomendasyon ng AI. Pakisubukan muli pagkalipas ng ilang minuto.",

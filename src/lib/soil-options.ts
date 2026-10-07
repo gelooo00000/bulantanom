@@ -234,6 +234,7 @@ export const SOIL_STRINGS = {
   tryAgain: "Try Again",
   retrying: "Analyzing…",
   retryHint: "Your soil information is saved — try again without re-entering anything.",
+  updatingAdvice: "Updating this result with clearer advice…",
   stillUnavailable:
     "AI recommendation is still unavailable. Please try again in a few minutes.",
 
