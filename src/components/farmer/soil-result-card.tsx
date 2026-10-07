@@ -56,8 +56,7 @@ function Section({
   );
 }
 
-/** Crops each group shows, and advice items shown, before "See more". */
-const CROPS_SHOWN = 2;
+/** Fertilizer tips shown before "See more". */
 const ADVICE_SHOWN = 1;
 
 function CropGrid({ crops }: { crops: SoilCropSuggestion[] }) {
@@ -152,9 +151,7 @@ function WarningList({ items, emptyText }: { items: SoilAdvice[]; emptyText: str
 
 export function SoilResultCard({ result }: { result: SoilRecommendation }) {
   const t = useSoilStrings();
-  // One toggle for all three crop groups, one for the fertilizer advice.
-  // The parent keys this card by result, so both reset on a new result.
-  const [cropsOpen, setCropsOpen] = useState(false);
+  // The parent keys this card by result, so the toggle resets on a new result.
   const [adviceOpen, setAdviceOpen] = useState(false);
 
   const groups = [
@@ -162,10 +159,6 @@ export function SoilResultCard({ result }: { result: SoilRecommendation }) {
     { key: "vegetables", icon: Leaf, title: t.suitableVegetables, crops: result.suitable_vegetables },
     { key: "crops", icon: Wheat, title: t.suitableCrops, crops: result.suitable_crops },
   ].filter((group) => group.crops.length > 0);
-  const hiddenCrops = groups.reduce(
-    (sum, group) => sum + Math.max(0, group.crops.length - CROPS_SHOWN),
-    0,
-  );
 
   const fertilizer = result.fertilizer_recommendations;
   const hiddenAdvice = Math.max(0, fertilizer.length - ADVICE_SHOWN);
@@ -179,17 +172,9 @@ export function SoilResultCard({ result }: { result: SoilRecommendation }) {
 
       {groups.map((group) => (
         <Section key={group.key} icon={group.icon} title={group.title}>
-          <CropGrid crops={cropsOpen ? group.crops : group.crops.slice(0, CROPS_SHOWN)} />
+          <CropGrid crops={group.crops} />
         </Section>
       ))}
-      {hiddenCrops > 0 ? (
-        <SeeMoreButton
-          open={cropsOpen}
-          onToggle={() => setCropsOpen((open) => !open)}
-          more={`${t.seeMore} (${hiddenCrops})`}
-          less={t.seeLess}
-        />
-      ) : null}
 
       {fertilizer.length > 0 ? (
         <Section icon={FlaskConical} title={t.fertilizer}>

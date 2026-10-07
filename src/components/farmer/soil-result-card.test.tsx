@@ -21,16 +21,11 @@ const result = {
 } as unknown as SoilRecommendation;
 
 describe("SoilResultCard", () => {
-  it("shows two crops per group, with one See more for all of them", async () => {
+  it("shows every crop, with no See more for them", () => {
     render(<SoilResultCard result={result} />);
-    expect(screen.queryByText("Banana")).toBeNull();
-    expect(screen.queryByText("Corn")).toBeNull();
-
-    const buttons = screen.getAllByRole("button", { name: /See more options/ });
-    expect(buttons).toHaveLength(1);
-    await userEvent.click(buttons[0]);
     expect(screen.getByText("Banana")).toBeInTheDocument();
     expect(screen.getByText("Corn")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /See more options/ })).toBeNull();
   });
 
   it("shows the first fertilizer tip, with See more for the rest", async () => {

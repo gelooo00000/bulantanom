@@ -52,11 +52,6 @@ export const soil = defineMessages({
     fil: "Mag-ingat",
     bik: "Mag-ingat",
   },
-  "soil.seeMore": {
-    en: "See more options",
-    fil: "Tingnan ang iba pang pagpipilian",
-    bik: "Hilingon an iba pang pagpipilian",
-  },
   "soil.seeMoreAdvice": {
     en: "See more",
     fil: "Tingnan pa",

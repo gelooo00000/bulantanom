@@ -205,7 +205,6 @@ export const SOIL_STRINGS = {
   fertilizer: "What to add to your soil",
   soilImprovement: "How to fix your soil and watering",
   warnings: "Be careful",
-  seeMore: "See more options",
   seeMoreAdvice: "See more",
   seeLess: "Show fewer",
   noWarnings: "No major warnings based on the information provided.",
