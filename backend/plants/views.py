@@ -491,7 +491,9 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(
+            data=request.data, context={**self.get_serializer_context(), "plant": plant}
+        )
         serializer.is_valid(raise_exception=True)
 
         assessment_date = timezone.localdate()

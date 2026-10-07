@@ -29,6 +29,7 @@ import {
   type BackendAssessment,
   type EvidenceValidation,
 } from "@/lib/api/risk-api";
+import type { AssessmentQuestion } from "@/lib/api/plants-api";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
@@ -149,11 +150,14 @@ export function AssessmentForm({
   plantId,
   plantLabel,
   cropName,
+  skipQuestions = [],
   onLocked,
 }: {
   plantId: number;
   plantLabel: string;
   cropName: string;
+  /** Questions that don't fit this crop (e.g. leaves on a mushroom). */
+  skipQuestions?: AssessmentQuestion[];
   /** Called when the server reports the weekly assessment is already done. */
   onLocked?: (eligibility: AssessmentEligibility) => void;
 }) {
@@ -183,7 +187,10 @@ export function AssessmentForm({
 
   // Evidence is mandatory: the risk reading is only meaningful when the photo
   // has been verified to show this crop.
-  const canSubmit = Boolean(growth && health && leaf && watering && evidence);
+  const asks = (question: AssessmentQuestion) => !skipQuestions.includes(question);
+  const canSubmit = Boolean(
+    growth && health && (leaf || !asks("leaf_condition")) && watering && evidence,
+  );
 
   function changeEvidence(file: File | null) {
     setEvidence(file);
@@ -230,12 +237,12 @@ export function AssessmentForm({
         accessToken,
         plantId,
         {
-          plant_height_cm: height,
+          plant_height_cm: asks("plant_height_cm") ? height : "",
           growth_condition: growth!,
           health_condition: health!,
-          leaf_condition: leaf!,
-          flowering_status: flowering ?? "",
-          fruiting_status: fruiting ?? "",
+          leaf_condition: asks("leaf_condition") ? leaf! : "",
+          flowering_status: asks("flowering_status") ? (flowering ?? "") : "",
+          fruiting_status: asks("fruiting_status") ? (fruiting ?? "") : "",
           watering_frequency: watering!,
           soil_moisture: soil ?? "",
           pest_observation: pest,
@@ -331,18 +338,20 @@ export function AssessmentForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="height">{t("asmt.height")}</Label>
-            <Input
-              id="height"
-              type="number"
-              min={0}
-              step={0.1}
-              placeholder={t("asmt.heightExample")}
-              value={height}
-              onChange={(e) => setHeight(e.target.value)}
-            />
-          </div>
+          {asks("plant_height_cm") && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="height">{t("asmt.height")}</Label>
+              <Input
+                id="height"
+                type="number"
+                min={0}
+                step={0.1}
+                placeholder={t("asmt.heightExample")}
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="growth">{t("asmt.growthCompared")}</Label>
             <Choice
@@ -362,25 +371,33 @@ export function AssessmentForm({
             <Label htmlFor="health">{t("asmt.overallHealth")}</Label>
             <Choice id="health" value={health} onChange={setHealth} options={HEALTH} placeholder={t("asmt.select")} />
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="leaf">{t("asmt.leaf")}</Label>
-            <Choice id="leaf" value={leaf} onChange={setLeaf} options={LEAF} placeholder={t("asmt.select")} />
-          </div>
+          {asks("leaf_condition") && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="leaf">{t("asmt.leaf")}</Label>
+              <Choice id="leaf" value={leaf} onChange={setLeaf} options={LEAF} placeholder={t("asmt.select")} />
+            </div>
+          )}
         </div>
       </FormSection>
 
-      <FormSection title={t("asmt.flowerFruit")} description={t("asmt.blankIfNA")}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="flowering">{t("asmt.flowering")}</Label>
-            <Choice id="flowering" value={flowering} onChange={setFlowering} options={FLOWERING} placeholder={t("asmt.select")} />
+      {(asks("flowering_status") || asks("fruiting_status")) && (
+        <FormSection title={t("asmt.flowerFruit")} description={t("asmt.blankIfNA")}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {asks("flowering_status") && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="flowering">{t("asmt.flowering")}</Label>
+                <Choice id="flowering" value={flowering} onChange={setFlowering} options={FLOWERING} placeholder={t("asmt.select")} />
+              </div>
+            )}
+            {asks("fruiting_status") && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="fruiting">{t("asmt.fruiting")}</Label>
+                <Choice id="fruiting" value={fruiting} onChange={setFruiting} options={FRUITING} placeholder={t("asmt.select")} />
+              </div>
+            )}
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="fruiting">{t("asmt.fruiting")}</Label>
-            <Choice id="fruiting" value={fruiting} onChange={setFruiting} options={FRUITING} placeholder={t("asmt.select")} />
-          </div>
-        </div>
-      </FormSection>
+        </FormSection>
+      )}
 
       <FormSection title={t("asmt.waterSoil")} description={t("asmt.waterSoilText")}>
         <div className="grid gap-4 sm:grid-cols-2">

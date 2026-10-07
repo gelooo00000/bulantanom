@@ -149,3 +149,57 @@ class NotApplicableAnswersTests(RiskTestCase):
         self.assertEqual(answers["leaf_condition"], NOT_APPLICABLE_TEXT)
         self.assertEqual(answers["flowering_status"], NOT_APPLICABLE_TEXT)
         self.assertEqual(answers["fruiting_status"], "Fruit ripening")
+
+    def test_root_crops_skip_fruiting_and_others_keep_every_question(self):
+        from .assessment_questions import NOT_APPLICABLE, not_applicable
+
+        for crop_id in ("purple-sweet-potato", "ginger", "radish-jicama"):
+            self.assertEqual(not_applicable(crop_id), ("fruiting_status",))
+        self.assertEqual(not_applicable("tomato"), ())
+        # Every crop named in the rule is a real catalog crop.
+        self.assertEqual(
+            set(Crop.objects.filter(pk__in=NOT_APPLICABLE).values_list("pk", flat=True)),
+            set(NOT_APPLICABLE),
+        )
+
+    def test_crop_api_lists_the_questions_to_hide(self):
+        make_user("farmer@example.com")
+        auth = self.login("farmer@example.com")
+        crops = {c["id"]: c for c in self.client.get("/api/farmer/crops/", **auth).json()}
+        self.assertEqual(
+            crops["mushroom"]["not_applicable_questions"],
+            ["plant_height_cm", "leaf_condition", "flowering_status"],
+        )
+        self.assertEqual(crops["tomato"]["not_applicable_questions"], [])
+
+    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    def test_mushroom_submits_without_leaf_and_stores_skipped_answers_blank(self, _mock):
+        farmer = make_user("farmer@example.com")
+        auth = self.login("farmer@example.com")
+        plant = self.make_plant(farmer, crop_id="mushroom")
+        payload = payload_with_image(plant_height_cm="12", flowering_status="flowering")
+        del payload["leaf_condition"]
+
+        response = self.client.post(
+            f"/api/farmer/plants/{plant.id}/assessments/", payload, **auth
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        saved = Assessment.objects.get()
+        self.assertEqual(saved.leaf_condition, "")
+        self.assertEqual(saved.flowering_status, "")
+        self.assertIsNone(saved.plant_height_cm)
+
+    def test_leaf_is_still_required_where_it_applies(self):
+        farmer = make_user("farmer@example.com")
+        auth = self.login("farmer@example.com")
+        plant = self.make_plant(farmer, crop_id="tomato")
+        payload = payload_with_image()
+        del payload["leaf_condition"]
+
+        response = self.client.post(
+            f"/api/farmer/plants/{plant.id}/assessments/", payload, **auth
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("leaf_condition", response.data)

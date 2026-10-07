@@ -4,6 +4,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from . import crop_calendar
+from .assessment_questions import HEIGHT, LEAF, not_applicable
 from .models import (
     Assessment,
     Crop,
@@ -75,6 +76,8 @@ class CropSerializer(serializers.ModelSerializer):
     category_label = serializers.CharField(source="get_category_display", read_only=True)
     variants = serializers.SerializerMethodField()
     planting_window = serializers.SerializerMethodField()
+    # Weekly-assessment questions the form hides for this crop.
+    not_applicable_questions = serializers.SerializerMethodField()
 
     class Meta:
         model = Crop
@@ -90,8 +93,12 @@ class CropSerializer(serializers.ModelSerializer):
             "search_terms",
             "variants",
             "planting_window",
+            "not_applicable_questions",
         ]
         read_only_fields = fields
+
+    def get_not_applicable_questions(self, crop):
+        return list(not_applicable(crop))
 
     def get_variants(self, crop):
         return CropVariantSerializer(
@@ -392,6 +399,22 @@ class AssessmentSerializer(serializers.ModelSerializer):
         if value is not None and (value < 0 or value > 5000):
             raise serializers.ValidationError("Please enter a realistic plant height in cm.")
         return value
+
+    def validate(self, attrs):
+        """
+        Questions that don't fit the plant's crop are stored blank, whatever
+        the client sent; the leaf question is required only where it applies.
+        The view passes the plant in the context.
+        """
+        plant = self.context.get("plant")
+        if plant is None:
+            return attrs
+        skip = not_applicable(plant.crop_id)
+        for field in skip:
+            attrs[field] = None if field == HEIGHT else ""
+        if LEAF not in skip and not attrs.get(LEAF):
+            raise serializers.ValidationError({LEAF: "This field is required."})
+        return attrs
 
 
 class SoilRecommendationSerializer(serializers.ModelSerializer):

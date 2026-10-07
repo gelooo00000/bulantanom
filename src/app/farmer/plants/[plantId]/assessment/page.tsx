@@ -86,6 +86,7 @@ export default function AssessmentPage({
           plantId={plant.id}
           plantLabel={plantLabel}
           cropName={plant.crop.name}
+          skipQuestions={plant.crop.not_applicable_questions}
           onLocked={setLockedBySubmit}
         />
       ) : (

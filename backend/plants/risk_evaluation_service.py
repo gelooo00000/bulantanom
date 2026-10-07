@@ -24,6 +24,7 @@ import logging
 from django.conf import settings
 
 from .ai_language import write_in
+from .assessment_questions import not_applicable
 from .durations import human_duration
 from .gemini_models import generate_with_fallback
 
@@ -33,12 +34,8 @@ logger = logging.getLogger(__name__)
 # same as "healthy", so the AI may answer INCONCLUSIVE instead of LOW.
 EARLY_STAGE_DAYS = 14
 
-# Form questions that do not fit a crop. The form still makes the farmer pick
-# something (mushrooms get "Healthy green leaves"), so those picks are sent as
-# not applicable rather than as claims the photo could contradict.
-NOT_APPLICABLE = {
-    "mushroom": {"leaf_condition", "flowering_status"},
-}
+# Sent in place of an answer to a question that does not fit the crop, so the
+# AI never reads it as a claim the photo could contradict.
 NOT_APPLICABLE_TEXT = "not applicable to this crop"
 
 RESPONSE_SCHEMA = {
@@ -236,7 +233,7 @@ def build_context(assessment) -> dict:
     """The structured EXPECTED + ACTUAL payload handed to Gemini."""
     plant = assessment.plant
     crop = plant.crop
-    skip = NOT_APPLICABLE.get(crop.id, set())
+    skip = not_applicable(crop)
 
     def answer(field, value):
         return NOT_APPLICABLE_TEXT if field in skip else value
@@ -265,10 +262,11 @@ def build_context(assessment) -> dict:
             "early_establishment_stage": assessment.plant_age_days <= EARLY_STAGE_DAYS,
         },
         "farmer_assessment": {
-            "plant_height_cm": (
+            "plant_height_cm": answer(
+                "plant_height_cm",
                 float(assessment.plant_height_cm)
                 if assessment.plant_height_cm is not None
-                else None
+                else None,
             ),
             "growth_condition": assessment.get_growth_condition_display(),
             "health_condition": assessment.get_health_condition_display(),
@@ -278,7 +276,9 @@ def build_context(assessment) -> dict:
             "flowering_status": answer(
                 "flowering_status", assessment.get_flowering_status_display() or None
             ),
-            "fruiting_status": assessment.get_fruiting_status_display() or None,
+            "fruiting_status": answer(
+                "fruiting_status", assessment.get_fruiting_status_display() or None
+            ),
             "watering_frequency": assessment.get_watering_frequency_display(),
             "soil_moisture": assessment.get_soil_moisture_display() or None,
             "pest_observation": assessment.pest_observation or "none reported",

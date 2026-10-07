@@ -310,7 +310,10 @@ class Assessment(models.Model):
     )
     growth_condition = models.CharField(max_length=32, choices=GrowthCondition.choices)
     health_condition = models.CharField(max_length=32, choices=HealthCondition.choices)
-    leaf_condition = models.CharField(max_length=32, choices=LeafCondition.choices)
+    # Blank for crops the leaf question doesn't fit (see assessment_questions).
+    leaf_condition = models.CharField(
+        max_length=32, choices=LeafCondition.choices, blank=True
+    )
     flowering_status = models.CharField(
         max_length=32, choices=FloweringStatus.choices, blank=True
     )

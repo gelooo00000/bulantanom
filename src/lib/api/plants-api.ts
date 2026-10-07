@@ -55,7 +55,15 @@ export type BackendCrop = {
   search_terms: string[];
   variants: CropVariant[];
   planting_window: PlantingWindow | null;
+  /** Weekly-assessment questions that don't fit this crop; the form hides them. */
+  not_applicable_questions?: AssessmentQuestion[];
 };
+
+export type AssessmentQuestion =
+  | "plant_height_cm"
+  | "leaf_condition"
+  | "flowering_status"
+  | "fruiting_status";
 
 export type BackendPlant = {
   id: number;
