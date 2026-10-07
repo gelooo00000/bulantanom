@@ -2,6 +2,7 @@
 
 import {
   Ban,
+  CalendarDays,
   CircleCheck,
   Clock,
   ExternalLink,
@@ -13,14 +14,15 @@ import {
   Trash2,
   TriangleAlert,
   UserRoundPlus,
-  UserRoundX,
   Users,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { CreateOfficerDialog } from "@/components/admin/create-officer-dialog";
+import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { lastActiveLabel } from "@/components/lgu/farmer-directory";
+import { DonutChart } from "@/components/lgu/risk-pie";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { ActionsMenu, type ActionItem } from "@/components/ui/actions-menu";
@@ -32,7 +34,6 @@ import {
   deleteAccount,
   listUsers,
   reactivateOfficer,
-  rejectFarmer,
   suspendFarmer,
   suspendOfficer,
   type AdminUser,
@@ -41,18 +42,15 @@ import type { BackendAccountStatus } from "@/lib/api/auth-api";
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
 
-const STATUS_STYLE: Record<BackendAccountStatus, string> = {
-  PENDING: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
-  APPROVED: "bg-risk-low/15 text-risk-low border-risk-low/30",
-  REJECTED: "bg-risk-high/15 text-risk-high border-risk-high/30",
-  SUSPENDED: "bg-risk-high/15 text-risk-high border-risk-high/30",
-};
-
-const STATUS_LABEL: Record<BackendAccountStatus, string> = {
-  PENDING: "Pending approval",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-  SUSPENDED: "Suspended",
+/**
+ * Farmers are approved the moment they register, so an approved account is
+ * the norm and carries no badge. Only an account that has lost access is
+ * marked. PENDING survives only on accounts made before auto-approval.
+ */
+const STATUS_BADGE: Partial<Record<BackendAccountStatus, { label: string; className: string }>> = {
+  PENDING: { label: "Inactive", className: "bg-muted text-muted-foreground border-border" },
+  REJECTED: { label: "Inactive", className: "bg-muted text-muted-foreground border-border" },
+  SUSPENDED: { label: "Suspended", className: "bg-risk-high/10 text-risk-high border-risk-high/30" },
 };
 
 const ROLE_LABEL = {
@@ -60,6 +58,22 @@ const ROLE_LABEL = {
   LGU_OFFICER: "LGU Officer",
   ADMIN: "Admin",
 } as const;
+
+/** One colour per role, shared by the charts and the account cards. */
+const ROLE_COLOR = {
+  FARMER: "var(--primary)",
+  LGU_OFFICER: "var(--chart-series-1)",
+  ADMIN: "var(--muted-foreground)",
+} as const;
+
+const ROLE_ICON = {
+  FARMER: Sprout,
+  LGU_OFFICER: ShieldCheck,
+  ADMIN: Users,
+} as const;
+
+/** A role colour at low strength, for avatar and chip backgrounds. */
+const tint = (color: string, percent = 12) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
 
 /**
  * Django Admin sits on the API host, not the Next.js host. Derived from the
@@ -69,24 +83,12 @@ const DJANGO_ADMIN_LGU_URL = `${(
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"
 ).replace(/\/api\/?$/, "")}/admin/accounts/lguofficer/`;
 
-type TabKey = "pending" | "farmers" | "officers" | "all";
+type TabKey = "farmers" | "officers" | "all";
 type SortKey = "newest" | "name" | "active";
 
 /** Plants, assessments and soil checks — everything a deletion would take. */
 export function recordCount(user: AdminUser): number {
   return user.plant_count + user.assessment_count + user.soil_record_count;
-}
-
-/** "6 plants · 12 assessments · 3 soil checks", only the parts that exist. */
-export function recordsText(user: AdminUser): string {
-  const parts: string[] = [];
-  const add = (n: number, one: string, many: string) => {
-    if (n > 0) parts.push(`${n} ${n === 1 ? one : many}`);
-  };
-  add(user.plant_count, "plant", "plants");
-  add(user.assessment_count, "assessment", "assessments");
-  add(user.soil_record_count, "soil check", "soil checks");
-  return parts.length > 0 ? parts.join(" · ") : "No farm records";
 }
 
 /**
@@ -95,21 +97,17 @@ export function recordsText(user: AdminUser): string {
  * which is the point of the confirmation step. Nothing is sent to the server
  * until the Admin confirms.
  */
-export type PendingAction =
-  | { kind: "suspend" | "reactivate" | "reject" | "delete"; user: AdminUser }
-  | { kind: "approve-all"; users: AdminUser[] };
+export type PendingAction = { kind: "suspend" | "reactivate" | "delete"; user: AdminUser };
 
 export function AccountManagement() {
   const { accessToken, currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<number | null>(null);
   const [dialogBusy, setDialogBusy] = useState(false);
   // Client-side narrowing of an already-authorized list. The server decides
   // *which* accounts this Admin may see; these only decide what is shown.
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BackendAccountStatus | "ALL">("ALL");
   const [sort, setSort] = useState<SortKey>("newest");
   const [tab, setTab] = useState<TabKey>("farmers");
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
@@ -153,21 +151,6 @@ export function AccountManagement() {
     };
   }, [accessToken]);
 
-  async function approve(user: AdminUser) {
-    if (!accessToken) return;
-    setBusyId(user.id);
-    setError(null);
-    try {
-      await approveFarmer(accessToken, user.id);
-      await load();
-      setToast(`${user.full_name} approved.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Action failed.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   /**
    * Runs the confirmed action against Django, then refetches. Nothing is
    * mutated locally — the server response (or a reload) is the only source
@@ -178,32 +161,10 @@ export function AccountManagement() {
     setDialogBusy(true);
     setDialogError(null);
     try {
-      if (pendingAction.kind === "approve-all") {
-        const results = await Promise.allSettled(
-          pendingAction.users.map((u) => approveFarmer(accessToken, u.id)),
-        );
-        const failed = pendingAction.users.filter((_, i) => results[i].status === "rejected");
-        await load();
-        if (failed.length > 0) {
-          setPendingAction({ kind: "approve-all", users: failed });
-          setDialogError(
-            `${failed.length} could not be approved (${failed.map((u) => u.full_name).join(", ")}). Try again.`,
-          );
-          return;
-        }
-        setPendingAction(null);
-        setToast(
-          `${pendingAction.users.length} registration${pendingAction.users.length === 1 ? "" : "s"} approved.`,
-        );
-        return;
-      }
-
       const { user, kind } = pendingAction;
       const isOfficer = user.role === "LGU_OFFICER";
       if (kind === "delete") {
         await deleteAccount(accessToken, user.id, { includeRecords: recordCount(user) > 0 });
-      } else if (kind === "reject") {
-        await rejectFarmer(accessToken, user.id);
       } else if (kind === "suspend") {
         await (isOfficer ? suspendOfficer : suspendFarmer)(accessToken, user.id);
       } else {
@@ -214,49 +175,35 @@ export function AccountManagement() {
       setToast(
         {
           delete: `${user.full_name}'s account was deleted.`,
-          reject: `${user.full_name}'s registration was rejected.`,
           suspend: `${user.full_name}'s account was suspended.`,
           reactivate: `${user.full_name}'s account was reactivated.`,
         }[kind],
       );
     } catch (err) {
-      // Stay open with the reason — the row must not disappear on failure.
+      // Stay open with the reason — the card must not disappear on failure.
       setDialogError(err instanceof Error ? err.message : "Action failed.");
     } finally {
       setDialogBusy(false);
     }
   }
 
-  /** Only the moves that are legal for this row's role and current status. */
+  /** Only the moves that are legal for this account's role and current status. */
   function actionsFor(user: AdminUser): ActionItem[] {
     const items: ActionItem[] = [];
     const isSelf = String(user.id) === currentUser?.id;
-    const busy = busyId === user.id;
 
     if (user.role === "ADMIN") return items;
 
-    if (user.account_status === "PENDING") {
-      items.push({ label: "Approve", icon: CircleCheck, disabled: busy, onSelect: () => approve(user) });
-      items.push({
-        label: "Reject",
-        icon: UserRoundX,
-        disabled: busy,
-        onSelect: () => setPendingAction({ kind: "reject", user }),
-      });
-    }
     if (user.account_status === "APPROVED") {
       items.push({
         label: "Suspend account",
         icon: Ban,
-        disabled: busy,
         onSelect: () => setPendingAction({ kind: "suspend", user }),
       });
-    }
-    if (user.account_status === "SUSPENDED" || user.account_status === "REJECTED") {
+    } else {
       items.push({
         label: "Reactivate account",
         icon: RotateCcw,
-        disabled: busy,
         onSelect: () => setPendingAction({ kind: "reactivate", user }),
       });
     }
@@ -264,29 +211,25 @@ export function AccountManagement() {
       label: "Delete account",
       icon: Trash2,
       destructive: true,
-      disabled: busy || isSelf,
+      disabled: isSelf,
       onSelect: () => setPendingAction({ kind: "delete", user }),
     });
     return items;
   }
 
-  const pending = users.filter((u) => u.role === "FARMER" && u.account_status === "PENDING");
   const farmers = users.filter((u) => u.role === "FARMER");
   const officers = users.filter((u) => u.role === "LGU_OFFICER");
-  const onlineNow = users.filter((u) => u.is_online).length;
 
   const query = search.trim().toLowerCase();
   /** One set of controls narrows and orders every tab. */
   function narrow(list: AdminUser[]) {
     return list
-      .filter((u) => {
-        const matchesStatus = statusFilter === "ALL" || u.account_status === statusFilter;
-        const matchesQuery =
+      .filter(
+        (u) =>
           query === "" ||
           u.full_name.toLowerCase().includes(query) ||
-          u.email.toLowerCase().includes(query);
-        return matchesStatus && matchesQuery;
-      })
+          u.email.toLowerCase().includes(query),
+      )
       .sort((a, b) => {
         if (sort === "name") return a.full_name.localeCompare(b.full_name);
         if (sort === "active") {
@@ -316,28 +259,17 @@ export function AccountManagement() {
     empty: { icon: typeof Users; title: string; description?: string };
   }[] = [
     {
-      key: "pending",
-      label: "Pending",
-      total: pending.length,
-      rows: narrow(pending),
-      empty: {
-        icon: CircleCheck,
-        title: "No pending registrations",
-        description: "New Farmer sign-ups will appear here for review.",
-      },
-    },
-    {
       key: "farmers",
       label: "Farmers",
       total: farmers.length,
       rows: narrow(farmers),
       empty: {
         icon: Sprout,
-        title: farmers.length === 0 ? "No farmers yet" : "No farmers match this filter",
+        title: farmers.length === 0 ? "No farmers yet" : "No farmers match this search",
         description:
           farmers.length === 0
             ? "Farmer accounts appear here once people register."
-            : "Try a different status or clear the search.",
+            : "Try a different name or clear the search.",
       },
     },
     {
@@ -347,9 +279,11 @@ export function AccountManagement() {
       rows: narrow(officers),
       empty: {
         icon: ShieldCheck,
-        title: "No LGU Officers yet",
+        title: officers.length === 0 ? "No LGU Officers yet" : "No officers match this search",
         description:
-          "Officers cannot register themselves. Create one to give an agricultural officer access.",
+          officers.length === 0
+            ? "Officers cannot register themselves. Create one to give an agricultural officer access."
+            : "Try a different name or clear the search.",
       },
     },
     {
@@ -357,7 +291,7 @@ export function AccountManagement() {
       label: "All accounts",
       total: users.length,
       rows: narrow(users),
-      empty: { icon: Users, title: "No accounts yet" },
+      empty: { icon: Users, title: users.length === 0 ? "No accounts yet" : "No accounts match this search" },
     },
   ];
 
@@ -411,7 +345,7 @@ export function AccountManagement() {
 
       <PageHeader
         title="Account Management"
-        description="Approve registrations, manage access, and see who is using BulanTanom."
+        description="Manage access and see who is using BulanTanom."
         action={
           <Button size="sm" onClick={() => setCreatingOfficer(true)}>
             <UserRoundPlus className="size-3.5" />
@@ -424,111 +358,60 @@ export function AccountManagement() {
         <p className="text-destructive bg-destructive/10 rounded-lg px-3 py-2 text-sm">{error}</p>
       )}
 
-      {/* A compact overview: the counts an Admin checks, in one line. */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Overview
-          icon={Clock}
-          label="Pending approval"
-          value={pending.length}
-          tone={pending.length > 0 ? "text-risk-medium" : undefined}
-          onClick={pending.length > 0 ? () => setTab("pending") : undefined}
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
+        <RoleBreakdown
+          farmers={farmers.length}
+          officers={officers.length}
+          onSelect={(key) => setTab(key as TabKey)}
         />
-        <Overview icon={Sprout} label="Farmers" value={farmers.length} onClick={() => setTab("farmers")} />
-        <Overview icon={ShieldCheck} label="LGU Officers" value={officers.length} onClick={() => setTab("officers")} />
-        <Overview icon={Users} label="Online now" value={onlineNow} tone={onlineNow > 0 ? "text-emerald-600 dark:text-emerald-400" : undefined} />
+        <OnlineNow farmers={farmers} officers={officers} />
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)}>
-        <TabsList className="max-w-full overflow-x-auto">
-          {TABS.map((t) => (
-            <TabsTab key={t.key} value={t.key}>
-              {t.label}
-              <span
-                className={cn(
-                  "ml-1.5 text-xs",
-                  t.key === "pending" && t.total > 0 ? "text-risk-medium font-medium" : "text-muted-foreground",
-                )}
-              >
-                {t.total}
-              </span>
-            </TabsTab>
-          ))}
-        </TabsList>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <TabsList className="max-w-full overflow-x-auto">
+            {TABS.map((t) => (
+              <TabsTab key={t.key} value={t.key}>
+                {t.label}
+                <span className="text-muted-foreground ml-1.5 text-xs">{t.total}</span>
+              </TabsTab>
+            ))}
+          </TabsList>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative min-w-0 flex-1">
-            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Escape" && setSearch("")}
-              placeholder="Search name or email"
-              aria-label="Search accounts"
-              className="border-border bg-card focus-visible:ring-ring/50 h-9 w-full rounded-lg border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
-            />
-          </div>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            aria-label="Sort accounts"
-            className="border-border bg-card h-9 rounded-lg border px-3 text-sm"
-          >
-            <option value="newest">Newest first</option>
-            <option value="name">Name A–Z</option>
-            <option value="active">Recently active</option>
-          </select>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by status">
-          {(["ALL", "PENDING", "APPROVED", "SUSPENDED", "REJECTED"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={statusFilter === value}
-              onClick={() => setStatusFilter(value)}
-              className={cn(
-                "rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                statusFilter === value
-                  ? "border-primary/50 bg-primary/10 text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground",
-              )}
+          <div className="flex gap-2">
+            <div className="relative min-w-0 flex-1 md:w-64 md:flex-none">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && setSearch("")}
+                placeholder="Search name or email"
+                aria-label="Search accounts"
+                className="border-border bg-card focus-visible:ring-ring/50 h-9 w-full rounded-lg border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
+              />
+            </div>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              aria-label="Sort accounts"
+              className="border-border bg-card h-9 rounded-lg border px-3 text-sm"
             >
-              {value === "ALL" ? "All statuses" : STATUS_LABEL[value]}
-            </button>
-          ))}
+              <option value="newest">Newest first</option>
+              <option value="name">Name A–Z</option>
+              <option value="active">Recently active</option>
+            </select>
+          </div>
         </div>
 
         {TABS.map((t) => (
           <TabsPanel key={t.key} value={t.key} className="flex flex-col gap-3">
-            {t.key === "pending" && t.rows.length > 1 && (
-              <div className="border-risk-medium/30 bg-risk-medium/10 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2.5 text-sm">
-                <span>
-                  {t.rows.length} registrations waiting for review.
-                </span>
-                <Button size="sm" onClick={() => setPendingAction({ kind: "approve-all", users: t.rows })}>
-                  <CircleCheck className="size-3.5" />
-                  Approve all ({t.rows.length})
-                </Button>
-              </div>
-            )}
-
             {t.rows.length === 0 ? (
               <EmptyState icon={t.empty.icon} title={t.empty.title} description={t.empty.description} />
             ) : (
-              <ul className="border-border divide-border bg-card divide-y overflow-hidden rounded-xl border">
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {t.rows.map((user) => (
-                  <AccountRow
-                    key={user.id}
-                    user={user}
-                    busy={busyId === user.id}
-                    actions={actionsFor(user)}
-                    showRole={t.key === "all"}
-                    onApprove={t.key === "pending" ? () => approve(user) : undefined}
-                    onReject={
-                      t.key === "pending" ? () => setPendingAction({ kind: "reject", user }) : undefined
-                    }
-                  />
+                  <AccountCard key={user.id} user={user} actions={actionsFor(user)} />
                 ))}
               </ul>
             )}
@@ -559,60 +442,163 @@ export function AccountManagement() {
   );
 }
 
-function Overview({
-  icon: Icon,
-  label,
-  value,
-  tone,
-  onClick,
+function Panel({
+  title,
+  description,
+  children,
 }: {
-  icon: typeof Users;
-  label: string;
-  value: number;
-  tone?: string;
-  onClick?: () => void;
+  title: string;
+  description: string;
+  children: React.ReactNode;
 }) {
-  const body = (
-    <>
-      <Icon className={cn("size-4 shrink-0", tone ?? "text-muted-foreground")} />
-      <span className="min-w-0">
-        <span className={cn("font-heading block text-lg leading-tight tabular-nums", tone)}>{value}</span>
-        <span className="text-muted-foreground block truncate text-xs">{label}</span>
-      </span>
-    </>
+  return (
+    <section className="border-border bg-card flex flex-col gap-4 rounded-2xl border p-5">
+      <header>
+        <h2 className="font-heading text-base font-medium">{title}</h2>
+        <p className="text-muted-foreground text-xs">{description}</p>
+      </header>
+      {children}
+    </section>
   );
-  const className = "border-border bg-card flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left";
-  return onClick ? (
-    <button type="button" onClick={onClick} className={cn(className, "hover:bg-accent/40 transition-colors")}>
-      {body}
-    </button>
-  ) : (
-    <div className={className}>{body}</div>
+}
+
+/** Farmers against LGU Officers: the donut for the share, labelled bars for the counts. */
+function RoleBreakdown({
+  farmers,
+  officers,
+  onSelect,
+}: {
+  farmers: number;
+  officers: number;
+  onSelect: (key: string) => void;
+}) {
+  const rows: BarRow[] = [
+    { key: "farmers", label: "Farmers", value: farmers, color: ROLE_COLOR.FARMER, icon: Sprout },
+    { key: "officers", label: "LGU Officers", value: officers, color: ROLE_COLOR.LGU_OFFICER, icon: ShieldCheck },
+  ];
+  return (
+    <Panel title="Accounts by role" description="Select a role to see its accounts.">
+      <div className="grid items-center gap-5 sm:grid-cols-[200px_1fr]">
+        <DonutChart rows={rows} unit="account" name="Accounts by role" onSelectKey={onSelect} />
+        <HorizontalBars rows={rows} unit="account" label="Accounts by role" onSelect={onSelect} />
+      </div>
+    </Panel>
+  );
+}
+
+/** Who is signed in right now, overall and per role, with their faces. */
+function OnlineNow({ farmers, officers }: { farmers: AdminUser[]; officers: AdminUser[] }) {
+  const online = [...farmers, ...officers].filter((u) => u.is_online);
+  const total = farmers.length + officers.length;
+  const roles = [
+    { label: "Farmers", list: farmers, color: ROLE_COLOR.FARMER },
+    { label: "LGU Officers", list: officers, color: ROLE_COLOR.LGU_OFFICER },
+  ];
+
+  return (
+    <Panel title="Online now" description="Signed in and active in the last few minutes.">
+      <div className="flex items-center gap-3">
+        <span className="relative flex size-3">
+          {online.length > 0 && (
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+          )}
+          <span
+            className={cn(
+              "relative inline-flex size-3 rounded-full",
+              online.length > 0 ? "bg-emerald-500" : "bg-muted-foreground/40",
+            )}
+          />
+        </span>
+        <p className="flex items-baseline gap-2">
+          <span className="font-heading text-4xl leading-none font-medium tabular-nums">{online.length}</span>
+          <span className="text-muted-foreground text-sm">of {total} online</span>
+        </p>
+      </div>
+
+      <ul className="flex flex-col gap-3" aria-label="Online by role">
+        {roles.map(({ label, list, color }) => {
+          const count = list.filter((u) => u.is_online).length;
+          return (
+            <li key={label}>
+              <div className="flex items-center justify-between text-sm">
+                <span>{label}</span>
+                <span className="font-heading tabular-nums">
+                  {count}
+                  <span className="text-muted-foreground ml-1 text-xs font-normal">/ {list.length}</span>
+                </span>
+              </div>
+              <div className="bg-muted mt-1 h-2 overflow-hidden rounded-full">
+                <div
+                  className="h-full rounded-full transition-[width] duration-300"
+                  style={{
+                    width: `${list.length > 0 ? (count / list.length) * 100 : 0}%`,
+                    backgroundColor: color,
+                  }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {online.length > 0 ? (
+        <div className="mt-auto flex items-center gap-2">
+          <div className="flex -space-x-2">
+            {online.slice(0, 6).map((u) => (
+              <Avatar key={u.id} user={u} size="sm" title={u.full_name} />
+            ))}
+          </div>
+          {online.length > 6 && (
+            <span className="text-muted-foreground text-xs">+{online.length - 6} more</span>
+          )}
+        </div>
+      ) : (
+        <p className="text-muted-foreground mt-auto text-xs">Nobody is signed in right now.</p>
+      )}
+    </Panel>
+  );
+}
+
+function Avatar({
+  user,
+  size = "md",
+  title,
+  showOnline,
+}: {
+  user: AdminUser;
+  size?: "sm" | "md";
+  title?: string;
+  showOnline?: boolean;
+}) {
+  const color = ROLE_COLOR[user.role];
+  const initials =
+    `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase() || user.email.charAt(0).toUpperCase();
+  return (
+    <span
+      aria-hidden="true"
+      title={title}
+      className={cn(
+        "ring-card relative flex shrink-0 items-center justify-center rounded-full font-heading font-medium ring-2",
+        size === "sm" ? "size-8 text-[11px]" : "size-12 text-sm",
+      )}
+      style={{ backgroundColor: tint(color, 16), color }}
+    >
+      {initials}
+      {showOnline && user.is_online && (
+        <span className="border-card absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 bg-emerald-500" />
+      )}
+    </span>
   );
 }
 
 /**
- * One account: who, whether they are on BulanTanom now, their role and
- * status, and — for a Farmer — the records they own, which is what a
- * deletion would take with it.
+ * One account: who, their role, whether they are on BulanTanom now, and —
+ * only when they have lost access — their status.
  */
-function AccountRow({
-  user,
-  busy,
-  actions,
-  showRole,
-  onApprove,
-  onReject,
-}: {
-  user: AdminUser;
-  busy: boolean;
-  actions: ActionItem[];
-  showRole?: boolean;
-  onApprove?: () => void;
-  onReject?: () => void;
-}) {
-  const initials =
-    `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase() || user.email.charAt(0).toUpperCase();
+function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[] }) {
+  const color = ROLE_COLOR[user.role];
+  const RoleIcon = ROLE_ICON[user.role];
+  const badge = STATUS_BADGE[user.account_status];
   const joined = new Date(user.date_joined).toLocaleDateString("en-PH", {
     month: "short",
     day: "numeric",
@@ -620,58 +606,57 @@ function AccountRow({
   });
 
   return (
-    <li className="hover:bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors">
-      <span
-        aria-hidden="true"
-        className="bg-primary/10 text-primary relative flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-medium"
-      >
-        {initials}
-        {user.is_online && (
-          <span className="border-card absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 bg-emerald-400" />
-        )}
-      </span>
+    <li
+      className={cn(
+        "border-border bg-card group relative flex flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
+        badge && "opacity-80",
+      )}
+    >
+      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} />
 
-      <div className="min-w-0 flex-1 basis-48">
-        <p className="flex flex-wrap items-center gap-2">
-          <span className="font-heading truncate text-sm font-medium">{user.full_name || user.email}</span>
-          {showRole && (
-            <span className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-[11px]">
-              {ROLE_LABEL[user.role]}
-            </span>
-          )}
-        </p>
-        <p className="text-muted-foreground truncate text-xs">{user.email}</p>
-        <p className="text-muted-foreground/80 mt-0.5 flex flex-wrap gap-x-3 text-xs">
-          <span>Joined {joined}</span>
-          <span className={cn(user.is_online && "font-medium text-emerald-600 dark:text-emerald-400")}>
-            {user.is_online ? "Online now" : lastActiveLabel(user.last_seen_at)}
-          </span>
-          {user.role === "FARMER" && <span>{recordsText(user)}</span>}
-        </p>
+      <div className="flex items-start gap-3">
+        <Avatar user={user} showOnline />
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="font-heading truncate text-base leading-tight font-medium">
+            {user.full_name || user.email}
+          </p>
+          <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+        </div>
+        {actions.length > 0 && (
+          <ActionsMenu items={actions} label={`Actions for ${user.full_name}`} />
+        )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="mt-3 flex flex-wrap gap-1.5">
         <span
-          className={cn(
-            "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-            STATUS_STYLE[user.account_status],
-          )}
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+          style={{ backgroundColor: tint(color), color }}
         >
-          {STATUS_LABEL[user.account_status]}
+          <RoleIcon className="size-3" />
+          {ROLE_LABEL[user.role]}
         </span>
-        {onApprove && onReject ? (
-          <>
-            <Button size="sm" disabled={busy} onClick={onApprove}>
-              {busy ? <LoaderCircle className="size-3.5 animate-spin" /> : <CircleCheck className="size-3.5" />}
-              Approve
-            </Button>
-            <Button size="sm" variant="destructive" disabled={busy} onClick={onReject}>
-              <UserRoundX className="size-3.5" />
-              Reject
-            </Button>
-          </>
+        {badge && (
+          <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", badge.className)}>
+            {badge.label}
+          </span>
+        )}
+      </div>
+
+      <div className="border-border text-muted-foreground mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-dashed pt-3 text-xs">
+        <span className="flex items-center gap-1.5">
+          <CalendarDays className="size-3.5" />
+          Joined {joined}
+        </span>
+        {user.is_online ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            Online now
+          </span>
         ) : (
-          <ActionsMenu items={actions} disabled={busy} label={`Actions for ${user.full_name}`} />
+          <span className="flex items-center gap-1.5">
+            <Clock className="size-3.5" />
+            {lastActiveLabel(user.last_seen_at).replace(/^Last active /, "Active ")}
+          </span>
         )}
       </div>
     </li>
@@ -708,26 +693,6 @@ export function ActionConfirm({
     error,
     onConfirm,
   };
-
-  if (action.kind === "approve-all") {
-    return (
-      <ConfirmDialog
-        {...common}
-        title={`Approve ${action.users.length} registration${action.users.length === 1 ? "" : "s"}?`}
-        description="Each farmer will be able to sign in and start tracking plants, and will be emailed that they were approved."
-        confirmLabel={busy ? "Approving…" : `Yes, approve ${action.users.length}`}
-        details={
-          <ul className="max-h-40 overflow-y-auto text-sm">
-            {action.users.map((u) => (
-              <li key={u.id} className="truncate py-0.5">
-                {u.full_name} <span className="text-muted-foreground">· {u.email}</span>
-              </li>
-            ))}
-          </ul>
-        }
-      />
-    );
-  }
 
   const { user, kind } = action;
   const who = (
@@ -812,13 +777,6 @@ export function ActionConfirm({
       description: "They will be able to sign in again straight away.",
       confirmLabel: "Reactivate account",
       destructive: false,
-    },
-    reject: {
-      title: `Reject ${user.full_name}'s registration?`,
-      description:
-        "This registration will not be approved. It can be reactivated later if this was a mistake.",
-      confirmLabel: "Reject registration",
-      destructive: true,
     },
   }[kind];
 

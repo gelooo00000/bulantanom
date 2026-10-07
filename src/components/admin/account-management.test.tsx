@@ -1,11 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AccountManagement,
   ActionConfirm,
-  recordsText,
   type PendingAction,
 } from "@/components/admin/account-management";
 import type { AdminUser } from "@/lib/api/admin-api";
@@ -61,46 +60,26 @@ beforeEach(() => {
   api.deleteAccount.mockResolvedValue({ detail: "deleted" });
 });
 
-describe("recordsText", () => {
-  it("lists only the records a farmer has", () => {
-    expect(recordsText(MARIA)).toBe("6 plants · 12 assessments · 3 soil checks");
-    expect(recordsText(JUAN)).toBe("No farm records");
-  });
-});
-
 describe("AccountManagement", () => {
-  it("shows each farmer's records and who is online", async () => {
+  it("shows who is online without the farm-record counts", async () => {
     render(<AccountManagement />);
-    const row = (await screen.findByText("Maria Santos")).closest("li")!;
-    expect(row).toHaveTextContent("6 plants · 12 assessments · 3 soil checks");
-    expect(row).toHaveTextContent("Online now");
+    const card = (await screen.findByText("Maria Santos")).closest("li")!;
+    expect(card).toHaveTextContent("Online now");
+    expect(card).not.toHaveTextContent("6 plants");
+    expect(card).not.toHaveTextContent("Approved");
   });
 
   it("counts who is online in the overview", async () => {
     render(<AccountManagement />);
     await screen.findByText("Maria Santos");
-    // "Online now" is also on Maria's row; the overview's is the label
-    // whose sibling holds the count.
-    const label = screen
-      .getAllByText("Online now")
-      .find((el) => el.previousElementSibling?.textContent === "1");
-    expect(label).toBeDefined();
+    expect(screen.getByText("of 3 online")).toBeInTheDocument();
   });
 
-  it("approves every pending registration at once, after asking", async () => {
-    const user = userEvent.setup();
+  it("has no pending tab or status filter", async () => {
     render(<AccountManagement />);
-    await user.click(await screen.findByRole("tab", { name: /Pending/ }));
-    await user.click(screen.getByRole("button", { name: "Approve all (2)" }));
-
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("Approve 2 registrations?");
-    expect(dialog).toHaveTextContent("Juan Cruz");
-    expect(dialog).toHaveTextContent("Ana Lim");
-    await user.click(within(dialog).getByRole("button", { name: "Yes, approve 2" }));
-
-    await waitFor(() => expect(api.approveFarmer).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("2 registrations approved.")).toBeInTheDocument();
+    await screen.findByText("Maria Santos");
+    expect(screen.queryByRole("tab", { name: /Pending/ })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Filter by status" })).toBeNull();
   });
 });
 
