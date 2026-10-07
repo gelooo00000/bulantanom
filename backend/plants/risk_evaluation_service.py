@@ -33,6 +33,14 @@ logger = logging.getLogger(__name__)
 # same as "healthy", so the AI may answer INCONCLUSIVE instead of LOW.
 EARLY_STAGE_DAYS = 14
 
+# Form questions that do not fit a crop. The form still makes the farmer pick
+# something (mushrooms get "Healthy green leaves"), so those picks are sent as
+# not applicable rather than as claims the photo could contradict.
+NOT_APPLICABLE = {
+    "mushroom": {"leaf_condition", "flowering_status"},
+}
+NOT_APPLICABLE_TEXT = "not applicable to this crop"
+
 RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -134,6 +142,12 @@ Check the answers against the photo first:
 - Small differences, things the photo cannot show (watering, soil moisture,
   smell, last week's weather), and parts of the plant out of frame are NOT
   contradictions. When in doubt, it matches.
+- Every farmer fills in the same form, so some questions do not fit every
+  crop: mushrooms have no leaves or flowers, a root crop's roots are
+  underground. An answer to a question that does not apply to this crop is
+  NOT a contradiction; ignore it here and do not treat it as a risk factor.
+  A contradiction is only an answer that describes the opposite of what the
+  photo plainly shows.
 - When false, list each contradiction in `answer_conflicts` as one plain
   sentence naming the answer and what the photo shows ("You answered 'Not
   fruiting', but the photo shows several green fruits."). Otherwise leave
@@ -222,6 +236,11 @@ def build_context(assessment) -> dict:
     """The structured EXPECTED + ACTUAL payload handed to Gemini."""
     plant = assessment.plant
     crop = plant.crop
+    skip = NOT_APPLICABLE.get(crop.id, set())
+
+    def answer(field, value):
+        return NOT_APPLICABLE_TEXT if field in skip else value
+
     return {
         "crop": {
             "name": crop.name,
@@ -253,8 +272,12 @@ def build_context(assessment) -> dict:
             ),
             "growth_condition": assessment.get_growth_condition_display(),
             "health_condition": assessment.get_health_condition_display(),
-            "leaf_condition": assessment.get_leaf_condition_display(),
-            "flowering_status": assessment.get_flowering_status_display() or None,
+            "leaf_condition": answer(
+                "leaf_condition", assessment.get_leaf_condition_display()
+            ),
+            "flowering_status": answer(
+                "flowering_status", assessment.get_flowering_status_display() or None
+            ),
             "fruiting_status": assessment.get_fruiting_status_display() or None,
             "watering_frequency": assessment.get_watering_frequency_display(),
             "soil_moisture": assessment.get_soil_moisture_display() or None,

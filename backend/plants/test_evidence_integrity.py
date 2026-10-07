@@ -129,3 +129,23 @@ class ParsingTests(RiskTestCase):
         result = validate_risk_payload(CONFLICT)
         self.assertFalse(result["answers_match_photo"])
         self.assertEqual(result["answer_conflicts"], CONFLICT["answer_conflicts"])
+
+
+class NotApplicableAnswersTests(RiskTestCase):
+    def test_leaf_and_flower_answers_are_not_claims_for_a_mushroom(self):
+        from .risk_evaluation_service import NOT_APPLICABLE_TEXT, build_context
+
+        farmer = make_user("farmer@example.com")
+        assessment = Assessment(
+            plant=self.make_plant(farmer, crop_id="mushroom"),
+            assessment_date=timezone.localdate(), plant_age_days=30,
+            growth_condition="as_expected", health_condition="healthy",
+            leaf_condition="healthy", flowering_status="not_flowering",
+            fruiting_status="ripening", watering_frequency="daily",
+        )
+
+        answers = build_context(assessment)["farmer_assessment"]
+
+        self.assertEqual(answers["leaf_condition"], NOT_APPLICABLE_TEXT)
+        self.assertEqual(answers["flowering_status"], NOT_APPLICABLE_TEXT)
+        self.assertEqual(answers["fruiting_status"], "Fruit ripening")
