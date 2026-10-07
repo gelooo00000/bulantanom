@@ -198,25 +198,10 @@ export default function AddPlantPage() {
           <CardContent className="flex flex-col items-center gap-4 px-6 text-center">
             <LoaderCircle className="text-primary size-7 animate-spin" />
             <p className="font-heading font-medium">
-              {t("add.analyzing", { crop: `${selectedCrop?.emoji ?? ""} ${selectedCrop?.name ?? ""}` })}
+              {t("add.analyzing", {
+                crop: `${selectedCrop?.emoji ?? ""} ${selectedVariant?.name ?? selectedCrop?.name ?? ""}`,
+              })}
             </p>
-            <ul className="text-muted-foreground space-y-1 text-sm">
-              <li>{t("add.step1")}</li>
-              <li>{t("add.step2")}</li>
-              <li>{t("add.step3")}</li>
-            </ul>
-            {/* The guidance is a nicety; the plant record is the point. The
-                first farmer to pick any crop waits on a live Gemini call
-                behind a 60-second timeout, so there has to be a way past it
-                rather than a spinner with no exit. */}
-            <div className="mt-2 flex flex-col items-center gap-1.5">
-              <Button variant="outline" onClick={handleSave} disabled={saving}>
-                {saving ? t("add.adding") : t("add.skipWait")}
-              </Button>
-              <p className="text-muted-foreground/70 text-xs">
-                {t("add.laterGuidance")}
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

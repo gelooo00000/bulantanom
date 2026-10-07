@@ -83,32 +83,7 @@ export const addPlant = defineMessages({
     bik: "Inaandam an impormasyon san tanom…",
   },
   "add.analyzing": { en: "Analyzing {crop}…", fil: "Sinusuri ang {crop}…", bik: "Sinususi an {crop}…" },
-  "add.step1": {
-    en: "Preparing crop information",
-    fil: "Inihahanda ang impormasyon ng pananim",
-    bik: "Inaandam an impormasyon san tanom",
-  },
-  "add.step2": {
-    en: "Calculating harvest window",
-    fil: "Kinakalkula ang panahon ng ani",
-    bik: "Kinukwenta an panahon san ani",
-  },
-  "add.step3": {
-    en: "Generating growing guidance",
-    fil: "Gumagawa ng gabay sa pagpapalaki",
-    bik: "Ginigibo an giya sa pagpadakula",
-  },
-  "add.skipWait": {
-    en: "Add plant without waiting",
-    fil: "Idagdag ang tanim nang hindi naghihintay",
-    bik: "Idugang an tanom na dili na naghuhulat",
-  },
   "add.adding": { en: "Adding plant…", fil: "Idinaragdag ang tanim…", bik: "Idinudugang an tanom…" },
-  "add.laterGuidance": {
-    en: "Guidance will still appear on the plant's page.",
-    fil: "Lalabas pa rin ang gabay sa pahina ng tanim.",
-    bik: "Makikita pa giyapon an giya sa pahina san tanom.",
-  },
 
   "add.backToSelect": {
     en: "Back to crop selection",
