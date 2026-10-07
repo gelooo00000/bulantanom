@@ -17,7 +17,13 @@ export function FarmerShell({ children }: { children: ReactNode }) {
     { label: t("nav.dashboard"), href: "/farmer/dashboard", icon: LayoutDashboard },
     { label: t("nav.plants"), href: "/farmer/plants", icon: Sprout },
     { label: t("nav.cropRecommendation"), href: "/farmer/soil-recommendation", icon: FlaskConical },
-    { label: t("nav.risk"), href: "/farmer/risk-indicator", icon: Radar },
+    // The Weekly Assessment is opened from, and returns to, Risk Indicator.
+    {
+      label: t("nav.risk"),
+      href: "/farmer/risk-indicator",
+      icon: Radar,
+      claims: /^\/farmer\/plants\/[^/]+\/assessment\/?$/,
+    },
     { label: t("nav.harvest"), href: "/farmer/harvest", icon: Wheat },
     // Past results only. What is due this week is on Risk Indicator.
     { label: t("nav.assessments"), href: "/farmer/assessments", icon: ClipboardList },

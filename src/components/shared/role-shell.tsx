@@ -16,7 +16,18 @@ import type { WeatherCondition } from "@/lib/api/weather-api";
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
 
-export type NavItem = { label: string; href: string; icon: ElementType };
+export type NavItem = {
+  label: string;
+  href: string;
+  icon: ElementType;
+  /**
+   * Pages outside `href` that belong to this item. A page matched here
+   * highlights only this item, even if its address sits under another
+   * item's `href` (the Weekly Assessment lives at /farmer/plants/… but is
+   * part of Risk Indicator).
+   */
+  claims?: RegExp;
+};
 
 /** The shell's own words, for a role whose screens are translated. */
 export type ShellCopy = {
@@ -60,7 +71,9 @@ export function RoleShell({
   // ends by itself goes to /login, so the user can sign straight back in.
   const logout = () => endSession("/");
 
+  const claimedBy = navItems.find((item) => item.claims?.test(pathname));
   function isActive(href: string) {
+    if (claimedBy) return claimedBy.href === href;
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
@@ -163,7 +176,15 @@ export function RoleShell({
 
           {overflowTabs.length > 0 && (
             <MenuPrimitive.Root>
-              <MenuPrimitive.Trigger className="text-muted-foreground font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px]">
+              <MenuPrimitive.Trigger
+                className={cn(
+                  "font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px]",
+                  // Lit when the page belongs to one of the items inside it.
+                  overflowTabs.some((item) => isActive(item.href))
+                    ? "text-primary"
+                    : "text-muted-foreground",
+                )}
+              >
                 <EllipsisVertical className="size-5" />
                 {copy.more}
               </MenuPrimitive.Trigger>
