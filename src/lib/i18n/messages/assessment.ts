@@ -84,9 +84,9 @@ export const assessment = defineMessages({
     bik: "Litrato san kamutangan san tanom",
   },
   "asmt.evidenceText": {
-    en: "A clear photo of your {crop} is required. We check that it matches the crop before evaluating risk.",
-    fil: "Kailangan ang malinaw na litrato ng iyong {crop}. Sinusuri namin kung tugma ito sa pananim bago suriin ang panganib.",
-    bik: "Kinahanglan an malinaw na litrato san imo {crop}. Sinususi mi kun angay ini sa tanom bago susihon an peligro.",
+    en: "Take a new, clear photo of your own {crop} today. Pictures from the internet, screenshots and old photos are refused, and the photo must agree with your answers above.",
+    fil: "Kumuha ng bago at malinaw na litrato ng sarili mong {crop} ngayong araw. Hindi tinatanggap ang litrato mula sa internet, screenshot o lumang litrato, at dapat tugma ang litrato sa iyong mga sagot sa itaas.",
+    bik: "Magkuha nin bag-o asin malinaw na litrato san imo mismo na {crop} niyan na adlaw. Dili inaako an litrato hali sa internet, screenshot o daan na litrato, asin dapat angay an litrato sa imo mga simbag sa itaas.",
   },
   "asmt.observations": { en: "Observations", fil: "Mga obserbasyon", bik: "Mga obserbasyon" },
   "asmt.observationsText": {
@@ -150,6 +150,11 @@ export const assessment = defineMessages({
     en: "Plant evidence could not be verified right now. Please try again in a moment.",
     fil: "Hindi masuri ang litrato ng tanim ngayon. Pakisubukan muli mamaya.",
     bik: "Dili masusi an litrato san tanom yana. Probaran tabi liwat maya-maya.",
+  },
+  "asmt.answersMismatch": {
+    en: "Your answers don't match the photo, so this assessment can't be evaluated. Correct the answers or take a new photo, then submit again.",
+    fil: "Hindi tugma ang iyong mga sagot sa litrato, kaya hindi masusuri ang assessment na ito. Itama ang mga sagot o kumuha ng bagong litrato, saka isumite muli.",
+    bik: "Dili angay an imo mga simbag sa litrato, kaya dili masusuri ini na assessment. Tadtaron an mga simbag o magkuha nin bag-o na litrato, dangan isumite giraray.",
   },
   "asmt.wentWrong": {
     en: "Something went wrong.",
@@ -303,6 +308,11 @@ export const assessment = defineMessages({
     en: "Invalid Plant Evidence",
     fil: "Hindi Wastong Litrato ng Tanim",
     bik: "Dili Tama na Litrato san Tanom",
+  },
+  "verdict.not_genuine": {
+    en: "Not a Photo of Your Plant",
+    fil: "Hindi Litrato ng Iyong Tanim",
+    bik: "Dili Litrato san Imo Tanom",
   },
   "verdict.unclear": {
     en: "Photo Not Clear Enough",

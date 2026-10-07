@@ -225,10 +225,32 @@ def _run_risk_evaluation(assessment, language="en"):
     status FAILED and risk_level left NULL — the farmer's assessment and
     evidence are never lost, and no risk level is fabricated.
     """
-    from .models import RiskAssessment, RiskStatus
-    from .risk_evaluation_service import evaluate_assessment, is_configured
+    from .risk_evaluation_service import evaluate_assessment
 
-    result = evaluate_assessment(assessment, language)
+    return _store_risk(assessment, evaluate_assessment(assessment, language), language)
+
+
+def _conflict_message(conflicts) -> str:
+    return (
+        "Your answers don't match the photo, so this assessment can't be evaluated. "
+        "Please correct your answers or take a new photo: " + " ".join(conflicts)
+    )
+
+
+def _store_risk(assessment, result, language="en"):
+    """Persist an evaluation result (or its failure) as the RiskAssessment."""
+    from .models import RiskAssessment, RiskStatus
+    from .risk_evaluation_service import is_configured
+
+    if result is not None and not result.get("answers_match_photo", True):
+        # No reading is ever issued on answers the photo contradicts.
+        return RiskAssessment.objects.create(
+            assessment=assessment,
+            status=RiskStatus.FAILED,
+            failure_reason=_conflict_message(result.get("answer_conflicts", [])),
+            model_name=result.get("model_name", settings.GEMINI_MODEL),
+            language=language,
+        )
 
     if result is None:
         return RiskAssessment.objects.create(
@@ -269,6 +291,27 @@ EVIDENCE_UNAVAILABLE_MESSAGE = (
 )
 
 
+def _reused_photo_result(plant, image_bytes) -> dict | None:
+    """
+    A rejection if these exact bytes were already submitted as evidence, by
+    anyone. Each weekly assessment needs a fresh photo of the plant as it is
+    now; re-sending last week's (or someone else's) is not evidence.
+    """
+    digest = evidence_token.image_digest(image_bytes)
+    if not Assessment.objects.filter(evidence_validation__image_sha256=digest).exists():
+        return None
+    crop = plant.crop.name.lower()
+    return {
+        "evidence_valid": False,
+        "verdict": "not_genuine",
+        "confidence": 1.0,
+        "detected_subject": "a photo already used in an earlier assessment",
+        "expected_crop": plant.crop.name,
+        "reason": "This exact photo was already used in an earlier assessment.",
+        "message": f"Take a new photo of your {crop} plant as it looks today.",
+    }
+
+
 def _read_upload(image) -> tuple[bytes, str]:
     """Bytes and MIME type of an uploaded evidence image, without saving it."""
     image.seek(0)
@@ -295,6 +338,10 @@ def _verify_evidence(request, plant, image) -> dict:
     from .evidence_validation_service import validate_crop_evidence
 
     image_bytes, mime = _read_upload(image)
+
+    reused = _reused_photo_result(plant, image_bytes)
+    if reused:
+        return {"outcome": "rejected", "result": reused}
 
     token = request.data.get("evidence_token")
     if token and evidence_token.verify(token, request.user.id, plant.id, image_bytes):
@@ -368,7 +415,9 @@ def validate_plant_evidence(request, plant_id):
     from .evidence_validation_service import validate_crop_evidence
 
     image_bytes, mime = _read_upload(image)
-    result = validate_crop_evidence(plant.crop, image_bytes, mime, from_request(request))
+    result = _reused_photo_result(plant, image_bytes) or validate_crop_evidence(
+        plant.crop, image_bytes, mime, from_request(request)
+    )
 
     if result is None:
         return Response(
@@ -484,18 +533,46 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
         # Plant age is computed here — never accepted from the client.
         age_days = (assessment_date - plant.planting_date).days
 
+        image_bytes, _mime = _read_upload(image)
         assessment = serializer.save(
             plant=plant,
             assessment_date=assessment_date,
             plant_age_days=age_days,
             evidence_validated=True,
-            evidence_validation=verification["result"],
+            evidence_validation={
+                **verification["result"],
+                # Lets a later submission of the same photo be refused.
+                "image_sha256": evidence_token.image_digest(image_bytes),
+            },
         )
 
         # 3. Only now does the risk evaluation run, on verified evidence. Its
         #    existing graceful failure is preserved: a Gemini outage records a
         #    FAILED risk rather than losing the farmer's assessment.
-        risk = _run_risk_evaluation(assessment, from_request(request))
+        from .risk_evaluation_service import evaluate_assessment
+
+        language = from_request(request)
+        result = evaluate_assessment(assessment, language)
+
+        # 3b. The answers must agree with the photo. If the photo clearly
+        #     contradicts them, nothing is kept and no reading is issued: the
+        #     farmer corrects the form (or the photo) and submits again, and
+        #     the week stays open because no assessment was recorded.
+        if result is not None and not result.get("answers_match_photo", True):
+            assessment.evidence_image.delete(save=False)
+            assessment.delete()
+            return Response(
+                {
+                    "detail": "Your answers don't match the photo, so this assessment "
+                    "can't be evaluated. Please correct the answers below or take "
+                    "a new photo.",
+                    "answers_mismatch": True,
+                    "answer_conflicts": result.get("answer_conflicts", []),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        risk = _store_risk(assessment, result, language)
         assessment.refresh_from_db()
 
         # 4. Notify only once the assessment and its risk row are stored, and

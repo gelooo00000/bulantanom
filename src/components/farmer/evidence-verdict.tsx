@@ -30,6 +30,12 @@ const STYLES: Record<
     tone: "text-risk-high",
     border: "border-risk-high/30 bg-risk-high/5",
   },
+  not_genuine: {
+    icon: ImageOff,
+    title: "verdict.not_genuine",
+    tone: "text-risk-high",
+    border: "border-risk-high/30 bg-risk-high/5",
+  },
   unclear: {
     icon: ScanEye,
     title: "verdict.unclear",

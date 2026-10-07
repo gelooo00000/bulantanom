@@ -47,6 +47,14 @@ RESPONSE_SCHEMA = {
                 "different stage from the recorded age."
             ),
         },
+        "answers_match_photo": {
+            "type": "boolean",
+            "description": (
+                "False only when the photo clearly contradicts one or more of "
+                "the farmer's answers."
+            ),
+        },
+        "answer_conflicts": {"type": "array", "items": {"type": "string"}},
         "summary": {"type": "string"},
         "reality_vs_expectation": {
             "type": "object",
@@ -84,6 +92,8 @@ RESPONSE_SCHEMA = {
         "recommended_actions",
         "next_assessment_days",
         "planting_date_mismatch",
+        "answers_match_photo",
+        "answer_conflicts",
     ],
 }
 
@@ -95,6 +105,40 @@ Philippines.
 Evaluate the supplied crop information, plant age, farmer observations, and
 plant-condition image. Compare the ACTUAL reported condition against what
 would normally be EXPECTED for this crop at this age.
+
+The farmer's answers are the basis of your reading:
+
+- Build the risk level from what the farmer reported in `farmer_assessment`
+  (growth, health, leaves, flowering, fruiting, watering, soil moisture,
+  pests, disease, environment, and `notes`, which is the concern
+  they wrote in their own words), checked against the photo and the crop's expected stage.
+- Every risk factor must trace back to a specific answer or to something
+  clearly visible in the photo. Name the answer it comes from ("You reported
+  yellowing leaves", "You water daily while the soil is wet"). Do not raise a
+  problem that neither the answers nor the photo support.
+- Answers left blank or "none reported" are not problems. Do not guess at
+  pests, disease or symptoms the farmer did not report and the photo does
+  not show.
+- `summary` should read as a direct response to what the farmer told you.
+
+Check the answers against the photo first:
+
+- `answers_match_photo`: set false ONLY when the photo clearly contradicts
+  the farmer's answers, so the two cannot both be true. Examples: health or
+  leaves reported "healthy" / "healthy green leaves" but the photo shows
+  plainly yellow, brown, wilted, spotted or dead foliage; "not flowering" but
+  open flowers are clearly visible; "not fruiting" but fruit is clearly
+  visible, or fruiting reported but the plant clearly has none; "none
+  observed" for pests while insects or heavy feeding damage are plainly
+  visible; a height that is wildly different from the plant in the photo.
+- Small differences, things the photo cannot show (watering, soil moisture,
+  smell, last week's weather), and parts of the plant out of frame are NOT
+  contradictions. When in doubt, it matches.
+- When false, list each contradiction in `answer_conflicts` as one plain
+  sentence naming the answer and what the photo shows ("You answered 'Not
+  fruiting', but the photo shows several green fruits."). Otherwise leave
+  `answer_conflicts` empty. The system will not issue a reading on
+  contradicting information; the farmer is asked to correct their answers.
 
 Rules you must follow:
 
@@ -276,7 +320,13 @@ def _validate(payload) -> dict | None:
 
     mismatch = payload.get("planting_date_mismatch") is True
 
+    # Only an explicit False counts: a missing flag must not block a farmer.
+    conflicts = _str_list("answer_conflicts")
+    answers_match = payload.get("answers_match_photo") is not False or not conflicts
+
     return {
+        "answers_match_photo": answers_match,
+        "answer_conflicts": [] if answers_match else conflicts,
         "risk_level": "INCONCLUSIVE" if mismatch else level,
         "date_mismatch": mismatch,
         "summary": summary.strip(),

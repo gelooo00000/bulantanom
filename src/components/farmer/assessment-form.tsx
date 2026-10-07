@@ -162,6 +162,8 @@ export function AssessmentForm({
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<BackendAssessment | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Where the photo contradicted the answers, one sentence per answer.
+  const [conflicts, setConflicts] = useState<string[]>([]);
   const [evidenceResult, setEvidenceResult] = useState<EvidenceValidation | null>(null);
   const uploadRef = useRef<EvidenceUploadHandle>(null);
 
@@ -195,6 +197,7 @@ export function AssessmentForm({
     if (!canSubmit || !accessToken || !evidence) return;
 
     setError(null);
+    setConflicts([]);
     setEvidenceResult(null);
 
     // Step 1 — verify the photo actually shows this crop. Nothing is saved
@@ -259,6 +262,15 @@ export function AssessmentForm({
           onLocked(locked);
           return;
         }
+      }
+      // The photo contradicted the answers: nothing was saved, so the form
+      // stays filled in for the Farmer to correct and resubmit.
+      if (err instanceof AssessmentApiError && err.payload.answers_mismatch) {
+        const listed = err.payload.answer_conflicts;
+        setConflicts(Array.isArray(listed) ? listed.map(String) : []);
+        setError(t("asmt.answersMismatch"));
+        setStatus("idle");
+        return;
       }
       setError(err instanceof Error ? err.message : t("asmt.wentWrong"));
       setStatus("idle");
@@ -431,7 +443,18 @@ export function AssessmentForm({
         </div>
       </FormSection>
 
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error && (
+        <div className="text-destructive text-sm">
+          <p>{error}</p>
+          {conflicts.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {conflicts.map((conflict) => (
+                <li key={conflict}>{conflict}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <Button type="submit" size="lg" disabled={!canSubmit} className="self-start">

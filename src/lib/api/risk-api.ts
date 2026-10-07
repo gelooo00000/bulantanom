@@ -56,7 +56,7 @@ export type AssessmentEligibility = {
   interval_days: number;
 };
 
-export type EvidenceVerdict = "match" | "mismatch" | "no_plant" | "unclear";
+export type EvidenceVerdict = "match" | "mismatch" | "no_plant" | "unclear" | "not_genuine";
 
 export type EvidenceValidation = {
   evidence_valid: boolean;

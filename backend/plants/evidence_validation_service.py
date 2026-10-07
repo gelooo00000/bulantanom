@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # accepted, so an ambiguous photo never passes as verified evidence.
 MIN_MATCH_CONFIDENCE = 0.55
 
-VERDICTS = ("match", "mismatch", "no_plant", "unclear")
+VERDICTS = ("match", "mismatch", "no_plant", "unclear", "not_genuine")
 
 RESPONSE_SCHEMA = {
     "type": "object",
@@ -55,8 +55,9 @@ You verify whether a farmer's uploaded photo actually shows the crop they
 selected in BulanTanom, an agricultural monitoring system for Layuan Nature
 Integrated Farm in Bulan, Sorsogon, Philippines.
 
-You are NOT diagnosing plant health here. Your only question is: does this
-photo plausibly show the expected crop?
+You are NOT diagnosing plant health here. Your questions are: is this a
+real photo the farmer took of a growing plant, and does it plausibly show the
+expected crop?
 
 Choose exactly one verdict:
 
@@ -71,6 +72,19 @@ Choose exactly one verdict:
 - "unclear"   — a plant may be present but the photo is too blurry, too dark,
                 too distant, too obstructed, or too cropped to tell which crop
                 it is.
+- "not_genuine" — the image is not a real photo of a living plant taken in
+                the field. Use this, even when the crop is right, for: stock
+                or internet images (watermarks, website logos, copyright
+                text, captions, catalogue-style shots of a perfect specimen
+                on a white or studio background); screenshots (phone status
+                bars, app or browser chrome, search results, social media
+                frames); a photo of a computer, TV or phone screen (visible
+                pixels, moire, screen glare, bezels); a photo of a printed
+                picture, poster, book, seed packet or product label;
+                drawings, illustrations, clip art, 3D renders, AI-generated
+                images; collages or edited images with text or stickers;
+                harvested fruit at a market or shop instead of a plant in the
+                ground.
 
 Rules:
 - `confidence` is your confidence in the verdict, from 0.0 to 1.0. Be honest.
@@ -87,6 +101,10 @@ Rules:
 - `reason` is one or two plain sentences a farmer would understand. No
   jargon, no hedging boilerplate.
 - Judge only the photo. Do not infer the crop from the expected-crop name.
+- Check "not_genuine" first. A genuine farm photo is usually imperfect: uneven
+  natural light, soil, weeds, other plants, fences or a hand in frame, some
+  blur. That is normal and is NOT a reason for "not_genuine". Use it only
+  when you see an actual sign listed above, and name that sign in `reason`.
 """.strip()
 
 
@@ -118,6 +136,11 @@ def _message_for(verdict: str, crop_name: str) -> str:
         return f"Please upload a clear photo of your {crop_name.lower()} plant."
     if verdict == "no_plant":
         return f"Please upload a photo showing your {crop_name.lower()} plant."
+    if verdict == "not_genuine":
+        return (
+            f"Take a new photo of your own {crop_name.lower()} plant with your camera. "
+            "Pictures from the internet, screenshots or photos of a screen can't be used."
+        )
     return "Please upload a clearer photo showing the plant."
 
 
