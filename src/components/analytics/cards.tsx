@@ -20,7 +20,7 @@ import type { Trend } from "@/lib/api/analytics-api";
 import { cn } from "@/lib/utils";
 
 /* ---------------------------------------------------------------------------
- * Page furniture: breadcrumbs, the advisory note and the live-data footer.
+ * Page furniture: breadcrumbs and the live-data footer.
  * ------------------------------------------------------------------------- */
 
 export function Breadcrumbs({ items }: { items: { label: string; href?: string }[] }) {
@@ -41,18 +41,6 @@ export function Breadcrumbs({ items }: { items: { label: string; href?: string }
         </span>
       ))}
     </nav>
-  );
-}
-
-export function AdvisoryNote() {
-  return (
-    <p className="border-primary/25 bg-primary/5 flex items-start gap-2 rounded-xl border px-3.5 py-2.5 text-xs">
-      <Info className="text-primary mt-px size-3.5 shrink-0" aria-hidden="true" />
-      <span>
-        <span className="font-medium">Advisory:</span> Results are advisory and based on
-        user-provided inputs, not final decisions.
-      </span>
-    </p>
   );
 }
 

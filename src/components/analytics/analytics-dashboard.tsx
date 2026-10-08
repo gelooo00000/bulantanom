@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ArrowRight, CircleHelp, Leaf, OctagonAlert, Sprout, Star, TriangleAlert, Users } from "lucide-react";
 
 import {
-  AdvisoryNote,
   Breadcrumbs,
   CardState,
   ChartCard,
@@ -52,7 +51,6 @@ export function AnalyticsDashboard() {
           description="Soil, crop, and farm analytics for Layuan Nature Integrated Farm, Bulan, Sorsogon."
         />
       </div>
-      <AdvisoryNote />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
