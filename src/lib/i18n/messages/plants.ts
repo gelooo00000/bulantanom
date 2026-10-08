@@ -21,11 +21,6 @@ export const plants = defineMessages({
     bik: "Itatanom sa {date}",
   },
   "card.planted": { en: "Planted {date}", fil: "Itinanim {date}", bik: "Itinanom {date}" },
-  "card.expected": {
-    en: "Expected harvest {date}",
-    fil: "Inaasahang ani {date}",
-    bik: "Inaasahan na ani {date}",
-  },
   "card.plannedAssess": {
     en: "Planned · assess from {date}",
     fil: "Nakaplano · masusuri simula {date}",

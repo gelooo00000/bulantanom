@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Check, CircleCheck, ClipboardList } from "lucide-react";
+import { CalendarClock, Check, CircleCheck, ClipboardList } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
 import { useLanguage } from "@/lib/i18n";
-import { plantAgeLabel, plantSubtitle, plantTitle } from "@/lib/plant-summary";
+import { plantSubtitle, plantTitle } from "@/lib/plant-summary";
 import { cn } from "@/lib/utils";
 
 /**
@@ -61,24 +61,22 @@ export function PlantCard({
         </span>
       )}
       <CardContent className="flex flex-col gap-3 px-5">
-        <div className={cn("min-w-0", selecting && "pr-7")}>
-          <p className="font-heading truncate text-[17px] leading-snug">
-            <span aria-hidden="true">{plant.crop.emoji}</span> {plantTitle(plant)}
-          </p>
-          <p className="text-muted-foreground mt-0.5 truncate text-sm">{plantSubtitle(plant, t)}</p>
-        </div>
-        <div className="text-foreground/75 flex flex-col gap-1 text-[13px]">
-          <span>
-            {t(plant.is_planned ? "card.plantingOn" : "card.planted", {
-              date: date(plant.planting_date),
-            })}
+        <div className={cn("flex min-w-0 items-center gap-3", selecting && "pr-7")}>
+          <span aria-hidden="true" className="shrink-0 text-3xl leading-none">
+            {plant.crop.emoji}
           </span>
-          <span className="flex items-center gap-1">
-            {t("card.expected", { date: date(plant.expected_harvest_start) })}
-            <ArrowRight className="size-3" />
-          </span>
-          {!plant.is_planned && <span>{plantAgeLabel(plant.age_days, t)}</span>}
+          <div className="min-w-0">
+            <p className="font-heading truncate text-lg leading-snug font-medium">{plantTitle(plant)}</p>
+            <p className="text-muted-foreground mt-0.5 truncate text-sm">{plantSubtitle(plant, t)}</p>
+          </div>
         </div>
+        {/* Only the planting date here: the harvest date lives on the
+            Harvest page and the plant's own page, and the age is one tap away. */}
+        <span className="text-foreground/75 text-[13px]">
+          {t(plant.is_planned ? "card.plantingOn" : "card.planted", {
+            date: date(plant.planting_date),
+          })}
+        </span>
 
         {/* The weekly assessment is the Farmer's recurring job, and the lock
             state was already on every plant - it just was not shown, so the
