@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
@@ -79,9 +80,19 @@ describe("the harvest calendar", () => {
 
   it("counts a harvest into its month, and one years away as later", () => {
     render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
-    expect(screen.getByText(/1 plant ready to harvest in the next 12 months/)).toBeInTheDocument();
-    expect(screen.getByRole("listitem", { name: "December 2026: 1" })).toBeInTheDocument();
-    expect(screen.getByRole("listitem", { name: "November 2026: 0" })).toBeInTheDocument();
-    expect(screen.getByText(/\+ 1 more later than 12 months/)).toBeInTheDocument();
+    expect(screen.getByText(/1 plant ready in the next 12 months/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/1 more plant is further away than 12 months/),
+    ).toBeInTheDocument();
+  });
+
+  it("names the plants ready in a month when that month is pointed at", async () => {
+    const user = userEvent.setup();
+    render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
+    expect(screen.getByText(/Point at a month/)).toBeInTheDocument();
+
+    await user.hover(screen.getByRole("button", { name: /December 2026/ }));
+    expect(screen.getByText(/Ready in December 2026 · 1 plant/)).toBeInTheDocument();
+    expect(screen.getByText("Corn")).toBeInTheDocument();
   });
 });
