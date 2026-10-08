@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
@@ -78,28 +77,11 @@ describe("the harvest calendar", () => {
     expected_harvest_end: "2026-12-24",
   } as Partial<BackendPlant>);
 
-  it("draws a row for a harvest in range, and lists one years away as later", () => {
+  it("counts a harvest into its month, and one years away as later", () => {
     render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
-    expect(screen.getByText(/1 to harvest in the next 6 months · 0 ready now/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Corn/ })).toBeInTheDocument();
-    expect(screen.getByText(/Later than 6 months \(1\)/)).toBeInTheDocument();
-  });
-
-  it("changes how far ahead it looks", async () => {
-    const user = userEvent.setup();
-    render(<HarvestCalendar plants={[corn]} today={TODAY} />);
-    await user.click(screen.getByRole("button", { name: "3 mo" }));
-    expect(screen.getByText(/Nothing to harvest in the next 3 months/)).toBeInTheDocument();
-    expect(screen.getByText(/Later than 3 months \(1\)/)).toBeInTheDocument();
-  });
-
-  it("shows a plant's harvest dates when its row is tapped", async () => {
-    const user = userEvent.setup();
-    render(<HarvestCalendar plants={[corn]} today={TODAY} />);
-    expect(screen.getByText(/in about 11 weeks|in about 3 months|in \d+/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Corn/ }));
-    expect(
-      screen.getByText(/Harvest from December 10, 2026 to December 24, 2026/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 plant ready to harvest in the next 12 months/)).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "December 2026: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "November 2026: 0" })).toBeInTheDocument();
+    expect(screen.getByText(/\+ 1 more later than 12 months/)).toBeInTheDocument();
   });
 });
