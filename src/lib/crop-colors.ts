@@ -41,3 +41,8 @@ const CROP_COLORS: Record<string, string> = {
 export function cropColor(cropName: string): string {
   return CROP_COLORS[cropName] ?? "var(--primary)";
 }
+
+/** The crop's colour at low strength, for the chip behind its emoji. */
+export function cropTint(cropName: string, percent = 18): string {
+  return `color-mix(in oklab, ${cropColor(cropName)} ${percent}%, transparent)`;
+}

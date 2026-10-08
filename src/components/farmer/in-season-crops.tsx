@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendCrop } from "@/lib/api/plants-api";
+import { cropColor } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { adviseForMonth, monthName } from "@/lib/planting-season";
 
@@ -116,10 +117,12 @@ export function InSeasonCrops({
                     type="button"
                     onClick={() => onSelect(crop.id)}
                     aria-pressed={selectedCropId === crop.id}
+                    // Picked and hovered in the crop's own colour.
+                    style={{ "--crop": cropColor(crop.name) } as React.CSSProperties}
                     className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm transition-colors ${
                       selectedCropId === crop.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50 hover:bg-accent"
+                        ? "border-(--crop) bg-(--crop)/15"
+                        : "border-border hover:border-(--crop)/60 hover:bg-(--crop)/10"
                     }`}
                   >
                     <span aria-hidden="true">{crop.emoji}</span>
@@ -172,10 +175,11 @@ export function InSeasonCrops({
                         type="button"
                         onClick={() => onSelect(crop.id)}
                         aria-pressed={selectedCropId === crop.id}
+                        style={{ "--crop": cropColor(crop.name) } as React.CSSProperties}
                         className={`flex items-center gap-1.5 rounded-lg border border-dashed px-2.5 py-1.5 text-sm transition-colors ${
                           selectedCropId === crop.id
-                            ? "border-primary bg-primary/10"
-                            : "border-border text-muted-foreground hover:border-primary/50 hover:bg-accent"
+                            ? "border-(--crop) bg-(--crop)/15"
+                            : "border-border text-muted-foreground hover:border-(--crop)/60 hover:bg-(--crop)/10"
                         }`}
                       >
                         <span aria-hidden="true">{crop.emoji}</span>

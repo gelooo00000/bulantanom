@@ -5,7 +5,7 @@ import { CalendarClock, Check, CircleCheck, ClipboardList } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
-import { cropColor } from "@/lib/crop-colors";
+import { cropColor, cropTint } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { plantSubtitle, plantTitle } from "@/lib/plant-summary";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,8 @@ export function PlantCard({
       <CardContent className={cn("flex items-start gap-3 px-4", selecting && "pr-10")}>
         <span
           aria-hidden="true"
-          className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-xl text-[28px] leading-none"
+          className="flex size-12 shrink-0 items-center justify-center rounded-xl text-[28px] leading-none"
+          style={{ backgroundColor: cropTint(plant.crop.name) }}
         >
           {plant.crop.emoji}
         </span>

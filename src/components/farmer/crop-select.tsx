@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { BackendCrop, CropVariant } from "@/lib/api/plants-api";
+import { cropTint } from "@/lib/crop-colors";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 
 const CATEGORY_ORDER: BackendCrop["category"][] = ["fruit", "vegetable"];
@@ -95,7 +96,7 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
           {() =>
             selectedCrop ? (
               <span className="flex items-center gap-2">
-                <span aria-hidden="true">{selectedCrop.emoji}</span>
+                <CropChip crop={selectedCrop} />
                 {selectedCrop.name}
               </span>
             ) : (
@@ -132,7 +133,7 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
                   <SelectItem key={crop.id} value={crop.id}>
                     {/* Emoji is a visual aid only — the name is always shown. */}
                     <span className="flex items-center gap-2">
-                      <span aria-hidden="true">{crop.emoji}</span>
+                      <CropChip crop={crop} />
                       <span className="flex flex-col items-start">
                         <span>{crop.name}</span>
                         {/* Says why this crop came back for the query. */}
@@ -155,5 +156,18 @@ export function CropSelect({ id, crops, value, onValueChange }: CropSelectProps)
         </div>
       </SelectContent>
     </Select>
+  );
+}
+
+/** The crop's emoji on a small chip tinted with the crop's own colour. */
+function CropChip({ crop }: { crop: BackendCrop }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-6 shrink-0 items-center justify-center rounded-md text-sm leading-none"
+      style={{ backgroundColor: cropTint(crop.name) }}
+    >
+      {crop.emoji}
+    </span>
   );
 }
