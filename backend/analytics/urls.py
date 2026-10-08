@@ -13,11 +13,6 @@ analytics_urlpatterns = [
     path("insights/", views.insights, name="analytics-insights"),
 ]
 
-# Mounted at /api/soil-records/
-soil_record_urlpatterns = [
-    path("", views.soil_records, name="soil-records"),
-]
-
 # Mounted at /api/reports/
 report_urlpatterns = [
     path("", views.report_history, name="report-history"),

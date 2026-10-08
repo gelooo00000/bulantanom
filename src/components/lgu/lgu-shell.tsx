@@ -4,8 +4,6 @@ import {
   BarChart3,
   ClipboardList,
   FileText,
-  FlaskConical,
-  Leaf,
   MapPin,
   Radar,
   ShieldCheck,
@@ -20,8 +18,6 @@ import { RoleShell, type NavItem } from "@/components/shared/role-shell";
 import { useAuth } from "@/lib/auth/auth-context";
 
 const ANALYTICS: NavItem = { label: "Agricultural Analytics", href: "/lgu/analytics", icon: BarChart3 };
-const SOIL_RECORDS: NavItem = { label: "Soil Records", href: "/lgu/soil-records", icon: FlaskConical };
-const CROP_RECOMMENDATIONS: NavItem = { label: "Crop Recommendations", href: "/lgu/crop-recommendations", icon: Leaf };
 const HARVEST: NavItem = { label: "Harvest & Monitoring", href: "/lgu/harvest", icon: Wheat };
 const REPORTS: NavItem = { label: "Detailed Reports", href: "/lgu/reports", icon: FileText };
 const FARM: NavItem = { label: "Layuan Farm", href: "/lgu/farm", icon: MapPin };
@@ -34,8 +30,6 @@ const LGU_NAV_ITEMS: NavItem[] = [
   { label: "High-Risk Cases", href: "/lgu/high-risk", icon: TriangleAlert },
   { label: "Assessment History", href: "/lgu/assessments", icon: ClipboardList },
   HARVEST,
-  SOIL_RECORDS,
-  CROP_RECOMMENDATIONS,
   REPORTS,
   FARM,
 ];
@@ -47,8 +41,6 @@ const LGU_NAV_ITEMS: NavItem[] = [
  */
 const ADMIN_NAV_ITEMS: NavItem[] = [
   ANALYTICS,
-  SOIL_RECORDS,
-  CROP_RECOMMENDATIONS,
   HARVEST,
   REPORTS,
   FARM,

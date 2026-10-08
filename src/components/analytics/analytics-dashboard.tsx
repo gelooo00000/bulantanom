@@ -188,7 +188,6 @@ export function AnalyticsDashboard() {
 
         {/* New cards */}
         <ChartCard title="Crop recommendations" description="Crops the system recommended most, by soil type and season."
-          href={`/lgu/crop-recommendations${carry}`} linkLabel="All recommendations"
           ignored={recs.data ? ignoredFilters(filters, recs.data.applies) : []}>
           <CardState query={recs} isEmpty={(d) => d.crops.length === 0} emptyHint="No analysed soil records match these filters.">
             {(d) => {

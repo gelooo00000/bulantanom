@@ -22,7 +22,6 @@ from datetime import date, timedelta
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from accounts.lgu_reports import FARM_NAME
 from accounts.models import AccountStatus, User, UserRole
 
 from .filters import NOT_RECORDED, NOT_RECORDED_LABEL, SEASON_LABELS, Filters, range_q, season_of
@@ -142,18 +141,6 @@ def soil_type_of(record) -> tuple[str, str]:
     if value in ("unknown", "other", "", None):
         return NOT_RECORDED, NOT_RECORDED_LABEL
     return value, record.get_legacy_soil_type_display()
-
-
-def moisture_of(record) -> str:
-    if record.soil_moisture is not None:
-        return f"{float(record.soil_moisture):g}%"
-    if record.legacy_soil_moisture not in ("unknown", ""):
-        return record.get_legacy_soil_moisture_display()
-    return NOT_RECORDED_LABEL
-
-
-def ph_of(record):
-    return float(record.soil_ph) if record.soil_ph is not None else None
 
 
 def _name(user) -> str:
@@ -522,27 +509,6 @@ def harvest_trends(f: Filters) -> dict:
         "total_harvests": sum(harvested),
         "applies": APPLIES["harvest"],
         "unit": "harvests",
-    }
-
-
-# ---------------------------------------------------------------------------
-# Soil records table
-# ---------------------------------------------------------------------------
-
-
-def soil_record_rows(f: Filters, limit=500) -> dict:
-    records = soil_records(f)
-    return {
-        "count": len(records),
-        "rows": [
-            {
-                "id": r.id, "farmer": _name(r.farmer), "location": FARM_NAME,
-                "soil_type": soil_type_of(r)[1], "ph": ph_of(r), "moisture": moisture_of(r),
-                "date": timezone.localtime(r.created_at).date().isoformat(),
-            }
-            for r in records[:limit]
-        ],
-        "applies": APPLIES["soil"],
     }
 
 

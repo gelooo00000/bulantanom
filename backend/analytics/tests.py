@@ -98,7 +98,7 @@ class AccessTests(AnalyticsBase):
         "/api/analytics/filters/", "/api/analytics/summary/", "/api/analytics/overview/",
         "/api/analytics/crop-recommendations/", "/api/analytics/recommended-vs-planted/",
         "/api/analytics/harvest-trends/", "/api/analytics/insights/",
-        "/api/soil-records/", "/api/reports/",
+        "/api/reports/",
     ]
 
     def test_anonymous_is_refused(self):
@@ -193,12 +193,6 @@ class FigureTests(AnalyticsBase):
         self.assertLessEqual(len(texts), 5)
         empty = self.get("/api/analytics/insights/", date_from="2020-01-01", date_to="2020-01-31").data
         self.assertEqual(empty["insights"], [])
-
-    def test_soil_records(self):
-        rows = self.get("/api/soil-records/").data["rows"]
-        self.assertEqual(len(rows), 3)
-        clay = next(r for r in rows if r["soil_type"] == "Clay")
-        self.assertEqual((clay["ph"], clay["moisture"]), (6.2, "40%"))
 
 
 class ReportTests(AnalyticsBase):

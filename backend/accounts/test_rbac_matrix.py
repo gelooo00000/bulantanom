@@ -149,7 +149,6 @@ class RbacMatrixBase(APITestCase):
             "/api/analytics/recommended-vs-planted/",
             "/api/analytics/harvest-trends/",
             "/api/analytics/insights/",
-            "/api/soil-records/",
             "/api/reports/",
         ]
 

@@ -149,12 +149,6 @@ export type HarvestTrends = {
 
 export type Insight = { kind: "harvest" | "recommendation" | "risk" | "monitoring"; text: string };
 
-export type SoilRecordRows = {
-  count: number;
-  rows: { id: number; farmer: string; location: string; soil_type: string; ph: number | null; moisture: string; date: string }[];
-  applies: FilterKey[];
-};
-
 export type ReportHistoryEntry = {
   id: number;
   report: string;
@@ -177,5 +171,4 @@ export const fetchRecommendedVsPlanted = (t: string, f: AnalyticsFilters) =>
 export const fetchHarvestTrends = (t: string, f: AnalyticsFilters) => get<HarvestTrends>("/analytics/harvest-trends/", f, t);
 export const fetchInsights = (t: string, f: AnalyticsFilters) =>
   get<{ insights: Insight[] }>("/analytics/insights/", f, t);
-export const fetchSoilRecords = (t: string, f: AnalyticsFilters) => get<SoilRecordRows>("/soil-records/", f, t);
 export const fetchReportHistory = (t: string) => get<{ results: ReportHistoryEntry[] }>("/reports/", null, t);
