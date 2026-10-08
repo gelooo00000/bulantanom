@@ -2,6 +2,7 @@
 
 import { Leaf, Sprout, Users } from "lucide-react";
 
+import { LayuanFarmMap } from "@/components/layuan-farm-map/LayuanFarmMap";
 import { FarmMap } from "@/components/lgu/farm-map";
 import { LguError, LguLoading, NotAvailableNotice } from "@/components/lgu/lgu-states";
 import { IconStatCard } from "@/components/shared/icon-stat-card";
@@ -9,9 +10,11 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchLguFarmOverview } from "@/lib/api/lgu-api";
 import { useLguQuery } from "@/lib/api/use-authed-query";
+import { useTheme } from "@/lib/theme/theme-context";
 
 export default function LguFarmOverviewPage() {
   const { data, loading, error, refetch } = useLguQuery(fetchLguFarmOverview);
+  const { theme } = useTheme();
 
   if (loading) return <LguLoading />;
   if (error) return <LguError message={error} onRetry={refetch} />;
@@ -40,13 +43,31 @@ export default function LguFarmOverviewPage() {
         <IconStatCard icon={Sprout} label="Total registrations" value={data.farmers.total} />
       </div>
 
-      <section aria-labelledby="farm-map-heading" className="flex flex-col gap-3">
+      <section
+        aria-labelledby="site-map-heading"
+        className="border-border bg-card relative flex flex-col gap-4 overflow-hidden rounded-2xl border p-4 sm:p-5"
+      >
+        <span aria-hidden="true" className="bg-primary absolute inset-x-0 top-0 h-1" />
         <div>
-          <h2 id="farm-map-heading" className="text-sm font-medium">
-            The farm in 3D
+          <h2 id="site-map-heading" className="font-heading text-base font-medium">
+            Site map
           </h2>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            Satellite view over the real terrain around {data.farm.name}.
+            Where each facility, field and water source sits on the farm. Pick a pin or a row in
+            the key to learn more.
+          </p>
+        </div>
+        {/* Follows the app's Light / Dark toggle rather than the OS setting. */}
+        <LayuanFarmMap theme={theme} />
+      </section>
+
+      <section aria-labelledby="farm-map-heading" className="flex flex-col gap-3">
+        <div>
+          <h2 id="farm-map-heading" className="font-heading text-sm font-medium">
+            Satellite view
+          </h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Satellite photography over the real terrain around {data.farm.name}.
           </p>
         </div>
         <FarmMap
