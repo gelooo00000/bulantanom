@@ -35,7 +35,7 @@ export function PlantCard({
   const card = (
     <Card
       className={cn(
-        "relative h-full gap-4 py-5 transition-all",
+        "relative h-full gap-0 py-4 transition-all",
         selecting &&
           (selected ? "border-primary ring-primary/30 ring-2" : "hover:border-primary/50"),
         highlighted && !selecting && "border-risk-low ring-risk-low/30 ring-2",
@@ -54,54 +54,57 @@ export function PlantCard({
           {selected && <Check className="size-3.5" strokeWidth={3} />}
         </span>
       )}
-      <CardContent className="flex flex-col gap-3 px-5">
-        <div className={cn("flex min-w-0 items-center gap-3", selecting && "pr-7")}>
-          <span aria-hidden="true" className="shrink-0 text-3xl leading-none">
-            {plant.crop.emoji}
-          </span>
-          <div className="min-w-0">
-            <p className="font-heading truncate text-lg leading-snug font-medium">{plantTitle(plant)}</p>
-            <p className="text-muted-foreground mt-0.5 truncate text-sm">{plantSubtitle(plant, t)}</p>
-          </div>
-        </div>
-        {/* Only the planting date here: the harvest date lives on the
-            Harvest page and the plant's own page, and the age is one tap away. */}
-        <span className="text-foreground/75 text-[13px]">
-          {t(plant.is_planned ? "card.plantingOn" : "card.planted", {
-            date: date(plant.planting_date),
-          })}
+      {/* One row: the emoji in its own chip, and every line of text in a
+          single column beside it, so nothing wraps back under the emoji and
+          leaves a gap on narrow phone screens. */}
+      <CardContent className={cn("flex items-start gap-3 px-4", selecting && "pr-10")}>
+        <span
+          aria-hidden="true"
+          className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-xl text-[28px] leading-none"
+        >
+          {plant.crop.emoji}
         </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="font-heading truncate text-lg leading-tight font-medium">{plantTitle(plant)}</p>
+          <p className="text-muted-foreground truncate text-sm">{plantSubtitle(plant, t)}</p>
+          {/* Only the planting date: the harvest date is on the Harvest page. */}
+          <span className="text-foreground/75 mt-1 text-[13px]">
+            {t(plant.is_planned ? "card.plantingOn" : "card.planted", {
+              date: date(plant.planting_date),
+            })}
+          </span>
 
-        {/* The weekly assessment is the Farmer's recurring job, and the lock
-            state was already on every plant - it just was not shown, so the
-            only way to find an assessable plant was to open each one. */}
-        {plant.is_planned ? (
-          <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
-            <CalendarClock className="size-3.5 shrink-0" />
-            {t("card.plannedAssess", { date: date(plant.planting_date) })}
-          </span>
-        ) : plant.assessment_eligibility.too_young &&
-          plant.assessment_eligibility.next_assessment_date ? (
-          // Planted, but not yet worth judging: the first check has a date.
-          <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
-            <CalendarClock className="size-3.5 shrink-0" />
-            {t("young.first", {
-              date: date(plant.assessment_eligibility.next_assessment_date),
-            })}
-          </span>
-        ) : plant.assessment_eligibility.can_assess ? (
-          <span className="font-heading text-primary flex items-center gap-1.5 text-xs font-medium tracking-wide">
-            <ClipboardList className="size-3.5 shrink-0" />
-            {t("card.ready")}
-          </span>
-        ) : plant.assessment_eligibility.next_assessment_date ? (
-          <span className="font-heading text-muted-foreground/70 flex items-center gap-1.5 text-xs font-medium tracking-wide">
-            <CircleCheck className="size-3.5 shrink-0" />
-            {t("card.assessedNext", {
-              date: date(plant.assessment_eligibility.next_assessment_date),
-            })}
-          </span>
-        ) : null}
+          {/* The weekly assessment is the Farmer's recurring job, and the lock
+              state was already on every plant - it just was not shown, so the
+              only way to find an assessable plant was to open each one. */}
+          {plant.is_planned ? (
+            <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
+              <CalendarClock className="size-3.5 shrink-0" />
+              {t("card.plannedAssess", { date: date(plant.planting_date) })}
+            </span>
+          ) : plant.assessment_eligibility.too_young &&
+            plant.assessment_eligibility.next_assessment_date ? (
+            // Planted, but not yet worth judging: the first check has a date.
+            <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
+              <CalendarClock className="size-3.5 shrink-0" />
+              {t("young.first", {
+                date: date(plant.assessment_eligibility.next_assessment_date),
+              })}
+            </span>
+          ) : plant.assessment_eligibility.can_assess ? (
+            <span className="font-heading text-primary flex items-center gap-1.5 text-xs font-medium tracking-wide">
+              <ClipboardList className="size-3.5 shrink-0" />
+              {t("card.ready")}
+            </span>
+          ) : plant.assessment_eligibility.next_assessment_date ? (
+            <span className="font-heading text-muted-foreground/70 flex items-center gap-1.5 text-xs font-medium tracking-wide">
+              <CircleCheck className="size-3.5 shrink-0" />
+              {t("card.assessedNext", {
+                date: date(plant.assessment_eligibility.next_assessment_date),
+              })}
+            </span>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
