@@ -42,13 +42,6 @@ const get = <T>(path: string, f: AnalyticsFilters | null, accessToken: string) =
 
 // --- Types ------------------------------------------------------------------
 
-export type FilterOptions = {
-  seasons: { key: "wet" | "dry"; label: string }[];
-  soil_types: { key: string; label: string }[];
-  crops: { id: string; name: string; emoji: string }[];
-  farmers: { id: number; name: string }[];
-};
-
 export type Trend = {
   current: number;
   previous: number;
@@ -80,27 +73,6 @@ export type AnalyticsOverview = {
   applies: Record<"risk" | "assessment_trend" | "crops" | "farmers", FilterKey[]>;
 };
 
-export type HarvestTrends = {
-  months: string[];
-  planted: number[];
-  harvested: number[];
-  by_crop: { id: string; name: string; data: number[] }[];
-  table: {
-    id: string;
-    name: string;
-    emoji: string;
-    planted: number;
-    harvested: number;
-    ready: number;
-    harvest_rate: number;
-    avg_days_to_harvest: number | null;
-    expected_days: number;
-  }[];
-  total_harvests: number;
-  applies: FilterKey[];
-  unit: "harvests";
-};
-
 export type ReportHistoryEntry = {
   id: number;
   report: string;
@@ -113,8 +85,6 @@ export type ReportHistoryEntry = {
 
 // --- Fetchers ---------------------------------------------------------------
 
-export const fetchFilterOptions = (t: string) => get<FilterOptions>("/analytics/filters/", null, t);
 export const fetchSummary = (t: string, f: AnalyticsFilters) => get<AnalyticsSummary>("/analytics/summary/", f, t);
 export const fetchOverview = (t: string, f: AnalyticsFilters) => get<AnalyticsOverview>("/analytics/overview/", f, t);
-export const fetchHarvestTrends = (t: string, f: AnalyticsFilters) => get<HarvestTrends>("/analytics/harvest-trends/", f, t);
 export const fetchReportHistory = (t: string) => get<{ results: ReportHistoryEntry[] }>("/reports/", null, t);

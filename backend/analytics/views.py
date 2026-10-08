@@ -35,14 +35,6 @@ summary = _filtered(services.summary)
 overview = _filtered(services.overview)
 crop_recommendations = _filtered(services.crop_recommendations)
 recommended_vs_planted = _filtered(services.recommended_vs_planted)
-harvest_trends = _filtered(services.harvest_trends)
-
-
-@api_view(["GET"])
-@permission_classes([IsLguOrAdmin])
-def filter_options(request):
-    """GET /api/analytics/filters/ - the choices for the filter bar, from real rows."""
-    return Response(services.filter_options())
 
 
 @api_view(["GET"])

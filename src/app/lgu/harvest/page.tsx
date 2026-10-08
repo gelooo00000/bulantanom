@@ -1,9 +1,8 @@
 "use client";
 
 import { CircleHelp, Leaf, OctagonAlert, TriangleAlert, Wheat, X } from "lucide-react";
-import { Suspense, useState } from "react";
+import { useState } from "react";
 
-import { HarvestProductivity } from "@/components/analytics/harvest-productivity";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
 import { DonutChart } from "@/components/lgu/risk-pie";
@@ -311,12 +310,6 @@ export default function LguHarvestPage() {
           </p>
         </>
       )}
-
-      {/* Productivity reads the analytics filters from the address, so it
-          needs a Suspense boundary of its own. */}
-      <Suspense>
-        <HarvestProductivity />
-      </Suspense>
     </div>
   );
 }

@@ -95,9 +95,8 @@ class AnalyticsBase(APITestCase):
 
 class AccessTests(AnalyticsBase):
     ENDPOINTS = [
-        "/api/analytics/filters/", "/api/analytics/summary/", "/api/analytics/overview/",
+        "/api/analytics/summary/", "/api/analytics/overview/",
         "/api/analytics/crop-recommendations/", "/api/analytics/recommended-vs-planted/",
-        "/api/analytics/harvest-trends/",
         "/api/reports/",
     ]
 
@@ -173,7 +172,11 @@ class FigureTests(AnalyticsBase):
         self.assertEqual(rvp["follow_rate"], 50)
 
     def test_harvest_trends_count_harvests_by_month(self):
-        data = self.get("/api/analytics/harvest-trends/", date_from="2026-01-01", date_to="2026-12-31").data
+        # The trend now feeds the Harvest report only, so it is checked directly.
+        from .filters import Filters
+        from .services import harvest_trends
+
+        data = harvest_trends(Filters(date_from=date(2026, 1, 1), date_to=date(2026, 12, 31)))
         self.assertEqual(data["total_harvests"], 1)
         self.assertEqual(data["harvested"][data["months"].index("2026-06")], 1)
         corn = next(r for r in data["table"] if r["id"] == "corn")

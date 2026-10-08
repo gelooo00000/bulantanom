@@ -28,14 +28,6 @@ export function useFiltered<T>(fetcher: (token: string, f: AnalyticsFilters) => 
   return useAuthedQuery<T>((token) => fetcher(token, filters), [analyticsQuery(filters)]);
 }
 
-export function monthLabel(ym: string) {
-  const [y, m] = ym.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: "short", year: "2-digit" });
-}
-
-/** Distinct series colours that hold up in both themes. */
-export const CROP_COLORS = ["var(--primary)", "var(--chart-series-1)", "var(--risk-medium)", "var(--risk-high)", "var(--muted-foreground)"];
-
 /**
  * The Agricultural Analytics System: KPIs and the four farm cards, always
  * across every record. The dashboard has no

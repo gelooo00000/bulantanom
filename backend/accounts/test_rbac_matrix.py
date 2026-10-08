@@ -142,12 +142,10 @@ class RbacMatrixBase(APITestCase):
             "/api/lgu/reports/agricultural-summary/",
             "/api/lgu/reports/agricultural-summary/pdf/",
             "/api/lgu/reports/agricultural-summary/csv/",
-            "/api/analytics/filters/",
             "/api/analytics/summary/",
             "/api/analytics/overview/",
             "/api/analytics/crop-recommendations/",
             "/api/analytics/recommended-vs-planted/",
-            "/api/analytics/harvest-trends/",
             "/api/reports/",
         ]
 

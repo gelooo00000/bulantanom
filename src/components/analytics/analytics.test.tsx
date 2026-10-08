@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CardState, StatCard } from "@/components/analytics/cards";
 import { DataTable } from "@/components/analytics/data-table";
-import { ignoredFilters } from "@/lib/analytics/use-analytics-filters";
 import { analyticsQuery, EMPTY_FILTERS } from "@/lib/api/analytics-api";
 import { Users } from "lucide-react";
 
@@ -14,12 +13,6 @@ describe("analytics filters", () => {
     expect(analyticsQuery({ ...EMPTY_FILTERS, season: "wet", crop: "corn", dateFrom: "2026-01-01" })).toBe(
       "?date_from=2026-01-01&season=wet&crop=corn",
     );
-  });
-
-  it("names the active filters a card does not honour", () => {
-    const f = { ...EMPTY_FILTERS, season: "dry" as const, soilType: "clay", farmer: "3" };
-    expect(ignoredFilters(f, ["date", "season", "crop", "farmer"])).toEqual(["soil type"]);
-    expect(ignoredFilters(EMPTY_FILTERS, [])).toEqual([]);
   });
 });
 

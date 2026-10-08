@@ -148,33 +148,6 @@ def _name(user) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Filter options
-# ---------------------------------------------------------------------------
-
-
-def filter_options() -> dict:
-    from plants.models import Crop, SoilRecommendation
-
-    soil_types = [
-        {"key": key, "label": label}
-        for key, label in SoilRecommendation.SoilType.choices
-        if key not in ("unknown", "other")
-    ] + [{"key": NOT_RECORDED, "label": NOT_RECORDED_LABEL}]
-    return {
-        "seasons": [{"key": k, "label": v} for k, v in SEASON_LABELS.items()],
-        "soil_types": soil_types,
-        "crops": [
-            {"id": c.id, "name": c.name, "emoji": c.emoji}
-            for c in Crop.objects.filter(is_active=True).order_by("name")
-        ],
-        "farmers": [
-            {"id": u.id, "name": _name(u)}
-            for u in User.objects.filter(**APPROVED).order_by("first_name", "last_name", "email")
-        ],
-    }
-
-
-# ---------------------------------------------------------------------------
 # KPI row
 # ---------------------------------------------------------------------------
 

@@ -176,7 +176,7 @@ type ResolvedColors = string[] & {
  * cannot take the theme's `var(--risk-high)` tokens. They are resolved to
  * plain rgb() here, and again whenever the page switches light/dark.
  */
-export function useResolvedColors(
+function useResolvedColors(
   ref: React.RefObject<HTMLDivElement | null>,
   tokens: string[],
 ): ResolvedColors | null {
