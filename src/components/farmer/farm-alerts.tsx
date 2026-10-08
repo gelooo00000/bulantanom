@@ -24,22 +24,19 @@ import { useLanguage } from "@/lib/i18n";
 
 const STYLES: Record<
   FarmAlert["severity"],
-  { icon: ElementType; accent: string; ring: string }
+  { icon: ElementType; accent: string }
 > = {
   high: {
     icon: OctagonAlert,
     accent: "text-risk-high",
-    ring: "border-risk-high/40 bg-risk-high/10",
   },
   medium: {
     icon: TriangleAlert,
     accent: "text-risk-medium",
-    ring: "border-risk-medium/40 bg-risk-medium/10",
   },
   info: {
     icon: Info,
     accent: "text-muted-foreground",
-    ring: "border-border bg-card",
   },
 };
 
@@ -64,33 +61,43 @@ export function FarmAlerts({ alerts, hasPlants }: FarmAlertsProps) {
     );
   }
 
+  // One compact card with divided rows rather than a stack of tinted
+  // boxes: the alerts are a to-do list, not the page's headline, so they
+  // should not push the risk and harvest sections below the fold.
   return (
-    <section aria-label={t("alerts.title")} className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">{t("alerts.title")}</h2>
-      <ul className="flex flex-col gap-2">
-        {alerts.map((alert, index) => {
-          const style = STYLES[alert.severity];
-          const Icon = style.icon;
-          return (
-            <li key={`${alert.severity}-${index}`}>
-              <Link
-                href={alert.href}
-                className={`hover:border-primary/40 flex items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-colors ${style.ring}`}
-              >
-                <Icon
-                  className={`size-4 shrink-0 ${style.accent}`}
-                  aria-hidden="true"
-                />
-                <span className="flex-1 text-sm">{alert.message}</span>
-                <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
-                  {alert.action}
-                  <ArrowRight className="size-3" />
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+    <section aria-label={t("alerts.title")}>
+      <Card className="gap-0 py-0">
+        <div className="flex items-center gap-2 border-b px-3 py-2">
+          <h2 className="text-sm font-medium">{t("alerts.title")}</h2>
+          <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-xs tabular-nums">
+            {alerts.length}
+          </span>
+        </div>
+        <ul className="divide-y">
+          {alerts.map((alert, index) => {
+            const style = STYLES[alert.severity];
+            const Icon = style.icon;
+            return (
+              <li key={`${alert.severity}-${index}`}>
+                <Link
+                  href={alert.href}
+                  className="hover:bg-muted/50 flex items-center gap-2.5 px-3 py-2 transition-colors"
+                >
+                  <Icon
+                    className={`size-4 shrink-0 ${style.accent}`}
+                    aria-hidden="true"
+                  />
+                  <span className="flex-1 text-sm leading-snug">{alert.message}</span>
+                  <span className="text-primary flex shrink-0 items-center gap-1 text-xs font-medium">
+                    {alert.action}
+                    <ArrowRight className="size-3" />
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
     </section>
   );
 }
