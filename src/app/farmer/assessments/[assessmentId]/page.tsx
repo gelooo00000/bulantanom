@@ -46,7 +46,7 @@ export default function AssessmentDetailPage({
           <Button
             variant="outline"
             nativeButton={false}
-            render={<Link href="/farmer/assessments" />}
+            render={<Link href="/farmer/risk-indicator" />}
           >
             {t("asmtDetail.backShort")}
           </Button>
@@ -58,7 +58,7 @@ export default function AssessmentDetailPage({
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
       <Link
-        href="/farmer/assessments"
+        href="/farmer/risk-indicator"
         className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm"
       >
         <ArrowLeft className="size-3.5" />

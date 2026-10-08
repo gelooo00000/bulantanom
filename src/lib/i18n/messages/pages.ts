@@ -122,13 +122,13 @@ export const pages = defineMessages({
     bik: "Dili makita an pagsusi na ini sa imo rekord.",
   },
   "asmtDetail.backShort": {
-    en: "Back to history",
-    fil: "Bumalik sa kasaysayan",
-    bik: "Balik sa kasaysayan",
+    en: "Back to Risk Indicator",
+    fil: "Bumalik sa Antas ng Panganib",
+    bik: "Balik sa Tanda san Peligro",
   },
   "asmtDetail.back": {
-    en: "Back to Assessment History",
-    fil: "Bumalik sa Kasaysayan ng Pagsusuri",
-    bik: "Balik sa Mga Nakaagi na Pagsusi",
+    en: "Back to Risk Indicator",
+    fil: "Bumalik sa Antas ng Panganib",
+    bik: "Balik sa Tanda san Peligro",
   },
 });
