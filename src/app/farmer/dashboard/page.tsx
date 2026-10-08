@@ -5,7 +5,6 @@ import { ArrowRight, LoaderCircle, Sprout, TriangleAlert } from "lucide-react";
 
 import { AssessmentTrendChart } from "@/components/farmer/assessment-trend-chart";
 import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
-import { FarmAlerts } from "@/components/farmer/farm-alerts";
 import { HarvestSchedule } from "@/components/farmer/harvest-schedule";
 import { RiskCountsRow } from "@/components/risk/risk-counts";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -70,7 +69,7 @@ export default function FarmerDashboardPage() {
     );
   }
 
-  const { overview, assessment_trend, upcoming_harvests, alerts } = dashboard;
+  const { overview, assessment_trend, upcoming_harvests } = dashboard;
   // `overview` is no longer rendered; its plant count still decides whether
   // this is a working farm or a first-run empty state.
   const hasPlants = overview.plant_count > 0;
@@ -103,8 +102,6 @@ export default function FarmerDashboardPage() {
         />
       ) : (
         <>
-          <FarmAlerts alerts={alerts} hasPlants={hasPlants} />
-
           {/* The existing Low / Medium / High breakdown, reused as-is. */}
           {risk && (
             <section aria-label={t("dash.cropRisk")} className="flex flex-col gap-2">

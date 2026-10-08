@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AssessmentTrendChart } from "@/components/farmer/assessment-trend-chart";
 import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
-import { FarmAlerts } from "@/components/farmer/farm-alerts";
 import { HarvestSchedule } from "@/components/farmer/harvest-schedule";
 import type { BackendPlant } from "@/lib/api/plants-api";
 import type { AssessmentTrend, UpcomingHarvest } from "@/lib/api/dashboard-api";
@@ -273,38 +272,5 @@ describe("HarvestSchedule", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(await screen.findByText("Crop 5")).toBeInTheDocument();
-  });
-});
-
-describe("FarmAlerts", () => {
-  it("confirms an all-clear rather than hiding the section", () => {
-    render(<FarmAlerts alerts={[]} hasPlants />);
-    expect(
-      screen.getByText("Nothing needs your attention right now."),
-    ).toBeInTheDocument();
-  });
-
-  it("stays out of the way entirely on a farm with no plants", () => {
-    const { container } = render(<FarmAlerts alerts={[]} hasPlants={false} />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("renders each alert with its action and link", () => {
-    render(
-      <FarmAlerts
-        hasPlants
-        alerts={[
-          {
-            severity: "high",
-            message: "2 plants read high risk on their last assessment.",
-            href: "/farmer/risk-indicator",
-            action: "Review",
-          },
-        ]}
-      />,
-    );
-    const link = screen.getByRole("link", { name: /2 plants read high risk/ });
-    expect(link).toHaveAttribute("href", "/farmer/risk-indicator");
-    expect(screen.getByText("Review")).toBeInTheDocument();
   });
 });

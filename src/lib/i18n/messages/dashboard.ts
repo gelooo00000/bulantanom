@@ -40,16 +40,6 @@ export const dashboard = defineMessages({
   "dash.cropRisk": { en: "Crop risk", fil: "Panganib sa pananim", bik: "Peligro san tanom" },
   "dash.details": { en: "Details", fil: "Detalye", bik: "Detalye" },
 
-  "alerts.none": {
-    en: "Nothing needs your attention right now.",
-    fil: "Walang kailangang asikasuhin sa ngayon.",
-    bik: "Waray kinahanglan asikasuhon yana.",
-  },
-  "alerts.title": {
-    en: "Needs attention",
-    fil: "Kailangang asikasuhin",
-    bik: "Kinahanglan asikasuhon",
-  },
 
   "harvest.title": { en: "Harvest schedule", fil: "Iskedyul ng ani", bik: "Iskedyul san ani" },
   "harvest.all": { en: "All harvests", fil: "Lahat ng ani", bik: "Ngatanan na ani" },
