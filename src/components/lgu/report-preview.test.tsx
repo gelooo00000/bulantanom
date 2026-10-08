@@ -106,6 +106,32 @@ describe("ReportPreview", () => {
     expect(screen.queryByText(/undefined/)).not.toBeInTheDocument();
   });
 
+  it("colours the risk column by level and names who prepared the report", () => {
+    const report = makeReport({
+      prepared_by: "Juan Dela Cruz",
+      tables: [
+        {
+          title: "Risk Assessments",
+          columns: ["Farmer", "Risk"],
+          keys: ["farmer", "level"],
+          tone_key: "level",
+          rows: [
+            { farmer: "High Ground Farms", level: "High" },
+            { farmer: "Maria Santos", level: "No reading" },
+          ],
+        },
+      ],
+    });
+
+    render(<ReportPreview report={report} />);
+
+    expect(screen.getByText("High", { selector: "td" })).toHaveClass("text-risk-high");
+    expect(screen.getByText("No reading")).not.toHaveClass("text-risk-high");
+    // Only the tone column is coloured, even when another cell starts with a level word.
+    expect(screen.getByText("High Ground Farms")).not.toHaveClass("text-risk-high");
+    expect(screen.getByText("Juan Dela Cruz")).toBeInTheDocument();
+  });
+
   it("keeps the printable sheet marked so the print stylesheet can find it", () => {
     const { container } = render(<ReportPreview report={makeReport()} />);
     // The print rules hang off this class; losing it silently breaks Print.

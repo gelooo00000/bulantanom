@@ -39,7 +39,11 @@ export const REPORT_STRINGS = {
   farm: "Farm",
   generated: "Generated",
   footerNote:
-    "Compiled from BulanTanom records. AI guidance is stored from the original assessment and is not a substitute for an agricultural officer's judgement.",
+    "Compiled from BulanTanom records. AI guidance is as stored at assessment time and does not replace an agricultural officer's judgement.",
+  preparedBy: "Prepared by:",
+  preparedByRole: "LGU Agricultural Officer",
+  notedBy: "Noted by:",
+  notedByRole: "Municipal Agriculturist",
 
   loadingCatalog: "Loading reports…",
   loadingReport: "Building report…",

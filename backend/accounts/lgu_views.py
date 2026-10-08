@@ -611,7 +611,8 @@ def _report_from_request(request, slug):
         request.query_params.get("date_to", ""),
     )
     filters = lgu_reports.parse_filters(request.query_params)
-    return lgu_reports.build(slug, period, filters)
+    prepared_by = request.user.get_full_name() or request.user.email
+    return lgu_reports.build(slug, period, filters, prepared_by=prepared_by)
 
 
 @api_view(["GET"])

@@ -192,8 +192,9 @@ def _build_farmer_registration(period: Period, filters: dict) -> dict:
         "tables": [
             {
                 "title": "Farmer Registrations",
-                "columns": ["Farmer", "Email", "Status", "Registered"],
-                "keys": ["farmer", "email", "status", "registered"],
+                "columns": ["Farmer", "Status", "Registered"],
+                "keys": ["farmer", "status", "registered"],
+                "widths": [3, 1.5, 1.5],
                 "rows": rows,
             }
         ],
@@ -235,11 +236,13 @@ def _build_plants(period: Period, filters: dict) -> dict:
                 "farmer": _display_name(p.farmer),
                 "crop": p.crop.name,
                 "plant": p.display_name,
+                "crop_plant": f"{p.crop.name} - {p.display_name}",
                 "planted": p.planting_date.isoformat(),
                 "harvest_start": p.expected_harvest_start.isoformat(),
                 "age": f"{age} days ({age // 7} wk)",
                 "status": p.get_status_display(),
                 "harvest_status": harvest,
+                "harvest": f"{p.expected_harvest_start.isoformat()} ({harvest})",
             }
         )
 
@@ -260,14 +263,9 @@ def _build_plants(period: Period, filters: dict) -> dict:
         "tables": [
             {
                 "title": "Plant Records",
-                "columns": [
-                    "Farmer", "Crop", "Plant", "Planted",
-                    "Harvest From", "Age", "Status", "Harvest",
-                ],
-                "keys": [
-                    "farmer", "crop", "plant", "planted",
-                    "harvest_start", "age", "status", "harvest_status",
-                ],
+                "columns": ["Farmer", "Plant", "Planted", "Harvest From", "Status"],
+                "keys": ["farmer", "crop_plant", "planted", "harvest", "status"],
+                "widths": [2, 2.2, 1.3, 2.3, 1.5],
                 "rows": rows,
             }
         ],
@@ -354,16 +352,11 @@ def _build_risk(period: Period, filters: dict) -> dict:
         "tables": [
             {
                 "title": "Risk Assessments",
-                "columns": [
-                    "Farmer", "Plant", "Date", "Risk",
-                    "AI Summary", "Main Reason", "Recommended Action", "Evidence",
-                ],
-                "keys": [
-                    "farmer", "plant", "date", "level",
-                    "summary", "reason", "action", "evidence",
-                ],
+                "columns": ["Farmer", "Plant", "Date", "Risk", "Finding", "Recommended Action"],
+                "keys": ["farmer", "plant", "date", "level", "summary", "action"],
+                "widths": [1.4, 1.7, 1.3, 1.3, 3, 2.6],
+                "tone_key": "level",
                 "rows": rows,
-                "wide": True,
             }
         ],
     }
@@ -413,16 +406,11 @@ def _build_monitoring(period: Period, filters: dict) -> dict:
         "tables": [
             {
                 "title": "Field Monitoring Log",
-                "columns": [
-                    "Farmer", "Crop", "Date", "Condition", "Watering",
-                    "Soil Moisture", "Observations", "Risk", "Notes",
-                ],
-                "keys": [
-                    "farmer", "crop", "date", "condition", "watering",
-                    "moisture", "observations", "risk", "notes",
-                ],
+                "columns": ["Farmer", "Crop", "Date", "Condition", "Observations", "Risk"],
+                "keys": ["farmer", "crop", "date", "condition", "observations", "risk"],
+                "widths": [1.5, 1.2, 1.3, 2.1, 3.2, 1.3],
+                "tone_key": "risk",
                 "rows": rows,
-                "wide": True,
             }
         ],
     }
@@ -506,6 +494,7 @@ def _build_summary(period: Period, filters: dict) -> dict:
                 "title": "Recent Monitoring Activity",
                 "columns": ["Farmer", "Crop", "Date", "Risk"],
                 "keys": ["farmer", "crop", "date", "risk"],
+                "tone_key": "risk",
                 "rows": recent_activity,
             },
             {
@@ -534,7 +523,7 @@ REPORTS = {
     "risk-assessment": {
         "title": "Risk Assessment Report",
         "category": "Technical Report",
-        "description": "Weekly AI risk readings with the reasoning, recommended action and evidence status for each assessment.",
+        "description": "Weekly AI risk readings with what was found and the recommended action for each assessment.",
         "icon": "radar",
         "builder": _build_risk,
         "supports": ["period", "farmer", "crop", "risk_level"],
@@ -542,7 +531,7 @@ REPORTS = {
     "plant-crop": {
         "title": "Plant & Crop Report",
         "category": "Performance Report",
-        "description": "Every registered plant with planting date, age, status and harvest window.",
+        "description": "Every registered plant with its planting date, harvest window and status.",
         "icon": "sprout",
         "builder": _build_plants,
         "supports": ["period", "farmer", "crop"],
@@ -550,7 +539,7 @@ REPORTS = {
     "farm-monitoring": {
         "title": "Farm Monitoring Report",
         "category": "Field Records",
-        "description": "Condition, watering and field observations recorded in each weekly assessment.",
+        "description": "Plant condition and field observations recorded in each weekly assessment.",
         "icon": "activity",
         "builder": _build_monitoring,
         "supports": ["period", "farmer", "crop"],
@@ -614,7 +603,7 @@ def catalog() -> list[dict]:
     return items
 
 
-def build(slug: str, period: Period, filters: dict) -> dict:
+def build(slug: str, period: Period, filters: dict, prepared_by: str = "") -> dict:
     spec = REPORTS.get(slug)
     if spec is None:
         raise ReportError(f"Unknown report '{slug}'.")
@@ -636,6 +625,8 @@ def build(slug: str, period: Period, filters: dict) -> dict:
             "end": period.end.isoformat() if period.end else None,
         },
         "generated_at": timezone.now().isoformat(),
+        # The signed-in Officer, for the "Prepared by" line on a printout.
+        "prepared_by": prepared_by,
         "stats": payload.get("stats", []),
         "tables": payload.get("tables", []),
     }

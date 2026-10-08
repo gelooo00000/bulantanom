@@ -33,7 +33,11 @@ export type ReportTable = {
   columns: string[];
   keys: string[];
   rows: Record<string, string | number | boolean>[];
-  /** Rendered in a horizontally scrollable frame and printed landscape. */
+  /** Relative column widths, one per column. */
+  widths?: number[];
+  /** The key whose cells are risk levels, shown in their level's colour. */
+  tone_key?: string;
+  /** Printed landscape in the PDF. */
   wide?: boolean;
 };
 
@@ -53,6 +57,8 @@ export type ReportDocument = {
     end: string | null;
   };
   generated_at: string;
+  /** The signed-in Officer, for the "Prepared by" line. */
+  prepared_by?: string;
   stats: ReportStat[];
   tables: ReportTable[];
 };

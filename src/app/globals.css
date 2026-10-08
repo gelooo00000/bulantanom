@@ -453,6 +453,41 @@
     border: none !important;
   }
 
+  /* The brand table header and the coloured strips on the summary cards are
+     kept: the global rule above clears backgrounds, and browsers drop
+     background ink unless told to print it. */
+  .report-sheet {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .report-sheet thead tr {
+    background-color: #1f5a32 !important;
+  }
+  .report-sheet thead th {
+    color: #fff !important;
+  }
+  .report-sheet .bg-primary {
+    background-color: #1f5a32 !important;
+  }
+  .report-sheet .bg-risk-high {
+    background-color: #9b2c2c !important;
+  }
+  .report-sheet .bg-risk-medium {
+    background-color: #8a5a00 !important;
+  }
+  .report-sheet .bg-risk-low {
+    background-color: #1f5a32 !important;
+  }
+  .report-sheet tbody tr:nth-child(even) {
+    background-color: #f1f6f2 !important;
+  }
+
+  /* Stat cards and the signature block are never split across pages. */
+  .report-stats,
+  .report-signatures {
+    page-break-inside: avoid;
+  }
+
   /* Risk levels are information, not decoration. Flattening them to black
      would cost an officer the fastest signal on the page, so they are
      re-stated in print-safe inks. */

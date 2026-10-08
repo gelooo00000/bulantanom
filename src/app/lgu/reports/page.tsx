@@ -20,7 +20,6 @@ import { FadeIn } from "@/components/motion/fade-in";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   downloadReportPdf,
@@ -210,8 +209,8 @@ export default function LguReportsPage() {
 
       {/* Filters. Mobile order is filters -> list -> preview -> actions, which
           is the order the page already renders in. */}
-      <Card className="print-hide gap-3 py-4">
-        <CardContent className="flex flex-wrap items-end gap-3 px-4">
+      <section className="print-hide border-border bg-card rounded-2xl border p-4">
+        <div className="flex flex-wrap items-end gap-3">
           <FilterSelect
             id="report-period"
             label={t.period}
@@ -302,14 +301,14 @@ export default function LguReportsPage() {
               ))}
             </FilterSelect>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
         {/* LEFT: Available Reports */}
         <div className="print-hide flex flex-col gap-2">
-          <h2 className="text-sm font-medium">{t.availableReports}</h2>
-          <div className="flex flex-col gap-2">
+          <h2 className="font-heading text-sm font-medium">{t.availableReports}</h2>
+          <div className="flex flex-col gap-2.5">
             {catalog.reports.map((item) => {
               const Icon = REPORT_ICONS[item.icon] ?? ClipboardList;
               const active = item.slug === selected;
@@ -320,32 +319,33 @@ export default function LguReportsPage() {
                   onClick={() => setSelected(item.slug)}
                   aria-current={active ? "true" : undefined}
                   className={cn(
-                    "flex items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors",
-                    active
-                      ? "border-primary/50 bg-primary/5"
-                      : "border-border hover:bg-muted/40",
+                    "bg-card relative flex items-start gap-3 overflow-hidden rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md",
+                    active ? "border-primary/50 shadow-sm" : "border-border",
                   )}
                 >
+                  {active && (
+                    <span aria-hidden="true" className="bg-primary absolute inset-y-0 left-0 w-1" />
+                  )}
                   <span
                     className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-lg border",
-                      active ? "border-primary/40 text-primary" : "border-border text-muted-foreground",
+                      "flex size-10 shrink-0 items-center justify-center rounded-full",
+                      active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
                     )}
                   >
-                    <Icon className="size-4" />
+                    <Icon className="size-4.5" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-heading text-sm font-medium">{item.title}</span>
+                      <span className="font-heading text-sm leading-tight font-medium">{item.title}</span>
                       {item.latest && (
                         <span className="font-heading bg-primary/10 text-primary rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                           {t.latest}
                         </span>
                       )}
                     </span>
-                    <span className="text-muted-foreground mt-0.5 block text-xs">
+                    <span className="text-muted-foreground mt-1 block text-xs">
                       {item.category}
-                      {" • "}
+                      {" · "}
                       {item.updated
                         ? `${t.updated} ${new Date(item.updated).toLocaleDateString()}`
                         : t.noActivity}
@@ -359,7 +359,7 @@ export default function LguReportsPage() {
 
         {/* RIGHT: Report preview */}
         <div className="flex min-w-0 flex-col gap-2">
-          <h2 className="print-hide text-sm font-medium">{t.reportPreview}</h2>
+          <h2 className="print-hide font-heading text-sm font-medium">{t.reportPreview}</h2>
 
           {downloadError && (
             <p className="text-destructive bg-destructive/10 print-hide rounded-lg px-3 py-2 text-sm">
