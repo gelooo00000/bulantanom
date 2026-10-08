@@ -45,6 +45,16 @@ export const pages = defineMessages({
     fil: "Ang iyong mga tanim ayon sa huling resulta.",
     bik: "An imo mga tanom segun sa pinakahuring resulta.",
   },
+  "riskPage.withReading": {
+    en: "With a risk reading",
+    fil: "May resulta ng panganib",
+    bik: "May resulta san peligro",
+  },
+  "riskPage.withoutReading": {
+    en: "No risk level yet",
+    fil: "Wala pang antas ng panganib",
+    bik: "Waray pa antas san peligro",
+  },
   "riskPage.dueNow": { en: "Due now", fil: "Dapat suriin ngayon", bik: "Dapat susihon yana" },
   "riskPage.notChecked": {
     en: "Not checked yet",

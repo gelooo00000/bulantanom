@@ -41,6 +41,8 @@ const GROUPS: { key: Group; label: MessageKey; color: string; icon: typeof Leaf 
   { key: "none", label: "riskCounts.noReading", color: "var(--muted-foreground)", icon: CircleHelp },
 ];
 const COLOR = Object.fromEntries(GROUPS.map((g) => [g.key, g.color])) as Record<Group, string>;
+/** GROUPS is already worst first, so its order is the sort key. */
+const SEVERITY = Object.fromEntries(GROUPS.map((g, i) => [g.key, i])) as Record<Group, number>;
 
 /** A colour at low strength, for icon and chip backgrounds (as on the Admin cards). */
 const tint = (color: string, percent = 12) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
@@ -103,11 +105,18 @@ export default function RiskIndicatorPage() {
         <>
           <RiskBreakdown entries={entries} />
 
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {entries.map((entry) => (
-              <PlantRiskCard key={entry.plant.id} {...entry} />
-            ))}
-          </ul>
+          {/* Plants with a verdict first, worst first, so a reading is never
+              buried under a long run of plants still waiting for one. */}
+          <PlantGroup
+            title={t("riskPage.withReading")}
+            entries={entries
+              .filter((e) => groupOf(e.latest) !== "none")
+              .sort((a, b) => SEVERITY[groupOf(a.latest)] - SEVERITY[groupOf(b.latest)])}
+          />
+          <PlantGroup
+            title={t("riskPage.withoutReading")}
+            entries={entries.filter((e) => groupOf(e.latest) === "none")}
+          />
 
           <RiskInfoNote />
         </>
@@ -158,6 +167,26 @@ function RiskBreakdown({ entries }: { entries: Entry[] }) {
   );
 }
 
+/** A titled run of plant cards with its count; nothing at all when empty. */
+function PlantGroup({ title, entries }: { title: string; entries: Entry[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <section aria-label={title} className="flex flex-col gap-2">
+      <h2 className="flex items-center gap-2 text-sm font-medium">
+        {title}
+        <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-xs tabular-nums">
+          {entries.length}
+        </span>
+      </h2>
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {entries.map((entry) => (
+          <PlantRiskCard key={entry.plant.id} {...entry} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** The crop's emoji in a round chip tinted with the plant's level, like the Admin avatars. */
 function CropIcon({ entry }: { entry: Entry }) {
   const color = COLOR[groupOf(entry.latest)];
@@ -180,11 +209,26 @@ function CropIcon({ entry }: { entry: Entry }) {
 function PlantRiskCard({ plant, latest }: Entry) {
   const { t, dateLocale } = useLanguage();
   const level = levelOf(latest);
-  const color = COLOR[groupOf(latest)];
+  const group = groupOf(latest);
+  const color = COLOR[group];
+  // A plant with a verdict wears its level's colour on the whole card, so
+  // it can be picked out at a glance; one still waiting stays plain.
+  const assessed = group !== "none";
 
   return (
-    <li className="border-border bg-card group relative flex flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md">
-      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} />
+    <li
+      className="bg-card group relative flex flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+      style={
+        assessed
+          ? { borderColor: tint(color, 45), backgroundImage: `linear-gradient(${tint(color, 8)}, ${tint(color, 8)})` }
+          : undefined
+      }
+    >
+      <span
+        aria-hidden="true"
+        className={`absolute inset-x-0 top-0 ${assessed ? "h-1.5" : "h-1 opacity-40"}`}
+        style={{ backgroundColor: color }}
+      />
 
       <div className="flex items-start gap-3">
         <CropIcon entry={{ plant, latest }} />
