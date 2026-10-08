@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CalendarClock, Check, CircleCheck, ClipboardList } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,10 +12,8 @@ import { cn } from "@/lib/utils";
 /**
  * Card for a real, database-backed plant owned by the authenticated Farmer.
  *
- * Normally a link to the plant. In selection mode (`onToggle` given) the
- * whole card becomes a checkbox instead, so tapping it selects the plant
- * rather than opening it — a card that did both would open a plant the
- * farmer only meant to tick.
+ * Display only. In selection mode (`onToggle` given) the whole card
+ * becomes a checkbox, so tapping it selects the plant.
  */
 export function PlantCard({
   plant,
@@ -39,11 +36,8 @@ export function PlantCard({
     <Card
       className={cn(
         "relative h-full gap-4 py-5 transition-all",
-        selecting
-          ? selected
-            ? "border-primary ring-primary/30 ring-2"
-            : "hover:border-primary/50"
-          : "hover:border-primary/50 hover:shadow-primary/10 hover:-translate-y-0.5 hover:shadow-lg",
+        selecting &&
+          (selected ? "border-primary ring-primary/30 ring-2" : "hover:border-primary/50"),
         highlighted && !selecting && "border-risk-low ring-risk-low/30 ring-2",
       )}
     >
@@ -127,5 +121,7 @@ export function PlantCard({
     );
   }
 
-  return <Link href={`/farmer/plants/${plant.id}`}>{card}</Link>;
+  // Not a link: the card already shows everything the farmer needs about
+  // the plant, so there is no separate plant page to open.
+  return card;
 }

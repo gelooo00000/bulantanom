@@ -1,6 +1,6 @@
 import { defineMessages } from "../define";
 
-/** One plant's page, and the card shown when its assessment is locked. */
+/** Loading a plant for its assessment, and the card shown when that is locked. */
 export const plantDetail = defineMessages({
   "detail.loading": { en: "Loading plant…", fil: "Kinukuha ang tanim…", bik: "Kinukuha an tanom…" },
   "detail.loadFailed": {
@@ -12,23 +12,6 @@ export const plantDetail = defineMessages({
     en: "This plant could not be found in your records.",
     fil: "Hindi makita ang tanim na ito sa iyong talaan.",
     bik: "Dili makita an tanom na ini sa imo rekord.",
-  },
-  "detail.plantingDate": { en: "Planting date", fil: "Petsa ng pagtatanim", bik: "Petsa san pagtanom" },
-  "detail.age": { en: "Current age", fil: "Kasalukuyang edad", bik: "Edad yana" },
-  "detail.ageValue": { en: "{n} days", fil: "{n} araw", bik: "{n} adlaw" },
-  "detail.status": { en: "Status", fil: "Kalagayan", bik: "Kamutangan" },
-  "detail.harvestFrom": { en: "Harvest from", fil: "Ani mula", bik: "Ani poon" },
-  "detail.harvestUntil": { en: "Harvest until", fil: "Ani hanggang", bik: "Ani sagkod" },
-  "detail.about": { en: "About {name}", fil: "Tungkol sa {name}", bik: "Manungod sa {name}" },
-  "detail.typical": {
-    en: "Usually takes {growing} to be ready, and can be harvested for {window}. Actual timing varies with weather, soil and plant health.",
-    fil: "Karaniwang umaabot ng {growing} bago handa, at puwedeng anihin nang {window}. Nag-iiba ang aktwal na panahon depende sa panahon, lupa at kalusugan ng tanim.",
-    bik: "Kadalasan naghahaloy nin {growing} bago pwede anihon, asin pwede anihon sulod san {window}. Nagbabago an totoo na panahon segun sa klima, daga asin salud san tanom.",
-  },
-  "detail.typicalNoVariety": {
-    en: "Usually takes {growing} to be ready, and can be harvested for {window}. Actual timing varies with variety, weather, soil and plant health.",
-    fil: "Karaniwang umaabot ng {growing} bago handa, at puwedeng anihin nang {window}. Nag-iiba ang aktwal na panahon depende sa uri, panahon, lupa at kalusugan ng tanim.",
-    bik: "Kadalasan naghahaloy nin {growing} bago pwede anihon, asin pwede anihon sulod san {window}. Nagbabago an totoo na panahon segun sa klase, klima, daga asin salud san tanom.",
   },
 
   "lock.today": { en: "today", fil: "ngayon", bik: "yana" },

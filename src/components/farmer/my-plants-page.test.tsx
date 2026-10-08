@@ -58,9 +58,10 @@ describe("My Plants", () => {
     expect(screen.getByRole("button", { name: "Add Plant" })).toBeInTheDocument();
   });
 
-  it("opens plants normally until Select is pressed", () => {
+  it("shows plants as plain cards, not links, until Select is pressed", () => {
     render(<MyPlantsPage />);
-    expect(screen.getByRole("link", { name: /Banana/ })).toHaveAttribute("href", "/farmer/plants/1");
+    expect(screen.getByText("Banana")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Banana/ })).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
@@ -142,7 +143,8 @@ describe("My Plants", () => {
     await user.click(screen.getByRole("checkbox", { name: "Select Banana" }));
     await user.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("toolbar")).toBeNull();
-    expect(screen.getByRole("link", { name: /Banana/ })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getByText("Banana")).toBeInTheDocument();
   });
 });
 

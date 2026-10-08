@@ -30,7 +30,7 @@ def build_route(notification) -> str | None:
     if notification.related_type == RelatedType.PLANT and related_id:
         if role == UserRole.LGU_OFFICER:
             return "/lgu/plants"
-        return f"/farmer/plants/{related_id}"
+        return "/farmer/plants"
 
     if notification.related_type == RelatedType.FARMER:
         if role == UserRole.LGU_OFFICER:
