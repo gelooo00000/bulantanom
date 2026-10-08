@@ -4,14 +4,12 @@ import Link from "next/link";
 import {
   ArrowRight,
   CircleHelp,
-  FlaskConical,
   Leaf,
   OctagonAlert,
   Sprout,
   Star,
   TriangleAlert,
   Users,
-  Wheat,
 } from "lucide-react";
 
 import { AnalyticsChart } from "@/components/analytics/analytics-chart";
@@ -86,12 +84,9 @@ export function AnalyticsDashboard() {
       <AdvisoryNote />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <StatCard label="Total farmers" icon={Users} loading={!k} value={k?.farmers.value ?? 0} trend={k?.farmers.trend} />
         <StatCard label="Total plants" icon={Sprout} loading={!k} value={k?.plants.value ?? 0} trend={k?.plants.trend} />
-        <StatCard label="Soil records submitted" icon={FlaskConical} loading={!k} value={k?.soil_records.value ?? 0} trend={k?.soil_records.trend} />
-        <StatCard label="Crop recommendations" icon={Leaf} loading={!k} value={k?.recommendations.value ?? 0} trend={k?.recommendations.trend} />
-        <StatCard label="Harvests recorded" icon={Wheat} loading={!k} value={k?.harvests.value ?? 0} trend={k?.harvests.trend} />
         <StatCard
           label="Most recommended crop"
           icon={Star}
