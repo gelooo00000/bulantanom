@@ -122,17 +122,37 @@ class RbacMatrixBase(APITestCase):
             "/api/lgu/dashboard/",
             "/api/lgu/farmers/",
             f"/api/lgu/farmers/{self.farmer.pk}/",
-            "/api/lgu/farm/",
-            "/api/lgu/plants/",
             "/api/lgu/risk/overview/",
             "/api/lgu/risk/high-risk/",
             "/api/lgu/assessments/history/",
             f"/api/lgu/assessments/{self.assessment.pk}/",
+            "/api/lgu/notifications/",
+            "/api/lgu/notifications/unread-count/",
+        ]
+
+    def lgu_or_admin_urls(self):
+        """
+        The Agricultural Analytics module and the pages it links to: open to
+        LGU Officers and Admins, never to a Farmer.
+        """
+        return [
+            "/api/lgu/farm/",
+            "/api/lgu/plants/",
             "/api/lgu/reports/",
             "/api/lgu/reports/agricultural-summary/",
             "/api/lgu/reports/agricultural-summary/pdf/",
-            "/api/lgu/notifications/",
-            "/api/lgu/notifications/unread-count/",
+            "/api/lgu/reports/agricultural-summary/csv/",
+            "/api/analytics/filters/",
+            "/api/analytics/summary/",
+            "/api/analytics/overview/",
+            "/api/analytics/crop-recommendations/",
+            "/api/analytics/recommended-vs-planted/",
+            "/api/analytics/harvest-trends/",
+            "/api/analytics/map/",
+            "/api/analytics/insights/",
+            "/api/analytics/audit/",
+            "/api/soil-records/",
+            "/api/reports/",
         ]
 
     def admin_urls(self):
@@ -163,7 +183,8 @@ class RbacMatrixBase(APITestCase):
 
 class AnonymousIsRejectedEverywhere(RbacMatrixBase):
     def test_no_endpoint_answers_without_credentials(self):
-        for _, _, urls in self.all_groups() + [(None, None, self.shared_urls())]:
+        extra = [(None, None, self.shared_urls()), (None, None, self.lgu_or_admin_urls())]
+        for _, _, urls in self.all_groups() + extra:
             for url in urls:
                 with self.subTest(url=url):
                     self.assertEqual(
@@ -395,3 +416,19 @@ class SharedReferenceDataIsReadableByEveryApprovedRole(RbacMatrixBase):
         body = self.client.get("/api/farmer/crops/", **auth).content.decode()
         for secret in (self.farmer.email, self.farmer.get_full_name(), "Matrix Plot"):
             self.assertNotIn(secret, body)
+
+
+class AnalyticsIsLguAndAdminOnly(RbacMatrixBase):
+    def test_lgu_and_admin_are_admitted(self):
+        for user in (self.lgu, self.admin):
+            auth = self.auth(user)
+            for url in self.lgu_or_admin_urls():
+                with self.subTest(role=user.role, url=url):
+                    code = self.client.get(url, **auth).status_code
+                    self.assertNotIn(code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN), msg=url)
+
+    def test_farmer_is_refused(self):
+        auth = self.auth(self.farmer)
+        for url in self.lgu_or_admin_urls():
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url, **auth).status_code, status.HTTP_403_FORBIDDEN, msg=url)

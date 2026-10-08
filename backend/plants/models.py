@@ -179,6 +179,11 @@ class Plant(models.Model):
     status = models.CharField(
         max_length=32, choices=PlantStatus.choices, default=PlantStatus.GROWING
     )
+    # When the plant was marked Harvested. Set by save(), never by a client,
+    # so harvest trends rest on a recorded moment rather than on whatever
+    # last touched the row. Plants harvested before this field existed were
+    # backfilled from updated_at (migration 0016).
+    harvested_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
@@ -211,6 +216,15 @@ class Plant(models.Model):
             )
             self.expected_harvest_start = start
             self.expected_harvest_end = end
+        if self.status == PlantStatus.HARVESTED:
+            if self.harvested_at is None:
+                self.harvested_at = timezone.now()
+        else:
+            # Moved back out of Harvested (a correction): no harvest recorded.
+            self.harvested_at = None
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "status" in update_fields:
+            kwargs["update_fields"] = {*update_fields, "harvested_at"}
         super().save(*args, **kwargs)
 
     @property

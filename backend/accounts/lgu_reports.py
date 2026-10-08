@@ -507,6 +507,103 @@ def _build_summary(period: Period, filters: dict) -> dict:
     }
 
 
+def _analytics_filters(period: Period, filters: dict):
+    """The report's parameters as the analytics module's filters."""
+    from analytics.filters import Filters
+
+    return Filters(
+        date_from=period.start,
+        date_to=period.end,
+        soil_type=filters.get("soil_type") or None,
+        crop_id=filters.get("crop_id") or None,
+        farmer_id=filters.get("farmer_id"),
+    )
+
+
+def _build_crop_recommendations(period: Period, filters: dict) -> dict:
+    from analytics import services
+
+    data = services.crop_recommendations(_analytics_filters(period, filters))
+    crops = data["crops"]
+    return {
+        "stats": [
+            {"label": "Analysed soil records", "value": data["analysed_records"]},
+            {"label": "Crops recommended", "value": len(crops)},
+            {"label": "Recommendations made", "value": data["row_count"], "tone": "low"},
+        ],
+        "tables": [
+            {
+                "title": "Most recommended crops",
+                "columns": ["Crop", "Times recommended", "Recommendation rate", "Wet season", "Dry season", "Soil types"],
+                "keys": ["crop", "count", "rate", "wet", "dry", "soil"],
+                "widths": [2, 1.3, 1.4, 1, 1, 2.4],
+                "rows": [
+                    {
+                        "crop": c["name"],
+                        "count": c["count"],
+                        "rate": f"{c['rate']}%",
+                        "wet": c["by_season"]["wet"],
+                        "dry": c["by_season"]["dry"],
+                        "soil": ", ".join(f"{x['label']} ({x['count']})" for x in c["by_soil"]),
+                    }
+                    for c in crops
+                ],
+            },
+            {
+                "title": "Recommendations",
+                "columns": ["Date", "Farmer", "Crop", "Soil type", "Season"],
+                "keys": ["date", "farmer", "crop", "soil_type", "season"],
+                "widths": [1.2, 2, 1.8, 1.4, 1.8],
+                "rows": data["rows"],
+            },
+        ],
+    }
+
+
+def _build_harvest(period: Period, filters: dict) -> dict:
+    from analytics import services
+
+    data = services.harvest_trends(_analytics_filters(period, filters))
+    table = data["table"]
+    planted = sum(r["planted"] for r in table)
+    harvested = sum(r["harvested"] for r in table)
+    return {
+        "stats": [
+            {"label": "Harvests recorded", "value": data["total_harvests"], "tone": "low"},
+            {"label": "Plants planted", "value": planted},
+            {"label": "Ready for harvest", "value": sum(r["ready"] for r in table), "tone": "medium"},
+            {"label": "Harvest rate (%)", "value": round(100 * harvested / planted) if planted else 0},
+        ],
+        "tables": [
+            {
+                "title": "Productivity by crop",
+                "columns": ["Crop", "Planted", "Harvested", "Harvest rate", "Avg. days to harvest", "Expected days", "Ready now"],
+                "keys": ["name", "planted", "harvested", "rate", "days", "expected_days", "ready"],
+                "widths": [2, 1, 1, 1.1, 1.4, 1.2, 1],
+                "rows": [
+                    {
+                        **r,
+                        "rate": f"{r['harvest_rate']}%",
+                        "days": r["avg_days_to_harvest"] if r["avg_days_to_harvest"] is not None else "No harvest yet",
+                    }
+                    for r in table
+                ],
+            },
+            {
+                "title": "Planting and harvest by month",
+                "columns": ["Month", "Planted", "Harvested"],
+                "keys": ["month", "planted", "harvested"],
+                "widths": [2, 1, 1],
+                "rows": [
+                    {"month": m, "planted": pl, "harvested": hv}
+                    for m, pl, hv in zip(data["months"], data["planted"], data["harvested"])
+                    if pl or hv
+                ],
+            },
+        ],
+    }
+
+
 # --------------------------------------------------------------------------
 # Catalog
 # --------------------------------------------------------------------------
@@ -526,7 +623,7 @@ REPORTS = {
         "description": "Weekly AI risk readings with what was found and the recommended action for each assessment.",
         "icon": "radar",
         "builder": _build_risk,
-        "supports": ["period", "farmer", "crop", "risk_level"],
+        "supports": ["period", "area", "farmer", "crop", "risk_level"],
     },
     "plant-crop": {
         "title": "Plant & Crop Report",
@@ -550,7 +647,23 @@ REPORTS = {
         "description": "Farmer accounts by status with registration dates.",
         "icon": "users",
         "builder": _build_farmer_registration,
-        "supports": ["period"],
+        "supports": ["period", "area"],
+    },
+    "crop-recommendation": {
+        "title": "Crop Recommendation Report",
+        "category": "Analytics",
+        "description": "Crops recommended from soil records: how often, in which season and on which soil types. Advisory, based on farmer-provided soil inputs.",
+        "icon": "flask",
+        "builder": _build_crop_recommendations,
+        "supports": ["period", "area", "farmer", "crop", "soil_type"],
+    },
+    "harvest": {
+        "title": "Harvest Report",
+        "category": "Analytics",
+        "description": "Harvests recorded per crop and month, the harvest rate, and days from planting to harvest. Harvests are counted, not weighed.",
+        "icon": "sprout",
+        "builder": _build_harvest,
+        "supports": ["period", "area", "farmer", "crop"],
     },
 }
 
@@ -565,6 +678,24 @@ def _latest_activity(slug: str):
     if slug == "farmer-registration":
         row = _approved_farmers().order_by("-date_joined").values_list("date_joined", flat=True).first()
         return row.date() if row else None
+    if slug == "crop-recommendation":
+        from plants.models import SoilRecommendation
+
+        row = (
+            SoilRecommendation.objects.filter(farmer__account_status=AccountStatus.APPROVED, ai_generated=True)
+            .order_by("-created_at")
+            .values_list("created_at", flat=True)
+            .first()
+        )
+        return timezone.localtime(row).date() if row else None
+    if slug == "harvest":
+        row = (
+            Plant.objects.filter(farmer__account_status=AccountStatus.APPROVED, harvested_at__isnull=False)
+            .order_by("-harvested_at")
+            .values_list("harvested_at", flat=True)
+            .first()
+        )
+        return timezone.localtime(row).date() if row else None
     if slug == "plant-crop":
         return (
             Plant.objects.filter(farmer__account_status=AccountStatus.APPROVED)
@@ -646,6 +777,9 @@ def filter_options() -> dict:
             for c in Crop.objects.filter(is_active=True).order_by("name")
         ],
         "periods": [{"key": k, "label": v} for k, v in PERIOD_LABELS.items()],
+        # One farm today; kept as a parameter so a report states its area.
+        "areas": [{"key": "layuan", "label": FARM_NAME}],
+        "soil_types": _soil_type_options(),
         "risk_levels": [
             {"key": "ALL", "label": "All Levels"},
             {"key": "HIGH", "label": "High Risk"},
@@ -660,4 +794,32 @@ def parse_filters(params) -> dict:
         "farmer_id": _optional_int(params.get("farmer", ""), "farmer"),
         "crop_id": (params.get("crop") or "").strip() or None,
         "risk_level": (params.get("risk_level") or "").strip(),
+        "soil_type": _soil_type(params.get("soil_type", "")),
+        "area": _area(params.get("area", "")),
     }
+
+
+def _soil_type_options() -> list[dict]:
+    from plants.models import SoilRecommendation
+
+    return [
+        {"key": key, "label": label}
+        for key, label in SoilRecommendation.SoilType.choices
+        if key not in ("unknown", "other")
+    ] + [{"key": "not_recorded", "label": "Not recorded"}]
+
+
+def _soil_type(raw: str):
+    value = (raw or "").strip().lower()
+    if value in ("", "all"):
+        return None
+    if value not in {o["key"] for o in _soil_type_options()}:
+        raise ReportError("Unknown soil_type.")
+    return value
+
+
+def _area(raw: str) -> str:
+    value = (raw or "").strip().lower()
+    if value not in ("", "all", "layuan"):
+        raise ReportError("Unknown area.")
+    return "layuan"

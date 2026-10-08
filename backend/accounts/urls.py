@@ -65,6 +65,7 @@ lgu_urlpatterns = [
     path("reports/", lgu_views.lgu_report_catalog, name="lgu-reports"),
     path("reports/<slug:slug>/", lgu_views.lgu_report_detail, name="lgu-report-detail"),
     path("reports/<slug:slug>/pdf/", lgu_views.lgu_report_pdf, name="lgu-report-pdf"),
+    path("reports/<slug:slug>/csv/", lgu_views.lgu_report_csv, name="lgu-report-csv"),
     *lgu_notification_urlpatterns,
 ]
 

@@ -72,6 +72,27 @@ describe("RequireRole", () => {
   it("sends a signed-in user of another role to their own dashboard", () => {
     auth = { currentUser: { ...farmer, role: "lgu" }, loading: false };
     render(guarded());
-    expect(replace).toHaveBeenCalledWith("/lgu/dashboard");
+    expect(replace).toHaveBeenCalledWith("/lgu/analytics");
+  });
+
+  it("admits any of several roles: Admins reach the analytics module", () => {
+    auth = { currentUser: { ...farmer, role: "admin" }, loading: false };
+    const { getByText } = render(
+      <RequireRole role={["lgu", "admin"]}>
+        <p>Agricultural Analytics</p>
+      </RequireRole>,
+    );
+    expect(getByText("Agricultural Analytics")).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("still turns a Farmer away from the analytics module", () => {
+    auth = { currentUser: farmer, loading: false };
+    render(
+      <RequireRole role={["lgu", "admin"]}>
+        <p>Agricultural Analytics</p>
+      </RequireRole>,
+    );
+    expect(replace).toHaveBeenCalledWith("/farmer/dashboard");
   });
 });

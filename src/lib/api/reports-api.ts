@@ -68,6 +68,8 @@ export type ReportFilterOptions = {
   crops: { id: string; name: string }[];
   periods: { key: ReportPeriodKey; label: string }[];
   risk_levels: { key: string; label: string }[];
+  areas: { key: string; label: string }[];
+  soil_types: { key: string; label: string }[];
 };
 
 export type ReportCatalog = {
@@ -82,6 +84,8 @@ export type ReportQuery = {
   farmer?: string;
   crop?: string;
   riskLevel?: string;
+  soilType?: string;
+  area?: string;
 };
 
 /** Only the filters a given report actually supports are sent. */
@@ -100,6 +104,12 @@ export function reportQueryString(query: ReportQuery, supports: string[]): strin
   }
   if (supports.includes("risk_level") && query.riskLevel && query.riskLevel !== "ALL") {
     params.set("risk_level", query.riskLevel);
+  }
+  if (supports.includes("soil_type") && query.soilType && query.soilType !== "all") {
+    params.set("soil_type", query.soilType);
+  }
+  if (supports.includes("area") && query.area && query.area !== "all") {
+    params.set("area", query.area);
   }
   return params.toString();
 }
@@ -126,13 +136,27 @@ export function fetchReport(
  * The endpoint is Bearer-authorized like every other LGU route, which is why
  * the file cannot simply be linked to with an anchor.
  */
-export async function downloadReportPdf(
+export function downloadReportPdf(
   accessToken: string,
   slug: string,
   query: ReportQuery,
   supports: string[],
 ): Promise<void> {
-  const path = `/lgu/reports/${slug}/pdf/?${reportQueryString(query, supports)}`;
+  return downloadReport(accessToken, slug, `?${reportQueryString(query, supports)}`, "pdf");
+}
+
+/**
+ * Downloads a report as PDF or CSV. `search` is the query string, so a
+ * report from the history can be fetched again with its stored parameters.
+ * Each download is added to the report history by the server.
+ */
+export async function downloadReport(
+  accessToken: string,
+  slug: string,
+  search: string,
+  format: "pdf" | "csv",
+): Promise<void> {
+  const path = `/lgu/reports/${slug}/${format}/${search}`;
   const send = (token: string) =>
     fetch(`${API_BASE_URL}${path}`, {
       credentials: "include",
@@ -145,14 +169,15 @@ export async function downloadReportPdf(
     if (refreshed) response = await send(refreshed);
   }
   if (!response.ok) {
-    throw new Error("Unable to generate the PDF. Please try again.");
+    throw new Error(`Unable to generate the ${format.toUpperCase()}. Please try again.`);
   }
 
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `bulantanom-${slug}-${query.period}.pdf`;
+  const period = new URLSearchParams(search).get("period") ?? "report";
+  anchor.download = `bulantanom-${slug}-${period}.${format}`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

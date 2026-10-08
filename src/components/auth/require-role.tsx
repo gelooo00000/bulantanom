@@ -8,7 +8,8 @@ import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth } from "@/lib/auth/auth-context";
 import type { Role } from "@/lib/auth/types";
 
-export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
+export function RequireRole({ role, children }: { role: Role | Role[]; children: ReactNode }) {
+  const roles = Array.isArray(role) ? role : [role];
   const { currentUser, loading, signedOutTo } = useAuth();
   const router = useRouter();
   // Whether this page ever had a signed-in user. A session that expires while
@@ -26,12 +27,13 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
       router.replace(signedOutTo ?? (hadSession.current ? "/login" : "/"));
       return;
     }
-    if (currentUser.role !== role) {
+    if (!roles.includes(currentUser.role)) {
       router.replace(DASHBOARD_BY_ROLE[currentUser.role]);
     }
-  }, [loading, currentUser, role, router, signedOutTo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, currentUser, roles.join(), router, signedOutTo]);
 
-  if (loading || !currentUser || currentUser.role !== role) {
+  if (loading || !currentUser || !roles.includes(currentUser.role)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <LoaderCircle className="text-primary size-6 animate-spin" />

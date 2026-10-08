@@ -52,7 +52,7 @@ afterEach(() => {
 describe("signing in", () => {
   it.each([
     ["farmer", null, "/farmer/dashboard"],
-    ["lgu", "lgu", "/lgu/dashboard"],
+    ["lgu", "lgu", "/lgu/analytics"],
   ] as const)(
     "shows the loading screen for a %s, then opens the dashboard after 5 seconds",
     async (role, param, dashboard) => {

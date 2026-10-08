@@ -12,7 +12,7 @@ export const REPORT_STRINGS = {
   brand: "BulanTanom",
   pageTitle: "Detailed Reports",
   pageDescription:
-    "Access comprehensive agricultural data across farmers, plants, risk readings and soil assessments at Layuan Farm.",
+    "Generate reports on crop recommendations, harvests, risk and farmers, and export them as PDF or CSV.",
 
   filters: "Filters",
   period: "Period",
@@ -32,6 +32,16 @@ export const REPORT_STRINGS = {
 
   print: "Print Report",
   download: "Download PDF",
+  downloadCsv: "Export CSV",
+  csvError: "Unable to generate the CSV. Please try again.",
+  area: "Area",
+  soilType: "Soil type",
+  allSoilTypes: "All soil types",
+  history: "Report history",
+  historyHint:
+    "Every PDF and CSV export, with the parameters it used. Downloading one again rebuilds it from the current records.",
+  historyEmpty: "No reports exported yet.",
+  loadingHistory: "Loading report history…",
   preparing: "Preparing…",
 
   summary: "Summary",

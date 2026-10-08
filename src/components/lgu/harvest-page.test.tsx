@@ -10,6 +10,10 @@ vi.mock("@/lib/api/use-authed-query", () => ({
   useLguQuery: () => ({ data: plants, loading: false, error: null, refetch: vi.fn() }),
 }));
 
+// The productivity section has its own data and tests (analytics); this file
+// is about the harvest list.
+vi.mock("@/components/analytics/harvest-productivity", () => ({ HarvestProductivity: () => null }));
+
 // Today is fixed, so every harvest window below has a known stage.
 const TODAY = "2026-09-24";
 

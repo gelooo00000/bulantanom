@@ -159,7 +159,9 @@ class ReportPermissionTests(LguReportsTestBase):
         slugs = {r["slug"] for r in response.data["reports"]}
         self.assertIn("agricultural-summary", slugs)
         self.assertIn("risk-assessment", slugs)
-        self.assertEqual(len(slugs), 5)
+        self.assertIn("crop-recommendation", slugs)
+        self.assertIn("harvest", slugs)
+        self.assertEqual(len(slugs), 7)
         self.assertNotIn("soil-assessment", slugs)
 
 

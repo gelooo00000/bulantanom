@@ -5,6 +5,7 @@ import {
   ChartColumn,
   ClipboardList,
   Download,
+  FileSpreadsheet,
   FlaskConical,
   LoaderCircle,
   Printer,
@@ -21,10 +22,16 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Breadcrumbs } from "@/components/analytics/cards";
+import { DataTable } from "@/components/analytics/data-table";
+import { fetchReportHistory, type ReportHistoryEntry } from "@/lib/api/analytics-api";
+import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import {
+  downloadReport,
   downloadReportPdf,
   fetchReport,
   fetchReportCatalog,
+  reportQueryString,
   type ReportCatalog,
   type ReportDocument,
   type ReportPeriodKey,
@@ -94,9 +101,13 @@ export default function LguReportsPage() {
     farmer: "all",
     crop: "all",
     riskLevel: "ALL",
+    soilType: "all",
+    area: "layuan",
     dateFrom: "",
     dateTo: "",
   });
+  const history = useAuthedQuery((token) => fetchReportHistory(token));
+  const [exporting, setExporting] = useState(false);
 
   const loadCatalog = useCallback(async () => {
     if (!accessToken) return;
@@ -160,10 +171,37 @@ export default function LguReportsPage() {
     setDownloadError(null);
     try {
       await downloadReportPdf(accessToken, selected, query, activeSpec.supports);
+      history.refetch();
     } catch {
       setDownloadError(t.pdfError);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleCsv() {
+    if (!accessToken || !selected || !activeSpec) return;
+    setExporting(true);
+    setDownloadError(null);
+    try {
+      await downloadReport(accessToken, selected, `?${reportQueryString(query, activeSpec.supports)}`, "csv");
+      history.refetch();
+    } catch {
+      setDownloadError(t.csvError);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function redownload(entry: ReportHistoryEntry) {
+    if (!accessToken) return;
+    setDownloadError(null);
+    try {
+      const search = new URLSearchParams(entry.params).toString();
+      await downloadReport(accessToken, entry.report, `?${search}`, entry.format);
+      history.refetch();
+    } catch {
+      setDownloadError(entry.format === "csv" ? t.csvError : t.pdfError);
     }
   }
 
@@ -194,12 +232,17 @@ export default function LguReportsPage() {
         )}
         {downloading ? t.preparing : t.download}
       </Button>
+      <Button size="sm" variant="outline" onClick={handleCsv} disabled={!report || exporting}>
+        {exporting ? <LoaderCircle className="size-3.5 animate-spin" /> : <FileSpreadsheet className="size-3.5" />}
+        {t.downloadCsv}
+      </Button>
     </div>
   );
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="print-hide">
+      <div className="print-hide flex flex-col gap-2">
+        <Breadcrumbs items={[{ label: "Agricultural Analytics", href: "/lgu/analytics" }, { label: t.pageTitle }]} />
         <PageHeader
           title={t.pageTitle}
           description={t.pageDescription}
@@ -282,6 +325,37 @@ export default function LguReportsPage() {
               {catalog.filters.crops.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
+
+          {supports.includes("area") && (
+            <FilterSelect
+              id="report-area"
+              label={t.area}
+              value={query.area ?? "layuan"}
+              onChange={(v) => setQuery((q) => ({ ...q, area: v }))}
+            >
+              {catalog.filters.areas.map((a) => (
+                <option key={a.key} value={a.key}>
+                  {a.label}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
+
+          {supports.includes("soil_type") && (
+            <FilterSelect
+              id="report-soil"
+              label={t.soilType}
+              value={query.soilType ?? "all"}
+              onChange={(v) => setQuery((q) => ({ ...q, soilType: v }))}
+            >
+              <option value="all">{t.allSoilTypes}</option>
+              {catalog.filters.soil_types.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
                 </option>
               ))}
             </FilterSelect>
@@ -384,6 +458,68 @@ export default function LguReportsPage() {
           {report && <div className="print-hide flex justify-end pt-1">{actions}</div>}
         </div>
       </div>
+
+      <section aria-labelledby="report-history" className="print-hide flex flex-col gap-2">
+        <h2 id="report-history" className="font-heading text-sm font-medium">
+          {t.history}
+        </h2>
+        <p className="text-muted-foreground text-xs">{t.historyHint}</p>
+        {history.error ? (
+          <LguError message={history.error} onRetry={history.refetch} />
+        ) : history.loading && !history.data ? (
+          <LguLoading label={t.loadingHistory} />
+        ) : (
+          <DataTable<ReportHistoryEntry>
+            caption={t.history}
+            rows={history.data?.results ?? []}
+            rowKey={(r) => r.id}
+            pageSize={10}
+            emptyText={t.historyEmpty}
+            columns={[
+              { key: "title", header: "Report" },
+              {
+                key: "params",
+                header: "Parameters",
+                value: (r) => describeParams(r.params, catalog),
+                render: (r) => describeParams(r.params, catalog),
+              },
+              { key: "format", header: "Format", render: (r) => r.format.toUpperCase() },
+              {
+                key: "created_at",
+                header: "Generated",
+                value: (r) => r.created_at,
+                render: (r) => new Date(r.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }),
+              },
+              { key: "by", header: "By", render: (r) => r.by ?? "-" },
+              {
+                key: "again",
+                header: "Download",
+                value: () => null,
+                render: (r) => (
+                  <Button size="sm" variant="ghost" onClick={() => redownload(r)} aria-label={`Download ${r.title} again as ${r.format.toUpperCase()}`}>
+                    <Download className="size-3.5" />
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        )}
+      </section>
     </div>
   );
+}
+
+/** A history entry's parameters in words, using the catalog's labels. */
+function describeParams(params: Record<string, string>, catalog: ReportCatalog): string {
+  const f = catalog.filters;
+  const parts: string[] = [];
+  const period = f.periods.find((p) => p.key === params.period);
+  if (params.period === "custom") parts.push(`${params.date_from ?? "..."} to ${params.date_to ?? "..."}`);
+  else if (period) parts.push(period.label);
+  if (params.area) parts.push(f.areas.find((a) => a.key === params.area)?.label ?? params.area);
+  if (params.crop) parts.push(f.crops.find((c) => c.id === params.crop)?.name ?? params.crop);
+  if (params.soil_type) parts.push(f.soil_types.find((s) => s.key === params.soil_type)?.label ?? params.soil_type);
+  if (params.farmer) parts.push(f.farmers.find((x) => String(x.id) === params.farmer)?.name ?? `Farmer ${params.farmer}`);
+  if (params.risk_level) parts.push(f.risk_levels.find((r) => r.key === params.risk_level)?.label ?? params.risk_level);
+  return parts.join(" · ") || "All records";
 }

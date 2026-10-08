@@ -557,3 +557,43 @@
     animation: none;
   }
 }
+
+/* Soil map popup (components/analytics/map-panel.tsx). Leaflet draws its
+   popup on white in both themes, so the text is pinned dark. */
+.lfm-popup {
+  color: #1a2a20;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.lfm-popup strong {
+  font-size: 13px;
+}
+.lfm-popup-muted {
+  color: #5b6e62;
+}
+.lfm-popup-head {
+  margin-top: 8px;
+  font-weight: 600;
+}
+.lfm-popup dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 4px 0 0;
+}
+.lfm-popup dt {
+  color: #5b6e62;
+}
+.lfm-popup dd {
+  margin: 0;
+}
+
+/* The soil map's tiles in Dark mode: OpenStreetMap only draws a light map,
+   so its tiles are inverted and toned down. Markers and popups are not. */
+.lfm-map-dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+.lfm-map-dark .leaflet-container,
+.lfm-map-dark.leaflet-container {
+  background: #1b2420;
+}

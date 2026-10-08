@@ -21,7 +21,7 @@ describe("HeroCta", () => {
     render(<HeroCta />);
     expect(screen.getByRole("link", { name: /Go to my dashboard/ })).toHaveAttribute(
       "href",
-      "/lgu/dashboard",
+      "/lgu/analytics",
     );
     expect(screen.queryByText("Get started now")).toBeNull();
   });

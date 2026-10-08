@@ -25,7 +25,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from .models import AccountStatus, User, UserRole
-from .permissions import IsLguOfficer
+from .permissions import IsLguOfficer, IsLguOrAdmin
 from .serializers import UserSerializer
 
 FARM_NAME = "Layuan Farm"
@@ -358,7 +358,7 @@ class LguFarmerDetailView(generics.RetrieveAPIView):
 
 
 @api_view(["GET"])
-@permission_classes([IsLguOfficer])
+@permission_classes([IsLguOrAdmin])
 def lgu_farm_overview(request):
     """GET /api/lgu/farm/ — single-farm (Layuan) overview. No multi-farm support by design."""
     counts = _farmer_counts()
@@ -531,7 +531,7 @@ def lgu_assessment_detail(request, pk):
 
 
 @api_view(["GET"])
-@permission_classes([IsLguOfficer])
+@permission_classes([IsLguOrAdmin])
 def lgu_plants(request):
     """
     GET /api/lgu/plants/ — every plant belonging to an approved Farmer.
@@ -591,7 +591,7 @@ def lgu_plants(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsLguOfficer])
+@permission_classes([IsLguOrAdmin])
 def lgu_report_catalog(request):
     """GET /api/lgu/reports/ - available reports plus real filter choices."""
     from . import lgu_reports
@@ -616,7 +616,7 @@ def _report_from_request(request, slug):
 
 
 @api_view(["GET"])
-@permission_classes([IsLguOfficer])
+@permission_classes([IsLguOrAdmin])
 def lgu_report_detail(request, slug):
     """GET /api/lgu/reports/<slug>/ - the report, built from live MySQL rows."""
     from .lgu_reports import ReportError
@@ -628,7 +628,7 @@ def lgu_report_detail(request, slug):
 
 
 @api_view(["GET"])
-@permission_classes([IsLguOfficer])
+@permission_classes([IsLguOrAdmin])
 def lgu_report_pdf(request, slug):
     """
     GET /api/lgu/reports/<slug>/pdf/ - the same report as a real PDF.
@@ -644,10 +644,79 @@ def lgu_report_pdf(request, slug):
     except ReportError as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
+    _log_export(request, slug, report, "pdf")
     pdf = report_pdf.render(report)
     filename = f"bulantanom-{slug}-{report['period']['key']}.pdf"
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     # A report is a snapshot of the moment it was asked for.
+    response["Cache-Control"] = "private, max-age=0, no-store"
+    return response
+
+
+def _log_export(request, slug, report, export_format):
+    """Adds the export to the report history, with the parameters it used."""
+    from analytics.models import ReportLog
+
+    params = {
+        key: value
+        for key, value in request.query_params.items()
+        if value not in ("", "all", "ALL")
+    }
+    params.setdefault("period", report["period"]["key"])
+    ReportLog.objects.create(
+        user=request.user,
+        report=slug,
+        title=report["title"],
+        params=params,
+        export_format=export_format,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsLguOrAdmin])
+def lgu_report_csv(request, slug):
+    """
+    GET /api/lgu/reports/<slug>/csv/ - the same report as CSV.
+
+    One file: the report's details and summary first, then each table under
+    its title, so it opens cleanly in a spreadsheet.
+    """
+    import csv
+    import io
+
+    from .lgu_reports import ReportError
+
+    try:
+        report = _report_from_request(request, slug)
+    except ReportError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    _log_export(request, slug, report, "csv")
+    buffer = io.StringIO()
+    out = csv.writer(buffer)
+    out.writerow([report["title"]])
+    out.writerow(["Farm", report["farm"]["name"], report["farm"]["location"]])
+    out.writerow(["Period", report["period"]["label"], report["period"]["range"]])
+    out.writerow(["Generated", report["generated_at"][:19].replace("T", " ")])
+    out.writerow(["Prepared by", report.get("prepared_by", "")])
+    if report["stats"]:
+        out.writerow([])
+        out.writerow(["Summary"])
+        for stat in report["stats"]:
+            out.writerow([stat["label"], stat["value"]])
+    for table in report["tables"]:
+        out.writerow([])
+        out.writerow([table["title"]])
+        out.writerow(table["columns"])
+        for row in table["rows"]:
+            out.writerow([row.get(key, "") for key in table["keys"]])
+        if not table["rows"]:
+            out.writerow(["No records for this period."])
+
+    # A BOM so Excel reads the file as UTF-8 (names with n-tilde, emoji).
+    response = HttpResponse("\ufeff" + buffer.getvalue(), content_type="text/csv; charset=utf-8")
+    filename = f"bulantanom-{slug}-{report['period']['key']}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     response["Cache-Control"] = "private, max-age=0, no-store"
     return response

@@ -39,6 +39,25 @@ class IsAdmin(_RolePermission):
     message = "This action is only available to Admin accounts."
 
 
+class IsLguOrAdmin(BasePermission):
+    """
+    Read-only analytics: an approved LGU Officer or Admin. Farmers never
+    reach these endpoints, so no Farmer can read another Farmer's records.
+    """
+
+    message = "This is only available to approved LGU Officer and Admin accounts."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and user.account_status == AccountStatus.APPROVED
+            and user.role in (UserRole.LGU_OFFICER, UserRole.ADMIN)
+        )
+
+
 class IsApproved(BasePermission):
     """Any role, but the account must be active and approved."""
 
