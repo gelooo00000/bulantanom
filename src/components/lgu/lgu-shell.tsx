@@ -3,12 +3,10 @@
 import {
   BarChart3,
   ClipboardList,
-  FileSearch,
   FileText,
   FlaskConical,
   Leaf,
   MapPin,
-  Map as MapIcon,
   Radar,
   ShieldCheck,
   Sprout,
@@ -24,10 +22,8 @@ import { useAuth } from "@/lib/auth/auth-context";
 const ANALYTICS: NavItem = { label: "Agricultural Analytics", href: "/lgu/analytics", icon: BarChart3 };
 const SOIL_RECORDS: NavItem = { label: "Soil Records", href: "/lgu/soil-records", icon: FlaskConical };
 const CROP_RECOMMENDATIONS: NavItem = { label: "Crop Recommendations", href: "/lgu/crop-recommendations", icon: Leaf };
-const SOIL_MAP: NavItem = { label: "Soil Map", href: "/lgu/soil-map", icon: MapIcon };
 const HARVEST: NavItem = { label: "Harvest & Monitoring", href: "/lgu/harvest", icon: Wheat };
 const REPORTS: NavItem = { label: "Detailed Reports", href: "/lgu/reports", icon: FileText };
-const AUDIT: NavItem = { label: "Audit Analytics", href: "/lgu/audit", icon: FileSearch };
 const FARM: NavItem = { label: "Layuan Farm", href: "/lgu/farm", icon: MapPin };
 
 const LGU_NAV_ITEMS: NavItem[] = [
@@ -40,9 +36,7 @@ const LGU_NAV_ITEMS: NavItem[] = [
   HARVEST,
   SOIL_RECORDS,
   CROP_RECOMMENDATIONS,
-  SOIL_MAP,
   REPORTS,
-  AUDIT,
   FARM,
 ];
 
@@ -55,10 +49,8 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   ANALYTICS,
   SOIL_RECORDS,
   CROP_RECOMMENDATIONS,
-  SOIL_MAP,
   HARVEST,
   REPORTS,
-  AUDIT,
   FARM,
   { label: "Admin Console", href: "/admin", icon: ShieldCheck },
 ];

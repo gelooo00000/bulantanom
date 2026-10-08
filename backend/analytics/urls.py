@@ -10,9 +10,7 @@ analytics_urlpatterns = [
     path("crop-recommendations/", views.crop_recommendations, name="analytics-crop-recommendations"),
     path("recommended-vs-planted/", views.recommended_vs_planted, name="analytics-recommended-vs-planted"),
     path("harvest-trends/", views.harvest_trends, name="analytics-harvest-trends"),
-    path("map/", views.soil_map, name="analytics-map"),
     path("insights/", views.insights, name="analytics-insights"),
-    path("audit/", views.audit, name="analytics-audit"),
 ]
 
 # Mounted at /api/soil-records/

@@ -25,7 +25,6 @@ import {
   StatCard,
 } from "@/components/analytics/cards";
 import { FilterBar } from "@/components/analytics/filter-bar";
-import { MapPanel } from "@/components/analytics/map-panel";
 import { CROP_PAGE_SIZE, HorizontalBars, WeeklyColumns, type BarRow } from "@/components/lgu/dashboard-charts";
 import { RiskPie } from "@/components/lgu/risk-pie";
 import { PageHeader } from "@/components/shared/page-header";
@@ -37,7 +36,6 @@ import {
   fetchInsights,
   fetchOverview,
   fetchRecommendedVsPlanted,
-  fetchSoilMap,
   fetchSummary,
   type AnalyticsFilters,
 } from "@/lib/api/analytics-api";
@@ -71,7 +69,6 @@ export function AnalyticsDashboard() {
   const recs = useFiltered(fetchCropRecommendations, filters);
   const rvp = useFiltered(fetchRecommendedVsPlanted, filters);
   const harvest = useFiltered(fetchHarvestTrends, filters);
-  const map = useFiltered(fetchSoilMap, filters);
   const insights = useFiltered(fetchInsights, filters);
 
   const k = summary.data?.kpis;
@@ -301,21 +298,11 @@ export function AnalyticsDashboard() {
         </CardState>
       </ChartCard>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <ChartCard title="Soil distribution map" description="Soil records at Layuan, coloured by soil type. Records are not geotagged, so they sit under the farm's marker."
-          href={`/lgu/soil-map${carry}`} linkLabel="Full map"
-          ignored={map.data ? ignoredFilters(filters, map.data.applies) : []}>
-          <CardState query={map} minHeight={320}>
-            {(d) => <MapPanel data={d} height={320} selectedSoil={filters.soilType} onSelectSoil={(soilType) => setFilters({ soilType })} />}
-          </CardState>
-        </ChartCard>
-
-        <ChartCard title="Analytics insights" description="Observations computed from the records in view.">
-          <CardState query={insights} isEmpty={(d) => d.insights.length === 0} emptyHint="There is not enough data in this view for an observation.">
-            {(d) => <InsightCard items={d.insights} />}
-          </CardState>
-        </ChartCard>
-      </div>
+      <ChartCard title="Analytics insights" description="Observations computed from the records in view.">
+        <CardState query={insights} isEmpty={(d) => d.insights.length === 0} emptyHint="There is not enough data in this view for an observation.">
+          {(d) => <InsightCard items={d.insights} />}
+        </CardState>
+      </ChartCard>
 
       <LiveDataNote />
     </div>

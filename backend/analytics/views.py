@@ -36,9 +36,7 @@ overview = _filtered(services.overview)
 crop_recommendations = _filtered(services.crop_recommendations)
 recommended_vs_planted = _filtered(services.recommended_vs_planted)
 harvest_trends = _filtered(services.harvest_trends)
-soil_map = _filtered(services.soil_map)
 insights = _filtered(services.insights)
-audit = _filtered(services.audit)
 soil_records = _filtered(services.soil_record_rows)
 
 

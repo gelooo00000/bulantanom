@@ -147,47 +147,12 @@ export type HarvestTrends = {
   unit: "harvests";
 };
 
-export type SoilMapRecord = {
-  id: number;
-  farmer: string;
-  soil_type: string;
-  soil_key: string;
-  ph: number | null;
-  moisture: string;
-  texture: string;
-  recommended: string[];
-  updated: string;
-  date: string;
-};
-
-export type SoilMap = {
-  farm: {
-    name: string;
-    location: string;
-    lat: number;
-    lng: number;
-    dominant_soil: { key: string; label: string } | null;
-  };
-  soil_types: { key: string; label: string; count: number }[];
-  records: SoilMapRecord[];
-  record_count: number;
-  located_by: "farm";
-  applies: FilterKey[];
-};
-
 export type Insight = { kind: "harvest" | "recommendation" | "risk" | "monitoring"; text: string };
 
 export type SoilRecordRows = {
   count: number;
   rows: { id: number; farmer: string; location: string; soil_type: string; ph: number | null; moisture: string; date: string }[];
   applies: FilterKey[];
-};
-
-export type AuditIssueRow = { id: number; farmer: string; plant?: string; date: string; issues: string[] };
-
-export type AuditData = {
-  incomplete: { key: string; label: string; count: number; rows: AuditIssueRow[] }[];
-  activity: { at: string; kind: string; text: string }[];
 };
 
 export type ReportHistoryEntry = {
@@ -210,9 +175,7 @@ export const fetchCropRecommendations = (t: string, f: AnalyticsFilters) =>
 export const fetchRecommendedVsPlanted = (t: string, f: AnalyticsFilters) =>
   get<RecommendedVsPlanted>("/analytics/recommended-vs-planted/", f, t);
 export const fetchHarvestTrends = (t: string, f: AnalyticsFilters) => get<HarvestTrends>("/analytics/harvest-trends/", f, t);
-export const fetchSoilMap = (t: string, f: AnalyticsFilters) => get<SoilMap>("/analytics/map/", f, t);
 export const fetchInsights = (t: string, f: AnalyticsFilters) =>
   get<{ insights: Insight[] }>("/analytics/insights/", f, t);
-export const fetchAudit = (t: string, f: AnalyticsFilters) => get<AuditData>("/analytics/audit/", f, t);
 export const fetchSoilRecords = (t: string, f: AnalyticsFilters) => get<SoilRecordRows>("/soil-records/", f, t);
 export const fetchReportHistory = (t: string) => get<{ results: ReportHistoryEntry[] }>("/reports/", null, t);

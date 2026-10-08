@@ -6,11 +6,21 @@ import { useFiltered } from "@/components/analytics/analytics-dashboard";
 import { AnalyticsPage } from "@/components/analytics/analytics-page";
 import { CardState, ChartCard } from "@/components/analytics/cards";
 import { DataTable } from "@/components/analytics/data-table";
-import { SOIL_COLORS } from "@/components/analytics/map-panel";
 import { ignoredFilters } from "@/lib/analytics/use-analytics-filters";
 import { fetchSoilRecords, type AnalyticsFilters, type SoilRecordRows } from "@/lib/api/analytics-api";
 
 type Row = SoilRecordRows["rows"][number];
+
+/** One colour per recorded soil type, so the column scans at a glance. */
+const SOIL_COLORS: Record<string, string> = {
+  loamy: "#8b5a2b",
+  clay: "#b5452f",
+  sandy: "#d9a93a",
+  silty: "#7d8a8f",
+  sandy_loam: "#c9874a",
+  clay_loam: "#9a3f6b",
+  not_recorded: "#8a948e",
+};
 
 function SoilRecordsTable({ filters }: { filters: AnalyticsFilters }) {
   const query = useFiltered(fetchSoilRecords, filters);

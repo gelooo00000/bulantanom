@@ -97,8 +97,8 @@ class AccessTests(AnalyticsBase):
     ENDPOINTS = [
         "/api/analytics/filters/", "/api/analytics/summary/", "/api/analytics/overview/",
         "/api/analytics/crop-recommendations/", "/api/analytics/recommended-vs-planted/",
-        "/api/analytics/harvest-trends/", "/api/analytics/map/", "/api/analytics/insights/",
-        "/api/analytics/audit/", "/api/soil-records/", "/api/reports/",
+        "/api/analytics/harvest-trends/", "/api/analytics/insights/",
+        "/api/soil-records/", "/api/reports/",
     ]
 
     def test_anonymous_is_refused(self):
@@ -186,16 +186,6 @@ class FigureTests(AnalyticsBase):
         # original dashboard, so the four figures add up to the plant total.
         self.assertEqual(data["risk"]["unassessed"], 2)
 
-    def test_map_and_soil_records(self):
-        data = self.get("/api/analytics/map/").data
-        self.assertEqual(data["record_count"], 3)
-        self.assertEqual(data["located_by"], "farm")
-        labels = {t["label"] for t in data["soil_types"]}
-        self.assertEqual(labels, {"Clay", "Sandy", "Not recorded"})
-        rows = self.get("/api/soil-records/").data["rows"]
-        clay = next(r for r in rows if r["soil_type"] == "Clay")
-        self.assertEqual((clay["ph"], clay["moisture"]), (6.2, "40%"))
-
     def test_insights_come_from_data_and_vanish_without_it(self):
         texts = [i["text"] for i in self.get("/api/analytics/insights/").data["insights"]]
         self.assertTrue(any("Corn" in t and "harvests" in t for t in texts))
@@ -204,14 +194,11 @@ class FigureTests(AnalyticsBase):
         empty = self.get("/api/analytics/insights/", date_from="2020-01-01", date_to="2020-01-31").data
         self.assertEqual(empty["insights"], [])
 
-    def test_audit_lists_incomplete_inputs(self):
-        data = self.get("/api/analytics/audit/").data
-        groups = {g["key"]: g for g in data["incomplete"]}
-        soil_issues = {r["id"]: r["issues"] for r in groups["soil"]["rows"]}
-        self.assertIn(self.soil_failed.id, soil_issues)
-        self.assertNotIn(self.soil_wet.id, soil_issues)
-        self.assertEqual(groups["assessments"]["count"], 1)  # no evidence photo
-        self.assertTrue(data["activity"])
+    def test_soil_records(self):
+        rows = self.get("/api/soil-records/").data["rows"]
+        self.assertEqual(len(rows), 3)
+        clay = next(r for r in rows if r["soil_type"] == "Clay")
+        self.assertEqual((clay["ph"], clay["moisture"]), (6.2, "40%"))
 
 
 class ReportTests(AnalyticsBase):

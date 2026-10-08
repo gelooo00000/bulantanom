@@ -8,8 +8,6 @@ type on detector readings), the payload says so instead of filling the gap:
 
 - Harvests are counted (plants marked Harvested, dated by `harvested_at`),
   not weighed.
-- The map has one real location, the farm itself; soil records are listed
-  under it rather than scattered at invented positions.
 - Soil type comes from the records that captured one; the rest are
   "Not recorded".
 - A crop's "recommendation rate" is the share of analysed soil records that
@@ -21,11 +19,10 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 
-from django.conf import settings
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from accounts.lgu_reports import FARM_LOCATION, FARM_NAME
+from accounts.lgu_reports import FARM_NAME
 from accounts.models import AccountStatus, User, UserRole
 
 from .filters import NOT_RECORDED, NOT_RECORDED_LABEL, SEASON_LABELS, Filters, range_q, season_of
@@ -152,12 +149,6 @@ def moisture_of(record) -> str:
         return f"{float(record.soil_moisture):g}%"
     if record.legacy_soil_moisture not in ("unknown", ""):
         return record.get_legacy_soil_moisture_display()
-    return NOT_RECORDED_LABEL
-
-
-def texture_of(record) -> str:
-    if record.legacy_soil_texture not in ("unknown", ""):
-        return record.get_legacy_soil_texture_display()
     return NOT_RECORDED_LABEL
 
 
@@ -535,42 +526,6 @@ def harvest_trends(f: Filters) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Soil map
-# ---------------------------------------------------------------------------
-
-
-def soil_map(f: Filters) -> dict:
-    records = soil_records(f, limit=None)
-    counts = Counter()
-    items = []
-    for r in records[:300]:
-        key, label = soil_type_of(r)
-        counts[(key, label)] += 1
-        items.append({
-            "id": r.id, "farmer": _name(r.farmer), "soil_type": label, "soil_key": key,
-            "ph": ph_of(r), "moisture": moisture_of(r), "texture": texture_of(r),
-            "recommended": [i.get("name", i["id"]) for i in recommended_items(r)][:6],
-            "updated": timezone.localtime(r.updated_at).date().isoformat(),
-            "date": timezone.localtime(r.created_at).date().isoformat(),
-        })
-    for r in records[300:]:
-        counts[soil_type_of(r)] += 1
-    dominant = counts.most_common(1)[0][0] if counts else None
-    return {
-        "farm": {
-            "name": FARM_NAME, "location": FARM_LOCATION,
-            "lat": settings.FARM_LATITUDE, "lng": settings.FARM_LONGITUDE,
-            "dominant_soil": {"key": dominant[0], "label": dominant[1]} if dominant else None,
-        },
-        "soil_types": [{"key": k, "label": l, "count": c} for (k, l), c in counts.most_common()],
-        "records": items,
-        "record_count": len(records),
-        "located_by": "farm",
-        "applies": APPLIES["soil"],
-    }
-
-
-# ---------------------------------------------------------------------------
 # Soil records table
 # ---------------------------------------------------------------------------
 
@@ -653,85 +608,3 @@ def insights(f: Filters) -> dict:
                 })
 
     return {"insights": out[:5]}
-
-
-# ---------------------------------------------------------------------------
-# Audit analytics: incomplete inputs and recent activity
-# ---------------------------------------------------------------------------
-
-SENSOR_FIELDS = [
-    ("soil_temperature", "temperature"), ("soil_moisture", "moisture"), ("soil_conductivity", "conductivity"),
-    ("soil_ph", "pH"), ("nitrogen", "nitrogen"), ("phosphorus", "phosphorus"), ("potassium", "potassium"),
-    ("soil_fertility", "fertility"),
-]
-
-
-def audit(f: Filters) -> dict:
-    from plants.models import PlantStatus
-
-    from .models import ReportLog
-
-    soil_issues = []
-    for r in soil_records(f):
-        problems = []
-        if not r.has_sensor_readings:
-            problems.append("No soil-detector readings (recorded before the detector)")
-        else:
-            missing = [label for field, label in SENSOR_FIELDS if getattr(r, field) is None]
-            if missing:
-                problems.append("Missing " + ", ".join(missing))
-        if not r.ai_generated:
-            problems.append("No recommendation generated" + (f": {r.failure_reason}" if r.failure_reason else ""))
-        if problems:
-            soil_issues.append({"id": r.id, "farmer": _name(r.farmer), "date": timezone.localtime(r.created_at).date().isoformat(), "issues": problems})
-
-    assessment_issues = []
-    for a in assessments_qs(f).select_related("plant__crop", "plant__farmer", "risk").order_by("-assessment_date")[:400]:
-        problems = []
-        if not a.evidence_image:
-            problems.append("No evidence photo")
-        risk = getattr(a, "risk", None)
-        if risk is None:
-            problems.append("No AI risk reading")
-        elif risk.status != "completed":
-            problems.append("AI risk reading failed" + (f": {risk.failure_reason}" if risk.failure_reason else ""))
-        if problems:
-            assessment_issues.append({"id": a.id, "farmer": _name(a.plant.farmer), "plant": f"{a.plant.crop.name} - {a.plant.display_name}",
-                                      "date": a.assessment_date.isoformat(), "issues": problems})
-
-    today = timezone.localdate()
-    unassessed = []
-    for p in plants_qs(f).filter(status__in=[PlantStatus.GROWING, PlantStatus.READY_FOR_HARVEST], assessments__isnull=True, planting_date__lte=today - timedelta(days=7)).select_related("crop", "farmer").distinct():
-        unassessed.append({"id": p.id, "farmer": _name(p.farmer), "plant": f"{p.crop.name} - {p.display_name}",
-                           "date": p.planting_date.isoformat(), "issues": [f"No weekly check in {(today - p.planting_date).days} days since planting"]})
-
-    idle = [{"id": u.id, "farmer": _name(u), "date": u.date_joined.date().isoformat(), "issues": ["No plants recorded"]}
-            for u in farmers_qs(f).annotate(n=Count("plants")).filter(n=0)]
-
-    # Recent activity, newest first, from the records themselves.
-    events = []
-    for u in farmers_qs(f).order_by("-date_joined")[:15]:
-        events.append((u.date_joined, "registration", f"{_name(u)} registered as a farmer"))
-    for p in plants_qs(f, dates=False).select_related("crop", "farmer").order_by("-created_at")[:15]:
-        events.append((p.created_at, "plant", f"{_name(p.farmer)} added {p.crop.name} ({p.display_name})"))
-    for p in harvested_qs(f, dates=False).select_related("crop", "farmer").order_by("-harvested_at")[:15]:
-        events.append((p.harvested_at, "harvest", f"{_name(p.farmer)} harvested {p.crop.name} ({p.display_name})"))
-    for a in assessments_qs(f, dates=False).select_related("plant__crop", "plant__farmer").order_by("-created_at")[:15]:
-        events.append((a.created_at, "assessment", f"{_name(a.plant.farmer)} submitted a weekly check for {a.plant.crop.name}"))
-    for r in soil_qs(f, dates=False).order_by("-created_at")[:15]:
-        events.append((r.created_at, "soil", f"{_name(r.farmer)} submitted a soil record"))
-    for log in ReportLog.objects.select_related("user").order_by("-created_at")[:15]:
-        events.append((log.created_at, "report", f"{_name(log.user) if log.user else 'Someone'} exported {log.title} ({log.export_format.upper()})"))
-    events.sort(key=lambda e: e[0], reverse=True)
-
-    return {
-        "incomplete": [
-            {"key": "soil", "label": "Soil records", "count": len(soil_issues), "rows": soil_issues[:100]},
-            {"key": "assessments", "label": "Weekly checks", "count": len(assessment_issues), "rows": assessment_issues[:100]},
-            {"key": "unassessed", "label": "Plants never checked", "count": len(unassessed), "rows": unassessed[:100]},
-            {"key": "farmers", "label": "Farmers with no plants", "count": len(idle), "rows": idle[:100]},
-        ],
-        "activity": [
-            {"at": timezone.localtime(at).isoformat(), "kind": kind, "text": text} for at, kind, text in events[:40]
-        ],
-    }
