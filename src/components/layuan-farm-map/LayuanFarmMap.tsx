@@ -12,7 +12,6 @@ import {
   Plus,
   Recycle,
   RotateCcw,
-  Search,
   SlidersHorizontal,
   Sprout,
   Trees,
@@ -31,7 +30,7 @@ import {
   useState,
 } from "react";
 
-import { INFO, KEY, PINS, buildFarmMap, type FarmPin } from "./farmMapCore";
+import { INFO, PINS, buildFarmMap, type FarmPin } from "./farmMapCore";
 
 type LayerId = "rice" | "veg" | "buildings" | "water" | "trees";
 type View = { cx: number; cy: number; z: number };
@@ -44,14 +43,6 @@ const LAYERS: { id: LayerId; label: string; icon: LucideIcon; swatch: string }[]
   { id: "trees", label: "Trees & flowers", icon: Trees, swatch: "var(--lfm-tree)" },
 ];
 
-const CATEGORIES: { id: string; label: string; match: (id: string) => boolean }[] = [
-  { id: "all", label: "All", match: () => true },
-  { id: "buildings", label: "Buildings & training", match: (id) => ["Building", "Training"].includes(INFO[id].type) },
-  { id: "farming", label: "Farming", match: (id) => ["Production", "Crops", "Aquaculture"].includes(INFO[id].type) },
-  { id: "livestock", label: "Livestock", match: (id) => INFO[id].type === "Livestock" },
-  { id: "leisure", label: "Stay & leisure", match: (id) => ["Lodging", "Rest area", "Recreation"].includes(INFO[id].type) },
-  { id: "support", label: "Water & support", match: (id) => !id.startsWith("f") },
-];
 
 /** Facilities first by number, then the water, flower and recycling pins. */
 const ORDERED_PINS: FarmPin[] = [...PINS].sort((a, b) => (a.n ?? 100) - (b.n ?? 100) || a.id.localeCompare(b.id));
@@ -117,8 +108,6 @@ export function LayuanFarmMap({
   const [expanded, setExpanded] = useState(false);
   const [showView, setShowView] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
 
   const stageRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -212,15 +201,6 @@ export function LayuanFarmMap({
       return g.clamp({ cx: p.cx - dx / kk, cy: p.cy - dy / kk, z: p.z });
     });
   }, []);
-
-  const centerOn = useCallback(
-    (id: string, minZoom = 2.4) => {
-      const a = map.anchors[id];
-      if (!a) return;
-      setView((prev) => geom.current.clamp({ cx: a[0], cy: a[1] - 20, z: Math.max(prev.z, minZoom) }));
-    },
-    [map],
-  );
 
   const resetView = useCallback(() => {
     const g = geom.current;
@@ -390,29 +370,6 @@ export function LayuanFarmMap({
       return next;
     });
   }
-
-  /** From the facilities list: select it, make sure it is shown, and fly to it. */
-  function showOnMap(id: string) {
-    const pin = PINS.find((p) => p.id === id);
-    const layer = pin?.layer as LayerId | "";
-    if (layer && hidden.has(layer)) toggleLayer(layer);
-    setSelected(id);
-    centerOn(id);
-    const r = stageRef.current?.getBoundingClientRect();
-    if (r && (r.top < 0 || r.bottom > window.innerHeight)) {
-      stageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }
-
-  // --- Facilities list ---------------------------------------------------------
-  const needle = query.trim().toLowerCase();
-  const cat = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
-  const listIds = ORDERED_PINS.map((p) => p.id).filter((id) => {
-    if (!cat.match(id)) return false;
-    if (!needle) return true;
-    const i = INFO[id];
-    return `${i.n ?? ""} ${i.title} ${i.type} ${i.note}`.toLowerCase().includes(needle);
-  });
 
   const classes = [
     "lfm",
@@ -633,103 +590,6 @@ export function LayuanFarmMap({
         Illustrative layout, not to scale. Items marked as future development are planned and not
         yet built.
       </p>
-
-      <section className="lfm-facilities" aria-labelledby="lfm-fac-title">
-        <div className="lfm-fac-head">
-          <div>
-            <h3 id="lfm-fac-title" className="lfm-fac-title">
-              Facilities
-            </h3>
-            <p className="lfm-fac-sub">
-              {KEY.length} facilities, {KEY.filter((x) => x.future).length} of them planned. Choose
-              one to find it on the map.
-            </p>
-          </div>
-          <label className="lfm-search">
-            <Search aria-hidden="true" />
-            <input
-              type="search"
-              placeholder="Search facilities"
-              aria-label="Search facilities"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-        </div>
-
-        <div className="lfm-tabs" role="group" aria-label="Facility categories">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className="lfm-tab"
-              aria-pressed={category === c.id}
-              onClick={() => setCategory(c.id)}
-            >
-              {c.label}
-              <span className="lfm-tab-count">{ORDERED_PINS.filter((p) => c.match(p.id)).length}</span>
-            </button>
-          ))}
-        </div>
-
-        {listIds.length === 0 ? (
-          <p className="lfm-empty">No facility matches “{query}”.</p>
-        ) : (
-          <ul className="lfm-grid">
-            {listIds.map((id) => {
-              const i = INFO[id];
-              const pin = PINS.find((p) => p.id === id)!;
-              return (
-                <li key={id}>
-                  <button
-                    type="button"
-                    className={`lfm-card${active === id ? " is-active" : ""}`}
-                    style={{ "--pin": pinColor(id) } as CSSProperties}
-                    aria-pressed={selected === id}
-                    onMouseEnter={() => setHover(id)}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => showOnMap(id)}
-                  >
-                    <span className={`lfm-card-num${i.future ? " is-future" : ""}`}>
-                      <PinGlyph pin={pin} />
-                    </span>
-                    <span>
-                      <span className="lfm-card-name">{i.title}</span>
-                      <span className="lfm-card-meta">
-                        {i.type}
-                        {i.future && <span className="lfm-tag">Future</span>}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <div className="lfm-legend">
-          <span>
-            <span className="lfm-dot" style={{ background: "var(--lfm-pin-facility)" }} />
-            Facility
-          </span>
-          <span>
-            <span className="lfm-dot" style={{ background: "var(--lfm-pin-water)" }} />
-            Water source
-          </span>
-          <span>
-            <span className="lfm-dot" style={{ background: "var(--lfm-pin-flower)" }} />
-            Ornamental plants
-          </span>
-          <span>
-            <span className="lfm-dot" style={{ background: "var(--lfm-pin-recycle)" }} />
-            Material recovery facility
-          </span>
-          <span>
-            <span className="lfm-dot" style={{ border: "1.5px dashed var(--lfm-future)" }} />
-            Future development
-          </span>
-        </div>
-      </section>
     </div>
   );
 }

@@ -44,7 +44,7 @@ describe("LayuanFarmMap", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("renders a button for every pin, and the facility list", () => {
+  it("renders a button for every pin", () => {
     const { container } = render(<LayuanFarmMap theme="light" />);
 
     expect(container.querySelector(".lfm")).toHaveAttribute("data-theme", "light");
@@ -52,11 +52,10 @@ describe("LayuanFarmMap", () => {
     expect(screen.getByRole("button", { name: "1. Multi-purpose hall (future development)" })).toBeInTheDocument();
   });
 
-  it("shows a facility's details when its card is chosen, and selects its pin", () => {
+  it("shows a facility's details when its pin is chosen", () => {
     const { container } = render(<LayuanFarmMap />);
 
-    const list = container.querySelector(".lfm-grid") as HTMLElement;
-    fireEvent.click(within(list).getByRole("button", { name: /Fishpond/ }));
+    fireEvent.click(container.querySelector('[data-pin="f7"]') as HTMLButtonElement);
 
     const detail = container.querySelector(".lfm-detail") as HTMLElement;
     expect(within(detail).getByText("Fishpond")).toBeInTheDocument();
@@ -86,7 +85,7 @@ describe("LayuanFarmMap", () => {
     expect(container.querySelector('[data-pin="w1"]')).toBeNull();
   });
 
-  it("zooms with the buttons and filters the facility list", () => {
+  it("zooms with the buttons", () => {
     const { container } = render(<LayuanFarmMap />);
     const svg = container.querySelector("svg.lfm-svg") as SVGSVGElement;
     const before = svg.getAttribute("viewBox");
@@ -96,8 +95,5 @@ describe("LayuanFarmMap", () => {
     });
     expect(svg.getAttribute("viewBox")).not.toBe(before);
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search facilities" }), { target: { value: "hog" } });
-    const list = container.querySelector(".lfm-grid") as HTMLElement;
-    expect(within(list).getAllByRole("button")).toHaveLength(1);
   });
 });
