@@ -148,7 +148,6 @@ class RbacMatrixBase(APITestCase):
             "/api/analytics/crop-recommendations/",
             "/api/analytics/recommended-vs-planted/",
             "/api/analytics/harvest-trends/",
-            "/api/analytics/insights/",
             "/api/reports/",
         ]
 

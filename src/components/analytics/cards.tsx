@@ -239,26 +239,3 @@ export function CardState<T>({
   }
   return <div className={cn("flex flex-1 flex-col", query.loading && "opacity-60 transition-opacity")}>{children(query.data)}</div>;
 }
-
-/* ---------------------------------------------------------------------------
- * InsightCard: plain-language observations, each computed from the data.
- * ------------------------------------------------------------------------- */
-
-export function InsightCard({ items }: { items: { kind: string; text: string }[] }) {
-  return (
-    <ul className="flex flex-col gap-2.5">
-      {items.map((item) => (
-        <li key={item.text} className="bg-muted/40 flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-sm">
-          <span
-            aria-hidden="true"
-            className={cn(
-              "mt-1.5 size-2 shrink-0 rounded-full",
-              item.kind === "risk" ? "bg-risk-high" : item.kind === "harvest" ? "bg-risk-low" : item.kind === "monitoring" ? "bg-risk-medium" : "bg-primary",
-            )}
-          />
-          <span>{item.text}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}

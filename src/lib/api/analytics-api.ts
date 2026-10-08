@@ -101,8 +101,6 @@ export type HarvestTrends = {
   unit: "harvests";
 };
 
-export type Insight = { kind: "harvest" | "recommendation" | "risk" | "monitoring"; text: string };
-
 export type ReportHistoryEntry = {
   id: number;
   report: string;
@@ -119,6 +117,4 @@ export const fetchFilterOptions = (t: string) => get<FilterOptions>("/analytics/
 export const fetchSummary = (t: string, f: AnalyticsFilters) => get<AnalyticsSummary>("/analytics/summary/", f, t);
 export const fetchOverview = (t: string, f: AnalyticsFilters) => get<AnalyticsOverview>("/analytics/overview/", f, t);
 export const fetchHarvestTrends = (t: string, f: AnalyticsFilters) => get<HarvestTrends>("/analytics/harvest-trends/", f, t);
-export const fetchInsights = (t: string, f: AnalyticsFilters) =>
-  get<{ insights: Insight[] }>("/analytics/insights/", f, t);
 export const fetchReportHistory = (t: string) => get<{ results: ReportHistoryEntry[] }>("/reports/", null, t);

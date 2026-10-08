@@ -97,7 +97,7 @@ class AccessTests(AnalyticsBase):
     ENDPOINTS = [
         "/api/analytics/filters/", "/api/analytics/summary/", "/api/analytics/overview/",
         "/api/analytics/crop-recommendations/", "/api/analytics/recommended-vs-planted/",
-        "/api/analytics/harvest-trends/", "/api/analytics/insights/",
+        "/api/analytics/harvest-trends/",
         "/api/reports/",
     ]
 
@@ -186,16 +186,6 @@ class FigureTests(AnalyticsBase):
         # original dashboard, so the four figures add up to the plant total.
         self.assertEqual(data["risk"]["unassessed"], 2)
 
-    def test_insights_come_from_data_and_vanish_without_it(self):
-        texts = [i["text"] for i in self.get("/api/analytics/insights/").data["insights"]]
-        self.assertTrue(any("Corn" in t and "harvests" in t for t in texts))
-        self.assertTrue(any("1 of 2" in t for t in texts))
-        self.assertLessEqual(len(texts), 5)
-        empty = self.get("/api/analytics/insights/", date_from="2020-01-01", date_to="2020-01-31").data
-        self.assertEqual(empty["insights"], [])
-
-
-class ReportTests(AnalyticsBase):
     def test_new_report_types_build_and_export(self):
         for slug in ("crop-recommendation", "harvest"):
             res = self.get(f"/api/lgu/reports/{slug}/", period="all_time")

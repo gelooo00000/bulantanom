@@ -36,7 +36,6 @@ overview = _filtered(services.overview)
 crop_recommendations = _filtered(services.crop_recommendations)
 recommended_vs_planted = _filtered(services.recommended_vs_planted)
 harvest_trends = _filtered(services.harvest_trends)
-insights = _filtered(services.insights)
 
 
 @api_view(["GET"])

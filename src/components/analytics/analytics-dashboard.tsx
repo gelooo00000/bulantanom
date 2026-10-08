@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { ArrowRight, CircleHelp, Leaf, OctagonAlert, Sprout, Star, TriangleAlert, Users } from "lucide-react";
 
-import { AnalyticsChart } from "@/components/analytics/analytics-chart";
 import {
   AdvisoryNote,
   Breadcrumbs,
   CardState,
   ChartCard,
-  InsightCard,
   LiveDataNote,
   StatCard,
 } from "@/components/analytics/cards";
@@ -19,8 +17,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import {
   analyticsQuery,
   EMPTY_FILTERS,
-  fetchHarvestTrends,
-  fetchInsights,
   fetchOverview,
   fetchSummary,
   type AnalyticsFilters,
@@ -41,8 +37,8 @@ export function monthLabel(ym: string) {
 export const CROP_COLORS = ["var(--primary)", "var(--chart-series-1)", "var(--risk-medium)", "var(--risk-high)", "var(--muted-foreground)"];
 
 /**
- * The Agricultural Analytics System: KPIs, the four farm cards, the harvest
- * trend and insights, always across every record. The dashboard has no
+ * The Agricultural Analytics System: KPIs and the four farm cards, always
+ * across every record. The dashboard has no
  * filter bar, so it deliberately ignores any filters left in the address.
  * All figures come from /api/analytics/*, counted at request time.
  */
@@ -51,8 +47,6 @@ export function AnalyticsDashboard() {
 
   const summary = useFiltered(fetchSummary, filters);
   const overview = useFiltered(fetchOverview, filters);
-  const harvest = useFiltered(fetchHarvestTrends, filters);
-  const insights = useFiltered(fetchInsights, filters);
 
   const k = summary.data?.kpis;
   const highRisk = overview.data?.risk.HIGH ?? 0;
@@ -159,49 +153,6 @@ export function AnalyticsDashboard() {
           </CardState>
         </ChartCard>
       </div>
-
-      <ChartCard title="Harvest and productivity trend" description="Plantings and harvests per month. Harvests are counted, not weighed: no yield in kilograms is recorded."
-        href="/lgu/harvest" linkLabel="Harvest & monitoring">
-        <CardState query={harvest} isEmpty={(d) => d.planted.every((n) => n === 0) && d.harvested.every((n) => n === 0)}
-          emptyHint="No plantings or harvests in the last 12 months.">
-          {(d) => (
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-              <AnalyticsChart
-                type="area"
-                height={260}
-                categories={d.months.map(monthLabel)}
-                series={[
-                  { name: "Planted", data: d.planted, color: "var(--chart-series-1)" },
-                  { name: "Harvested", data: d.harvested, color: "var(--primary)" },
-                ]}
-                unit="plant"
-                label="Plantings and harvests per month"
-              />
-              {d.by_crop.length > 0 ? (
-                <AnalyticsChart
-                  type="bar"
-                  stacked
-                  height={260}
-                  categories={d.months.map(monthLabel)}
-                  series={d.by_crop.map((c, i) => ({ name: c.name, data: c.data, color: CROP_COLORS[i % CROP_COLORS.length] }))}
-                  unit="harvest"
-                  label="Harvests per crop per month"
-                />
-              ) : (
-                <div className="border-border text-muted-foreground flex items-center justify-center rounded-xl border border-dashed p-6 text-center text-xs">
-                  No harvest recorded in this period yet, so there is no per-crop breakdown.
-                </div>
-              )}
-            </div>
-          )}
-        </CardState>
-      </ChartCard>
-
-      <ChartCard title="Analytics insights" description="Observations computed from the farm's records.">
-        <CardState query={insights} isEmpty={(d) => d.insights.length === 0} emptyHint="There is not enough data yet for an observation.">
-          {(d) => <InsightCard items={d.insights} />}
-        </CardState>
-      </ChartCard>
 
       <LiveDataNote />
     </div>
