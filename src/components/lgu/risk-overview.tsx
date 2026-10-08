@@ -5,14 +5,12 @@ import type { ElementType, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 
 import { CROP_PAGE_SIZE, HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
-import { FarmersToVisit, type Presence } from "@/components/lgu/farmers-to-visit";
 import { NO_FILTERS, PlantDirectory, type PlantFilters } from "@/components/lgu/plant-directory";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import { Card, CardContent } from "@/components/ui/card";
 import type { LguPlant } from "@/lib/api/lgu-api";
 import {
   cropCounts,
-  farmersToVisit,
   riskKey,
   riskTally,
   type RiskKey,
@@ -21,11 +19,10 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The body of the LGU Risk overview. It answers, top to bottom: how healthy
- * are the plants overall (and which crops sit at each
- * risk level), and which Farmers to visit first — then lists every plant
- * behind those answers. The charts filter the list, so a tap on "Maria
- * Santos" or on a crop goes straight to those plants.
+ * The body of the LGU Risk overview. It answers how healthy the plants are
+ * overall, and which crops sit at each risk level, then lists every plant
+ * behind that answer. The chart filters the list, so a tap on a crop goes
+ * straight to those plants.
  *
  * Everything is worked out from the one plant list, so the charts and the
  * list can never disagree.
@@ -40,12 +37,9 @@ const LEVELS: { key: RiskKey; label: string; short: string; color: string; icon:
 
 export function RiskOverview({
   plants,
-  presence,
   initialCropId = null,
 }: {
   plants: LguPlant[];
-  /** Online status by Farmer id, for the Farmers to visit cards. Optional. */
-  presence?: Map<number, Presence>;
   /** From `?crop=` when arriving from a crop on the Plants page. */
   initialCropId?: string | null;
 }) {
@@ -53,7 +47,6 @@ export function RiskOverview({
   const listRef = useRef<HTMLElement>(null);
 
   const tally = useMemo(() => riskTally(plants), [plants]);
-  const farmers = useMemo(() => farmersToVisit(plants), [plants]);
 
   const riskRows: BarRow[] = useMemo(
     () =>
@@ -84,16 +77,6 @@ export function RiskOverview({
           plants={plants}
           riskRows={riskRows}
           onShow={(risk, cropId) => show({ risk, cropId })}
-        />
-      </Panel>
-
-      <Panel
-        title="Farmers to visit"
-        description="Most urgent first — who to see and why."
-      >
-        <FarmersToVisit
-          farmers={farmers}
-          presence={presence}
         />
       </Panel>
 

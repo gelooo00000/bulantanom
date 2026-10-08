@@ -7,7 +7,7 @@ import { LguError, LguLoading } from "@/components/lgu/lgu-states";
 import { RiskOverview } from "@/components/lgu/risk-overview";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
-import { fetchLguFarmers, fetchLguPlants } from "@/lib/api/lgu-api";
+import { fetchLguPlants } from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { livePlants } from "@/lib/lgu-plant-stats";
 
@@ -16,19 +16,6 @@ export default function LguRiskOverviewPage() {
   // can never show two different answers to the same question.
   const { data, loading, error, refetch } = useAuthedQuery(fetchLguPlants);
   const plants = useMemo(() => livePlants(data ?? []), [data]);
-
-  // Online status for the Farmers to visit cards. Nice to have: if it fails,
-  // the cards simply show each Farmer's email instead.
-  const { data: farmers } = useAuthedQuery((token) => fetchLguFarmers(token, "ALL"));
-  const presence = useMemo(
-    () =>
-      farmers
-        ? new Map(
-            farmers.map((f) => [f.id, { is_online: f.is_online, last_seen_at: f.last_seen_at }]),
-          )
-        : undefined,
-    [farmers],
-  );
 
   // `?crop=` from a crop picked on the Plants page. Read from
   // `window.location` rather than `useSearchParams`, which would oblige this
@@ -48,7 +35,7 @@ export default function LguRiskOverviewPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Risk Overview"
-        description="How healthy Layuan's plants are, who to visit first, and which crops need attention."
+        description="How healthy Layuan's plants are, and which crops need attention."
       />
 
       {loading ? (
@@ -67,7 +54,6 @@ export default function LguRiskOverviewPage() {
         <RiskOverview
           key={cropId ?? "all"}
           plants={plants}
-          presence={presence}
           initialCropId={cropId}
         />
       )}

@@ -1,5 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import LguHarvestPage from "@/app/lgu/harvest/page";
@@ -64,10 +63,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function bars(name: string) {
-  return within(screen.getByRole("list", { name }));
-}
-
 describe("LGU Harvest & Monitoring", () => {
   it("has no summary tiles and no harvest-stage chart", () => {
     render(<LguHarvestPage />);
@@ -85,38 +80,10 @@ describe("LGU Harvest & Monitoring", () => {
     expect(screen.getByText("Harvest time passed", { exact: false })).toBeInTheDocument();
   });
 
-  it("charts risk for plants still in the field, counting too-early as no reading", () => {
+  it("has no Monitoring risk chart, and lists every plant", () => {
     render(<LguHarvestPage />);
-    // The harvested Corn is left out; the too-early Banana joins Mango as no reading.
-    expect(
-      screen.getByRole("img", {
-        name: "Plants in the field by latest risk: High risk 1, Medium risk 0, Low risk 1, No reading yet 2.",
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it("lists only the picked risk level, and shows everything again on request", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<LguHarvestPage />);
-
-    await user.click(bars("Plants in the field by latest risk").getByRole("button", { name: /High risk/ }));
-    expect(screen.getByRole("status")).toHaveTextContent("Showing High risk · 1 plant");
-    expect(screen.getByText("Weekly check due")).toBeInTheDocument();
-    expect(screen.queryByText("Mango", { selector: "p *, p" })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Show all" }));
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText("Monitoring")).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Plants in the field by latest risk" })).not.toBeInTheDocument();
     expect(screen.getByText("Mango", { selector: "p *, p" })).toBeInTheDocument();
-  });
-
-  it("clears the filter on a second click of the same level", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<LguHarvestPage />);
-
-    const none = bars("Plants in the field by latest risk").getByRole("button", { name: /No reading yet/ });
-    await user.click(none);
-    expect(screen.getByRole("status")).toHaveTextContent("Showing No reading yet · 2 plants");
-    await user.click(none);
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

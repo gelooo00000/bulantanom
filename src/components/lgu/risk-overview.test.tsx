@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { RiskOverview, tallyText } from "@/components/lgu/risk-overview";
 import type { LguPlant } from "@/lib/api/lgu-api";
-import { farmersToVisit, riskTally } from "@/lib/lgu-plant-stats";
+import { riskTally } from "@/lib/lgu-plant-stats";
 
 const MARIA = { id: 1, full_name: "Maria Santos", email: "maria@example.com" };
 const JUAN = { id: 2, full_name: "Juan Cruz", email: "juan@example.com" };
@@ -55,10 +55,6 @@ describe("risk statistics", () => {
     // out as NaN and badge lookups found nothing.
     const early = plant(ANA, CORN, "INCONCLUSIVE");
     expect(riskTally([...PLANTS, early])).toEqual({ HIGH: 2, MEDIUM: 1, LOW: 2, NONE: 2 });
-  });
-
-  it("ranks farmers to visit by high, then medium risk, and leaves out all-low farmers", () => {
-    expect(farmersToVisit(PLANTS).map((f) => f.name)).toEqual(["Maria Santos", "Juan Cruz"]);
   });
 
   it("writes only the non-zero levels asked for", () => {

@@ -1,15 +1,11 @@
 "use client";
 
-import { CircleHelp, Leaf, OctagonAlert, TriangleAlert, Wheat, X } from "lucide-react";
-import { useState } from "react";
+import { Wheat } from "lucide-react";
 
-import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
-import { DonutChart } from "@/components/lgu/risk-pie";
 import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { fetchLguPlants, type LguPlant } from "@/lib/api/lgu-api";
@@ -75,25 +71,6 @@ function phaseLabel(plant: LguPlant, phase: Phase): string {
       return `${toStart} days to go`;
   }
 }
-
-type RiskKey = "HIGH" | "MEDIUM" | "LOW" | "none";
-
-/**
- * The plant's latest reading, bucketed as the LGU dashboard buckets it: a
- * "too early to tell" reading counts as no reading yet, so the two screens
- * always agree.
- */
-function riskOf(plant: LguPlant): RiskKey {
-  const level = plant.latest_risk?.risk_level;
-  return level === "HIGH" || level === "MEDIUM" || level === "LOW" ? level : "none";
-}
-
-const RISKS: { key: RiskKey; label: string; color: string; icon: typeof Wheat }[] = [
-  { key: "HIGH", label: "High risk", color: "var(--risk-high)", icon: OctagonAlert },
-  { key: "MEDIUM", label: "Medium risk", color: "var(--risk-medium)", icon: TriangleAlert },
-  { key: "LOW", label: "Low risk", color: "var(--risk-low)", icon: Leaf },
-  { key: "none", label: "No reading yet", color: "var(--muted-foreground)", icon: CircleHelp },
-];
 
 /** Still in the ground and being monitored: not harvested, not yet planted. */
 function inField(plant: LguPlant): boolean {
@@ -208,23 +185,8 @@ function Section({ title, plants }: { title: string; plants: LguPlant[] }) {
 
 export default function LguHarvestPage() {
   const { data, loading, error, refetch } = useLguQuery(fetchLguPlants);
-  const [riskFilter, setRiskFilter] = useState<RiskKey | null>(null);
-
   const plants = data ?? [];
-  const monitored = plants.filter(inField);
-  const riskRows: BarRow[] = RISKS.map((risk) => ({
-    key: risk.key,
-    label: risk.label,
-    value: monitored.filter((p) => riskOf(p) === risk.key).length,
-    color: risk.color,
-    icon: risk.icon,
-  }));
-
-  const pickRisk = (key: string) =>
-    setRiskFilter((current) => (current === key ? null : (key as RiskKey)));
-
-  const shown = riskFilter ? monitored.filter((p) => riskOf(p) === riskFilter) : plants;
-  const shownIn = (phase: Phase) => shown.filter((p) => phaseOf(p) === phase);
+  const shownIn = (phase: Phase) => plants.filter((p) => phaseOf(p) === phase);
 
   return (
     <div className="flex flex-col gap-6">
@@ -245,52 +207,6 @@ export default function LguHarvestPage() {
         />
       ) : (
         <>
-          <Card className="gap-0 py-4">
-            <CardContent className="px-4">
-              <h2 className="text-sm font-medium">Monitoring</h2>
-              <p className="text-muted-foreground mt-0.5 mb-4 text-xs">
-                Latest AI risk reading for plants still in the field. Click a level to list
-                only those plants.
-              </p>
-              {/* The donut shows the split at a glance; the rows beside it
-                  name each level and its count, so colour is never the only cue. */}
-              <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,180px)_minmax(0,28rem)]">
-                <DonutChart
-                  rows={riskRows}
-                  unit="plant"
-                  name="Plants in the field by latest risk"
-                  onSelectKey={pickRisk}
-                />
-                <HorizontalBars
-                  rows={riskRows}
-                  unit="plant"
-                  label="Plants in the field by latest risk"
-                  selectedKey={riskFilter}
-                  onSelect={pickRisk}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {riskFilter && (
-            <div
-              role="status"
-              className="border-border bg-muted/40 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
-            >
-              <span>
-                Showing{" "}
-                <span className="font-medium">
-                  {RISKS.find((r) => r.key === riskFilter)?.label}
-                </span>{" "}
-                · {shown.length} plant{shown.length === 1 ? "" : "s"}
-              </span>
-              <Button variant="ghost" size="sm" onClick={() => setRiskFilter(null)}>
-                <X className="size-3.5" />
-                Show all
-              </Button>
-            </div>
-          )}
-
           <Section title="Ready to harvest" plants={shownIn("open")} />
           <Section
             title={`Harvest starts within ${APPROACHING_WINDOW_DAYS} days`}
@@ -299,9 +215,6 @@ export default function LguHarvestPage() {
           <Section title="Harvest time passed" plants={shownIn("passed")} />
           <Section title="Still growing" plants={shownIn("growing")} />
           <Section title="Harvested" plants={shownIn("harvested")} />
-          {shown.length === 0 && (
-            <p className="text-muted-foreground text-sm">No plants in this group.</p>
-          )}
 
           <p className="text-muted-foreground text-xs">
             Harvest dates are calculated by BulanTanom from each crop&apos;s typical
