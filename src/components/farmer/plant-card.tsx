@@ -5,7 +5,7 @@ import { CalendarClock, Check, CircleCheck, ClipboardList } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
-import { cropColor, cropTint } from "@/lib/crop-colors";
+import { CROP_OUTLINE, cropTint, cropVar } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { plantSubtitle, plantTitle } from "@/lib/plant-summary";
 import { cn } from "@/lib/utils";
@@ -39,11 +39,10 @@ export function PlantCard({
       // while pointed at, pressed, or tapped. Focusable so a tap on a phone,
       // where there is no hover, leaves the outline on the plant touched.
       tabIndex={selecting ? undefined : 0}
-      style={{ "--crop": cropColor(plant.crop.name) } as React.CSSProperties}
+      style={cropVar(plant.crop.name)}
       className={cn(
-        "relative h-full gap-0 py-4 transition-all outline-none",
-        !selecting &&
-          "hover:border-(--crop) hover:ring-(--crop)/25 focus:border-(--crop) focus:ring-(--crop)/25 active:border-(--crop) active:ring-(--crop)/25 focus:ring-3 hover:ring-3 active:ring-3",
+        "relative h-full gap-0 py-4 transition-all",
+        !selecting && CROP_OUTLINE,
         selecting &&
           (selected ? "border-primary ring-primary/30 ring-2" : "hover:border-primary/50"),
         highlighted && !selecting && "border-risk-low ring-risk-low/30 ring-2",

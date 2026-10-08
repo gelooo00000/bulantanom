@@ -46,3 +46,16 @@ export function cropColor(cropName: string): string {
 export function cropTint(cropName: string, percent = 18): string {
   return `color-mix(in oklab, ${cropColor(cropName)} ${percent}%, transparent)`;
 }
+
+/**
+ * Classes that outline a card in its crop's colour while pointed at,
+ * pressed, or focused (a tap on a phone, where there is no hover). Pair
+ * with `cropVar` on the same element, and make it focusable.
+ */
+export const CROP_OUTLINE =
+  "outline-none hover:border-(--crop) hover:ring-3 hover:ring-(--crop)/25 focus:border-(--crop) focus:ring-3 focus:ring-(--crop)/25 active:border-(--crop) active:ring-3 active:ring-(--crop)/25";
+
+/** Sets `--crop` for CROP_OUTLINE and other `(--crop)` classes. */
+export function cropVar(cropName: string): React.CSSProperties {
+  return { "--crop": cropColor(cropName) } as React.CSSProperties;
+}

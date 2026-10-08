@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { fetchPlants, type BackendPlant } from "@/lib/api/plants-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { CROP_OUTLINE, cropTint, cropVar } from "@/lib/crop-colors";
 import { humanDuration } from "@/lib/duration";
 import { useLanguage, type Translate } from "@/lib/i18n";
 import { plantStatusLabel } from "@/lib/plant-summary";
@@ -113,21 +114,35 @@ function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
   const windowDays = harvestWindowDays(plant);
 
   return (
-    <Card className="h-full min-w-0 gap-2 py-4">
+    // Outlined in the crop's own colour on hover or tap, as on My Plants.
+    <Card
+      tabIndex={0}
+      style={cropVar(plant.crop.name)}
+      className={cn("h-full min-w-0 gap-2 py-4 transition-all", CROP_OUTLINE)}
+    >
       <CardContent className="flex h-full flex-col gap-3 px-4 sm:px-5">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
-              <span aria-hidden="true">{plant.crop.emoji}</span> {plant.display_name}
-            </p>
-            <p className="text-muted-foreground mt-0.5 truncate text-sm">
-              {plant.crop.name} ·{" "}
-              {plant.crop.category === "fruit"
-                ? t("category.fruit")
-                : plant.crop.category === "vegetable"
-                  ? t("category.vegetable")
-                  : plant.crop.category_label}
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-11 shrink-0 items-center justify-center rounded-xl text-2xl leading-none"
+              style={{ backgroundColor: cropTint(plant.crop.name) }}
+            >
+              {plant.crop.emoji}
+            </span>
+            <div className="min-w-0">
+              <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
+                {plant.display_name}
+              </p>
+              <p className="text-muted-foreground mt-0.5 truncate text-sm">
+                {plant.crop.name} ·{" "}
+                {plant.crop.category === "fruit"
+                  ? t("category.fruit")
+                  : plant.crop.category === "vegetable"
+                    ? t("category.vegetable")
+                    : plant.crop.category_label}
+              </p>
+            </div>
           </div>
           <span
             className={cn(
