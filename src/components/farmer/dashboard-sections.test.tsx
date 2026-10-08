@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AssessmentTrendChart } from "@/components/farmer/assessment-trend-chart";
 import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
-import { HarvestSchedule } from "@/components/farmer/harvest-schedule";
+import { PlantedCrops } from "@/components/farmer/planted-crops";
 import type { BackendPlant } from "@/lib/api/plants-api";
-import type { AssessmentTrend, UpcomingHarvest } from "@/lib/api/dashboard-api";
+import type { AssessmentTrend } from "@/lib/api/dashboard-api";
 
 /**
  * These pin the dashboard's central promise: it shows what the farm actually
@@ -215,62 +215,61 @@ describe("CropSuggestionsCard", () => {
   });
 });
 
-const HARVEST: UpcomingHarvest = {
-  plant_id: 1,
-  name: "Watermelon",
-  crop_name: "Watermelon",
-  emoji: "🍉",
-  expected_harvest_start: "2026-12-13",
-  days_away: 90,
-  in_window: false,
-};
+// Only the fields the list reads.
+function plant(id: number, name: string, date: string, extra: Partial<BackendPlant> = {}): BackendPlant {
+  return {
+    id,
+    display_name: name,
+    planting_date: date,
+    age_days: 2,
+    is_planned: false,
+    status: "GROWING",
+    crop: { name: "Ginger", emoji: "🫚" },
+    ...extra,
+  } as BackendPlant;
+}
 
-describe("HarvestSchedule", () => {
-  it("lists upcoming harvests with their dates", () => {
-    render(<HarvestSchedule harvests={[HARVEST]} />);
-    expect(screen.getByText("Watermelon")).toBeInTheDocument();
-    expect(screen.getByText("December 13, 2026")).toBeInTheDocument();
-  });
-
-  it("flags a plant already inside its window", () => {
+describe("PlantedCrops", () => {
+  it("lists planted crops newest first, with the planting date and age", () => {
     render(
-      <HarvestSchedule
-        harvests={[{ ...HARVEST, in_window: true, days_away: -2 }]}
+      <PlantedCrops
+        plants={[plant(1, "Older", "2026-10-01", { age_days: 8 }), plant(2, "Newer", "2026-10-08", { age_days: 1 })]}
       />,
     );
-    expect(screen.getByText("Ready now")).toBeInTheDocument();
+    const names = screen.getAllByText(/Older|Newer/).map((el) => el.textContent);
+    expect(names).toEqual(["Newer", "Older"]);
+    expect(screen.getByText("Planted October 8, 2026")).toBeInTheDocument();
+    expect(screen.getByText("1 day old")).toBeInTheDocument();
   });
 
-  it("scales the wording from days to months to years", () => {
+  it("leaves out planned, harvested and archived plants", () => {
     render(
-      <HarvestSchedule
-        harvests={[
-          { ...HARVEST, plant_id: 1, days_away: 5 },
-          { ...HARVEST, plant_id: 2, days_away: 90 },
-          { ...HARVEST, plant_id: 3, days_away: 1400 },
+      <PlantedCrops
+        plants={[
+          plant(1, "Growing", "2026-10-01"),
+          plant(2, "Planned", "2026-11-01", { is_planned: true }),
+          plant(3, "Harvested", "2026-09-01", { status: "HARVESTED" }),
+          plant(4, "Archived", "2026-09-01", { status: "ARCHIVED" }),
         ]}
       />,
     );
-    expect(screen.getByText("in 5 days")).toBeInTheDocument();
-    expect(screen.getByText("in 3 months")).toBeInTheDocument();
-    expect(screen.getByText("in 4 years")).toBeInTheDocument();
+    expect(screen.getByText("Growing")).toBeInTheDocument();
+    expect(screen.queryByText(/Planned|Harvested|Archived/)).not.toBeInTheDocument();
   });
 
-  it("says so when nothing is scheduled", () => {
-    render(<HarvestSchedule harvests={[]} />);
-    expect(screen.getByText(/No harvests scheduled/)).toBeInTheDocument();
+  it("says so when nothing is planted", () => {
+    render(<PlantedCrops plants={[]} />);
+    expect(screen.getByText(/Nothing planted yet/)).toBeInTheDocument();
   });
 
-  it("shows four harvests at a time, as plain rows rather than links", async () => {
-    const five = [1, 2, 3, 4, 5].map((n) => ({ ...HARVEST, plant_id: n, name: `Crop ${n}` }));
-    render(<HarvestSchedule harvests={five} />);
-
-    expect(screen.getByText("Crop 4")).toBeInTheDocument();
-    expect(screen.queryByText("Crop 5")).not.toBeInTheDocument();
-    // The only link is "All harvests"; the rows themselves go nowhere.
+  it("shows four at a time, as plain rows rather than links", async () => {
+    render(<PlantedCrops plants={[1, 2, 3, 4, 5].map((n) => plant(n, `Crop ${n}`, `2026-10-0${n}`))} />);
+    // Newest first: Crop 5 down to Crop 2 on the first page.
+    expect(screen.getByText("Crop 5")).toBeInTheDocument();
+    expect(screen.queryByText("Crop 1")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link")).toHaveLength(1);
 
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(await screen.findByText("Crop 5")).toBeInTheDocument();
+    expect(await screen.findByText("Crop 1")).toBeInTheDocument();
   });
 });

@@ -41,25 +41,13 @@ export const dashboard = defineMessages({
   "dash.details": { en: "Details", fil: "Detalye", bik: "Detalye" },
 
 
-  "harvest.title": { en: "Harvest schedule", fil: "Iskedyul ng ani", bik: "Iskedyul san ani" },
-  "harvest.all": { en: "All harvests", fil: "Lahat ng ani", bik: "Ngatanan na ani" },
-  "harvest.none": {
-    en: "No harvests scheduled. Add a plant and its window will appear here.",
-    fil: "Walang nakatakdang ani. Magdagdag ng tanim at lalabas dito ang panahon ng ani nito.",
-    bik: "Waray pa ani na nakatakda. Magdugang san tanom asin makikita digdi an panahon san ani kaini.",
+  "planted.title": { en: "Planted crops", fil: "Mga naitanim", bik: "Mga natanom" },
+  "planted.all": { en: "All plants", fil: "Lahat ng tanim", bik: "Ngatanan na tanom" },
+  "planted.none": {
+    en: "Nothing planted yet. Plants you add will appear here.",
+    fil: "Wala pang naitanim. Lalabas dito ang mga tanim na idaragdag mo.",
+    bik: "Waray pa natatanom. Makikita digdi an mga tanom na idugang mo.",
   },
-  "when.readyNow": { en: "Ready now", fil: "Handa na", bik: "Pwede na anihon" },
-  "when.today": { en: "Today", fil: "Ngayon", bik: "Yana" },
-  "when.tomorrow": { en: "Tomorrow", fil: "Bukas", bik: "Buwas" },
-  "when.days": { en: "in {n} days", fil: "sa loob ng {n} araw", bik: "sa sulod san {n} adlaw" },
-  "when.month": { en: "in 1 month", fil: "sa loob ng 1 buwan", bik: "sa sulod san 1 bulan" },
-  "when.months": {
-    en: "in {n} months",
-    fil: "sa loob ng {n} buwan",
-    bik: "sa sulod san {n} bulan",
-  },
-  "when.year": { en: "in 1 year", fil: "sa loob ng 1 taon", bik: "sa sulod san 1 taon" },
-  "when.years": { en: "in {n} years", fil: "sa loob ng {n} taon", bik: "sa sulod san {n} taon" },
 
   "suited.title": {
     en: "Planted on your date",

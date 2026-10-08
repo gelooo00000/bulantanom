@@ -5,7 +5,7 @@ import { ArrowRight, LoaderCircle, Sprout, TriangleAlert } from "lucide-react";
 
 import { AssessmentTrendChart } from "@/components/farmer/assessment-trend-chart";
 import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
-import { HarvestSchedule } from "@/components/farmer/harvest-schedule";
+import { PlantedCrops } from "@/components/farmer/planted-crops";
 import { RiskCountsRow } from "@/components/risk/risk-counts";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ export default function FarmerDashboardPage() {
     );
   }
 
-  const { overview, assessment_trend, upcoming_harvests } = dashboard;
+  const { overview, assessment_trend } = dashboard;
   // `overview` is no longer rendered; its plant count still decides whether
   // this is a working farm or a first-run empty state.
   const hasPlants = overview.plant_count > 0;
@@ -123,7 +123,7 @@ export default function FarmerDashboardPage() {
           {/* The two plant lists side by side, the activity chart under them
               across the full width. */}
           <div className="grid gap-3 lg:grid-cols-2">
-            <HarvestSchedule harvests={upcoming_harvests} />
+            <PlantedCrops plants={plants ?? []} />
             <CropSuggestionsCard plants={plants ?? []} />
           </div>
 
