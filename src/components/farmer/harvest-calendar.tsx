@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { ColumnChart } from "@/components/lgu/dashboard-charts";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
+import { cropColor, cropTint } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { plantTitle } from "@/lib/plant-summary";
 
@@ -102,6 +103,13 @@ export function HarvestCalendar({
           title: monthLabel(bucket.month, true),
           tableLabel: monthLabel(bucket.month, true),
           count: bucket.plants.length,
+          // One piece per crop, in the crop's own colour.
+          segments: Object.entries(
+            bucket.plants.reduce<Record<string, number>>((acc, p) => {
+              acc[p.crop.name] = (acc[p.crop.name] ?? 0) + 1;
+              return acc;
+            }, {}),
+          ).map(([crop, n]) => ({ key: crop, color: cropColor(crop), count: n })),
         }))}
         unit={t("calendarChart.unit")}
         tableHeading={t("calendarChart.month")}
@@ -140,7 +148,14 @@ export function HarvestCalendar({
               <ul className="-mr-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-2 text-sm">
                 {shown.plants.map((plant) => (
                   <li key={plant.id} className="flex items-center gap-2">
-                    <span aria-hidden="true">{plant.crop.emoji}</span>
+                    <span
+                      aria-hidden="true"
+                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-xs leading-none"
+                      // The same colour as this crop's piece of the bar.
+                      style={{ backgroundColor: cropTint(plant.crop.name, 30) }}
+                    >
+                      {plant.crop.emoji}
+                    </span>
                     <span className="truncate">{plantTitle(plant)}</span>
                     <span className="text-muted-foreground ml-auto shrink-0 text-xs">
                       {formatDisplayDate(plant.expected_harvest_start, dateLocale)}

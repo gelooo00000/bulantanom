@@ -238,6 +238,28 @@ export function WeeklyColumns({ weeks }: { weeks: WeekCount[] }) {
   );
 }
 
+/**
+ * Where each piece of a stacked column sits, bottom first. A 2px gap is
+ * left under every piece but the lowest, so neighbouring colours stay apart.
+ */
+function stackSegments(
+  segments: NonNullable<Column["segments"]>,
+  peak: number,
+  plotH: number,
+  baseline: number,
+) {
+  let floor = baseline;
+  return segments
+    .filter((seg) => seg.count > 0)
+    .map((seg, i) => {
+      const h = (seg.count / peak) * plotH;
+      const bottom = floor - (i > 0 ? 2 : 0);
+      const top = floor - h;
+      floor = top;
+      return { key: seg.key, color: seg.color, top, bottom: Math.max(top + 1, bottom) };
+    });
+}
+
 export type Column = {
   key: string;
   /** Short label under the column, e.g. "Sep 14" or "Oct". */
@@ -247,6 +269,12 @@ export type Column = {
   /** First cell of the numbers table. */
   tableLabel: string;
   count: number;
+  /**
+   * Optional: the column split into coloured pieces, bottom first, which
+   * must add up to `count` (the farmer's harvest graph colours each month's
+   * bar by crop). Without it the column is one piece in the primary colour.
+   */
+  segments?: { key: string; color: string; count: number }[];
 };
 
 /**
@@ -382,13 +410,36 @@ export function ColumnChart({
               >
                 {/* A hit target the full height of the slot, bigger than the bar. */}
                 <rect x={i * slot} y={0} width={slot} height={height} fill="transparent" />
-                {path && (
-                  <path
-                    d={path}
-                    fill="var(--primary)"
-                    opacity={focused !== null && focused !== i ? 0.45 : 1}
-                  />
-                )}
+                {path &&
+                  (column.segments && column.segments.length > 0 ? (
+                    <g opacity={focused !== null && focused !== i ? 0.45 : 1}>
+                      {stackSegments(column.segments, peak, plotH, baseline).map((seg, s, all) =>
+                        s === all.length - 1 ? (
+                          // The top piece carries the rounded data-end.
+                          <path
+                            key={seg.key}
+                            d={`M${x},${seg.bottom} V${seg.top + Math.min(4, seg.bottom - seg.top)} Q${x},${seg.top} ${x + Math.min(4, seg.bottom - seg.top)},${seg.top} H${x + barW - Math.min(4, seg.bottom - seg.top)} Q${x + barW},${seg.top} ${x + barW},${seg.top + Math.min(4, seg.bottom - seg.top)} V${seg.bottom} Z`}
+                            fill={seg.color}
+                          />
+                        ) : (
+                          <rect
+                            key={seg.key}
+                            x={x}
+                            y={seg.top}
+                            width={barW}
+                            height={seg.bottom - seg.top}
+                            fill={seg.color}
+                          />
+                        ),
+                      )}
+                    </g>
+                  ) : (
+                    <path
+                      d={path}
+                      fill="var(--primary)"
+                      opacity={focused !== null && focused !== i ? 0.45 : 1}
+                    />
+                  ))}
                 {/* One direct label; the rest are on hover or in the table. */}
                 {i === labelIndex && shown === null && (
                   <text
