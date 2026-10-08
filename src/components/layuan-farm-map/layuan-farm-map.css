@@ -1,9 +1,10 @@
 /*
  * Layuan Farm site map. Every rule is scoped under .lfm.
  *
- * Panel colours borrow the app's tokens (--card, --border, ...) when they
+ * Interface colours borrow the app's tokens (--card, --border, ...) when they
  * exist, so the map sits in the BulanTanom theme; the fallbacks keep it
- * readable anywhere else. The scene palette is the map's own.
+ * readable anywhere else. The scene palette is the map's own: a sunny
+ * morning in Light, a cool dusk in Dark.
  *
  * Theme: follows prefers-color-scheme, unless data-theme="light|dark" is set.
  */
@@ -19,39 +20,59 @@
   --lfm-chip: var(--muted, #edf2ea);
   --lfm-accent: var(--primary, #1f6b3a);
   --lfm-accent-ink: var(--primary-foreground, #ffffff);
-  --lfm-sky: #e6efe2;
-  --lfm-sky-2: #f4f7ef;
+  --lfm-sky-top: #cfe6f2;
+  --lfm-sky-mid: #e8f3e6;
+  --lfm-sky-low: #f3f6ec;
+  --lfm-cloud: rgba(255, 255, 255, 0.5);
+  --lfm-glass-bg: color-mix(in srgb, var(--lfm-panel) 84%, transparent);
+  --lfm-elev: 0 10px 30px -12px rgba(16, 40, 24, 0.35), 0 2px 6px -2px rgba(16, 40, 24, 0.18);
 
   /* Scene */
-  --lfm-shadow: rgba(24, 48, 30, 0.28);
-  --lfm-grass: #7fb35a;
-  --lfm-grass-2: #9ccb6f;
+  --lfm-shadow: rgba(24, 48, 30, 0.3);
+  --lfm-cast: rgba(18, 42, 20, 0.34);
+  --lfm-grass: #7cb257;
+  --lfm-grass-2: #a3cf72;
+  --lfm-grass-3: #5f9a44;
+  --lfm-grass-light: #b6dc84;
+  --lfm-grass-dark: #4f8a39;
   --lfm-grass-lip: #5f9442;
-  --lfm-tuft: #5c8f3f;
-  --lfm-soil: #8a5f3c;
-  --lfm-soil-2: #6c472c;
-  --lfm-rice: #e9c64a;
-  --lfm-rice-row: #c99f25;
-  --lfm-rice-dot: #f8e27c;
+  --lfm-tuft: #4f8436;
+  --lfm-soil: #8f6440;
+  --lfm-soil-2: #74502f;
+  --lfm-soil-3: #5c3e24;
+  --lfm-soil-line: #3f2a18;
+  --lfm-rice: #e2bd3e;
+  --lfm-rice-2: #f3d96b;
+  --lfm-rice-row: #c19722;
+  --lfm-rice-dot: #fbe78d;
   --lfm-bund: #c9a774;
   --lfm-veg: #4f9a3e;
-  --lfm-veg-row: #2c6b26;
+  --lfm-veg-row: #2a6624;
+  --lfm-veg-leaf: #7cc456;
   --lfm-veg-soil: #7a5534;
+  --lfm-leaf: #3e8a35;
   --lfm-terrace-soil: #8d6440;
-  --lfm-field: #5a3d27;
-  --lfm-field-furrow: #43291a;
-  --lfm-water: #3f8fd2;
-  --lfm-water-hi: #bfe3ff;
-  --lfm-bank: #6f8f4c;
-  --lfm-path: #f3efe2;
+  --lfm-field: #5e4029;
+  --lfm-field-furrow: #3d2617;
+  --lfm-field-ridge: #8a6544;
+  --lfm-water: #2f7fc4;
+  --lfm-water-2: #6bb6e8;
+  --lfm-water-hi: #d6efff;
+  --lfm-bank: #6a8b48;
+  --lfm-path: #f2ede0;
+  --lfm-path-edge: #cfc7b2;
   --lfm-wood: #9a6a3f;
-  --lfm-road: #9aa09d;
-  --lfm-road-line: #f2f2ec;
-  --lfm-wall: #f1ece0;
+  --lfm-road: #6f7573;
+  --lfm-road-2: #858b88;
+  --lfm-road-shoulder: #b9ae92;
+  --lfm-road-edge: #f4f4ee;
+  --lfm-road-line: #f2c335;
+  --lfm-wall: #f3eee2;
+  --lfm-plinth: #b8b2a3;
   --lfm-bamboo: #d8b878;
   --lfm-mesh: #e3e6dc;
   --lfm-door: #6b4a2e;
-  --lfm-window: #8fc1df;
+  --lfm-window: #7fb4d6;
   --lfm-roof: #4e7a5c;
   --lfm-roof-red: #b5452f;
   --lfm-roof-green: #2f7a46;
@@ -61,14 +82,16 @@
   --lfm-glass: #cfeef2;
   --lfm-glass-edge: #ffffff;
   --lfm-compost: #4a3222;
-  --lfm-tank: #5b8fb8;
+  --lfm-tank: #4f86b4;
   --lfm-tent-1: #e07a3a;
   --lfm-tent-2: #2f8f8a;
   --lfm-tent-3: #d4b13a;
-  --lfm-palm: #3f8a3a;
+  --lfm-palm: #4a9440;
   --lfm-palm-trunk: #8a6a44;
-  --lfm-tree: #3c8c45;
-  --lfm-tree-2: #5a9c35;
+  --lfm-coconut: #6b4a22;
+  --lfm-tree: #3f8e46;
+  --lfm-tree-2: #5c9e36;
+  --lfm-tree-3: #2f7440;
   --lfm-trunk: #6d4a2c;
   --lfm-sapling: #6fbf4a;
   --lfm-plot-soil: #a37a50;
@@ -80,6 +103,7 @@
   --lfm-hen-2: #b8643a;
   --lfm-purple: #8d4fc4;
   --lfm-orange: #f08a24;
+  --lfm-fire-glow: rgba(255, 170, 60, 0.55);
   --lfm-future: #d98a00;
   --lfm-pin-facility: #1f5a32;
   --lfm-pin-water: #2a78d6;
@@ -90,10 +114,10 @@
   color: var(--lfm-ink);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-/* Dark palette: same names, deeper and calmer so the scene is not glaring. */
+/* Dusk palette: same names, deeper and calmer so the scene is not glaring. */
 .lfm[data-theme="dark"] {
   --lfm-panel: var(--card, #142219);
   --lfm-ink: var(--foreground, #eef4ee);
@@ -102,51 +126,70 @@
   --lfm-chip: var(--muted, #1b2c21);
   --lfm-accent: var(--primary, #4cc26a);
   --lfm-accent-ink: var(--primary-foreground, #08130c);
-  --lfm-sky: #0f1d15;
-  --lfm-sky-2: #142619;
+  --lfm-sky-top: #0c1a24;
+  --lfm-sky-mid: #10221a;
+  --lfm-sky-low: #0c1711;
+  --lfm-cloud: rgba(200, 220, 230, 0.12);
+  --lfm-elev: 0 12px 34px -12px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.5);
 
-  --lfm-shadow: rgba(0, 0, 0, 0.5);
-  --lfm-grass: #4f7f3a;
-  --lfm-grass-2: #659848;
+  --lfm-shadow: rgba(0, 0, 0, 0.55);
+  --lfm-cast: rgba(0, 8, 4, 0.42);
+  --lfm-grass: #4c7c38;
+  --lfm-grass-2: #66964a;
+  --lfm-grass-3: #3a6430;
+  --lfm-grass-light: #75a252;
+  --lfm-grass-dark: #335a29;
   --lfm-grass-lip: #3e6a2d;
-  --lfm-tuft: #3a6428;
+  --lfm-tuft: #355c27;
   --lfm-soil: #6a4930;
-  --lfm-soil-2: #4f3522;
-  --lfm-rice: #c9a83a;
-  --lfm-rice-row: #9c7a1c;
-  --lfm-rice-dot: #e4c968;
+  --lfm-soil-2: #523823;
+  --lfm-soil-3: #3f2b1b;
+  --lfm-rice: #c09d34;
+  --lfm-rice-2: #d4b552;
+  --lfm-rice-row: #957319;
+  --lfm-rice-dot: #e2c866;
   --lfm-bund: #a68a5e;
   --lfm-veg: #3f7f33;
-  --lfm-veg-row: #1f4f1c;
+  --lfm-veg-row: #1e4c1b;
+  --lfm-veg-leaf: #64a346;
   --lfm-field: #45301f;
-  --lfm-field-furrow: #2f1f14;
-  --lfm-water: #2f74b0;
-  --lfm-water-hi: #9ccaf0;
-  --lfm-bank: #4f6b37;
-  --lfm-path: #cfcabb;
-  --lfm-road: #7a807d;
-  --lfm-road-line: #d6d6cf;
-  --lfm-wall: #d9d3c4;
+  --lfm-field-furrow: #2a1b10;
+  --lfm-field-ridge: #6a4c33;
+  --lfm-water: #245f93;
+  --lfm-water-2: #3e86bf;
+  --lfm-water-hi: #a9d4f2;
+  --lfm-bank: #4a6634;
+  --lfm-path: #cdc8b8;
+  --lfm-path-edge: #9d9784;
+  --lfm-road: #545a58;
+  --lfm-road-2: #666c69;
+  --lfm-road-shoulder: #8c836c;
+  --lfm-road-edge: #d8d8d0;
+  --lfm-road-line: #d6ad2e;
+  --lfm-wall: #d6d0c1;
+  --lfm-plinth: #8f8a7d;
   --lfm-mesh: #c4c8bd;
-  --lfm-window: #6fa3c4;
-  --lfm-concrete: #a9a69c;
+  --lfm-window: #f2cf7a;
+  --lfm-concrete: #a5a298;
   --lfm-glass: #a9d8df;
   --lfm-glass-edge: #e6f6f8;
-  --lfm-palm: #357a32;
+  --lfm-palm: #3a7d33;
   --lfm-tree: #2f7238;
   --lfm-tree-2: #4a842b;
+  --lfm-tree-3: #245a31;
   --lfm-sapling: #5aa53c;
   --lfm-plot-soil: #84603e;
   --lfm-paddock: #6e9a4c;
   --lfm-camp: #86a862;
   --lfm-hen: #ece4d2;
+  --lfm-fire-glow: rgba(255, 160, 50, 0.8);
   --lfm-future: #f0a52a;
   --lfm-pin-facility: #2c8a4c;
   --lfm-pin-water: #3a8be6;
 }
 
 @media (prefers-color-scheme: dark) {
-  .lfm:not([data-theme="light"]) {
+  .lfm:not([data-theme]) {
     --lfm-panel: var(--card, #142219);
     --lfm-ink: var(--foreground, #eef4ee);
     --lfm-muted: var(--muted-foreground, #9fb3a6);
@@ -154,173 +197,194 @@
     --lfm-chip: var(--muted, #1b2c21);
     --lfm-accent: var(--primary, #4cc26a);
     --lfm-accent-ink: var(--primary-foreground, #08130c);
-    --lfm-sky: #0f1d15;
-    --lfm-sky-2: #142619;
-
-    --lfm-shadow: rgba(0, 0, 0, 0.5);
-    --lfm-grass: #4f7f3a;
-    --lfm-grass-2: #659848;
+    --lfm-sky-top: #0c1a24;
+    --lfm-sky-mid: #10221a;
+    --lfm-sky-low: #0c1711;
+    --lfm-cloud: rgba(200, 220, 230, 0.12);
+    --lfm-elev: 0 12px 34px -12px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.5);
+    --lfm-shadow: rgba(0, 0, 0, 0.55);
+    --lfm-cast: rgba(0, 8, 4, 0.42);
+    --lfm-grass: #4c7c38;
+    --lfm-grass-2: #66964a;
+    --lfm-grass-3: #3a6430;
+    --lfm-grass-light: #75a252;
+    --lfm-grass-dark: #335a29;
     --lfm-grass-lip: #3e6a2d;
-    --lfm-tuft: #3a6428;
+    --lfm-tuft: #355c27;
     --lfm-soil: #6a4930;
-    --lfm-soil-2: #4f3522;
-    --lfm-rice: #c9a83a;
-    --lfm-rice-row: #9c7a1c;
-    --lfm-rice-dot: #e4c968;
+    --lfm-soil-2: #523823;
+    --lfm-soil-3: #3f2b1b;
+    --lfm-rice: #c09d34;
+    --lfm-rice-2: #d4b552;
+    --lfm-rice-row: #957319;
+    --lfm-rice-dot: #e2c866;
     --lfm-bund: #a68a5e;
     --lfm-veg: #3f7f33;
-    --lfm-veg-row: #1f4f1c;
+    --lfm-veg-row: #1e4c1b;
+    --lfm-veg-leaf: #64a346;
     --lfm-field: #45301f;
-    --lfm-field-furrow: #2f1f14;
-    --lfm-water: #2f74b0;
-    --lfm-water-hi: #9ccaf0;
-    --lfm-bank: #4f6b37;
-    --lfm-path: #cfcabb;
-    --lfm-road: #7a807d;
-    --lfm-road-line: #d6d6cf;
-    --lfm-wall: #d9d3c4;
+    --lfm-field-furrow: #2a1b10;
+    --lfm-field-ridge: #6a4c33;
+    --lfm-water: #245f93;
+    --lfm-water-2: #3e86bf;
+    --lfm-water-hi: #a9d4f2;
+    --lfm-bank: #4a6634;
+    --lfm-path: #cdc8b8;
+    --lfm-path-edge: #9d9784;
+    --lfm-road: #545a58;
+    --lfm-road-2: #666c69;
+    --lfm-road-shoulder: #8c836c;
+    --lfm-road-edge: #d8d8d0;
+    --lfm-road-line: #d6ad2e;
+    --lfm-wall: #d6d0c1;
+    --lfm-plinth: #8f8a7d;
     --lfm-mesh: #c4c8bd;
-    --lfm-window: #6fa3c4;
-    --lfm-concrete: #a9a69c;
+    --lfm-window: #f2cf7a;
+    --lfm-concrete: #a5a298;
     --lfm-glass: #a9d8df;
     --lfm-glass-edge: #e6f6f8;
-    --lfm-palm: #357a32;
+    --lfm-palm: #3a7d33;
     --lfm-tree: #2f7238;
     --lfm-tree-2: #4a842b;
+    --lfm-tree-3: #245a31;
     --lfm-sapling: #5aa53c;
     --lfm-plot-soil: #84603e;
     --lfm-paddock: #6e9a4c;
     --lfm-camp: #86a862;
     --lfm-hen: #ece4d2;
+    --lfm-fire-glow: rgba(255, 160, 50, 0.8);
     --lfm-future: #f0a52a;
     --lfm-pin-facility: #2c8a4c;
     --lfm-pin-water: #3a8be6;
   }
 }
 
-/* --- Toolbar: layer chips and sliders ------------------------------------ */
+/* --- Stage: the map, its sky and the floating controls -------------------- */
 
-.lfm-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px 20px;
-}
-
-.lfm-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.lfm-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.lfm-stage {
+  position: relative;
+  height: clamp(420px, 68vh, 760px);
   border: 1px solid var(--lfm-line);
-  background: var(--lfm-panel);
-  color: var(--lfm-ink);
-  border-radius: 999px;
-  padding: 5px 11px 5px 8px;
-  font: 500 12px/1.2 var(--lfm-font-body);
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--lfm-sky-top), var(--lfm-sky-mid) 45%, var(--lfm-sky-low));
+  isolation: isolate;
 }
 
-.lfm-chip:hover {
-  border-color: var(--lfm-accent);
+@media (max-width: 639px) {
+  .lfm-stage {
+    height: min(74svh, 620px);
+    min-height: 440px;
+    border-radius: 16px;
+  }
 }
 
-.lfm-chip[aria-pressed="false"] {
-  opacity: 0.55;
-  background: transparent;
+.lfm-stage.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  height: 100dvh;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
 }
 
-.lfm-chip[aria-pressed="false"] .lfm-swatch {
-  background: transparent !important;
+.lfm-viewport {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.lfm-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
-  border: 1.5px solid currentColor;
-  border-color: color-mix(in srgb, var(--lfm-ink) 25%, transparent);
-  flex: none;
+.lfm-viewport.is-panning {
+  cursor: grabbing;
 }
 
-.lfm-sliders {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-}
-
-.lfm-slider {
-  display: grid;
-  grid-template-columns: auto 120px 2.6em;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--lfm-muted);
-}
-
-.lfm-slider input {
-  width: 100%;
-  accent-color: var(--lfm-accent);
-}
-
-.lfm-slider output {
-  font: 600 12px/1 var(--lfm-font-heading);
-  color: var(--lfm-ink);
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- The map frame --------------------------------------------------------- */
-
-.lfm-frame {
-  border: 1px solid var(--lfm-line);
-  border-radius: 16px;
-  background:
-    radial-gradient(ellipse at 50% 35%, var(--lfm-sky-2), var(--lfm-sky) 75%);
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
+.lfm-viewport:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--lfm-accent);
 }
 
 .lfm-svg {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  min-width: 780px;
-  height: auto;
-}
-
-.lfm-svg:focus {
-  outline: none;
+  height: 100%;
+  display: block;
 }
 
 .lfm-label {
-  font: 600 11px var(--lfm-font-heading);
+  font: 700 11px var(--lfm-font-heading);
   fill: var(--lfm-ink);
   paint-order: stroke;
   stroke: var(--lfm-panel);
   stroke-width: 3px;
 }
 
+/* Clouds drifting over the farm, with their shadows. */
+.lfm-clouds {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.lfm-cloud {
+  position: absolute;
+  width: 240px;
+  height: 70px;
+  border-radius: 999px;
+  background: var(--lfm-cloud);
+  filter: blur(18px);
+  animation: lfm-drift 70s linear infinite;
+}
+
+.lfm-cloud:nth-child(2) {
+  width: 320px;
+  animation-duration: 95s;
+  animation-delay: -40s;
+}
+
+.lfm-cloud:nth-child(3) {
+  width: 180px;
+  animation-duration: 80s;
+  animation-delay: -65s;
+  opacity: 0.7;
+}
+
+@keyframes lfm-drift {
+  from {
+    transform: translateX(-360px);
+  }
+  to {
+    transform: translateX(calc(100vw + 360px));
+  }
+}
+
 /* Canal flow. */
 .lfm-flow {
-  animation: lfm-flow 1.6s linear infinite;
+  animation: lfm-flow 1.8s linear infinite;
+}
+
+.lfm-flow--slow {
+  animation-duration: 3s;
 }
 
 @keyframes lfm-flow {
   to {
-    stroke-dashoffset: -32;
+    stroke-dashoffset: -36;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lfm-flow {
+  .lfm-flow,
+  .lfm-cloud {
     animation: none;
+  }
+  .lfm-cloud {
+    display: none;
   }
 }
 
@@ -333,104 +397,354 @@
   display: none;
 }
 
-/* --- Pins ------------------------------------------------------------------ */
+/* --- Pins (HTML buttons over the map, the same size at any zoom) ----------- */
+
+.lfm-pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
 
 .lfm-pin {
+  --size: 30px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  pointer-events: auto;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transform: translate(calc(var(--x) - 50%), calc(var(--y) - 100%));
+  transition: opacity 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 639px) {
+  .lfm-pin {
+    --size: 26px;
+  }
+}
+
+.lfm-pin-head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 999px;
+  background: var(--pin);
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.45);
+  font: 700 calc(var(--size) * 0.42) / 1 var(--lfm-font-heading);
+  transition: transform 0.18s cubic-bezier(0.3, 1.4, 0.5, 1), box-shadow 0.18s;
+  transform-origin: 50% 100%;
+}
+
+.lfm-pin-head svg {
+  width: 58%;
+  height: 58%;
+}
+
+.lfm-pin.is-future .lfm-pin-head {
+  border-style: dashed;
+}
+
+.lfm-pin-stem {
+  width: 2px;
+  height: 14px;
+  background: linear-gradient(var(--pin), color-mix(in srgb, var(--pin) 20%, transparent));
+}
+
+.lfm-pin-foot {
+  width: 7px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.lfm-pin:hover .lfm-pin-head,
+.lfm-pin.is-active .lfm-pin-head {
+  transform: scale(1.18) translateY(-2px);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pin) 35%, transparent), 0 8px 16px -4px rgba(0, 0, 0, 0.5);
 }
 
 .lfm-pin:focus {
   outline: none;
 }
 
-.lfm-pin-leader {
-  stroke: var(--lfm-ink);
-  stroke-opacity: 0.55;
-  stroke-width: 1;
-  stroke-dasharray: 2 2;
+.lfm-pin:focus-visible .lfm-pin-head {
+  outline: 3px solid var(--lfm-accent);
+  outline-offset: 2px;
 }
 
-.lfm-pin-foot {
-  fill: var(--lfm-ink);
-  fill-opacity: 0.7;
+.lfm-has-active .lfm-pin:not(.is-active) {
+  opacity: 0.45;
 }
 
-.lfm-pin-hit {
-  fill: transparent;
+.lfm-pin.is-active {
+  z-index: 3;
 }
 
-.lfm-pin-disc {
-  stroke: #fff;
-  stroke-width: 1.6;
-  transition: transform 0.15s;
+/* --- Floating controls ------------------------------------------------------ */
+
+.lfm-glass {
+  background: var(--lfm-glass-bg);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid color-mix(in srgb, var(--lfm-line) 80%, transparent);
+  box-shadow: var(--lfm-elev);
 }
 
-.lfm-pin-num {
-  font: 700 10.5px var(--lfm-font-heading);
-  fill: #fff;
+.lfm-layers {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 64px;
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
   pointer-events: none;
+  padding: 2px;
 }
 
-.lfm-has-active .lfm-pin {
-  opacity: 0.35;
+.lfm-layers::-webkit-scrollbar {
+  display: none;
 }
 
-.lfm-has-active .lfm-pin.is-active {
-  opacity: 1;
+.lfm-chip {
+  pointer-events: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 12px 6px 8px;
+  color: var(--lfm-ink);
+  font: 600 12px/1.2 var(--lfm-font-body);
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
 }
 
-.lfm-pin.is-active .lfm-pin-disc {
-  stroke: var(--lfm-ink);
-  stroke-width: 2.4;
+.lfm-chip:active {
+  transform: scale(0.96);
 }
 
-.lfm-pin:focus-visible .lfm-pin-hit {
-  stroke: var(--lfm-accent);
-  stroke-width: 2.5;
+.lfm-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--swatch);
+  color: #fff;
 }
 
-.lfm-note {
+.lfm-chip-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.lfm-chip[aria-pressed="false"] {
+  opacity: 0.6;
+}
+
+.lfm-chip[aria-pressed="false"] .lfm-chip-icon {
+  background: transparent;
+  color: var(--lfm-muted);
+  box-shadow: inset 0 0 0 1.5px var(--lfm-muted);
+}
+
+.lfm-chip:focus-visible,
+.lfm-ctrl:focus-visible {
+  outline: 2px solid var(--lfm-accent);
+  outline-offset: 2px;
+}
+
+.lfm-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lfm-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.lfm-ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--lfm-ink);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.lfm-ctrl + .lfm-ctrl {
+  border-top: 1px solid color-mix(in srgb, var(--lfm-line) 80%, transparent);
+}
+
+.lfm-ctrl:hover {
+  background: color-mix(in srgb, var(--lfm-accent) 12%, transparent);
+}
+
+.lfm-ctrl[aria-pressed="true"] {
+  color: var(--lfm-accent);
+}
+
+.lfm-ctrl:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.lfm-ctrl svg {
+  width: 18px;
+  height: 18px;
+}
+
+.lfm-pop {
+  position: absolute;
+  top: 12px;
+  right: 62px;
+  z-index: 5;
+  width: min(260px, calc(100% - 80px));
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  animation: lfm-pop 0.16s ease-out;
+}
+
+@keyframes lfm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.lfm-pop-title {
   margin: 0;
+  font: 600 13px/1.2 var(--lfm-font-heading);
+}
+
+.lfm-slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
   font-size: 12px;
   color: var(--lfm-muted);
 }
 
-/* --- Detail card and map key ------------------------------------------------ */
-
-.lfm-below {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr;
+.lfm-slider input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--lfm-accent);
 }
 
-@media (min-width: 900px) {
-  .lfm-below {
-    grid-template-columns: minmax(240px, 300px) 1fr;
-    align-items: start;
+.lfm-slider output {
+  font: 700 12px/1 var(--lfm-font-heading);
+  color: var(--lfm-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.lfm-pop-reset {
+  justify-self: start;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--lfm-accent);
+  font: 600 12px var(--lfm-font-body);
+  cursor: pointer;
+}
+
+.lfm-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 4;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: lfm-pop 0.2s ease-out;
+}
+
+.lfm-zoom-level {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font: 700 11px/1.4 var(--lfm-font-heading);
+  color: var(--lfm-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* --- Detail panel: a floating card, a bottom sheet on phones ---------------- */
+
+.lfm-detail {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  width: min(340px, calc(100% - 24px));
+  border-radius: 18px;
+  overflow: hidden;
+  animation: lfm-sheet 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+@media (max-width: 639px) {
+  .lfm-detail {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
   }
 }
 
-.lfm-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--lfm-line);
-  background: var(--lfm-panel);
-  border-radius: 16px;
-  padding: 16px;
+@keyframes lfm-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
 }
 
-.lfm-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
+.lfm-detail-strip {
   height: 4px;
-  background: var(--lfm-card-strip, var(--lfm-accent));
+  background: var(--pin);
 }
 
-.lfm-card-head {
+.lfm-detail-body {
+  padding: 14px 14px 14px 16px;
+}
+
+.lfm-detail-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -439,26 +753,53 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
+  background: var(--pin);
   color: #fff;
-  font: 700 16px/1 var(--lfm-font-heading);
+  font: 700 17px/1 var(--lfm-font-heading);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pin) 18%, transparent);
 }
 
-.lfm-card-title {
+.lfm-badge svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lfm-detail-title {
   margin: 0;
   font: 600 16px/1.25 var(--lfm-font-heading);
 }
 
-.lfm-card-type {
-  margin: 2px 0 0;
+.lfm-detail-type {
+  margin: 3px 0 0;
   font-size: 12px;
   color: var(--lfm-muted);
 }
 
-.lfm-card-note {
-  margin: 12px 0 0;
+.lfm-detail-close {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--lfm-chip);
+  color: var(--lfm-muted);
+  cursor: pointer;
+}
+
+.lfm-detail-close svg {
+  width: 15px;
+  height: 15px;
+}
+
+.lfm-detail-note {
+  margin: 10px 0 0;
   font-size: 13px;
   line-height: 1.5;
   color: var(--lfm-muted);
@@ -467,109 +808,230 @@
 .lfm-tag {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   margin-top: 10px;
   border: 1px dashed var(--lfm-future);
   color: var(--lfm-future);
   border-radius: 999px;
   padding: 2px 9px;
-  font: 600 11px/1.4 var(--lfm-font-body);
+  font: 700 11px/1.4 var(--lfm-font-body);
 }
 
-.lfm-card-empty {
+.lfm-note {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--lfm-muted);
 }
 
-.lfm-card-empty strong {
-  display: block;
-  margin-bottom: 4px;
-  font: 600 15px/1.3 var(--lfm-font-heading);
-  color: var(--lfm-ink);
+/* --- Facilities: search, categories and cards ------------------------------- */
+
+.lfm-facilities {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.lfm-key {
+.lfm-fac-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lfm-fac-title {
+  margin: 0;
+  font: 600 16px/1.2 var(--lfm-font-heading);
+}
+
+.lfm-fac-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--lfm-muted);
+}
+
+.lfm-search {
+  position: relative;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.lfm-search svg {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 15px;
+  height: 15px;
+  transform: translateY(-50%);
+  color: var(--lfm-muted);
+  pointer-events: none;
+}
+
+.lfm-search input {
+  width: 100%;
   border: 1px solid var(--lfm-line);
   background: var(--lfm-panel);
-  border-radius: 16px;
-  padding: 14px 12px 10px;
+  color: var(--lfm-ink);
+  border-radius: 999px;
+  padding: 8px 12px 8px 33px;
+  font: 500 13px var(--lfm-font-body);
+  outline: none;
 }
 
-.lfm-key-title {
-  margin: 0 4px 8px;
-  font: 600 14px/1.2 var(--lfm-font-heading);
+.lfm-search input:focus-visible {
+  border-color: var(--lfm-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lfm-accent) 25%, transparent);
 }
 
-.lfm-key-list {
+.lfm-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.lfm-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.lfm-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--lfm-line);
+  background: var(--lfm-panel);
+  color: var(--lfm-ink);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: 600 12px/1.2 var(--lfm-font-body);
+  cursor: pointer;
+}
+
+.lfm-tab[aria-pressed="true"] {
+  background: var(--lfm-accent);
+  border-color: var(--lfm-accent);
+  color: var(--lfm-accent-ink);
+}
+
+.lfm-tab-count {
+  font: 700 11px/1 var(--lfm-font-heading);
+  opacity: 0.75;
+}
+
+.lfm-tab:focus-visible,
+.lfm-card:focus-visible {
+  outline: 2px solid var(--lfm-accent);
+  outline-offset: 2px;
+}
+
+.lfm-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 2px 10px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 10px;
 }
 
-@media (min-width: 640px) {
-  .lfm-key-list {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.lfm-key-row {
+.lfm-card {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 9px;
+  align-items: flex-start;
+  gap: 11px;
   width: 100%;
-  border: 0;
-  background: transparent;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--lfm-line);
+  background: var(--lfm-panel);
   color: var(--lfm-ink);
   text-align: left;
-  border-radius: 10px;
-  padding: 5px 6px;
-  font: 500 12.5px/1.3 var(--lfm-font-body);
+  border-radius: 16px;
+  padding: 13px 12px 12px 14px;
+  font: inherit;
   cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
 
-.lfm-key-row:hover,
-.lfm-key-row.is-active {
-  background: var(--lfm-chip);
+.lfm-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--pin);
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 
-.lfm-key-row[aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1.5px var(--lfm-accent);
+.lfm-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--lfm-elev);
 }
 
-.lfm-key-row:focus-visible {
-  outline: 2px solid var(--lfm-accent);
-  outline-offset: 1px;
+.lfm-card:hover::before,
+.lfm-card.is-active::before,
+.lfm-card[aria-pressed="true"]::before {
+  opacity: 1;
 }
 
-.lfm-key-num {
+.lfm-card[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--pin) 60%, var(--lfm-line));
+}
+
+.lfm-card-num {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
-  background: var(--lfm-pin-facility);
-  color: #fff;
-  font: 700 11px/1 var(--lfm-font-heading);
+  background: color-mix(in srgb, var(--pin) 14%, transparent);
+  color: var(--pin);
+  font: 700 13px/1 var(--lfm-font-heading);
 }
 
-.lfm-key-num.is-future {
+.lfm-card-num.is-future {
   background: transparent;
-  color: var(--lfm-future);
   border: 1.5px dashed var(--lfm-future);
+}
+
+.lfm-card-name {
+  display: block;
+  font: 600 13.5px/1.3 var(--lfm-font-heading);
+}
+
+.lfm-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--lfm-muted);
+}
+
+.lfm-card-meta .lfm-tag {
+  margin: 0;
+  padding: 0 7px;
+  font-size: 10.5px;
+}
+
+.lfm-empty {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--lfm-line);
+  border-radius: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--lfm-muted);
 }
 
 .lfm-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  margin: 10px 4px 2px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--lfm-line);
+  gap: 6px 16px;
   font-size: 11.5px;
   color: var(--lfm-muted);
 }
@@ -581,8 +1043,8 @@
 }
 
 .lfm-dot {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 999px;
   flex: none;
 }

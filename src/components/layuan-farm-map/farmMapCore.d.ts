@@ -34,4 +34,10 @@ export const PINS: FarmPin[];
 export function buildFarmMap(
   tilt?: number,
   height?: number,
-): { width: number; height: number; inner: string };
+): {
+  width: number;
+  height: number;
+  inner: string;
+  /** Where each pin stands, in the SVG's own units. */
+  anchors: Record<string, [number, number]>;
+};
