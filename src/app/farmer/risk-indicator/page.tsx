@@ -23,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import type { BackendPlant } from "@/lib/api/plants-api";
 import { fetchFarmerRisk, type BackendAssessment } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 type Entry = { plant: BackendPlant; latest: BackendAssessment | null };
 
@@ -216,13 +218,23 @@ function PlantRiskCard({ plant, latest }: Entry) {
   const assessed = group !== "none";
 
   return (
+    // The level's border is set through a variable, not inline, so the
+    // crop-coloured outline (as on My Plants and Harvest) can replace it
+    // while the card is pointed at or tapped.
     <li
-      className="bg-card group relative flex flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
-      style={
-        assessed
-          ? { borderColor: tint(color, 45), backgroundImage: `linear-gradient(${tint(color, 8)}, ${tint(color, 8)})` }
-          : undefined
-      }
+      tabIndex={0}
+      className={cn(
+        "bg-card group relative flex flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
+        assessed && "border-(--level)",
+        CROP_OUTLINE,
+      )}
+      style={{
+        ...cropVar(plant.crop.name),
+        ...(assessed && {
+          "--level": tint(color, 45),
+          backgroundImage: `linear-gradient(${tint(color, 8)}, ${tint(color, 8)})`,
+        }),
+      } as React.CSSProperties}
     >
       <span
         aria-hidden="true"
