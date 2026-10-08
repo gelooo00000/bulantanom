@@ -47,52 +47,36 @@ export const duration = defineMessages({
     bik: "Pwede na · {time} na sana",
   },
 
-  "calendarChart.title": { en: "Harvest calendar", fil: "Kalendaryo ng ani", bik: "Kalendaryo san ani" },
-  "calendarChart.summaryNone": {
-    en: "No harvests due in the next 12 months.",
-    fil: "Walang aanihin sa susunod na 12 buwan.",
-    bik: "Waray aanihon sa masunod na 12 bulan.",
+  "timeline.title": { en: "Harvest timeline", fil: "Takdang panahon ng ani", bik: "Panahon san ani" },
+  "timeline.summary": {
+    en: "{n} to harvest in the next {months} months · {ready} ready now",
+    fil: "{n} ang aanihin sa susunod na {months} buwan · {ready} ang handa na",
+    bik: "{n} an aanihon sa masunod na {months} bulan · {ready} an pwede na",
   },
-  "calendarChart.summary": {
-    en: "{n} ready in the next 12 months · {ready} ready now{later}",
-    fil: "{n} ang aanihin sa susunod na 12 buwan · {ready} ang handa na{later}",
-    bik: "{n} an aanihon sa masunod na 12 bulan · {ready} an pwede na{later}",
+  "timeline.summaryNone": {
+    en: "Nothing to harvest in the next {months} months.",
+    fil: "Walang aanihin sa susunod na {months} buwan.",
+    bik: "Waray aanihon sa masunod na {months} bulan.",
   },
-  "calendarChart.later": {
-    en: " · {n} after that",
-    fil: " · {n} pagkatapos noon",
-    bik: " · {n} pakatapos kaidto",
+  "timeline.rangeLabel": { en: "How far ahead", fil: "Gaano kalayo", bik: "Gurano kaharayo" },
+  "timeline.range": { en: "{n} mo", fil: "{n} buwan", bik: "{n} bulan" },
+  "timeline.readyNow": { en: "Ready now", fil: "Handa na", bik: "Pwede na" },
+  "timeline.tomorrow": { en: "Ready tomorrow", fil: "Handa bukas", bik: "Pwede buwas" },
+  "timeline.in": { en: "in {time}", fil: "sa loob ng {time}", bik: "sa sulod san {time}" },
+  "timeline.window": {
+    en: "Harvest from {from} to {to} · about {time}",
+    fil: "Anihin mula {from} hanggang {to} · mga {time}",
+    bik: "Anihon poon {from} sagkod {to} · mga {time}",
   },
-  "calendarChart.month": { en: "Month", fil: "Buwan", bik: "Bulan" },
-  "calendarChart.unit": { en: "plant", fil: "tanim", bik: "tanom" },
-  "calendarChart.name": {
-    en: "Plants ready to harvest each month for the next 12 months.",
-    fil: "Mga tanim na aanihin bawat buwan sa susunod na 12 buwan.",
-    bik: "Mga tanom na aanihon kada bulan sa masunod na 12 bulan.",
+  "timeline.todayKey": { en: "Today, {date}", fil: "Ngayon, {date}", bik: "Yana, {date}" },
+  "timeline.hint": {
+    en: "Tap a plant for its dates.",
+    fil: "I-tap ang tanim para sa mga petsa.",
+    bik: "I-tap an tanom para sa mga petsa.",
   },
-  "calendarChart.hint": {
-    en: "Point at a month to see which plants are ready in it.",
-    fil: "Ituro ang isang buwan para makita kung aling tanim ang handa.",
-    bik: "Ituro an sarong bulan para mahiling kun arin na tanom an pwede na.",
-  },
-  "calendarChart.due": {
-    en: "Ready in {month} · {n}",
-    fil: "Handa sa {month} · {n}",
-    bik: "Pwede sa {month} · {n}",
-  },
-  "calendarChart.none": {
-    en: "Nothing is ready in this month.",
-    fil: "Walang aanihin sa buwang ito.",
-    bik: "Waray aanihon sa bulan na ini.",
-  },
-  "calendarChart.laterNoteOne": {
-    en: "1 more plant is further away than 12 months — a tree crop takes years.",
-    fil: "1 pang tanim ang lampas sa 12 buwan — ilang taon ang punong-kahoy.",
-    bik: "1 pa na tanom an labi sa 12 bulan — pira na taon an kahoy.",
-  },
-  "calendarChart.laterNote": {
-    en: "{n} more plants are further away than 12 months, including tree crops that take years.",
-    fil: "{n} pang tanim ang lampas sa 12 buwan, kabilang ang mga punong tumatagal ng ilang taon.",
-    bik: "{n} pa na tanom an labi sa 12 bulan, kaiba an mga kahoy na naghahaloy nin pira na taon.",
+  "timeline.later": {
+    en: "Later than {months} months ({n})",
+    fil: "Lampas sa {months} buwan ({n})",
+    bik: "Labi sa {months} bulan ({n})",
   },
 });

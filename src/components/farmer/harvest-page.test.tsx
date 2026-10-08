@@ -78,21 +78,28 @@ describe("the harvest calendar", () => {
     expected_harvest_end: "2026-12-24",
   } as Partial<BackendPlant>);
 
-  it("counts a harvest into its month, and one years away as later", () => {
+  it("draws a row for a harvest in range, and lists one years away as later", () => {
     render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
-    expect(screen.getByText(/1 plant ready in the next 12 months/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/1 more plant is further away than 12 months/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 to harvest in the next 6 months · 0 ready now/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Corn/ })).toBeInTheDocument();
+    expect(screen.getByText(/Later than 6 months \(1\)/)).toBeInTheDocument();
   });
 
-  it("names the plants ready in a month when that month is pointed at", async () => {
+  it("changes how far ahead it looks", async () => {
     const user = userEvent.setup();
-    render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
-    expect(screen.getByText(/Point at a month/)).toBeInTheDocument();
+    render(<HarvestCalendar plants={[corn]} today={TODAY} />);
+    await user.click(screen.getByRole("button", { name: "3 mo" }));
+    expect(screen.getByText(/Nothing to harvest in the next 3 months/)).toBeInTheDocument();
+    expect(screen.getByText(/Later than 3 months \(1\)/)).toBeInTheDocument();
+  });
 
-    await user.hover(screen.getByRole("button", { name: /December 2026/ }));
-    expect(screen.getByText(/Ready in December 2026 · 1 plant/)).toBeInTheDocument();
-    expect(screen.getByText("Corn")).toBeInTheDocument();
+  it("shows a plant's harvest dates when its row is tapped", async () => {
+    const user = userEvent.setup();
+    render(<HarvestCalendar plants={[corn]} today={TODAY} />);
+    expect(screen.getByText(/in about 11 weeks|in about 3 months|in \d+/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Corn/ }));
+    expect(
+      screen.getByText(/Harvest from December 10, 2026 to December 24, 2026/),
+    ).toBeInTheDocument();
   });
 });
