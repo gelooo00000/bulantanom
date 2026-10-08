@@ -80,52 +80,6 @@ export type AnalyticsOverview = {
   applies: Record<"risk" | "assessment_trend" | "crops" | "farmers", FilterKey[]>;
 };
 
-export type CropRecommendationStat = {
-  id: string;
-  name: string;
-  emoji: string;
-  count: number;
-  rate: number;
-  by_soil: { label: string; count: number }[];
-  by_season: { wet: number; dry: number };
-};
-
-export type CropRecommendations = {
-  analysed_records: number;
-  crops: CropRecommendationStat[];
-  rows: {
-    record_id: number;
-    crop_id: string;
-    crop: string;
-    emoji: string;
-    rate: number;
-    soil_type: string;
-    season: string;
-    date: string;
-    farmer: string;
-    reason: string;
-  }[];
-  row_count: number;
-  durations: {
-    id: string;
-    name: string;
-    emoji: string;
-    growing_days: number;
-    harvest_window_days: number;
-    total_days: number;
-    planting_months: number[];
-  }[];
-  applies: FilterKey[];
-};
-
-export type RecommendedVsPlanted = {
-  crops: { id: string; name: string; emoji: string; recommended: number; planted: number; followed: number }[];
-  plants_with_advice: number;
-  followed: number;
-  follow_rate: number | null;
-  applies: FilterKey[];
-};
-
 export type HarvestTrends = {
   months: string[];
   planted: number[];
@@ -164,10 +118,6 @@ export type ReportHistoryEntry = {
 export const fetchFilterOptions = (t: string) => get<FilterOptions>("/analytics/filters/", null, t);
 export const fetchSummary = (t: string, f: AnalyticsFilters) => get<AnalyticsSummary>("/analytics/summary/", f, t);
 export const fetchOverview = (t: string, f: AnalyticsFilters) => get<AnalyticsOverview>("/analytics/overview/", f, t);
-export const fetchCropRecommendations = (t: string, f: AnalyticsFilters) =>
-  get<CropRecommendations>("/analytics/crop-recommendations/", f, t);
-export const fetchRecommendedVsPlanted = (t: string, f: AnalyticsFilters) =>
-  get<RecommendedVsPlanted>("/analytics/recommended-vs-planted/", f, t);
 export const fetchHarvestTrends = (t: string, f: AnalyticsFilters) => get<HarvestTrends>("/analytics/harvest-trends/", f, t);
 export const fetchInsights = (t: string, f: AnalyticsFilters) =>
   get<{ insights: Insight[] }>("/analytics/insights/", f, t);

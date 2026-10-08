@@ -1,16 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowRight,
-  CircleHelp,
-  Leaf,
-  OctagonAlert,
-  Sprout,
-  Star,
-  TriangleAlert,
-  Users,
-} from "lucide-react";
+import { ArrowRight, CircleHelp, Leaf, OctagonAlert, Sprout, Star, TriangleAlert, Users } from "lucide-react";
 
 import { AnalyticsChart } from "@/components/analytics/analytics-chart";
 import {
@@ -22,18 +13,15 @@ import {
   LiveDataNote,
   StatCard,
 } from "@/components/analytics/cards";
-import { FilterBar } from "@/components/analytics/filter-bar";
 import { CROP_PAGE_SIZE, HorizontalBars, WeeklyColumns, type BarRow } from "@/components/lgu/dashboard-charts";
 import { RiskPie } from "@/components/lgu/risk-pie";
 import { PageHeader } from "@/components/shared/page-header";
-import { ignoredFilters, useAnalyticsFilters } from "@/lib/analytics/use-analytics-filters";
 import {
   analyticsQuery,
-  fetchCropRecommendations,
+  EMPTY_FILTERS,
   fetchHarvestTrends,
   fetchInsights,
   fetchOverview,
-  fetchRecommendedVsPlanted,
   fetchSummary,
   type AnalyticsFilters,
 } from "@/lib/api/analytics-api";
@@ -49,23 +37,20 @@ export function monthLabel(ym: string) {
   return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: "short", year: "2-digit" });
 }
 
-export const ANALYTICS_HOME = "/lgu/analytics";
-
 /** Distinct series colours that hold up in both themes. */
 export const CROP_COLORS = ["var(--primary)", "var(--chart-series-1)", "var(--risk-medium)", "var(--risk-high)", "var(--muted-foreground)"];
 
 /**
- * The Agricultural Analytics System: KPIs, the global filter bar, and every
- * card, chart and the map reading those filters. All figures come from
- * /api/analytics/*, counted from the database at request time.
+ * The Agricultural Analytics System: KPIs, the four farm cards, the harvest
+ * trend and insights, always across every record. The dashboard has no
+ * filter bar, so it deliberately ignores any filters left in the address.
+ * All figures come from /api/analytics/*, counted at request time.
  */
 export function AnalyticsDashboard() {
-  const { filters, setFilters, reset, carry } = useAnalyticsFilters();
+  const filters = EMPTY_FILTERS;
 
   const summary = useFiltered(fetchSummary, filters);
   const overview = useFiltered(fetchOverview, filters);
-  const recs = useFiltered(fetchCropRecommendations, filters);
-  const rvp = useFiltered(fetchRecommendedVsPlanted, filters);
   const harvest = useFiltered(fetchHarvestTrends, filters);
   const insights = useFiltered(fetchInsights, filters);
 
@@ -102,8 +87,6 @@ export function AnalyticsDashboard() {
         </p>
       )}
 
-      <FilterBar filters={filters} onChange={setFilters} onReset={reset} />
-
       {highRisk > 0 && (
         <div role="alert" className="border-risk-high/40 bg-risk-high/10 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
@@ -113,8 +96,8 @@ export function AnalyticsDashboard() {
                 {highRisk} plant{highRisk === 1 ? "" : "s"} reading high risk
               </p>
               <p className="text-muted-foreground mt-0.5 text-sm">
-                From the latest weekly check{highRisk === 1 ? "" : "s"} in this view. Review the AI
-                reasoning and evidence photo before contacting the farmer.
+                {highRisk === 1 ? "This plant" : "These plants"} had a high-risk result on the latest
+                weekly check. Review the AI reasoning and evidence photo before contacting the farmer.
               </p>
             </div>
           </div>
@@ -125,12 +108,10 @@ export function AnalyticsDashboard() {
         </div>
       )}
 
-      {/* The original four cards, now following the filters. */}
       <div className="grid gap-3 lg:grid-cols-2">
-        <ChartCard title="Plant risk" description="Latest AI reading per plant across approved farmers." href="/lgu/risks" linkLabel="Risk overview"
-          ignored={overview.data ? ignoredFilters(filters, overview.data.applies.risk) : []}>
+        <ChartCard title="Plant risk" description="Latest AI reading per plant across approved farmers." href="/lgu/risks" linkLabel="Risk overview">
           <CardState query={overview} isEmpty={(d) => d.risk.LOW + d.risk.MEDIUM + d.risk.HIGH + d.risk.unassessed === 0}
-            emptyHint="No plants match these filters.">
+            emptyHint="No plants recorded yet.">
             {(d) => {
               const rows: BarRow[] = [
                 { key: "HIGH", label: "High risk", value: d.risk.HIGH, color: "var(--risk-high)", icon: OctagonAlert },
@@ -148,14 +129,12 @@ export function AnalyticsDashboard() {
           </CardState>
         </ChartCard>
 
-        <ChartCard title="Weekly assessments" description="Are farmers keeping up their weekly plant checks?" href="/lgu/assessments" linkLabel="History"
-          ignored={overview.data ? ignoredFilters(filters, overview.data.applies.assessment_trend) : []}>
+        <ChartCard title="Weekly assessments" description="Are farmers keeping up their weekly plant checks?" href="/lgu/assessments" linkLabel="History">
           <CardState query={overview}>{(d) => <WeeklyColumns weeks={d.assessment_trend} />}</CardState>
         </ChartCard>
 
-        <ChartCard title="Crops planted" description="Plants per crop at Layuan, most planted first." href="/lgu/plants" linkLabel="All plants"
-          ignored={overview.data ? ignoredFilters(filters, overview.data.applies.crops) : []}>
-          <CardState query={overview} isEmpty={(d) => d.crops.length === 0} emptyHint="No plants match these filters.">
+        <ChartCard title="Crops planted" description="Plants per crop at Layuan, most planted first." href="/lgu/plants" linkLabel="All plants">
+          <CardState query={overview} isEmpty={(d) => d.crops.length === 0} emptyHint="No plants recorded yet.">
             {(d) => (
               <HorizontalBars
                 rows={d.crops.map((c) => ({ key: c.name, label: c.name, emoji: c.emoji, value: c.count, color: "var(--primary)" }))}
@@ -165,9 +144,8 @@ export function AnalyticsDashboard() {
           </CardState>
         </ChartCard>
 
-        <ChartCard title="Farmer accounts" description="Farmer accounts by status." href="/lgu/farmers" linkLabel="Farmer records"
-          ignored={overview.data ? ignoredFilters(filters, overview.data.applies.farmers) : []}>
-          <CardState query={overview} isEmpty={(d) => d.farmers.total === 0} emptyHint="No farmer accounts match these filters.">
+        <ChartCard title="Farmer accounts" description="Farmer accounts by status." href="/lgu/farmers" linkLabel="Farmer records">
+          <CardState query={overview} isEmpty={(d) => d.farmers.total === 0} emptyHint="No farmer accounts yet.">
             {(d) => (
               <HorizontalBars
                 rows={[
@@ -180,85 +158,12 @@ export function AnalyticsDashboard() {
             )}
           </CardState>
         </ChartCard>
-
-        {/* New cards */}
-        <ChartCard title="Crop recommendations" description="Crops the system recommended most, by soil type and season."
-          ignored={recs.data ? ignoredFilters(filters, recs.data.applies) : []}>
-          <CardState query={recs} isEmpty={(d) => d.crops.length === 0} emptyHint="No analysed soil records match these filters.">
-            {(d) => {
-              const top = d.crops.slice(0, 6);
-              return (
-                <div className="flex flex-col gap-3">
-                  <AnalyticsChart
-                    type="bar"
-                    horizontal
-                    stacked
-                    height={Math.max(160, top.length * 40 + 50)}
-                    categories={top.map((c) => `${c.emoji} ${c.name}`)}
-                    series={[
-                      { name: "Wet season", data: top.map((c) => c.by_season.wet), color: "var(--chart-series-1)" },
-                      { name: "Dry season", data: top.map((c) => c.by_season.dry), color: "var(--risk-medium)" },
-                    ]}
-                    unit="recommendation"
-                    label="Top recommended crops by season"
-                  />
-                  <ul className="text-muted-foreground flex flex-col gap-1 text-[11px]">
-                    {top.slice(0, 3).map((c) => (
-                      <li key={c.id}>
-                        <span className="text-foreground font-medium">{c.name}</span> ({c.rate}% of records) on{" "}
-                        {c.by_soil.map((s) => `${s.label} ${s.count}`).join(", ")}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            }}
-          </CardState>
-        </ChartCard>
-
-        <ChartCard title="Recommended vs. planted" description="How closely farmers plant what their soil records recommended."
-          ignored={rvp.data ? ignoredFilters(filters, rvp.data.applies) : []}>
-          <CardState query={rvp} isEmpty={(d) => d.crops.length === 0} emptyHint="No recommendations or plantings match these filters.">
-            {(d) => {
-              const top = d.crops.slice(0, 7);
-              return (
-                <div className="flex flex-col gap-3">
-                  <p className="text-sm">
-                    {d.follow_rate === null ? (
-                      <span className="text-muted-foreground">No planting was made after a soil recommendation yet.</span>
-                    ) : (
-                      <>
-                        <span className="font-heading text-primary text-2xl font-medium">{d.follow_rate}%</span>{" "}
-                        <span className="text-muted-foreground">
-                          of plantings after a recommendation used a recommended crop ({d.followed} of {d.plants_with_advice}).
-                        </span>
-                      </>
-                    )}
-                  </p>
-                  <AnalyticsChart
-                    type="bar"
-                    height={240}
-                    categories={top.map((c) => c.name)}
-                    series={[
-                      { name: "Recommended", data: top.map((c) => c.recommended), color: "var(--chart-series-1)" },
-                      { name: "Planted", data: top.map((c) => c.planted), color: "var(--primary)" },
-                      { name: "Planted as recommended", data: top.map((c) => c.followed), color: "var(--risk-low)" },
-                    ]}
-                    unit="record"
-                    label="Recommended crops compared with crops planted"
-                  />
-                </div>
-              );
-            }}
-          </CardState>
-        </ChartCard>
       </div>
 
       <ChartCard title="Harvest and productivity trend" description="Plantings and harvests per month. Harvests are counted, not weighed: no yield in kilograms is recorded."
-        href={`/lgu/harvest${carry}`} linkLabel="Harvest & monitoring"
-        ignored={harvest.data ? ignoredFilters(filters, harvest.data.applies) : []}>
+        href="/lgu/harvest" linkLabel="Harvest & monitoring">
         <CardState query={harvest} isEmpty={(d) => d.planted.every((n) => n === 0) && d.harvested.every((n) => n === 0)}
-          emptyHint="No plantings or harvests in this period.">
+          emptyHint="No plantings or harvests in the last 12 months.">
           {(d) => (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
               <AnalyticsChart
@@ -292,8 +197,8 @@ export function AnalyticsDashboard() {
         </CardState>
       </ChartCard>
 
-      <ChartCard title="Analytics insights" description="Observations computed from the records in view.">
-        <CardState query={insights} isEmpty={(d) => d.insights.length === 0} emptyHint="There is not enough data in this view for an observation.">
+      <ChartCard title="Analytics insights" description="Observations computed from the farm's records.">
+        <CardState query={insights} isEmpty={(d) => d.insights.length === 0} emptyHint="There is not enough data yet for an observation.">
           {(d) => <InsightCard items={d.insights} />}
         </CardState>
       </ChartCard>
