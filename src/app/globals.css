@@ -557,17 +557,3 @@
     animation: none;
   }
 }
-
-/* The farm map (see farm-map.tsx). MapLibre draws its own controls on white
-   in both themes, but their plain text inherits the page colour — white, in
-   Dark Mode — so it is pinned dark here. */
-.farm-map .maplibregl-ctrl-attrib,
-.farm-map .maplibregl-ctrl-scale,
-.farm-map .maplibregl-cooperative-gesture-screen {
-  font-family: inherit;
-}
-
-.farm-map .maplibregl-ctrl-attrib,
-.farm-map .maplibregl-ctrl-scale {
-  color: #333;
-}

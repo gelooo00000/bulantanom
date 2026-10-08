@@ -3,7 +3,6 @@
 import { Leaf, Sprout, Users } from "lucide-react";
 
 import { LayuanFarmMap } from "@/components/layuan-farm-map/LayuanFarmMap";
-import { FarmMap } from "@/components/lgu/farm-map";
 import { LguError, LguLoading, NotAvailableNotice } from "@/components/lgu/lgu-states";
 import { IconStatCard } from "@/components/shared/icon-stat-card";
 import { PageHeader } from "@/components/shared/page-header";
@@ -59,22 +58,6 @@ export default function LguFarmOverviewPage() {
         </div>
         {/* Follows the app's Light / Dark toggle rather than the OS setting. */}
         <LayuanFarmMap theme={theme} />
-      </section>
-
-      <section aria-labelledby="farm-map-heading" className="flex flex-col gap-3">
-        <div>
-          <h2 id="farm-map-heading" className="font-heading text-sm font-medium">
-            Satellite view
-          </h2>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            Satellite photography over the real terrain around {data.farm.name}.
-          </p>
-        </div>
-        <FarmMap
-          name={data.farm.name}
-          latitude={data.farm.latitude}
-          longitude={data.farm.longitude}
-        />
       </section>
 
       <NotAvailableNotice metrics={data.unavailable_metrics} />
