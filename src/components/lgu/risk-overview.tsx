@@ -101,7 +101,7 @@ export function PlantRisk({
     <div className="grid gap-4 lg:grid-cols-2">
       {/* The pie gives the share at a glance; the rows beside it name each
           level and its count, so colour is never the only cue. */}
-      <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,180px)_1fr]">
+      <div className="grid items-center gap-4 self-start sm:grid-cols-[minmax(0,180px)_1fr]">
         <DonutChart
           rows={riskRows}
           unit="plant"
