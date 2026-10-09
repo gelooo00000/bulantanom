@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { BackendAccountStatus } from "@/lib/api/auth-api";
 import type { LguFarmer } from "@/lib/api/lgu-api";
+import { CROP_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 /**
@@ -190,7 +191,7 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
           )}
         </div>
       ) : (
-        <ul className="border-border divide-border bg-card divide-y overflow-hidden rounded-xl border">
+        <ul className="flex flex-col gap-2">
           {shown.map((farmer) => (
             <FarmerRow key={farmer.id} farmer={farmer} query={query} />
           ))}
@@ -206,7 +207,16 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
     farmer.email.charAt(0).toUpperCase();
 
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+    // A card of its own that lights up on hover or tap, like the farmer's
+    // plant cards; a farmer has no crop, so the light is the app's green.
+    <li
+      tabIndex={0}
+      className={cn(
+        "border-border bg-card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 transition-[border-color,box-shadow]",
+        "[--crop:var(--primary)]",
+        CROP_OUTLINE,
+      )}
+    >
       <span
         aria-hidden="true"
         className="bg-primary/10 text-primary relative flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-medium"
