@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { AssessmentEligibility } from "@/lib/api/risk-api";
 import { useLanguage, type Translate } from "@/lib/i18n";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 
 function daysLabel(days: number, t: Translate) {
   if (days <= 0) return t("lock.today");
@@ -33,7 +34,7 @@ export function AssessmentLockCard({
   const { t, dateLocale } = useLanguage();
   const date = (iso: string) => formatDisplayDate(iso, dateLocale);
   return (
-    <Card className="gap-4 py-5">
+    <Card className={`gap-4 py-5 ${CARD_OUTLINE}`}>
       <CardContent className="flex flex-col gap-4 px-5">
         <div className="flex items-start gap-3">
           <span

@@ -19,6 +19,7 @@ import type {
   SoilRecommendation,
 } from "@/lib/api/soil-api";
 import { useSoilStrings } from "@/lib/soil-options";
+import { CARD_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 /**
@@ -60,7 +61,8 @@ function CropGrid({ crops }: { crops: SoilCropSuggestion[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {crops.map((crop) => (
-        <Card key={crop.id} className="gap-2 py-4">
+        // Lights up in the crop's own colour, like the plant cards.
+        <Card key={crop.id} className={`gap-2 py-4 ${CARD_OUTLINE}`} style={cropVar(crop.name)}>
           <CardContent className="flex flex-col gap-1.5 px-4">
             <div className="flex items-center gap-2">
               {/* The emoji is resolved server-side from the crop catalog. */}

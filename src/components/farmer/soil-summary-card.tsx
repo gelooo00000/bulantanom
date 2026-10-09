@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { SoilCropSuggestion, SoilRecommendation } from "@/lib/api/soil-api";
 import { SOIL_STRINGS as t } from "@/lib/soil-options";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 
 /**
  * Dashboard summary of the Farmer's latest soil assessment.
@@ -76,7 +77,7 @@ export function SoilSummaryCard({ soil }: { soil: SoilRecommendation | null }) {
   }
 
   return (
-    <Card className="gap-3 py-5">
+    <Card className={`gap-3 py-5 ${CARD_OUTLINE}`}>
       <CardContent className="flex flex-col gap-4 px-5">
         {/* The four readings a farmer glances at. The rest are on the full
             recommendation; this is a summary, not the whole assessment. */}

@@ -5,6 +5,7 @@ import type { ElementType } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useFarmerLanguage, type MessageKey } from "@/lib/i18n";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 export type RiskCounts = {
@@ -72,7 +73,7 @@ export function RiskCountsRow({
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {TILES.map((tile) => (
-        <Card key={tile.key} className="gap-1 py-4">
+        <Card key={tile.key} className={`gap-1 py-4 ${CARD_OUTLINE}`}>
           <CardContent className="px-4">
             <span
               className={cn(

@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DatePicker, formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
 import { useLanguage } from "@/lib/i18n";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 
 /**
  * The plants a farmer put in the ground on a date they pick.
@@ -43,7 +44,7 @@ export function CropSuggestionsCard({ plants = [] }: { plants?: BackendPlant[] }
   const earliest = `${(firstPlanting < todayIso() ? firstPlanting : todayIso()).slice(0, 7)}-01`;
 
   return (
-    <Card className="gap-0 py-4">
+    <Card className={`gap-0 py-4 ${CARD_OUTLINE}`}>
       <CardContent className="px-4">
         <div className="flex items-start justify-between gap-3">
           <h2 className="flex items-center gap-1.5 pt-1.5 text-sm font-medium">

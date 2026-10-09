@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { reanalyzeAssessment, type BackendAssessment } from "@/lib/api/risk-api";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useFarmerLanguage } from "@/lib/i18n";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 const SEVERITY_CLASS: Record<string, string> = {
@@ -84,7 +85,7 @@ export function RiskResultCard({
   }
 
   return (
-    <Card className="gap-5 py-5">
+    <Card className={`gap-5 py-5 ${CARD_OUTLINE}`}>
       <CardContent className="flex flex-col gap-5 px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">

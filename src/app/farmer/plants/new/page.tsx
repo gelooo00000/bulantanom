@@ -36,7 +36,7 @@ import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { humanDuration } from "@/lib/duration";
-import { cropColor, cropTint } from "@/lib/crop-colors";
+import { CARD_OUTLINE, cropColor, cropTint, cropVar } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { adviseForMonth, monthFromIsoDate } from "@/lib/planting-season";
 
@@ -242,7 +242,7 @@ export default function AddPlantPage() {
           />
 
           {window && (
-            <Card className="gap-4 py-5">
+            <Card className={`gap-4 py-5 ${CARD_OUTLINE}`}>
               <CardContent className="px-5">
                 <p
                   className="font-heading flex items-center gap-1.5 text-sm tracking-wide"
@@ -270,7 +270,7 @@ export default function AddPlantPage() {
           )}
 
           {ai ? (
-            <Card className="gap-4 py-5">
+            <Card className={`gap-4 py-5 ${CARD_OUTLINE}`}>
               <CardContent className="flex flex-col gap-5 px-5">
                 <div className="flex items-start gap-3">
                   <span
@@ -470,7 +470,10 @@ export default function AddPlantPage() {
 
           {selectedCrop && (
             // Bordered in the chosen crop's own colour, like its card on My Plants.
-            <Card className="py-4" style={{ borderColor: cropColor(selectedCrop.name) }}>
+            <Card
+              className={`py-4 ${CARD_OUTLINE}`}
+              style={{ ...cropVar(selectedCrop.name), borderColor: cropColor(selectedCrop.name) }}
+            >
               <CardContent className="flex flex-col gap-2 px-4 text-sm">
                 <div>
                   <p className="font-heading flex items-center gap-2 font-medium">

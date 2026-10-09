@@ -9,6 +9,7 @@ import { AuthedImage } from "@/components/shared/authed-image";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendAssessment } from "@/lib/api/risk-api";
 import { useFarmerLanguage } from "@/lib/i18n";
+import { CARD_OUTLINE, cropVar } from "@/lib/crop-colors";
 
 /**
  * Compact summary of one assessment. Used by both Farmer history and the
@@ -32,7 +33,7 @@ export function AssessmentRow({
   const [showEvidence, setShowEvidence] = useState(false);
 
   const body = (
-    <Card className="hover:border-primary/40 gap-2 py-4 transition-colors">
+    <Card className={`gap-2 py-4 ${CARD_OUTLINE}`} style={cropVar(assessment.crop_name)}>
       <CardContent className="flex flex-col gap-2 px-5">
         <div className="flex flex-wrap items-center gap-2">
           {level ? (

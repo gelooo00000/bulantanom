@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { type MessageKey, useLanguage } from "@/lib/i18n";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 
 /**
  * Step-by-step directions for the My Plants page, in the order a farmer
@@ -38,7 +39,7 @@ export function MyPlantsGuide({ onClose }: { onClose: () => void }) {
   const { t } = useLanguage();
 
   return (
-    <Card className="gap-0 py-4" aria-labelledby="my-plants-guide-title">
+    <Card className={`gap-0 py-4 ${CARD_OUTLINE}`} aria-labelledby="my-plants-guide-title">
       <CardContent className="px-4">
         <div className="flex items-start justify-between gap-3">
           <div>

@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import type { BackendPlant } from "@/lib/api/plants-api";
 import { fetchFarmerRisk, type BackendAssessment } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
-import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
+import { CARD_OUTLINE, CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -137,7 +137,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-border bg-card flex flex-col gap-4 rounded-2xl border p-5">
+    <section className={cn("border-border bg-card flex flex-col gap-4 rounded-2xl border p-5", CARD_OUTLINE)}>
       <header>
         <h2 className="font-heading text-base font-medium">{title}</h2>
         <p className="text-muted-foreground text-xs">{description}</p>

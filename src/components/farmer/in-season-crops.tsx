@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendCrop } from "@/lib/api/plants-api";
-import { cropColor } from "@/lib/crop-colors";
+import { CARD_OUTLINE, cropColor } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { adviseForMonth, monthName } from "@/lib/planting-season";
 
@@ -93,7 +93,7 @@ export function InSeasonCrops({
   const Icon = sparse ? CloudRain : CalendarCheck;
 
   return (
-    <Card className="gap-0 py-4">
+    <Card className={`gap-0 py-4 ${CARD_OUTLINE}`}>
       <CardContent className="px-4">
         <h2 className="flex items-center gap-1.5 text-sm font-medium">
           <Icon

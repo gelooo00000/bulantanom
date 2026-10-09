@@ -7,7 +7,7 @@ import { SlidePager } from "@/components/shared/slide-pager";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
-import { cropTint } from "@/lib/crop-colors";
+import { CARD_OUTLINE, cropTint } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { plantAgeLabel } from "@/lib/plant-summary";
 
@@ -25,7 +25,7 @@ export function PlantedCrops({ plants }: { plants: BackendPlant[] }) {
     .sort((a, b) => b.planting_date.localeCompare(a.planting_date) || b.id - a.id);
 
   return (
-    <Card className="gap-0 py-4">
+    <Card className={`gap-0 py-4 ${CARD_OUTLINE}`}>
       <CardContent className="px-4">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-sm font-medium">

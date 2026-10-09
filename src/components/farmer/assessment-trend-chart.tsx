@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate, formatShortDate } from "@/components/ui/date-picker";
 import type { AssessmentTrend } from "@/lib/api/dashboard-api";
 import { useLanguage } from "@/lib/i18n";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 
 /**
  * How often this farmer has been assessing, over the last month.
@@ -56,7 +57,7 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
   const last = days[days.length - 1];
 
   return (
-    <Card className="gap-0 py-4">
+    <Card className={`gap-0 py-4 ${CARD_OUTLINE}`}>
       <CardContent className="px-4">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-sm font-medium">{t("trend.title")}</h2>
