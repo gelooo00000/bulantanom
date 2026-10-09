@@ -105,10 +105,10 @@ describe("RiskOverview", () => {
     const user = userEvent.setup();
     render(<RiskOverview plants={PLANTS} />);
     const panel = screen.getByTestId("risk-level-crops");
-    expect(panel).toHaveClass("h-[18.5rem]");
+    expect(panel).toHaveClass("h-52");
     await user.hover(level(/^Not assessed: 1 plant/));
-    expect(panel).toHaveClass("h-[18.5rem]");
-    // The list pages five crops at a time instead of scrolling inside.
+    expect(panel).toHaveClass("h-52");
+    // The list pages three crops at a time instead of scrolling inside.
     expect(within(panel).getByRole("list").parentElement).not.toHaveClass("overflow-y-auto");
   });
 

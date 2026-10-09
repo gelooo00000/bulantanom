@@ -4,7 +4,7 @@ import { CircleHelp, Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
 import type { ElementType, ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import { CROP_PAGE_SIZE, HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
+import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import { Card, CardContent } from "@/components/ui/card";
 import type { LguPlant } from "@/lib/api/lgu-api";
@@ -21,6 +21,9 @@ import { cn } from "@/lib/utils";
  * The body of the LGU Risk overview: how healthy the plants are overall,
  * and which crops sit at each risk level.
  */
+
+// Three crops a page keeps the crop panel as short as the donut beside it.
+const RISK_CROP_PAGE_SIZE = 3;
 
 const LEVELS: { key: RiskKey; label: string; short: string; color: string; icon: ElementType }[] = [
   { key: "HIGH", label: "High risk", short: "high", color: "var(--risk-high)", icon: OctagonAlert },
@@ -121,9 +124,8 @@ export function PlantRisk({
 
       {/* Below the pie on narrow screens, beside it on wide ones.
 
-          A fixed height (just enough for a heading, five crops and the
-          slide buttons), showing five crops at a time with slide buttons to
-          the rest. It used to grow with the list,
+          A fixed height, about the donut's, showing three crops at a time
+          with slide buttons to the rest, so no gap opens under the chart. It used to grow with the list,
           and "Not assessed" (usually the longest) made the page ~450px
           taller on hover. That added a scrollbar and made the browser adjust
           the page, moving things under the pointer; the list closed, the
@@ -131,7 +133,7 @@ export function PlantRisk({
           never changes size cannot start that loop. */}
       <div
         data-testid="risk-level-crops"
-        className="border-border flex h-[18.5rem] flex-col border-t pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
+        className="border-border flex h-52 flex-col border-t pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
         aria-live="polite"
       >
         {level ? (
@@ -156,7 +158,7 @@ export function PlantRisk({
                 rows={rows}
                 unit="plant"
                 label={`Crops at ${level.label.toLowerCase()}`}
-                pageSize={CROP_PAGE_SIZE}
+                pageSize={RISK_CROP_PAGE_SIZE}
               />
             )}
           </>
