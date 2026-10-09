@@ -40,6 +40,7 @@ import {
 } from "@/lib/api/reports-api";
 import { useAuth } from "@/lib/auth/auth-context";
 import { REPORT_STRINGS as t } from "@/lib/report-strings";
+import { CARD_OUTLINE, CROP_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 const REPORT_ICONS: Record<string, ElementType> = {
@@ -252,7 +253,7 @@ export default function LguReportsPage() {
 
       {/* Filters. Mobile order is filters -> list -> preview -> actions, which
           is the order the page already renders in. */}
-      <section className="print-hide border-border bg-card rounded-2xl border p-4">
+      <section className={cn("print-hide border-border bg-card rounded-2xl border p-4", CARD_OUTLINE)}>
         <div className="flex flex-wrap items-end gap-3">
           <FilterSelect
             id="report-period"
@@ -394,6 +395,9 @@ export default function LguReportsPage() {
                   aria-current={active ? "true" : undefined}
                   className={cn(
                     "bg-card relative flex items-start gap-3 overflow-hidden rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md",
+                    // The same light outline as the other cards, on hover or tap.
+                    "[--crop:var(--primary)]",
+                    CROP_OUTLINE,
                     active ? "border-primary/50 shadow-sm" : "border-border",
                   )}
                 >

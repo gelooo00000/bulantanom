@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 
 import type { ReportDocument, ReportStat, ReportTable } from "@/lib/api/reports-api";
 import { REPORT_STRINGS as t } from "@/lib/report-strings";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 const TONE_TEXT: Record<string, string> = {
@@ -27,7 +28,7 @@ function toneOf(value: unknown): string | undefined {
 
 function StatTile({ stat }: { stat: ReportStat }) {
   return (
-    <div className="border-border bg-card relative overflow-hidden rounded-xl border px-3 pt-3.5 pb-2.5">
+    <div className={cn("border-border bg-card relative overflow-hidden rounded-xl border px-3 pt-3.5 pb-2.5", CARD_OUTLINE)}>
       <span
         aria-hidden="true"
         className={cn(
@@ -125,7 +126,7 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
   const generated = new Date(report.generated_at);
 
   return (
-    <article className="report-sheet border-border bg-card relative overflow-hidden rounded-2xl border">
+    <article className={cn("report-sheet border-border bg-card relative overflow-hidden rounded-2xl border", CARD_OUTLINE)}>
       <span aria-hidden="true" className="bg-primary absolute inset-x-0 top-0 h-1" />
 
       <div className="flex flex-col gap-6 px-5 pt-6 pb-5 sm:px-7">
