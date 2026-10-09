@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { CropsPlanted, HarvestOutlook, PlantsOverview } from "@/components/lgu/plants-overview";
 import type { LguPlant } from "@/lib/api/lgu-api";
@@ -32,9 +32,7 @@ const PLANTS = [
 ];
 
 function renderCard() {
-  const onPickCrop = vi.fn();
-  render(<CropsPlanted plants={PLANTS} onPickCrop={onPickCrop} />);
-  return onPickCrop;
+  render(<CropsPlanted plants={PLANTS} />);
 }
 
 const fruitRow = () => screen.getByRole("button", { name: /^Fruit: 3 plants/ });
@@ -43,7 +41,7 @@ describe("CropsPlanted", () => {
   it("shows only the crop types until one is pointed at", () => {
     renderCard();
     expect(fruitRow()).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Pineapple/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Pineapple/)).not.toBeInTheDocument();
     expect(screen.getByText(/Point at Fruit or Vegetables & Crops/)).toBeInTheDocument();
   });
 
@@ -51,13 +49,13 @@ describe("CropsPlanted", () => {
     const user = userEvent.setup();
     renderCard();
     await user.hover(fruitRow());
-    expect(screen.getByRole("button", { name: /^Pineapple: 2 plants/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Banana: 1 plant/ })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Pineapple: 2 plants/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Banana: 1 plant/)).toBeInTheDocument();
     // Only that type's crops — no vegetables mixed in.
-    expect(screen.queryByRole("button", { name: /^Eggplant/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Eggplant/)).not.toBeInTheDocument();
 
     await user.unhover(fruitRow());
-    expect(screen.queryByRole("button", { name: /^Pineapple/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Pineapple/)).not.toBeInTheDocument();
   });
 
   it("keeps a clicked type open so its crops can be reached, and closes on a second click", async () => {
@@ -65,20 +63,12 @@ describe("CropsPlanted", () => {
     renderCard();
     await user.click(fruitRow());
     await user.unhover(fruitRow());
-    expect(screen.getByRole("button", { name: /^Pineapple/ })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Pineapple/)).toBeInTheDocument();
     expect(fruitRow()).toHaveAttribute("aria-pressed", "true");
 
     await user.click(fruitRow());
     await user.unhover(fruitRow());
-    expect(screen.queryByRole("button", { name: /^Pineapple/ })).not.toBeInTheDocument();
-  });
-
-  it("opens the plants of a picked crop", async () => {
-    const user = userEvent.setup();
-    const onPickCrop = renderCard();
-    await user.click(fruitRow());
-    await user.click(screen.getByRole("button", { name: /^Pineapple/ }));
-    expect(onPickCrop).toHaveBeenCalledWith("pineapple");
+    expect(screen.queryByLabelText(/^Pineapple/)).not.toBeInTheDocument();
   });
 });
 
@@ -101,11 +91,7 @@ describe("HarvestOutlook", () => {
   ];
 
   function renderOutlook() {
-    const onPickCrop = vi.fn();
-    render(
-      <HarvestOutlook plants={DUE} onPickCrop={onPickCrop} today={TODAY} />,
-    );
-    return onPickCrop;
+    render(<HarvestOutlook plants={DUE} today={TODAY} />);
   }
 
   const month = (name: RegExp) => screen.getByRole("button", { name });
@@ -117,23 +103,22 @@ describe("HarvestOutlook", () => {
 
     await user.hover(month(/^October 2026: 3 plants/));
     expect(screen.getByText(/Due in October 2026 · 3 plants/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Pineapple: 2 plants/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Banana: 1 plant/ })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Pineapple: 2 plants/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Banana: 1 plant/)).toBeInTheDocument();
     // December's mango is not due in October.
-    expect(screen.queryByRole("button", { name: /^Mango/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Mango/)).not.toBeInTheDocument();
 
     await user.unhover(month(/^October 2026/));
-    expect(screen.queryByRole("button", { name: /^Pineapple/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Pineapple/)).not.toBeInTheDocument();
   });
 
-  it("keeps a clicked month open so its crops can be picked", async () => {
+  it("keeps a clicked month open, showing its crops", async () => {
     const user = userEvent.setup();
-    const onPickCrop = renderOutlook();
+    renderOutlook();
     await user.click(month(/^December 2026: 1 plant/));
     await user.unhover(month(/^December 2026/));
     expect(month(/^December 2026/)).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: /^Mango: 1 plant/ }));
-    expect(onPickCrop).toHaveBeenCalledWith("mango");
+    expect(screen.getByLabelText(/^Mango: 1 plant/).tagName).not.toBe("BUTTON");
   });
 
   it("says so for a month with nothing due", async () => {
@@ -144,21 +129,10 @@ describe("HarvestOutlook", () => {
   });
 });
 
-const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-
 describe("PlantsOverview", () => {
-  it("no longer lists every plant — that list lives on the Risk overview", () => {
+  it("has no plant list", () => {
     render(<PlantsOverview plants={PLANTS} />);
     expect(screen.queryByRole("region", { name: "All plants" })).not.toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
-  });
-
-  it("opens the Risk overview filtered to a crop picked from the chart", async () => {
-    const user = userEvent.setup();
-    render(<PlantsOverview plants={PLANTS} />);
-    await user.click(screen.getByRole("button", { name: /^Fruit: 3 plants/ }));
-    await user.click(screen.getByRole("button", { name: /^Pineapple: 2 plants/ }));
-    expect(push).toHaveBeenCalledWith("/lgu/risks?crop=pineapple");
   });
 });

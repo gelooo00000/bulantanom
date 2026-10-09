@@ -2,10 +2,9 @@
 
 import { CircleHelp, Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
 import type { ElementType, ReactNode } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { CROP_PAGE_SIZE, HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
-import { NO_FILTERS, PlantDirectory, type PlantFilters } from "@/components/lgu/plant-directory";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import { Card, CardContent } from "@/components/ui/card";
 import type { LguPlant } from "@/lib/api/lgu-api";
@@ -19,13 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The body of the LGU Risk overview. It answers how healthy the plants are
- * overall, and which crops sit at each risk level, then lists every plant
- * behind that answer. The chart filters the list, so a tap on a crop goes
- * straight to those plants.
- *
- * Everything is worked out from the one plant list, so the charts and the
- * list can never disagree.
+ * The body of the LGU Risk overview: how healthy the plants are overall,
+ * and which crops sit at each risk level.
  */
 
 const LEVELS: { key: RiskKey; label: string; short: string; color: string; icon: ElementType }[] = [
@@ -35,17 +29,7 @@ const LEVELS: { key: RiskKey; label: string; short: string; color: string; icon:
   { key: "NONE", label: "Not assessed", short: "not assessed", color: "var(--muted-foreground)", icon: CircleHelp },
 ];
 
-export function RiskOverview({
-  plants,
-  initialCropId = null,
-}: {
-  plants: LguPlant[];
-  /** From `?crop=` when arriving from a crop on the Plants page. */
-  initialCropId?: string | null;
-}) {
-  const [filters, setFilters] = useState<PlantFilters>({ ...NO_FILTERS, cropId: initialCropId });
-  const listRef = useRef<HTMLElement>(null);
-
+export function RiskOverview({ plants }: { plants: LguPlant[] }) {
   const tally = useMemo(() => riskTally(plants), [plants]);
 
   const riskRows: BarRow[] = useMemo(
@@ -60,49 +44,27 @@ export function RiskOverview({
     [tally],
   );
 
-  // A chart tap sets one filter (clearing the others, so the list shows
-  // exactly what was tapped) and brings the list into view.
-  function show(next: Partial<PlantFilters>) {
-    setFilters({ ...NO_FILTERS, ...next });
-    listRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-  }
-
   return (
-    <div className="flex flex-col gap-5">
-      <Panel
-        title="Plant risk"
-        description="Latest AI reading for each plant — point at a level to see its crops."
-      >
-        <PlantRisk
-          plants={plants}
-          riskRows={riskRows}
-          onShow={(risk, cropId) => show({ risk, cropId })}
-        />
-      </Panel>
-
-      <section ref={listRef} aria-label="All plants" className="flex scroll-mt-4 flex-col gap-3">
-        <h2 className="text-sm font-medium">All plants</h2>
-        <PlantDirectory plants={plants} filters={filters} onFiltersChange={setFilters} />
-      </section>
-    </div>
+    <Panel
+      title="Plant risk"
+      description="Latest AI reading for each plant — point at a level to see its crops."
+    >
+      <PlantRisk plants={plants} riskRows={riskRows} />
+    </Panel>
   );
 }
 
 /**
  * The risk share, and the crops at each level. Pointing at a level (its
  * slice or its row) reveals the crops at that level underneath; moving away
- * hides them. Clicking keeps a level open so its crops can be reached —
- * picking one lists those plants, and "Show all" lists the whole level.
+ * hides them. Clicking keeps a level open.
  */
 export function PlantRisk({
   plants,
   riskRows,
-  onShow,
 }: {
   plants: LguPlant[];
   riskRows: BarRow[];
-  /** List the plants at `risk`, optionally only those of one crop. */
-  onShow: (risk: RiskKey, cropId: string | null) => void;
 }) {
   const [hoverLevel, setHoverLevel] = useState<RiskKey | null>(null);
   const [pinnedLevel, setPinnedLevel] = useState<RiskKey | null>(null);
@@ -187,30 +149,19 @@ export function PlantRisk({
             {count === 0 ? (
               <p className="text-muted-foreground text-xs">No plants at this level.</p>
             ) : (
-              <>
-                {/* Keyed by level, so another level starts on its first crops. */}
-                <HorizontalBars
-                  key={level.key}
-                  rows={rows}
-                  unit="plant"
-                  label={`Crops at ${level.label.toLowerCase()}`}
-                  onSelect={(cropId) => onShow(level.key, cropId)}
-                  pageSize={CROP_PAGE_SIZE}
-                />
-                <button
-                  type="button"
-                  onClick={() => onShow(level.key, null)}
-                  className="text-muted-foreground hover:text-foreground mt-3 shrink-0 self-start text-xs underline underline-offset-2"
-                >
-                  Show all {count} {level.label.toLowerCase()} plant{count === 1 ? "" : "s"}
-                </button>
-              </>
+              // Keyed by level, so another level starts on its first crops.
+              <HorizontalBars
+                key={level.key}
+                rows={rows}
+                unit="plant"
+                label={`Crops at ${level.label.toLowerCase()}`}
+                pageSize={CROP_PAGE_SIZE}
+              />
             )}
           </>
         ) : (
           <p className="text-muted-foreground text-xs">
-            Point at a risk level to see which crops are at it. Click to keep it open, then pick
-            a crop to list its plants.
+            Point at a risk level to see which crops are at it. Click to keep it open.
           </p>
         )}
       </div>

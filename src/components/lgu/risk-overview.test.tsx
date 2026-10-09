@@ -63,11 +63,6 @@ describe("risk statistics", () => {
   });
 });
 
-function listRows() {
-  const list = screen.getByRole("region", { name: "All plants" });
-  return within(list).getAllByRole("listitem").map((li) => li.textContent ?? "");
-}
-
 describe("RiskOverview", () => {
   it("has no AI readings tab", () => {
     render(<RiskOverview plants={PLANTS} />);
@@ -96,11 +91,11 @@ describe("RiskOverview", () => {
     // Low: Maria's corn and Ana's corn.
     await user.hover(level(/^Low risk: 2 plants/));
     expect(screen.getByText(/Low risk · 2 plants/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Corn: 2 plants/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Pineapple: / })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^Corn: 2 plants/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Pineapple: /)).not.toBeInTheDocument();
 
     await user.unhover(level(/^Low risk: 2 plants/));
-    expect(screen.queryByRole("button", { name: /^Corn: 2 plants/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Corn: 2 plants/)).not.toBeInTheDocument();
   });
 
   it("keeps the crop panel one fixed size, however long the list it reveals", async () => {
@@ -117,30 +112,19 @@ describe("RiskOverview", () => {
     expect(within(panel).getByRole("list").parentElement).not.toHaveClass("overflow-y-auto");
   });
 
-  it("keeps a clicked level open and lists its plants of one crop", async () => {
+  it("no longer lists every plant", () => {
+    render(<RiskOverview plants={PLANTS} />);
+    expect(screen.queryByRole("region", { name: "All plants" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+  });
+
+  it("keeps a clicked level open, showing its crops as plain rows", async () => {
     const user = userEvent.setup();
     render(<RiskOverview plants={PLANTS} />);
     await user.click(level(/^High risk: 2 plants/));
     await user.unhover(level(/^High risk: 2 plants/));
     expect(level(/^High risk: 2 plants/)).toHaveAttribute("aria-pressed", "true");
-
-    await user.click(screen.getByRole("button", { name: /^Pineapple: 2 plants/ }));
-    expect(listRows()).toHaveLength(2);
-    expect(listRows().every((row) => row.includes("High risk"))).toBe(true);
-  });
-
-  it("lists every plant at a level from Show all", async () => {
-    const user = userEvent.setup();
-    render(<RiskOverview plants={PLANTS} />);
-    await user.click(level(/^Not assessed: 1 plant/));
-    await user.click(screen.getByRole("button", { name: "Show all 1 not assessed plant" }));
-    expect(listRows()).toHaveLength(1);
-    expect(listRows()[0]).toContain("Not assessed");
-  });
-
-  it("starts filtered to a crop picked on the Plants page", () => {
-    render(<RiskOverview plants={PLANTS} initialCropId="pineapple" />);
-    expect(listRows()).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "Stop filtering by Pineapple" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Pineapple: 2 plants/).tagName).not.toBe("BUTTON");
+    expect(screen.queryByRole("button", { name: /^Show all/ })).not.toBeInTheDocument();
   });
 });

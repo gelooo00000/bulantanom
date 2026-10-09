@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
@@ -23,10 +22,6 @@ import {
 /**
  * The body of the LGU Plants page: what is growing at Layuan, and when it
  * comes in.
- *
- * The plant-by-plant list lives on the Risk overview, where each plant's
- * risk is the point. Picking a crop in either chart opens that list
- * already filtered to the crop.
  */
 
 const OUTLOOK_MONTHS = 6;
@@ -43,9 +38,6 @@ const CROP_TYPE_COLOR: Record<string, string> = {
 };
 
 export function PlantsOverview({ plants }: { plants: LguPlant[] }) {
-  const router = useRouter();
-  const openCrop = (cropId: string) =>
-    router.push(`/lgu/risks?crop=${encodeURIComponent(cropId)}`);
   const farmerCount = useMemo(() => new Set(plants.map((p) => p.farmer.id)).size, [plants]);
 
   return (
@@ -60,14 +52,14 @@ export function PlantsOverview({ plants }: { plants: LguPlant[] }) {
           title="Crops planted"
           description="Fruit or vegetables — point at one to see its crops."
         >
-          <CropsPlanted plants={plants} onPickCrop={openCrop} />
+          <CropsPlanted plants={plants} />
         </ChartCard>
 
         <ChartCard
           title="Harvest outlook"
           description="Plants due for harvest each month — point at a month to see its crops."
         >
-          <HarvestOutlook plants={plants} onPickCrop={openCrop} />
+          <HarvestOutlook plants={plants} />
         </ChartCard>
       </div>
     </div>
@@ -78,17 +70,9 @@ export function PlantsOverview({ plants }: { plants: LguPlant[] }) {
  * Crop type and the crops inside it, as one chart. The donut and the type
  * rows beside it show Fruit against Vegetables; pointing at either reveals
  * that type's crops underneath, and moving away hides them again. Clicking
- * keeps a type open — without that, the crops would vanish the moment the
- * pointer moved down to reach them. Picking a crop opens its plants.
+ * keeps a type open, so its crops stay up while the pointer moves away.
  */
-export function CropsPlanted({
-  plants,
-  onPickCrop,
-}: {
-  plants: LguPlant[];
-  /** Called with a crop's id when it is picked from the revealed list. */
-  onPickCrop: (cropId: string) => void;
-}) {
+export function CropsPlanted({ plants }: { plants: LguPlant[] }) {
   const [hoverType, setHoverType] = useState<string | null>(null);
   const [pinnedType, setPinnedType] = useState<string | null>(null);
   const shownType = hoverType ?? pinnedType;
@@ -170,14 +154,13 @@ export function CropsPlanted({
               rows={shownRows}
               unit="plant"
               label={`${shownType} crops`}
-              onSelect={onPickCrop}
               pageSize={CROP_PAGE_SIZE}
             />
           </>
         ) : (
           <p className="text-muted-foreground text-xs">
             Point at {typeRows.map((row) => row.label).join(" or ")} to see its crops. Click to
-            keep them open, then pick a crop to see its plants and their risk.
+            keep them open.
           </p>
         )}
       </div>
@@ -191,17 +174,13 @@ const monthName = (date: Date, month: "short" | "long") =>
 /**
  * Plants coming due each month, and which crops they are. Pointing at a
  * month reveals the crops due in it underneath and moving away hides them;
- * clicking keeps a month open so its crops can be reached, and picking a
- * crop opens its plants — the same behaviour as "Crops planted".
+ * clicking keeps a month open — the same behaviour as "Crops planted".
  */
 export function HarvestOutlook({
   plants,
-  onPickCrop,
   today = new Date(),
 }: {
   plants: LguPlant[];
-  /** Called with a crop's id when it is picked from the revealed list. */
-  onPickCrop: (cropId: string) => void;
   /** Injected by tests; the page always uses the real date. */
   today?: Date;
 }) {
@@ -280,15 +259,13 @@ export function HarvestOutlook({
                 rows={outlook.cropRows[shownMonth!]}
                 unit="plant"
                 label={`Crops due in ${monthName(shown.month, "long")}`}
-                onSelect={onPickCrop}
                 pageSize={CROP_PAGE_SIZE}
               />
             )}
           </>
         ) : (
           <p className="text-muted-foreground text-xs">
-            Point at a month to see which crops are due. Click to keep it open, then pick a
-            crop to see its plants and their risk.
+            Point at a month to see which crops are due. Click to keep it open.
           </p>
         )}
       </div>
