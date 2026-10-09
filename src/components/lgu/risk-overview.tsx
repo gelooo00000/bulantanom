@@ -121,7 +121,8 @@ export function PlantRisk({
 
       {/* Below the pie on narrow screens, beside it on wide ones.
 
-          A fixed height, showing five crops at a time with slide buttons to
+          A fixed height (just enough for a heading, five crops and the
+          slide buttons), showing five crops at a time with slide buttons to
           the rest. It used to grow with the list,
           and "Not assessed" (usually the longest) made the page ~450px
           taller on hover. That added a scrollbar and made the browser adjust
@@ -130,7 +131,7 @@ export function PlantRisk({
           never changes size cannot start that loop. */}
       <div
         data-testid="risk-level-crops"
-        className="border-border flex h-96 flex-col border-t pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
+        className="border-border flex h-[18.5rem] flex-col border-t pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
         aria-live="polite"
       >
         {level ? (
