@@ -2,7 +2,6 @@
 
 import {
   BarChart3,
-  ClipboardList,
   FileText,
   MapPin,
   Radar,
@@ -28,7 +27,6 @@ const LGU_NAV_ITEMS: NavItem[] = [
   { label: "Plants", href: "/lgu/plants", icon: Sprout },
   { label: "Risk Overview", href: "/lgu/risks", icon: Radar },
   { label: "High-Risk Cases", href: "/lgu/high-risk", icon: TriangleAlert },
-  { label: "Assessment History", href: "/lgu/assessments", icon: ClipboardList },
   HARVEST,
   REPORTS,
   FARM,

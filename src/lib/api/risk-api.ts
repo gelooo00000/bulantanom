@@ -285,16 +285,3 @@ export function fetchLguRiskOverview(accessToken: string): Promise<{
 export function fetchLguHighRisk(accessToken: string): Promise<BackendAssessment[]> {
   return apiFetch("/lgu/risk/high-risk/", { accessToken });
 }
-
-export function fetchLguAssessmentHistory(
-  accessToken: string,
-): Promise<BackendAssessment[]> {
-  return apiFetch("/lgu/assessments/history/", { accessToken });
-}
-
-export function fetchLguAssessment(
-  accessToken: string,
-  assessmentId: number | string,
-): Promise<BackendAssessment> {
-  return apiFetch(`/lgu/assessments/${assessmentId}/`, { accessToken });
-}

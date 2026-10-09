@@ -113,7 +113,7 @@ export function AnalyticsDashboard() {
           </CardState>
         </ChartCard>
 
-        <ChartCard title="Weekly assessments" description="Are farmers keeping up their weekly plant checks?" href="/lgu/assessments" linkLabel="History">
+        <ChartCard title="Weekly assessments" description="Are farmers keeping up their weekly plant checks?">
           <CardState query={overview}>{(d) => <WeeklyColumns weeks={d.assessment_trend} />}</CardState>
         </ChartCard>
 

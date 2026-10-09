@@ -19,11 +19,11 @@ def build_route(notification) -> str | None:
     if notification.related_type == RelatedType.ASSESSMENT and related_id:
         if role == UserRole.LGU_OFFICER:
             # The LGU has no per-assessment page; high risk belongs in the
-            # High-Risk Cases queue, everything else in the history list.
+            # High-Risk Cases queue, everything else in the Risk Overview.
             return (
                 "/lgu/high-risk"
                 if notification.notification_type == "RISK_HIGH"
-                else "/lgu/assessments"
+                else "/lgu/risks"
             )
         return f"/farmer/assessments/{related_id}"
 
