@@ -18,6 +18,8 @@ import {
   harvestOutlook,
   harvestStatus,
 } from "@/lib/lgu-plant-stats";
+import { CARD_OUTLINE, cropColor } from "@/lib/crop-colors";
+import { cn } from "@/lib/utils";
 
 /**
  * The body of the LGU Plants page: what is growing at Layuan, and when it
@@ -98,7 +100,7 @@ export function CropsPlanted({ plants }: { plants: LguPlant[] }) {
         label: crop.name,
         emoji: crop.emoji,
         value: crop.count,
-        color: type.color,
+        color: cropColor(crop.name),
       }));
       byType.set(type.key, rows);
     }
@@ -200,7 +202,7 @@ export function HarvestOutlook({
         label: crop.name,
         emoji: crop.emoji,
         value: crop.count,
-        color: "var(--primary)",
+        color: cropColor(crop.name),
       })),
     );
     return { buckets, later, total, readyNow, peak, cropRows };
@@ -219,6 +221,12 @@ export function HarvestOutlook({
           title: monthName(bucket.month, "long"),
           tableLabel: monthName(bucket.month, "long"),
           count: bucket.count,
+          // Each month's column split by crop, in the crops' own colours.
+          segments: cropCounts(bucket.plants).map((crop) => ({
+            key: crop.id,
+            color: cropColor(crop.name),
+            count: crop.count,
+          })),
         }))}
         unit="plant"
         tableHeading="Month"
@@ -285,7 +293,7 @@ function ChartCard({
   children: ReactNode;
 }) {
   return (
-    <Card className={`gap-0 py-4 ${className ?? ""}`}>
+    <Card className={cn("gap-0 py-4", CARD_OUTLINE, className)}>
       <CardContent className="px-4">
         <h2 className="text-sm font-medium">{title}</h2>
         <p className="text-muted-foreground mt-0.5 mb-4 text-xs">{description}</p>

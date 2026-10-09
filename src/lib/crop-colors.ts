@@ -55,6 +55,14 @@ export function cropTint(cropName: string, percent = 18): string {
 export const CROP_OUTLINE =
   "outline-none hover:border-(--crop) hover:ring-3 hover:ring-(--crop)/25 focus:border-(--crop) focus:ring-3 focus:ring-(--crop)/25 active:border-(--crop) active:ring-3 active:ring-(--crop)/25";
 
+/**
+ * The same light outline for a card that is not one crop's (a chart, a
+ * report): on hover it lights up in the app's primary colour, or in the
+ * crop's colour when `cropVar` is set on the element.
+ */
+export const CARD_OUTLINE =
+  "transition-[border-color,box-shadow] [--crop:var(--primary)] hover:border-(--crop) hover:ring-3 hover:ring-(--crop)/25";
+
 /** Sets `--crop` for CROP_OUTLINE and other `(--crop)` classes. */
 export function cropVar(cropName: string): React.CSSProperties {
   return { "--crop": cropColor(cropName) } as React.CSSProperties;

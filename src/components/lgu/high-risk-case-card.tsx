@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BackendAssessment } from "@/lib/api/risk-api";
+import { cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 const SEVERITY_CLASS: Record<string, string> = {
@@ -57,10 +58,14 @@ export function HighRiskCaseCard({ assessment }: { assessment: BackendAssessment
   return (
     <Card
       className={cn(
-        "gap-0 overflow-hidden py-0 transition-colors",
+        "gap-0 overflow-hidden py-0 transition-[border-color,box-shadow]",
         level && "border-l-4",
         level ? ACCENT_CLASS[level] : undefined,
+        // A light in the crop's colour, as on the farmer's cards; the
+        // risk-coloured left edge stays.
+        "hover:ring-3 hover:ring-(--crop)/30 focus-within:ring-3 focus-within:ring-(--crop)/30",
       )}
+      style={cropVar(assessment.crop_name)}
     >
       <button
         type="button"

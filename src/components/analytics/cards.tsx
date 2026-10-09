@@ -17,6 +17,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import type { Trend } from "@/lib/api/analytics-api";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 /* ---------------------------------------------------------------------------
@@ -148,7 +149,7 @@ export function ChartCard({
   children: ReactNode;
 }) {
   return (
-    <section className={cn("border-border bg-card flex min-w-0 flex-col rounded-2xl border p-4", className)}>
+    <section className={cn("border-border bg-card flex min-w-0 flex-col rounded-2xl border p-4", CARD_OUTLINE, className)}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-heading text-sm font-medium">{title}</h2>
         {href && linkLabel ? (

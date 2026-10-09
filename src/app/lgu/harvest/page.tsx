@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { fetchLguPlants, type LguPlant } from "@/lib/api/lgu-api";
 import { useLguQuery } from "@/lib/api/use-authed-query";
+import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 /**
@@ -92,7 +93,13 @@ function PlantCard({ plant }: { plant: LguPlant }) {
   const checkDue = inField(plant) && plant.assessment_eligibility?.can_assess;
 
   return (
-    <Card className="gap-2 py-4">
+    // Outlined in the crop's colour when pointed at or tapped, as on the
+    // farmer's cards.
+    <Card
+      tabIndex={0}
+      className={cn("gap-2 py-4 transition-[border-color,box-shadow]", CROP_OUTLINE)}
+      style={cropVar(plant.crop.name)}
+    >
       <CardContent className="flex flex-col gap-3 px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">

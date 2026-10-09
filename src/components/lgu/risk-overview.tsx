@@ -15,6 +15,7 @@ import {
   type RiskKey,
   type RiskTally,
 } from "@/lib/lgu-plant-stats";
+import { CARD_OUTLINE, cropColor } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 /**
@@ -85,7 +86,7 @@ export function PlantRisk({
           label: crop.name,
           emoji: crop.emoji,
           value: crop.count,
-          color: level.color,
+          color: cropColor(crop.name),
         })),
       );
     }
@@ -192,7 +193,7 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <Card className={cn("gap-0 py-4", className)}>
+    <Card className={cn("gap-0 py-4", CARD_OUTLINE, className)}>
       <CardContent className="px-4">
         <h2 className="text-sm font-medium">{title}</h2>
         <p className="text-muted-foreground mt-0.5 mb-2 text-xs">{description}</p>

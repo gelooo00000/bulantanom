@@ -21,6 +21,7 @@ import {
   type AnalyticsFilters,
 } from "@/lib/api/analytics-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { cropColor } from "@/lib/crop-colors";
 
 /** A query that refetches whenever the filters change. */
 export function useFiltered<T>(fetcher: (token: string, f: AnalyticsFilters) => Promise<T>, filters: AnalyticsFilters) {
@@ -121,7 +122,7 @@ export function AnalyticsDashboard() {
           <CardState query={overview} isEmpty={(d) => d.crops.length === 0} emptyHint="No plants recorded yet.">
             {(d) => (
               <HorizontalBars
-                rows={d.crops.map((c) => ({ key: c.name, label: c.name, emoji: c.emoji, value: c.count, color: "var(--primary)" }))}
+                rows={d.crops.map((c) => ({ key: c.name, label: c.name, emoji: c.emoji, value: c.count, color: cropColor(c.name) }))}
                 unit="plant" label="Plants per crop" pageSize={CROP_PAGE_SIZE}
               />
             )}
