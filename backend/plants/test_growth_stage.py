@@ -239,3 +239,21 @@ class PhotoCheckGetsThePreviousPhotoTests(RiskTestCase):
         previous = self._check()
         self.assertEqual(previous.observed_stage, "vegetative")
         self.assertIsNone(previous.image_bytes)
+
+
+class PreviousPhotoStorageErrorTests(PhotoCheckGetsThePreviousPhotoTests):
+    def test_a_storage_error_on_the_old_photo_never_breaks_the_check(self):
+        from botocore.exceptions import ClientError
+
+        self._last_assessment()
+        denied = ClientError({"Error": {"Code": "AccessDenied"}, "ResponseMetadata": {"HTTPStatusCode": 403}}, "GetObject")
+        with patch("django.db.models.fields.files.FieldFile.open", side_effect=denied):
+            response = self.client.post(
+                f"/api/farmer/plants/{self.plant.id}/evidence/validate/",
+                {"evidence_image": make_image()},
+                **self.auth,
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        previous = self.mock_validate_evidence.call_args.args[6]
+        self.assertEqual(previous.observed_stage, "vegetative")
+        self.assertIsNone(previous.image_bytes)

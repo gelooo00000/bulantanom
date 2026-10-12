@@ -349,7 +349,13 @@ def _previous_check(plant):
                 image_bytes = stored.read() or None
             if last.evidence_image.name.lower().endswith(".png"):
                 mime = "image/png"
-        except (OSError, ValueError):
+        except Exception as exc:  # noqa: BLE001 - optional context, never fatal
+            # A lost file (FileNotFoundError), and on object storage also a
+            # credentials or network error: the check runs without the photo.
+            logger.warning(
+                "Previous evidence photo unreadable for assessment %s: %s",
+                last.pk, type(exc).__name__,
+            )
             image_bytes = None
 
     return PreviousCheck(
