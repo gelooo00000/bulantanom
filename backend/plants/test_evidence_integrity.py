@@ -207,3 +207,24 @@ class NotApplicableAnswersTests(RiskTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("leaf_condition", response.data)
+
+
+class PhotoStorageFailureTests(RiskTestCase):
+    def setUp(self):
+        super().setUp()
+        self.farmer = make_user("farmer@example.com")
+        self.auth = self.login("farmer@example.com")
+        self.plant = self.make_plant(self.farmer)
+        self.url = f"/api/farmer/plants/{self.plant.id}/assessments/"
+
+    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    def test_storage_failure_is_a_clear_503_and_nothing_is_kept(self, _mock):
+        with patch(
+            "django.core.files.storage.FileSystemStorage._save",
+            side_effect=RuntimeError("Invalid api_key <your_api_key>"),
+        ), self.assertLogs("plants.views", level="ERROR"):
+            response = self.client.post(self.url, payload_with_image(), **self.auth)
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertTrue(response.data["evidence_storage_failed"])
+        self.assertEqual(Assessment.objects.count(), 0)

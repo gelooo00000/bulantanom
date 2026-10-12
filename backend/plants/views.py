@@ -293,6 +293,10 @@ EVIDENCE_UNAVAILABLE_MESSAGE = (
     "Plant evidence could not be verified right now. Please try again in a moment."
 )
 
+EVIDENCE_STORAGE_FAILED_MESSAGE = (
+    "Your plant photo could not be saved right now. Please try again in a moment."
+)
+
 
 def _reused_photo_result(plant, image_bytes) -> dict | None:
     """
@@ -605,18 +609,33 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
         age_days = (assessment_date - plant.planting_date).days
 
         image_bytes, _mime = _read_upload(image)
-        assessment = serializer.save(
-            plant=plant,
-            assessment_date=assessment_date,
-            plant_age_days=age_days,
-            weather=_assessment_weather(),
-            evidence_validated=True,
-            evidence_validation={
-                **verification["result"],
-                # Lets a later submission of the same photo be refused.
-                "image_sha256": evidence_token.image_digest(image_bytes),
-            },
-        )
+        weather = _assessment_weather()
+        # The photo is stored before the row is inserted, so a storage
+        # failure (e.g. Cloudinary rejecting bad credentials) leaves nothing
+        # behind; it is logged in full and the farmer is told what failed.
+        try:
+            with transaction.atomic():
+                assessment = serializer.save(
+                    plant=plant,
+                    assessment_date=assessment_date,
+                    plant_age_days=age_days,
+                    weather=weather,
+                    evidence_validated=True,
+                    evidence_validation={
+                        **verification["result"],
+                        # Lets a later submission of the same photo be refused.
+                        "image_sha256": evidence_token.image_digest(image_bytes),
+                    },
+                )
+        except Exception:  # noqa: BLE001 - any storage backend's error
+            logger.exception("Evidence photo could not be stored for plant %s", plant.id)
+            return Response(
+                {
+                    "detail": EVIDENCE_STORAGE_FAILED_MESSAGE,
+                    "evidence_storage_failed": True,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         # 3. Only now does the risk evaluation run, on verified evidence. Its
         #    existing graceful failure is preserved: a Gemini outage records a
