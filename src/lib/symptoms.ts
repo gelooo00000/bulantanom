@@ -2,7 +2,7 @@
  * The pests and disease signs offered as tick boxes on the weekly
  * assessment, per crop: the common problems of that crop in Bicol, so a
  * farmer ticks what they see instead of typing it. Anything not listed goes
- * in the "Something else" box.
+ * in the form's notes box.
  *
  * What is ticked is stored as plain English names in the assessment's
  * pest_observation / disease_observation text (toObservationText), the same
@@ -205,12 +205,9 @@ export function symptomsFor(cropId: string): CropSymptoms {
 }
 
 /**
- * The text saved for one list: the ticked names, then anything typed.
- * Empty when nothing was ticked or typed, which reads as "none observed".
+ * The text saved for one list: the ticked names. Empty when nothing was
+ * ticked, which reads as "none observed".
  */
-export function toObservationText(ticked: Iterable<Pest | Disease>, other: string): string {
-  const names = [...ticked].map((id) => STORED_NAME[id]);
-  const typed = other.trim();
-  if (typed) names.push(names.length ? `Other: ${typed}` : typed);
-  return names.join("; ");
+export function toObservationText(ticked: Iterable<Pest | Disease>): string {
+  return [...ticked].map((id) => STORED_NAME[id]).join("; ");
 }

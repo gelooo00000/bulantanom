@@ -169,7 +169,7 @@ describe("Weekly assessment: tap answers", () => {
     expect(within(flowering).queryByRole("radio", { checked: true })).toBeNull();
   });
 
-  it("offers this crop's pests and saves ticks and typed text as one answer", async () => {
+  it("offers this crop's pests and saves the ticks as one answer", async () => {
     validateEvidence.mockResolvedValue(ACCEPTED);
     submitAssessment.mockReturnValue(new Promise(() => {}));
     const user = userEvent.setup();
@@ -182,8 +182,7 @@ describe("Weekly assessment: tap answers", () => {
 
     await user.click(within(pests).getByRole("checkbox", { name: /Whiteflies/ }));
     await user.click(within(pests).getByRole("checkbox", { name: /Mealybugs/ }));
-    const [pestOther] = screen.getAllByPlaceholderText("Describe what you saw");
-    await user.type(pestOther, "maliit na uod");
+    expect(screen.queryByPlaceholderText("Describe what you saw")).toBeNull();
 
     await user.upload(screen.getByLabelText("Take photo"), photo());
     await screen.findByText(/filled in from your photo/);
@@ -192,7 +191,7 @@ describe("Weekly assessment: tap answers", () => {
     await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
     const [, , fields] = submitAssessment.mock.calls[0];
     expect(fields.pest_observation).toBe(
-      "Mealybugs or scale insects; Whiteflies; Other: maliit na uod",
+      "Mealybugs or scale insects; Whiteflies",
     );
     expect(fields.disease_observation).toBe("");
   });

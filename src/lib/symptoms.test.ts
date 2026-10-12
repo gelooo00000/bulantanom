@@ -14,10 +14,8 @@ describe("symptoms", () => {
     expect(symptomsFor("mushroom").diseases).toEqual(["mold", "rot"]);
   });
 
-  it("saves ticks and typed text as plain English", () => {
-    expect(toObservationText(["aphids", "mites"], "")).toBe("Aphids; Mites");
-    expect(toObservationText(["aphids"], "  kuhol  ")).toBe("Aphids; Other: kuhol");
-    expect(toObservationText([], "kuhol")).toBe("kuhol");
-    expect(toObservationText([], "   ")).toBe("");
+  it("saves the ticks as plain English", () => {
+    expect(toObservationText(["aphids", "mites"])).toBe("Aphids; Mites");
+    expect(toObservationText([])).toBe("");
   });
 });

@@ -3,7 +3,6 @@
 import { Check } from "lucide-react";
 import { useId, type ReactNode } from "react";
 
-import { Textarea } from "@/components/ui/textarea";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 import type { Disease, Pest } from "@/lib/symptoms";
 import { cn } from "@/lib/utils";
@@ -120,9 +119,9 @@ export function LeafPicture({ look }: { look: LeafLook }) {
 }
 
 /**
- * Tick boxes for the pests or disease signs this crop commonly gets, plus a
- * "Something else" box for anything not listed. Nothing ticked means none
- * seen.
+ * Tick boxes for the pests or disease signs this crop commonly gets. Nothing
+ * ticked means none seen; anything not listed goes in the form's one notes
+ * box.
  */
 export function SymptomChecklist<T extends Pest | Disease>({
   labelledBy,
@@ -130,62 +129,45 @@ export function SymptomChecklist<T extends Pest | Disease>({
   items,
   ticked,
   onToggle,
-  other,
-  onOtherChange,
 }: {
   labelledBy: string;
   kind: "pest" | "disease";
   items: readonly T[];
   ticked: ReadonlySet<T>;
   onToggle: (item: T) => void;
-  other: string;
-  onOtherChange: (value: string) => void;
 }) {
   const { t } = useLanguage();
-  const otherId = useId();
   return (
-    <div className="flex flex-col gap-2">
-      <div role="group" aria-labelledby={labelledBy} className="grid gap-2 sm:grid-cols-2">
-        {items.map((item) => {
-          const on = ticked.has(item);
-          return (
-            <button
-              key={item}
-              type="button"
-              role="checkbox"
-              aria-checked={on}
-              onClick={() => onToggle(item)}
+    <div role="group" aria-labelledby={labelledBy} className="grid gap-2 sm:grid-cols-2">
+      {items.map((item) => {
+        const on = ticked.has(item);
+        return (
+          <button
+            key={item}
+            type="button"
+            role="checkbox"
+            aria-checked={on}
+            onClick={() => onToggle(item)}
+            className={cn(
+              "flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-sm transition-colors outline-none",
+              "focus-visible:ring-ring/50 focus-visible:ring-3",
+              on
+                ? "border-risk-medium bg-risk-medium/10 text-foreground font-medium"
+                : "border-border hover:border-primary/40 text-muted-foreground",
+            )}
+          >
+            <span
               className={cn(
-                "flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-sm transition-colors outline-none",
-                "focus-visible:ring-ring/50 focus-visible:ring-3",
-                on
-                  ? "border-risk-medium bg-risk-medium/10 text-foreground font-medium"
-                  : "border-border hover:border-primary/40 text-muted-foreground",
+                "flex size-5 shrink-0 items-center justify-center rounded-md border",
+                on ? "border-risk-medium bg-risk-medium text-white" : "border-border",
               )}
             >
-              <span
-                className={cn(
-                  "flex size-5 shrink-0 items-center justify-center rounded-md border",
-                  on ? "border-risk-medium bg-risk-medium text-white" : "border-border",
-                )}
-              >
-                {on && <Check className="size-3.5" />}
-              </span>
-              {t(`sym.${kind}.${item}` as MessageKey)}
-            </button>
-          );
-        })}
-      </div>
-      <label htmlFor={otherId} className="text-muted-foreground text-xs">
-        {t("sym.other")}
-      </label>
-      <Textarea
-        id={otherId}
-        rows={2}
-        placeholder={t("sym.otherPlaceholder")}
-        value={other}
-        onChange={(event) => onOtherChange(event.target.value)}
-      />
+              {on && <Check className="size-3.5" />}
+            </span>
+            {t(`sym.${kind}.${item}` as MessageKey)}
+          </button>
+        );
+      })}
     </div>
   );
 }

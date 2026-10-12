@@ -228,9 +228,7 @@ export function AssessmentForm({
   const [soil, setSoil] = useState<string | null>(carried.soil_moisture ?? null);
   const symptoms = symptomsFor(cropId);
   const [pests, setPests] = useState<ReadonlySet<Pest>>(new Set());
-  const [pestOther, setPestOther] = useState("");
   const [diseases, setDiseases] = useState<ReadonlySet<Disease>>(new Set());
-  const [diseaseOther, setDiseaseOther] = useState("");
   // Height and notes sit behind "Add more details", closed to start.
   const [showDetails, setShowDetails] = useState(false);
   const [notes, setNotes] = useState("");
@@ -400,11 +398,9 @@ export function AssessmentForm({
           // In list order, so the same ticks always read the same way.
           pest_observation: toObservationText(
             symptoms.pests.filter((item) => pests.has(item)),
-            pestOther,
           ),
           disease_observation: toObservationText(
             symptoms.diseases.filter((item) => diseases.has(item)),
-            diseaseOther,
           ),
           // The weather is measured at the farm and attached by the server;
           // anything else the farmer noticed goes in the one notes box.
@@ -662,8 +658,6 @@ export function AssessmentForm({
             items={symptoms.pests}
             ticked={pests}
             onToggle={(item) => toggle(setPests, item)}
-            other={pestOther}
-            onOtherChange={setPestOther}
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -674,8 +668,6 @@ export function AssessmentForm({
             items={symptoms.diseases}
             ticked={diseases}
             onToggle={(item) => toggle(setDiseases, item)}
-            other={diseaseOther}
-            onOtherChange={setDiseaseOther}
           />
         </div>
       </FormSection>
