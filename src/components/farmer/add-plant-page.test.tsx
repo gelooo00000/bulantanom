@@ -1,106 +1,184 @@
-import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import AddPlantPage from "@/app/farmer/plants/new/page";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => ({ accessToken: "token" }) }));
+// Both of the page's queries (the crop catalog and the farmer's plants)
+// come back loaded: the catalog is `catalog`, empty unless a test fills it,
+// and the farmer has no plants yet unless a test adds some to `owned`.
+const catalog = vi.hoisted(() => ({ data: [] as unknown[] }));
+const owned = vi.hoisted(() => ({ data: [] as unknown[] }));
+vi.mock("@/lib/api/use-authed-query", () => ({
+  useAuthedQuery: (query: { name: string }) => ({
+    data: query.name === "fetchCrops" ? catalog.data : owned.data,
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+// Only the two calls the save flow makes are faked; the query functions keep
+// their real names, which the mock above keys on.
+const api = vi.hoisted(() => ({ createPlant: vi.fn(), fetchCropIntelligence: vi.fn() }));
+vi.mock("@/lib/api/plants-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  createPlant: api.createPlant,
+  fetchCropIntelligence: api.fetchCropIntelligence,
+}));
+
+const PINEAPPLE = {
+  id: "pineapple",
+  name: "Pineapple",
+  category: "FRUIT",
+  category_display: "Fruit",
+  description: "",
+  growing_duration_days: 540,
+  harvest_window_days: 30,
+  search_terms: [],
+  variants: [],
+  planting_window: null,
+};
+
+function dayFromToday(offset: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, "0")}-${`${d.getDate()}`.padStart(2, "0")}`;
+}
+
+afterEach(() => {
+  catalog.data = [];
+  owned.data = [];
+  api.createPlant.mockReset();
+  api.fetchCropIntelligence.mockReset();
+  window.history.replaceState(null, "", "/");
+});
+
+describe("Add a Plant", () => {
+  it("offers a way back to My Plants", () => {
+    render(<AddPlantPage />);
+    expect(screen.getByRole("link", { name: /Back to My Plants/ })).toHaveAttribute(
+      "href",
+      "/farmer/plants",
+    );
+  });
+
+  it("no longer asks for a label", () => {
+    render(<AddPlantPage />);
+    expect(screen.queryByLabelText(/Label/)).toBeNull();
+    expect(screen.queryByPlaceholderText(/North Row/)).toBeNull();
+    expect(screen.queryByText(/tell this planting apart/)).toBeNull();
+  });
+
+  it("still asks for the crop and the planting date", () => {
+    render(<AddPlantPage />);
+    expect(screen.getByText("Crop")).toBeInTheDocument();
+    expect(screen.getByText("Planting date")).toBeInTheDocument();
+  });
+
+  it("starts on the crop and day carried in a suggestion link", () => {
+    catalog.data = [PINEAPPLE];
+    window.history.replaceState(null, "", `/?crop=pineapple&date=${dayFromToday(3)}`);
+    render(<AddPlantPage />);
+    // Continue unlocks only once both a crop and a date are set.
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeEnabled();
+  });
+
+  it("keeps Continue off until a crop with varieties has one chosen", () => {
+    // Crop and date alone are not enough: varieties can be months apart at
+    // harvest, and "Not specified" used to let the form through.
+    catalog.data = [
+      {
+        ...PINEAPPLE,
+        variants: [
+          {
+            id: "pineapple-queen",
+            name: "Queen (Formosa)",
+            description: "",
+            growing_duration_days: 450,
+            harvest_window_days: 30,
+          },
+        ],
+      },
+    ];
+    window.history.replaceState(null, "", `/?crop=pineapple&date=${dayFromToday(3)}`);
+    render(<AddPlantPage />);
+
+    expect(screen.getByText("Choose a variety")).toBeInTheDocument();
+    expect(screen.queryByText("Not specified")).toBeNull();
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
+  });
+
+  it("ignores a link's unknown crop and past date", () => {
+    catalog.data = [PINEAPPLE];
+    window.history.replaceState(null, "", `/?crop=durian&date=${dayFromToday(-3)}`);
+    render(<AddPlantPage />);
+    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
+  });
 
-import AddPlantPage from "@/app/farmer/plants/new/page";
+  describe("same crop, variety and day as a plant already added", () => {
+    const day = dayFromToday(3);
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => ({ accessToken: "token" }) }));
-// Both of the page's queries (the crop catalog and the farmer's plants)
-// come back loaded: the catalog is `catalog`, empty unless a test fills it,
-// and the farmer has no plants yet.
-const catalog = vi.hoisted(() => ({ data: [] as unknown[] }));
-vi.mock("@/lib/api/use-authed-query", () => ({
-  useAuthedQuery: (query: { name: string }) => ({
-    data: query.name === "fetchCrops" ? catalog.data : [],
-    loading: false,
-    error: null,
-    refetch: vi.fn(),
-  }),
-}));
+    /** Fills the form from a link, continues, and taps "Add Plant". */
+    async function addPineapple() {
+      catalog.data = [PINEAPPLE];
+      api.fetchCropIntelligence.mockResolvedValue({
+        crop: { ...PINEAPPLE, emoji: "🍍" },
+        variant: null,
+        harvest_window: null,
+        intelligence: null,
+        intelligence_generated_now: false,
+        unavailable_reason: null,
+      });
+      api.createPlant.mockResolvedValue({ id: 99 });
+      window.history.replaceState(null, "", `/?crop=pineapple&date=${day}`);
+      const user = userEvent.setup();
+      render(<AddPlantPage />);
+      await user.click(screen.getByRole("button", { name: /Continue/ }));
+      await user.click(await screen.findByRole("button", { name: /Add Plant/ }));
+      return user;
+    }
 
-const PINEAPPLE = {
-  id: "pineapple",
-  name: "Pineapple",
-  category: "FRUIT",
-  category_display: "Fruit",
-  description: "",
-  growing_duration_days: 540,
-  harvest_window_days: 30,
-  search_terms: [],
-  variants: [],
-  planting_window: null,
-};
+    function ownPineapple(plantingDate: string) {
+      owned.data = [
+        {
+          id: 1,
+          crop: { ...PINEAPPLE, emoji: "🍍" },
+          variant: null,
+          display_name: "Pineapple",
+          planting_date: plantingDate,
+        },
+      ];
+    }
 
-function dayFromToday(offset: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, "0")}-${`${d.getDate()}`.padStart(2, "0")}`;
-}
+    it("asks first, and Cancel adds nothing", async () => {
+      ownPineapple(day);
+      const user = await addPineapple();
 
-afterEach(() => {
-  catalog.data = [];
-  window.history.replaceState(null, "", "/");
-});
+      expect(await screen.findByText("Add another Pineapple?")).toBeInTheDocument();
+      expect(screen.getByText(/You already have Pineapple planted on/)).toBeInTheDocument();
+      expect(api.createPlant).not.toHaveBeenCalled();
 
-describe("Add a Plant", () => {
-  it("offers a way back to My Plants", () => {
-    render(<AddPlantPage />);
-    expect(screen.getByRole("link", { name: /Back to My Plants/ })).toHaveAttribute(
-      "href",
-      "/farmer/plants",
-    );
-  });
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByText("Add another Pineapple?")).toBeNull();
+      expect(api.createPlant).not.toHaveBeenCalled();
+    });
 
-  it("no longer asks for a label", () => {
-    render(<AddPlantPage />);
-    expect(screen.queryByLabelText(/Label/)).toBeNull();
-    expect(screen.queryByPlaceholderText(/North Row/)).toBeNull();
-    expect(screen.queryByText(/tell this planting apart/)).toBeNull();
-  });
+    it("adds it once the farmer says yes", async () => {
+      ownPineapple(day);
+      const user = await addPineapple();
 
-  it("still asks for the crop and the planting date", () => {
-    render(<AddPlantPage />);
-    expect(screen.getByText("Crop")).toBeInTheDocument();
-    expect(screen.getByText("Planting date")).toBeInTheDocument();
-  });
+      await user.click(await screen.findByRole("button", { name: "Yes, add another" }));
+      expect(api.createPlant).toHaveBeenCalledOnce();
+    });
 
-  it("starts on the crop and day carried in a suggestion link", () => {
-    catalog.data = [PINEAPPLE];
-    window.history.replaceState(null, "", `/?crop=pineapple&date=${dayFromToday(3)}`);
-    render(<AddPlantPage />);
-    // Continue unlocks only once both a crop and a date are set.
-    expect(screen.getByRole("button", { name: /Continue/ })).toBeEnabled();
-  });
+    it("does not ask when the earlier one went in on another day", async () => {
+      ownPineapple(dayFromToday(4));
+      await addPineapple();
 
-  it("keeps Continue off until a crop with varieties has one chosen", () => {
-    // Crop and date alone are not enough: varieties can be months apart at
-    // harvest, and "Not specified" used to let the form through.
-    catalog.data = [
-      {
-        ...PINEAPPLE,
-        variants: [
-          {
-            id: "pineapple-queen",
-            name: "Queen (Formosa)",
-            description: "",
-            growing_duration_days: 450,
-            harvest_window_days: 30,
-          },
-        ],
-      },
-    ];
-    window.history.replaceState(null, "", `/?crop=pineapple&date=${dayFromToday(3)}`);
-    render(<AddPlantPage />);
-
-    expect(screen.getByText("Choose a variety")).toBeInTheDocument();
-    expect(screen.queryByText("Not specified")).toBeNull();
-    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
-  });
-
-  it("ignores a link's unknown crop and past date", () => {
-    catalog.data = [PINEAPPLE];
-    window.history.replaceState(null, "", `/?crop=durian&date=${dayFromToday(-3)}`);
-    render(<AddPlantPage />);
-    expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
+      expect(screen.queryByText("Add another Pineapple?")).toBeNull();
+      expect(api.createPlant).toHaveBeenCalledOnce();
+    });
   });
 });

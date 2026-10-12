@@ -46,6 +46,26 @@ export const addPlant = defineMessages({
     fil: "Naitala mo na ang {name} na itinanim sa petsang ito. Magdagdag lamang kung hiwalay itong pagtatanim.",
     bik: "Nairekord mo na an {name} na itinanom sa petsa na ini. Magdugang sana kun iba ini na pagtanom.",
   },
+  "add.dupTitle": {
+    en: "Add another {name}?",
+    fil: "Magdagdag ng isa pang {name}?",
+    bik: "Magdugang pa nin sarong {name}?",
+  },
+  "add.dupText": {
+    en: "You already have {name} planted on {date}. Are you sure you want to add another one?",
+    fil: "Mayroon ka nang {name} na itinanim noong {date}. Sigurado ka bang gusto mong magdagdag ng isa pa?",
+    bik: "Igwa ka na nin {name} na itinanom kan {date}. Sigurado ka na gusto mong magdugang pa nin saro?",
+  },
+  "add.dupTextMany": {
+    en: "You already have {n} {name} planted on {date}. Are you sure you want to add another one?",
+    fil: "Mayroon ka nang {n} {name} na itinanim noong {date}. Sigurado ka bang gusto mong magdagdag ng isa pa?",
+    bik: "Igwa ka na nin {n} na {name} na itinanom kan {date}. Sigurado ka na gusto mong magdugang pa nin saro?",
+  },
+  "add.dupConfirm": {
+    en: "Yes, add another",
+    fil: "Oo, magdagdag pa",
+    bik: "Iyo, magdugang pa",
+  },
   "add.errorVariety": {
     en: "Please choose a variety.",
     fil: "Pumili ng uri.",

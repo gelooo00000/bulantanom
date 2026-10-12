@@ -23,6 +23,7 @@ import { FadeIn } from "@/components/motion/fade-in";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker, formatDisplayDate } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
@@ -74,6 +75,7 @@ export default function AddPlantPage() {
   const [intel, setIntel] = useState<CropIntelligenceResponse | null>(null);
   const [showFullGuidance, setShowFullGuidance] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmingDuplicate, setConfirmingDuplicate] = useState(false);
 
   /**
    * Preselects the crop when arriving from a suggestion chip
@@ -123,15 +125,16 @@ export default function AddPlantPage() {
   // Same crop, same variety, same day. Almost always a double submit or a
   // forgotten earlier entry — but not always, since two beds can genuinely
   // go in together, so this warns and never blocks.
-  const duplicate =
+  const duplicates =
     cropId && plantingDate
-      ? (existingPlants ?? []).find(
+      ? (existingPlants ?? []).filter(
           (plant) =>
             plant.crop.id === cropId &&
             (plant.variant?.id ?? null) === variantId &&
             plant.planting_date === plantingDate,
         )
-      : undefined;
+      : [];
+  const duplicate = duplicates[0];
 
   async function handleContinue(event: FormEvent) {
     event.preventDefault();
@@ -369,7 +372,12 @@ export default function AddPlantPage() {
 
           {formError && <p className="text-destructive text-sm">{formError}</p>}
 
-          <Button onClick={handleSave} disabled={saving} className="self-start">
+          {/* A repeat of crop, variety and day asks first; "Cancel" adds nothing. */}
+          <Button
+            onClick={() => (duplicate ? setConfirmingDuplicate(true) : handleSave())}
+            disabled={saving}
+            className="self-start"
+          >
             {saving ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />
@@ -382,6 +390,32 @@ export default function AddPlantPage() {
               </>
             )}
           </Button>
+
+          {duplicate && confirmingDuplicate && (
+            <ConfirmDialog
+              open
+              onOpenChange={(open) => {
+                if (!open && !saving) setConfirmingDuplicate(false);
+              }}
+              busy={saving}
+              error={formError}
+              title={t("add.dupTitle", { name: duplicate.display_name })}
+              description={
+                duplicates.length === 1
+                  ? t("add.dupText", {
+                      name: duplicate.display_name,
+                      date: date(plantingDate),
+                    })
+                  : t("add.dupTextMany", {
+                      n: duplicates.length,
+                      name: duplicate.display_name,
+                      date: date(plantingDate),
+                    })
+              }
+              confirmLabel={saving ? t("add.adding") : t("add.dupConfirm")}
+              onConfirm={handleSave}
+            />
+          )}
         </div>
       </FadeIn>
     );
