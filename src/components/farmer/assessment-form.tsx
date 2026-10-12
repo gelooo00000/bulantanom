@@ -8,6 +8,12 @@ import {
   EvidenceUpload,
   type EvidenceUploadHandle,
 } from "@/components/farmer/evidence-upload";
+import {
+  ChoiceButtons,
+  LeafPicture,
+  SymptomChecklist,
+  type ChoiceOption,
+} from "@/components/farmer/assessment-choices";
 import { EvidenceVerdict } from "@/components/farmer/evidence-verdict";
 import { NextDuePlant } from "@/components/farmer/next-due-plant";
 import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
@@ -15,13 +21,6 @@ import { Button } from "@/components/ui/button";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AssessmentApiError,
@@ -34,62 +33,60 @@ import {
 } from "@/lib/api/risk-api";
 import type { AssessmentQuestion } from "@/lib/api/plants-api";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
+import { useLanguage } from "@/lib/i18n";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
-
-type Option = { value: string; label: MessageKey };
+import { symptomsFor, toObservationText, type Disease, type Pest } from "@/lib/symptoms";
 
 // The values are what Django stores; only the labels are translated.
-const GROWTH: Option[] = [
+const GROWTH: ChoiceOption[] = [
   { value: "faster_than_expected", label: "opt.growth.faster_than_expected" },
   { value: "as_expected", label: "opt.growth.as_expected" },
   { value: "slower_than_expected", label: "opt.growth.slower_than_expected" },
   { value: "stunted", label: "opt.growth.stunted" },
 ];
-const HEALTH: Option[] = [
-  { value: "healthy", label: "opt.health.healthy" },
-  { value: "slightly_unhealthy", label: "opt.health.slightly_unhealthy" },
-  { value: "unhealthy", label: "opt.health.unhealthy" },
+const HEALTH: ChoiceOption[] = [
+  { value: "healthy", label: "opt.health.healthy", picture: <span className="bg-risk-low block size-2.5 rounded-full" /> },
+  {
+    value: "slightly_unhealthy",
+    label: "opt.health.slightly_unhealthy",
+    picture: <span className="bg-risk-medium block size-2.5 rounded-full" />,
+  },
+  { value: "unhealthy", label: "opt.health.unhealthy", picture: <span className="bg-risk-high block size-2.5 rounded-full" /> },
 ];
-const LEAF: Option[] = [
-  { value: "healthy", label: "opt.leaf.healthy" },
-  { value: "slight_yellowing", label: "opt.leaf.slight_yellowing" },
-  { value: "yellowing", label: "opt.leaf.yellowing" },
-  { value: "spots", label: "opt.leaf.spots" },
-  { value: "wilting", label: "opt.leaf.wilting" },
-  { value: "damaged", label: "opt.leaf.damaged" },
+const LEAF: ChoiceOption[] = [
+  { value: "healthy", label: "opt.leaf.healthy", picture: <LeafPicture look="healthy" /> },
+  { value: "slight_yellowing", label: "opt.leaf.slight_yellowing", picture: <LeafPicture look="slight_yellowing" /> },
+  { value: "yellowing", label: "opt.leaf.yellowing", picture: <LeafPicture look="yellowing" /> },
+  { value: "spots", label: "opt.leaf.spots", picture: <LeafPicture look="spots" /> },
+  { value: "wilting", label: "opt.leaf.wilting", picture: <LeafPicture look="wilting" /> },
+  { value: "damaged", label: "opt.leaf.damaged", picture: <LeafPicture look="damaged" /> },
 ];
-const FLOWERING: Option[] = [
+const FLOWERING: ChoiceOption[] = [
   { value: "not_flowering", label: "opt.flowering.not_flowering" },
   { value: "starting", label: "opt.flowering.starting" },
   { value: "flowering", label: "opt.flowering.flowering" },
   { value: "finished", label: "opt.flowering.finished" },
 ];
-const FRUITING: Option[] = [
+const FRUITING: ChoiceOption[] = [
   { value: "not_fruiting", label: "opt.fruiting.not_fruiting" },
   { value: "forming", label: "opt.fruiting.forming" },
   { value: "developing", label: "opt.fruiting.developing" },
   { value: "ripening", label: "opt.fruiting.ripening" },
 ];
-const WATERING: Option[] = [
+const WATERING: ChoiceOption[] = [
   { value: "daily", label: "opt.watering.daily" },
   { value: "every_other_day", label: "opt.watering.every_other_day" },
   { value: "twice_weekly", label: "opt.watering.twice_weekly" },
   { value: "weekly", label: "opt.watering.weekly" },
   { value: "rain_fed", label: "opt.watering.rain_fed" },
 ];
-const SOIL: Option[] = [
+const SOIL: ChoiceOption[] = [
   { value: "dry", label: "opt.soil.dry" },
   { value: "slightly_dry", label: "opt.soil.slightly_dry" },
   { value: "moist", label: "opt.soil.moist" },
   { value: "wet", label: "opt.soil.wet" },
   { value: "waterlogged", label: "opt.soil.waterlogged" },
 ];
-
-function label(options: Option[], value: string | null, placeholder: string, t: Translate) {
-  const option = options.find((o) => o.value === value);
-  return option ? t(option.label) : placeholder;
-}
 
 function FormSection({
   title,
@@ -108,38 +105,6 @@ function FormSection({
       </div>
       {children}
     </div>
-  );
-}
-
-function Choice({
-  id,
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  id: string;
-  value: string | null;
-  onChange: (v: string | null) => void;
-  options: Option[];
-  placeholder: string;
-}) {
-  const { t } = useLanguage();
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger id={id}>
-        <SelectValue placeholder={placeholder}>
-          {(v: string) => label(options, v, placeholder, t)}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {t(option.label)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }
 
@@ -177,18 +142,19 @@ function carriedAnswers(
 
 /** A question's label, marked while its answer came from the photo or the last check. */
 function AnswerLabel({
-  htmlFor,
+  id,
   source,
   children,
 }: {
-  htmlFor: string;
+  /** Named by the question's buttons through aria-labelledby. */
+  id: string;
   source?: AnswerSource;
   children: React.ReactNode;
 }) {
   const { t } = useLanguage();
   const Icon = source === "photo" ? Camera : History;
   return (
-    <Label htmlFor={htmlFor} className="flex flex-wrap items-center gap-2">
+    <Label id={id} className="flex flex-wrap items-center gap-2">
       {children}
       {source && (
         <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
@@ -210,6 +176,7 @@ export function AssessmentForm({
   plantId,
   plantLabel,
   cropName,
+  cropId,
   skipQuestions = [],
   lastAssessment = null,
   onLocked,
@@ -217,6 +184,8 @@ export function AssessmentForm({
   plantId: number;
   plantLabel: string;
   cropName: string;
+  /** Picks the pests and disease signs offered as tick boxes. */
+  cropId: string;
   /** Questions that don't fit this crop (e.g. leaves on a mushroom). */
   skipQuestions?: AssessmentQuestion[];
   /** This plant's previous assessment; its answers start the form. */
@@ -247,8 +216,11 @@ export function AssessmentForm({
   const [fruiting, setFruiting] = useState<string | null>(carried.fruiting_status ?? null);
   const [watering, setWatering] = useState<string | null>(carried.watering_frequency ?? "daily");
   const [soil, setSoil] = useState<string | null>(carried.soil_moisture ?? null);
-  const [pest, setPest] = useState("");
-  const [disease, setDisease] = useState("");
+  const symptoms = symptomsFor(cropId);
+  const [pests, setPests] = useState<ReadonlySet<Pest>>(new Set());
+  const [pestOther, setPestOther] = useState("");
+  const [diseases, setDiseases] = useState<ReadonlySet<Disease>>(new Set());
+  const [diseaseOther, setDiseaseOther] = useState("");
   const [environment, setEnvironment] = useState("");
   const [notes, setNotes] = useState("");
   const [evidence, setEvidence] = useState<File | null>(null);
@@ -356,6 +328,14 @@ export function AssessmentForm({
     setSources((current) => ({ ...current, ...filled }));
   }
 
+  function toggle<T>(set: (update: (current: ReadonlySet<T>) => ReadonlySet<T>) => void, item: T) {
+    set((current) => {
+      const next = new Set(current);
+      if (!next.delete(item)) next.add(item);
+      return next;
+    });
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!canSubmit || !accessToken || !evidence) return;
@@ -406,8 +386,15 @@ export function AssessmentForm({
           fruiting_status: asks("fruiting_status") ? (fruiting ?? "") : "",
           watering_frequency: watering!,
           soil_moisture: soil ?? "",
-          pest_observation: pest,
-          disease_observation: disease,
+          // In list order, so the same ticks always read the same way.
+          pest_observation: toObservationText(
+            symptoms.pests.filter((item) => pests.has(item)),
+            pestOther,
+          ),
+          disease_observation: toObservationText(
+            symptoms.diseases.filter((item) => diseases.has(item)),
+            diseaseOther,
+          ),
           environmental_observations: environment,
           notes,
         },
@@ -541,7 +528,7 @@ export function AssessmentForm({
       )}
 
       <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4">
           {asks("plant_height_cm") && (
             <div className="flex flex-col gap-2">
               <Label htmlFor="height">{t("asmt.height")}</Label>
@@ -557,34 +544,45 @@ export function AssessmentForm({
             </div>
           )}
           <div className="flex flex-col gap-2">
-            <AnswerLabel htmlFor="growth" source={sources.growth_condition}>
+            <AnswerLabel id="growth-label" source={sources.growth_condition}>
               {t("asmt.growthCompared")}
             </AnswerLabel>
-            <Choice
-              id="growth"
+            <ChoiceButtons
+              labelledBy="growth-label"
               value={growth}
               onChange={(v) => answer("growth_condition", v)}
               options={GROWTH}
-              placeholder={t("asmt.select")}
             />
           </div>
         </div>
       </FormSection>
 
       <FormSection title={t("asmt.health")} description={t("asmt.healthText")}>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <AnswerLabel htmlFor="health" source={sources.health_condition}>
+            <AnswerLabel id="health-label" source={sources.health_condition}>
               {t("asmt.overallHealth")}
             </AnswerLabel>
-            <Choice id="health" value={health} onChange={(v) => answer("health_condition", v)} options={HEALTH} placeholder={t("asmt.select")} />
+            <ChoiceButtons
+              labelledBy="health-label"
+              value={health}
+              onChange={(v) => answer("health_condition", v)}
+              options={HEALTH}
+              columns={3}
+            />
           </div>
           {asks("leaf_condition") && (
             <div className="flex flex-col gap-2">
-              <AnswerLabel htmlFor="leaf" source={sources.leaf_condition}>
+              <AnswerLabel id="leaf-label" source={sources.leaf_condition}>
                 {t("asmt.leaf")}
               </AnswerLabel>
-              <Choice id="leaf" value={leaf} onChange={(v) => answer("leaf_condition", v)} options={LEAF} placeholder={t("asmt.select")} />
+              <ChoiceButtons
+                labelledBy="leaf-label"
+                value={leaf}
+                onChange={(v) => answer("leaf_condition", v)}
+                options={LEAF}
+                columns={3}
+              />
             </div>
           )}
         </div>
@@ -592,21 +590,33 @@ export function AssessmentForm({
 
       {(asks("flowering_status") || asks("fruiting_status")) && (
         <FormSection title={t("asmt.flowerFruit")} description={t("asmt.blankIfNA")}>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4">
             {asks("flowering_status") && (
               <div className="flex flex-col gap-2">
-                <AnswerLabel htmlFor="flowering" source={sources.flowering_status}>
+                <AnswerLabel id="flowering-label" source={sources.flowering_status}>
                   {t("asmt.flowering")}
                 </AnswerLabel>
-                <Choice id="flowering" value={flowering} onChange={(v) => answer("flowering_status", v)} options={FLOWERING} placeholder={t("asmt.select")} />
+                <ChoiceButtons
+                  labelledBy="flowering-label"
+                  value={flowering}
+                  onChange={(v) => answer("flowering_status", v)}
+                  options={FLOWERING}
+                  optional
+                />
               </div>
             )}
             {asks("fruiting_status") && (
               <div className="flex flex-col gap-2">
-                <AnswerLabel htmlFor="fruiting" source={sources.fruiting_status}>
+                <AnswerLabel id="fruiting-label" source={sources.fruiting_status}>
                   {t("asmt.fruiting")}
                 </AnswerLabel>
-                <Choice id="fruiting" value={fruiting} onChange={(v) => answer("fruiting_status", v)} options={FRUITING} placeholder={t("asmt.select")} />
+                <ChoiceButtons
+                  labelledBy="fruiting-label"
+                  value={fruiting}
+                  onChange={(v) => answer("fruiting_status", v)}
+                  options={FRUITING}
+                  optional
+                />
               </div>
             )}
           </div>
@@ -614,32 +624,59 @@ export function AssessmentForm({
       )}
 
       <FormSection title={t("asmt.waterSoil")} description={t("asmt.waterSoilText")}>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <AnswerLabel htmlFor="watering" source={sources.watering_frequency}>
+            <AnswerLabel id="watering-label" source={sources.watering_frequency}>
               {t("asmt.watering")}
             </AnswerLabel>
-            <Choice id="watering" value={watering} onChange={(v) => answer("watering_frequency", v)} options={WATERING} placeholder={t("asmt.select")} />
+            <ChoiceButtons
+              labelledBy="watering-label"
+              value={watering}
+              onChange={(v) => answer("watering_frequency", v)}
+              options={WATERING}
+              columns={3}
+            />
           </div>
           <div className="flex flex-col gap-2">
-            <AnswerLabel htmlFor="soil" source={sources.soil_moisture}>
+            <AnswerLabel id="soil-label" source={sources.soil_moisture}>
               {t("asmt.soil")}
             </AnswerLabel>
-            <Choice id="soil" value={soil} onChange={(v) => answer("soil_moisture", v)} options={SOIL} placeholder={t("asmt.select")} />
+            <ChoiceButtons
+              labelledBy="soil-label"
+              value={soil}
+              onChange={(v) => answer("soil_moisture", v)}
+              options={SOIL}
+              optional
+              columns={3}
+            />
           </div>
         </div>
       </FormSection>
 
-      <FormSection title={t("asmt.symptoms")} description={t("asmt.symptomsText")}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="pest">{t("asmt.pest")}</Label>
-            <Textarea id="pest" placeholder={t("asmt.noneObserved")} value={pest} onChange={(e) => setPest(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="disease">{t("asmt.disease")}</Label>
-            <Textarea id="disease" placeholder={t("asmt.noneObserved")} value={disease} onChange={(e) => setDisease(e.target.value)} />
-          </div>
+      <FormSection title={t("asmt.symptoms")} description={t("sym.tickAll")}>
+        <div className="flex flex-col gap-2">
+          <Label id="pest-label">{t("sym.pestTitle")}</Label>
+          <SymptomChecklist
+            labelledBy="pest-label"
+            kind="pest"
+            items={symptoms.pests}
+            ticked={pests}
+            onToggle={(item) => toggle(setPests, item)}
+            other={pestOther}
+            onOtherChange={setPestOther}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label id="disease-label">{t("sym.diseaseTitle")}</Label>
+          <SymptomChecklist
+            labelledBy="disease-label"
+            kind="disease"
+            items={symptoms.diseases}
+            ticked={diseases}
+            onToggle={(item) => toggle(setDiseases, item)}
+            other={diseaseOther}
+            onOtherChange={setDiseaseOther}
+          />
         </div>
       </FormSection>
 

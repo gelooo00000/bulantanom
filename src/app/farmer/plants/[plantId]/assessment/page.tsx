@@ -96,6 +96,7 @@ export default function AssessmentPage({
           lastAssessment={history.data?.[0] ?? null}
           plantLabel={plantLabel}
           cropName={plant.crop.name}
+          cropId={plant.crop.id}
           skipQuestions={plant.crop.not_applicable_questions}
           onLocked={setLockedBySubmit}
         />

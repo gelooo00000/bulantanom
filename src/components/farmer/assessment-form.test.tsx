@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,8 +32,22 @@ function photo() {
   return new File(["jpeg-bytes"], "plant.jpg", { type: "image/jpeg" });
 }
 
-function renderForm() {
-  render(<AssessmentForm plantId={7} plantLabel="Sinta" cropName="Papaya" />);
+function renderForm(lastAssessment: BackendAssessment | null = null) {
+  render(
+    <AssessmentForm
+      plantId={7}
+      plantLabel="Sinta"
+      cropName="Papaya"
+      cropId="papaya"
+      lastAssessment={lastAssessment}
+    />,
+  );
+}
+
+/** The answer chosen for one question. */
+function chosen(question: RegExp) {
+  const group = screen.getByRole("radiogroup", { name: question });
+  return within(group).getByRole("radio", { checked: true });
 }
 
 beforeEach(() => {
@@ -54,12 +68,8 @@ describe("Weekly assessment: photo first", () => {
 
     expect(await screen.findByText(/2 answers were filled in from your photo/)).toBeInTheDocument();
     expect(validateEvidence).toHaveBeenCalledWith("token", 7, expect.any(File));
-    expect(screen.getByRole("combobox", { name: /Overall health/ })).toHaveTextContent(
-      "Slightly unhealthy",
-    );
-    expect(screen.getByRole("combobox", { name: /Leaf condition/ })).toHaveTextContent(
-      "Spots or lesions",
-    );
+    expect(chosen(/Overall health/)).toHaveAccessibleName("Slightly unhealthy");
+    expect(chosen(/Leaf condition/)).toHaveAccessibleName("Spots or lesions");
     expect(screen.getAllByText("From photo")).toHaveLength(2);
   });
 
@@ -85,55 +95,40 @@ describe("Weekly assessment: photo first", () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("combobox", { name: /Overall health/ }));
-    await user.click(await screen.findByRole("option", { name: "Unhealthy" }));
+    const health = screen.getByRole("radiogroup", { name: /Overall health/ });
+    await user.click(within(health).getByRole("radio", { name: "Unhealthy" }));
     await user.upload(screen.getByLabelText("Take photo"), photo());
 
     expect(await screen.findByText(/1 answer was filled in from your photo/)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /Overall health/ })).toHaveTextContent(/^Unhealthy$/);
+    expect(chosen(/Overall health/)).toHaveAccessibleName("Unhealthy");
   });
 
   it("starts from the last check's answers, and the photo's are newer", async () => {
     validateEvidence.mockResolvedValue(ACCEPTED);
     const user = userEvent.setup();
-    render(
-      <AssessmentForm
-        plantId={7}
-        plantLabel="Sinta"
-        cropName="Papaya"
-        lastAssessment={
-          {
-            assessment_date: "2026-10-05",
-            growth_condition: "slower_than_expected",
-            health_condition: "healthy",
-            leaf_condition: "healthy",
-            flowering_status: "",
-            fruiting_status: "",
-            watering_frequency: "twice_weekly",
-            soil_moisture: "moist",
-            plant_height_cm: "40",
-            notes: "Leaves look pale",
-          } as unknown as BackendAssessment
-        }
-      />,
-    );
+    renderForm({
+      assessment_date: "2026-10-05",
+      growth_condition: "slower_than_expected",
+      health_condition: "healthy",
+      leaf_condition: "healthy",
+      flowering_status: "",
+      fruiting_status: "",
+      watering_frequency: "twice_weekly",
+      soil_moisture: "moist",
+      plant_height_cm: "40",
+      notes: "Leaves look pale",
+    } as unknown as BackendAssessment);
 
     expect(screen.getByText(/answers from the last check/)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /Watering frequency/ })).toHaveTextContent(
-      "Twice a week",
-    );
-    expect(screen.getByRole("combobox", { name: /Growth compared/ })).toHaveTextContent(/slower/i);
+    expect(chosen(/Watering frequency/)).toHaveAccessibleName("Twice a week");
+    expect(chosen(/Growth compared/)).toHaveAccessibleName("Slower than expected");
     // Height and written notes are this week's to give.
     expect(screen.getByLabelText(/Plant height/)).toHaveValue(null);
 
     await user.upload(screen.getByLabelText("Take photo"), photo());
     await screen.findByText(/2 answers were filled in from your photo/);
-    expect(screen.getByRole("combobox", { name: /Leaf condition/ })).toHaveTextContent(
-      "Spots or lesions",
-    );
-    expect(screen.getByRole("combobox", { name: /Watering frequency/ })).toHaveTextContent(
-      "Twice a week",
-    );
+    expect(chosen(/Leaf condition/)).toHaveAccessibleName("Spots or lesions");
+    expect(chosen(/Watering frequency/)).toHaveAccessibleName("Twice a week");
   });
 
   it("keeps submit off while a refused photo is selected", async () => {
@@ -152,5 +147,47 @@ describe("Weekly assessment: photo first", () => {
 
     expect(await screen.findByText("Take a new photo to submit this assessment.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Submit Assessment/ })).toBeDisabled();
+  });
+});
+
+describe("Weekly assessment: tap answers", () => {
+  it("lets an optional answer be cleared by tapping it again", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const flowering = screen.getByRole("radiogroup", { name: /Flowering status/ });
+    const starting = within(flowering).getByRole("radio", { name: "Starting to flower" });
+    await user.click(starting);
+    expect(starting).toBeChecked();
+    await user.click(starting);
+    expect(within(flowering).queryByRole("radio", { checked: true })).toBeNull();
+  });
+
+  it("offers this crop's pests and saves ticks and typed text as one answer", async () => {
+    validateEvidence.mockResolvedValue(ACCEPTED);
+    submitAssessment.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderForm();
+
+    const pests = screen.getByRole("group", { name: "Pests you have seen" });
+    // Papaya's list, not every pest there is.
+    expect(within(pests).getByRole("checkbox", { name: /Mealybugs/ })).toBeInTheDocument();
+    expect(within(pests).queryByRole("checkbox", { name: /Rats/ })).toBeNull();
+
+    await user.click(within(pests).getByRole("checkbox", { name: /Whiteflies/ }));
+    await user.click(within(pests).getByRole("checkbox", { name: /Mealybugs/ }));
+    const [pestOther] = screen.getAllByPlaceholderText("Describe what you saw");
+    await user.type(pestOther, "maliit na uod");
+
+    await user.upload(screen.getByLabelText("Take photo"), photo());
+    await screen.findByText(/filled in from your photo/);
+    await user.click(screen.getByRole("button", { name: /Submit Assessment/ }));
+
+    await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
+    const [, , fields] = submitAssessment.mock.calls[0];
+    expect(fields.pest_observation).toBe(
+      "Mealybugs or scale insects; Whiteflies; Other: maliit na uod",
+    );
+    expect(fields.disease_observation).toBe("");
   });
 });

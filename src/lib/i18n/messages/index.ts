@@ -11,6 +11,7 @@ import { plants } from "./plants";
 import { risk } from "./risk";
 import { shell } from "./shell";
 import { soil } from "./soil";
+import { symptoms } from "./symptoms";
 
 /** Every namespace, merged. Keys are prefixed per screen, so they never clash. */
 export const MESSAGES = {
@@ -27,8 +28,9 @@ export const MESSAGES = {
   ...risk,
   ...shell,
   ...soil,
+  ...symptoms,
 };
 
 export type MessageKey = keyof typeof MESSAGES;
 
-export { addPlant, assessment, common, dashboard, duration, earlyStage, harvest, pages, plantDetail, plants, risk, shell, soil };
+export { addPlant, assessment, common, dashboard, duration, earlyStage, harvest, pages, plantDetail, plants, risk, shell, soil, symptoms };
