@@ -42,9 +42,9 @@ export const addPlant = defineMessages({
     bik: "Pilion an adlaw na ini, o masunod na petsa para magplano san pagtanom. Pwede susihon an nakaplano na tanom poon sa petsa san pagtanom kaini.",
   },
   "add.duplicate": {
-    en: "You already recorded {name} planted on this date. Add another only if this is a separate planting.",
-    fil: "Naitala mo na ang {name} na itinanim sa petsang ito. Magdagdag lamang kung hiwalay itong pagtatanim.",
-    bik: "Nairekord mo na an {name} na itinanom sa petsa na ini. Magdugang sana kun iba ini na pagtanom.",
+    en: "You already recorded {name} planted on this date.",
+    fil: "Naitala mo na ang {name} na itinanim sa petsang ito.",
+    bik: "Nairekord mo na an {name} na itinanom sa petsa na ini.",
   },
   "add.dupTitle": {
     en: "Add another {name}?",
