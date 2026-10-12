@@ -1,10 +1,8 @@
 "use client";
 
 import { LoaderCircle, TriangleAlert, Wheat } from "lucide-react";
-import { useState } from "react";
 
 import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
-import { NoPlantsMatch, PlantFilterBar } from "@/components/farmer/plant-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -15,7 +13,6 @@ import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { CROP_OUTLINE, cropTint, cropVar } from "@/lib/crop-colors";
 import { humanDuration } from "@/lib/duration";
 import { useLanguage, type Translate } from "@/lib/i18n";
-import { filterPlants } from "@/lib/plant-filter";
 import { plantStatusLabel } from "@/lib/plant-summary";
 import { cn } from "@/lib/utils";
 
@@ -238,12 +235,7 @@ export default function HarvestPage() {
     a.expected_harvest_start.localeCompare(b.expected_harvest_start),
   );
 
-  // Search and crop filter, narrowing the calendar and every section alike.
-  const [query, setQuery] = useState("");
-  const [cropId, setCropId] = useState("");
-  const visible = filterPlants(sorted, query, cropId);
-
-  const byPhase = (phase: Phase) => visible.filter((p) => phaseOf(p) === phase);
+  const byPhase = (phase: Phase) => sorted.filter((p) => phaseOf(p) === phase);
   const open = byPhase("open");
   const approaching = byPhase("approaching");
   const growing = byPhase("growing");
@@ -277,25 +269,7 @@ export default function HarvestPage() {
         />
       ) : (
         <>
-          <PlantFilterBar
-            plants={sorted}
-            shown={visible.length}
-            query={query}
-            onQueryChange={setQuery}
-            cropId={cropId}
-            onCropChange={setCropId}
-          />
-
-          {visible.length === 0 ? (
-            <NoPlantsMatch
-              onClear={() => {
-                setQuery("");
-                setCropId("");
-              }}
-            />
-          ) : (
-            <HarvestCalendar plants={visible} />
-          )}
+          <HarvestCalendar plants={sorted} />
 
           <Section title={t("harvestPage.ready")} plants={open} />
           <Section
