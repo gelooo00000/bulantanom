@@ -149,13 +149,17 @@ class _LoginThrottleMixin:
 
     def throttled(self, request, wait):
         minutes = max(1, -(-int(wait or 60) // 60))
-        raise Throttled(
-            wait=wait,
+        exc = Throttled(
             detail=(
                 "Too many sign-in attempts. Please wait "
                 f"{minutes} minute{'s' if minutes != 1 else ''} and try again."
             ),
         )
+        # Set after construction: passed in, DRF would append its own
+        # "Expected available in N seconds." to the message. The
+        # Retry-After header still comes from it.
+        exc.wait = wait
+        raise exc
 
 
 class FarmerLoginView(_LoginThrottleMixin, APIView):

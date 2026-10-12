@@ -578,7 +578,11 @@ class LoginRateLimitTests(APITestCase):
 
         response = self.client.post(ADMIN_LOGIN_URL, wrong, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
-        self.assertIn("Too many sign-in attempts", response.data["detail"])
+        self.assertEqual(
+            response.data["detail"],
+            "Too many sign-in attempts. Please wait 1 minute and try again.",
+        )
+        self.assertIn("Retry-After", response)
 
         # Even the right password waits: the limit is on the account.
         right = {"email": "admin@example.com", "password": "SecurePassword123!"}
