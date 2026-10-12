@@ -12,24 +12,20 @@ export type ChoiceOption = { value: string; label: MessageKey; picture?: ReactNo
 /**
  * One question's answers as large buttons, all visible at once: one tap to
  * answer, instead of opening a dropdown and reading a list. A radio group
- * for screen readers and keyboards.
- *
- * `optional` questions ("leave blank if not applicable") clear when the
- * chosen button is tapped again.
+ * for screen readers and keyboards. Every question asked this way is
+ * required, so tapping the chosen answer again keeps it.
  */
 export function ChoiceButtons({
   labelledBy,
   value,
   onChange,
   options,
-  optional = false,
   columns = 2,
 }: {
   labelledBy: string;
   value: string | null;
   onChange: (value: string | null) => void;
   options: ChoiceOption[];
-  optional?: boolean;
   /** Per row from small screens up; phones always get two. */
   columns?: 2 | 3;
 }) {
@@ -48,7 +44,7 @@ export function ChoiceButtons({
             type="button"
             role="radio"
             aria-checked={chosen}
-            onClick={() => onChange(chosen && optional ? null : option.value)}
+            onClick={() => onChange(option.value)}
             className={cn(
               "flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors outline-none",
               "focus-visible:ring-ring/50 focus-visible:ring-3",

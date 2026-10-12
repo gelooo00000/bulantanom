@@ -58,6 +58,8 @@ async function answerTheRest(user: ReturnType<typeof userEvent.setup>) {
   await user.click(within(fruiting).getByRole("radio", { name: "Not fruiting" }));
   const watering = screen.getByRole("radiogroup", { name: /Watering frequency/ });
   await user.click(within(watering).getByRole("radio", { name: "Daily" }));
+  const soil = screen.getByRole("radiogroup", { name: /Soil moisture/ });
+  await user.click(within(soil).getByRole("radio", { name: "Moist" }));
 }
 
 /** The answer chosen for one question. */
@@ -181,16 +183,15 @@ describe("Weekly assessment: tap answers", () => {
     expect(starting).toBeChecked();
   });
 
-  it("lets an optional answer be cleared by tapping it again", async () => {
+  it("keeps soil moisture once chosen: it is required too", async () => {
     const user = userEvent.setup();
     renderForm();
 
     const soil = screen.getByRole("radiogroup", { name: /Soil moisture/ });
     const moist = within(soil).getByRole("radio", { name: "Moist" });
     await user.click(moist);
-    expect(moist).toBeChecked();
     await user.click(moist);
-    expect(within(soil).queryByRole("radio", { checked: true })).toBeNull();
+    expect(moist).toBeChecked();
   });
 
   it("offers this crop's pests and saves the ticks as one answer", async () => {
@@ -286,6 +287,7 @@ describe("Weekly assessment: what is still needed", () => {
       /Flowering status/,
       /Fruiting status/,
       /Watering frequency/,
+      /Soil moisture/,
     ]) {
       const group = screen.getByRole("radiogroup", { name: question });
       expect(within(group).queryByRole("radio", { checked: true })).toBeNull();
@@ -304,10 +306,11 @@ describe("Weekly assessment: what is still needed", () => {
       "Flowering status",
       "Fruiting status",
       "Watering frequency",
+      "Soil moisture",
     ]) {
       expect(screen.getByRole("button", { name: item })).toBeInTheDocument();
     }
-    expect(screen.getAllByText("Required")).toHaveLength(6);
+    expect(screen.getAllByText("Required")).toHaveLength(7);
   });
 
   it("drops an item once it is answered", async () => {
@@ -318,7 +321,7 @@ describe("Weekly assessment: what is still needed", () => {
     await user.click(within(leaves).getByRole("radio", { name: "Healthy green leaves" }));
 
     expect(screen.queryByRole("button", { name: "Leaf condition" })).toBeNull();
-    expect(screen.getAllByText("Required")).toHaveLength(5);
+    expect(screen.getAllByText("Required")).toHaveLength(6);
     expect(screen.getByRole("button", { name: "Plant photo" })).toBeInTheDocument();
   });
 });

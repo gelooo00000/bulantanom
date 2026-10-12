@@ -375,6 +375,7 @@ function AssessmentFormBody({
   if (floweringMissing) stillNeeded.push({ label: t("asmt.flowering"), target: "flowering-label" });
   if (fruitingMissing) stillNeeded.push({ label: t("asmt.fruiting"), target: "fruiting-label" });
   if (!watering) stillNeeded.push({ label: t("asmt.watering"), target: "watering-label" });
+  if (!soil) stillNeeded.push({ label: t("asmt.soil"), target: "soil-label" });
   const canSubmit = stillNeeded.length === 0 && !checkingPhoto;
 
   function changeEvidence(file: File | null) {
@@ -486,7 +487,7 @@ function AssessmentFormBody({
           flowering_status: asks("flowering_status") ? (flowering ?? "") : "",
           fruiting_status: asks("fruiting_status") ? (fruiting ?? "") : "",
           watering_frequency: watering!,
-          soil_moisture: soil ?? "",
+          soil_moisture: soil!,
           // In list order, so the same ticks always read the same way.
           pest_observation: toObservationText(
             symptoms.pests.filter((item) => pests.has(item)),
@@ -740,7 +741,7 @@ function AssessmentFormBody({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <AnswerLabel id="soil-label" source={sources.soil_moisture}>
+            <AnswerLabel id="soil-label" source={sources.soil_moisture} missing={!soil}>
               {t("asmt.soil")}
             </AnswerLabel>
             <ChoiceButtons
@@ -748,7 +749,6 @@ function AssessmentFormBody({
               value={soil}
               onChange={(v) => answer("soil_moisture", v)}
               options={SOIL}
-              optional
               columns={3}
             />
           </div>
