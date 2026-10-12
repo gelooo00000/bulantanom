@@ -49,6 +49,14 @@ function renderForm(lastAssessment: BackendAssessment | null = null) {
   );
 }
 
+/** Growth and watering: the answers a photo never gives. */
+async function answerTheRest(user: ReturnType<typeof userEvent.setup>) {
+  const growth = screen.getByRole("radiogroup", { name: /Growth compared/ });
+  await user.click(within(growth).getByRole("radio", { name: "About as expected" }));
+  const watering = screen.getByRole("radiogroup", { name: /Watering frequency/ });
+  await user.click(within(watering).getByRole("radio", { name: "Daily" }));
+}
+
 /** The answer chosen for one question. */
 function chosen(question: RegExp) {
   const group = screen.getByRole("radiogroup", { name: question });
@@ -88,6 +96,7 @@ describe("Weekly assessment: photo first", () => {
 
     await user.upload(screen.getByLabelText("Take photo"), photo());
     await screen.findByText(/filled in from your photo/);
+    await answerTheRest(user);
     await user.click(screen.getByRole("button", { name: /Submit Assessment/ }));
 
     await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
@@ -187,6 +196,7 @@ describe("Weekly assessment: tap answers", () => {
 
     await user.upload(screen.getByLabelText("Take photo"), photo());
     await screen.findByText(/filled in from your photo/);
+    await answerTheRest(user);
     await user.click(screen.getByRole("button", { name: /Submit Assessment/ }));
 
     await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
@@ -239,6 +249,7 @@ describe("Weekly assessment: less to fill in", () => {
     await user.type(screen.getByLabelText(/What have you noticed/), "Bunga nahuhulog");
     await user.upload(screen.getByLabelText("Take photo"), photo());
     await screen.findByText(/filled in from your photo/);
+    await answerTheRest(user);
     await user.click(screen.getByRole("button", { name: /Submit Assessment/ }));
 
     await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
@@ -248,13 +259,29 @@ describe("Weekly assessment: less to fill in", () => {
 });
 
 describe("Weekly assessment: what is still needed", () => {
-  it("names each missing item and marks the unanswered required question", () => {
+  it("starts with nothing answered for the farmer", () => {
+    renderForm();
+
+    for (const question of [/Growth compared/, /Overall health/, /Leaf condition/, /Watering frequency/]) {
+      const group = screen.getByRole("radiogroup", { name: question });
+      expect(within(group).queryByRole("radio", { checked: true })).toBeNull();
+    }
+  });
+
+  it("names each missing item and marks the unanswered required questions", () => {
     renderForm();
 
     expect(screen.getByText("To submit, still needed:")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Plant photo" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Leaf condition" })).toBeInTheDocument();
-    expect(screen.getByText("Required")).toBeInTheDocument();
+    for (const item of [
+      "Plant photo",
+      "Growth compared with expected",
+      "Overall health",
+      "Leaf condition",
+      "Watering frequency",
+    ]) {
+      expect(screen.getByRole("button", { name: item })).toBeInTheDocument();
+    }
+    expect(screen.getAllByText("Required")).toHaveLength(4);
   });
 
   it("drops an item once it is answered", async () => {
@@ -265,7 +292,7 @@ describe("Weekly assessment: what is still needed", () => {
     await user.click(within(leaves).getByRole("radio", { name: "Healthy green leaves" }));
 
     expect(screen.queryByRole("button", { name: "Leaf condition" })).toBeNull();
-    expect(screen.queryByText("Required")).toBeNull();
+    expect(screen.getAllByText("Required")).toHaveLength(3);
     expect(screen.getByRole("button", { name: "Plant photo" })).toBeInTheDocument();
   });
 });

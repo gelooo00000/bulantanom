@@ -265,16 +265,18 @@ function AssessmentFormBody({
   // are the farmer's own, so they win over the last check and the photo.
   const [draft] = useState(() => readDraft(plantId));
   const [own] = useState(() => draftAnswers(draft, skipQuestions));
-  const start = (field: Prefilled, fallback: string | null = null): string | null =>
-    field in own ? own[field] || null : (carried[field] ?? fallback);
+  // Otherwise a question starts unanswered: a ready-made "Healthy" or
+  // "Daily" could be submitted without a thought, and looks like the AI's.
+  const start = (field: Prefilled): string | null =>
+    field in own ? own[field] || null : (carried[field] ?? null);
 
   const [height, setHeight] = useState(draft?.height ?? "");
-  const [growth, setGrowth] = useState<string | null>(start("growth_condition", "as_expected"));
-  const [health, setHealth] = useState<string | null>(start("health_condition", "healthy"));
+  const [growth, setGrowth] = useState<string | null>(start("growth_condition"));
+  const [health, setHealth] = useState<string | null>(start("health_condition"));
   const [leaf, setLeaf] = useState<string | null>(start("leaf_condition"));
   const [flowering, setFlowering] = useState<string | null>(start("flowering_status"));
   const [fruiting, setFruiting] = useState<string | null>(start("fruiting_status"));
-  const [watering, setWatering] = useState<string | null>(start("watering_frequency", "daily"));
+  const [watering, setWatering] = useState<string | null>(start("watering_frequency"));
   const [soil, setSoil] = useState<string | null>(start("soil_moisture"));
   const symptoms = symptomsFor(cropId);
   const [pests, setPests] = useState<ReadonlySet<Pest>>(
@@ -360,20 +362,14 @@ function AssessmentFormBody({
   const leafMissing = asks("leaf_condition") && !leaf;
   const photoRefused = evidenceResult !== null && !evidenceResult.evidence_valid;
   // What still stands between the farmer and Submit, in form order, each
-  // with where to scroll to. Growth, health and watering always have an
-  // answer (a tapped button cannot be cleared), so they are never listed.
+  // with where to scroll to.
   const stillNeeded: { label: string; target: string }[] = [];
   if (!evidence || photoRefused) stillNeeded.push({ label: t("asmt.photoItem"), target: "asmt-photo" });
+  if (!growth) stillNeeded.push({ label: t("asmt.growthCompared"), target: "growth-label" });
+  if (!health) stillNeeded.push({ label: t("asmt.overallHealth"), target: "health-label" });
   if (leafMissing) stillNeeded.push({ label: t("asmt.leaf"), target: "leaf-label" });
-  const canSubmit = Boolean(
-    growth &&
-      health &&
-      !leafMissing &&
-      watering &&
-      evidence &&
-      !checkingPhoto &&
-      !photoRefused,
-  );
+  if (!watering) stillNeeded.push({ label: t("asmt.watering"), target: "watering-label" });
+  const canSubmit = stillNeeded.length === 0 && !checkingPhoto;
 
   function changeEvidence(file: File | null) {
     setEvidence(file);
@@ -641,7 +637,7 @@ function AssessmentFormBody({
       <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <AnswerLabel id="growth-label" source={sources.growth_condition}>
+            <AnswerLabel id="growth-label" source={sources.growth_condition} missing={!growth}>
               {t("asmt.growthCompared")}
             </AnswerLabel>
             <ChoiceButtons
@@ -657,7 +653,7 @@ function AssessmentFormBody({
       <FormSection title={t("asmt.health")} description={t("asmt.healthText")}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <AnswerLabel id="health-label" source={sources.health_condition}>
+            <AnswerLabel id="health-label" source={sources.health_condition} missing={!health}>
               {t("asmt.overallHealth")}
             </AnswerLabel>
             <ChoiceButtons
@@ -723,7 +719,7 @@ function AssessmentFormBody({
       <FormSection title={t("asmt.waterSoil")} description={t("asmt.waterSoilText")}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <AnswerLabel id="watering-label" source={sources.watering_frequency}>
+            <AnswerLabel id="watering-label" source={sources.watering_frequency} missing={!watering}>
               {t("asmt.watering")}
             </AnswerLabel>
             <ChoiceButtons
