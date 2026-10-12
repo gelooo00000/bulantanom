@@ -211,6 +211,19 @@ class AssessmentSubmissionTests(RiskTestCase):
             )
         self.assertEqual(response.data["weather"], {})
 
+    def test_growth_health_and_watering_are_required(self):
+        for field in ("growth_condition", "health_condition", "watering_frequency"):
+            for value in (None, ""):
+                payload = payload_with_image()
+                if value is None:
+                    del payload[field]
+                else:
+                    payload[field] = value
+                response = self.client.post(self.url, payload, **self.auth)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, field)
+                self.assertIn(field, response.data)
+        self.assertEqual(Assessment.objects.count(), 0)
+
     def test_soil_flowering_and_fruiting_are_required(self):
         payload = payload_with_image()
         for field in ("soil_moisture", "flowering_status", "fruiting_status"):
