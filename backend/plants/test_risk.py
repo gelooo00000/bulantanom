@@ -25,6 +25,8 @@ VALID_PAYLOAD = {
     "growth_condition": "as_expected",
     "health_condition": "healthy",
     "leaf_condition": "healthy",
+    "flowering_status": "not_flowering",
+    "fruiting_status": "not_fruiting",
     "watering_frequency": "daily",
     "soil_moisture": "moist",
     "notes": "Looks fine this week.",
@@ -208,6 +210,28 @@ class AssessmentSubmissionTests(RiskTestCase):
                 self.url, payload_with_image(weather='{"rainy_days": 99}'), **self.auth
             )
         self.assertEqual(response.data["weather"], {})
+
+    def test_soil_flowering_and_fruiting_are_required(self):
+        payload = payload_with_image()
+        for field in ("soil_moisture", "flowering_status", "fruiting_status"):
+            del payload[field]
+        response = self.client.post(self.url, payload, **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        for field in ("soil_moisture", "flowering_status", "fruiting_status"):
+            self.assertIn(field, response.data)
+        self.assertEqual(Assessment.objects.count(), 0)
+
+    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    def test_questions_a_crop_is_not_asked_are_not_required(self, _mock):
+        # Mushrooms are not asked about leaves or flowers (assessment_questions).
+        mushroom = self.make_plant(self.farmer, crop_id="mushroom")
+        payload = payload_with_image()
+        for field in ("leaf_condition", "flowering_status"):
+            del payload[field]
+        response = self.client.post(
+            f"/api/farmer/plants/{mushroom.id}/assessments/", payload, **self.auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
     def test_plant_age_is_calculated_server_side(self, _mock):

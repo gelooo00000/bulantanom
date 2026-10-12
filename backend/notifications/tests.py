@@ -38,7 +38,10 @@ VALID_ASSESSMENT = {
     "growth_condition": "as_expected",
     "health_condition": "healthy",
     "leaf_condition": "healthy",
+    "flowering_status": "not_flowering",
+    "fruiting_status": "not_fruiting",
     "watering_frequency": "daily",
+    "soil_moisture": "moist",
 }
 
 EVIDENCE_MATCH = {

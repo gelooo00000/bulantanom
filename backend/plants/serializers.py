@@ -4,7 +4,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from . import crop_calendar
-from .assessment_questions import HEIGHT, LEAF, not_applicable
+from .assessment_questions import FLOWERING, FRUITING, HEIGHT, LEAF, not_applicable
 from .models import (
     Assessment,
     Crop,
@@ -403,10 +403,17 @@ class AssessmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Please enter a realistic plant height in cm.")
         return value
 
+    # Blank-able in the database (old assessments, and crops these questions
+    # don't fit), but required on a new assessment wherever they apply - the
+    # same questions the farmer's form marks Required. "Not flowering" and
+    # "Not fruiting" are answers, so there is always one to give.
+    REQUIRED_WHERE_ASKED = (LEAF, FLOWERING, FRUITING)
+    ALWAYS_REQUIRED = ("soil_moisture",)
+
     def validate(self, attrs):
         """
         Questions that don't fit the plant's crop are stored blank, whatever
-        the client sent; the leaf question is required only where it applies.
+        the client sent; the rest of the blank-able questions are required.
         The view passes the plant in the context.
         """
         plant = self.context.get("plant")
@@ -415,8 +422,12 @@ class AssessmentSerializer(serializers.ModelSerializer):
         skip = not_applicable(plant.crop_id)
         for field in skip:
             attrs[field] = None if field == HEIGHT else ""
-        if LEAF not in skip and not attrs.get(LEAF):
-            raise serializers.ValidationError({LEAF: "This field is required."})
+        required = [f for f in self.REQUIRED_WHERE_ASKED if f not in skip]
+        missing = [f for f in (*required, *self.ALWAYS_REQUIRED) if not attrs.get(f)]
+        if missing:
+            raise serializers.ValidationError(
+                {field: "This field is required." for field in missing}
+            )
         return attrs
 
 
