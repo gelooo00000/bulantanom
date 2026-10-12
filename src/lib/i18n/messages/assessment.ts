@@ -96,11 +96,6 @@ export const assessment = defineMessages({
     bik: "Pwede ka magsurat sa Ingles, Filipino o Bikol.",
   },
   "asmt.submit": { en: "Submit Assessment", fil: "Isumite ang Pagsusuri", bik: "Isumite an Pagsusi" },
-  "asmt.needPhoto": {
-    en: "Add a plant photo to submit this assessment.",
-    fil: "Magdagdag ng litrato ng tanim para maisumite ang pagsusuring ito.",
-    bik: "Magdugang san litrato san tanom para maisumite an pagsusi na ini.",
-  },
   "asmt.needNewPhoto": {
     en: "Take a new photo to submit this assessment.",
     fil: "Kumuha ng bagong litrato para maisumite ang pagsusuring ito.",
@@ -157,6 +152,24 @@ export const assessment = defineMessages({
     fil: "Kusang idinadagdag ito sa iyong pagsusuri, kaya hindi mo na kailangang ilarawan ang panahon.",
     bik: "Kusang idinudugang ini sa imo pagsusi, kaya dai mo na kaipuhan isaysay an panahon.",
   },
+  "asmt.required": { en: "Required", fil: "Kailangan", bik: "Kaipuhan" },
+  "asmt.stillNeeded": {
+    en: "To submit, still needed:",
+    fil: "Kailangan pa bago maisumite:",
+    bik: "Kaipuhan pa bago maisumite:",
+  },
+  "asmt.photoItem": { en: "Plant photo", fil: "Litrato ng tanim", bik: "Litrato san tanom" },
+  "asmt.waitPhotoCheck": {
+    en: "Wait for the photo check to finish.",
+    fil: "Hintaying matapos ang pagsusuri ng litrato.",
+    bik: "Hulaton na matapos an pagsusi san litrato.",
+  },
+  "asmt.draftBack": {
+    en: "Your answers from earlier today are back, so you can carry on. Take the photo again to submit.",
+    fil: "Bumalik ang mga sagot mo kanina, kaya maaari kang magpatuloy. Kumuha ulit ng litrato para maisumite.",
+    bik: "Nagbalik an mga simbag mo kaina, kaya pwede ka magpadagos. Magkuha giraray nin litrato para maisumite.",
+  },
+  "asmt.startOver": { en: "Start over", fil: "Magsimula muli", bik: "Magpoon giraray" },
   "asmt.fromPhoto": { en: "From photo", fil: "Mula sa litrato", bik: "Hali sa litrato" },
   "asmt.fromLastCheck": { en: "Last check", fil: "Huling pagsusuri", bik: "Huring pagsusi" },
   "asmt.lastCheckFilled": {

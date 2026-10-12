@@ -56,6 +56,7 @@ function chosen(question: RegExp) {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   recentWeather = { available: false };
   validateEvidence.mockReset();
   submitAssessment.mockReset();
@@ -243,5 +244,86 @@ describe("Weekly assessment: less to fill in", () => {
     await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
     const [, , fields] = submitAssessment.mock.calls[0];
     expect(fields).toMatchObject({ notes: "Bunga nahuhulog", environmental_observations: "" });
+  });
+});
+
+describe("Weekly assessment: what is still needed", () => {
+  it("names each missing item and marks the unanswered required question", () => {
+    renderForm();
+
+    expect(screen.getByText("To submit, still needed:")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Plant photo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Leaf condition" })).toBeInTheDocument();
+    expect(screen.getByText("Required")).toBeInTheDocument();
+  });
+
+  it("drops an item once it is answered", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const leaves = screen.getByRole("radiogroup", { name: /Leaf condition/ });
+    await user.click(within(leaves).getByRole("radio", { name: "Healthy green leaves" }));
+
+    expect(screen.queryByRole("button", { name: "Leaf condition" })).toBeNull();
+    expect(screen.queryByText("Required")).toBeNull();
+    expect(screen.getByRole("button", { name: "Plant photo" })).toBeInTheDocument();
+  });
+});
+
+describe("Weekly assessment: draft", () => {
+  async function answerSome() {
+    const user = userEvent.setup();
+    const view = render(
+      <AssessmentForm plantId={7} plantLabel="Sinta" cropName="Papaya" cropId="papaya" />,
+    );
+    const leaves = screen.getByRole("radiogroup", { name: /Leaf condition/ });
+    await user.click(within(leaves).getByRole("radio", { name: "Slight yellowing" }));
+    const pests = screen.getByRole("group", { name: "Pests you have seen" });
+    await user.click(within(pests).getByRole("checkbox", { name: /Mealybugs/ }));
+    await user.click(screen.getByRole("button", { name: "Add more details (optional)" }));
+    await user.type(screen.getByLabelText(/What have you noticed/), "Dahon naninilaw");
+    view.unmount();
+    return user;
+  }
+
+  it("brings back today's unsent answers after the page is left", async () => {
+    await answerSome();
+    renderForm();
+
+    expect(screen.getByText(/Your answers from earlier today are back/)).toBeInTheDocument();
+    expect(chosen(/Leaf condition/)).toHaveAccessibleName("Slight yellowing");
+    const pests = screen.getByRole("group", { name: "Pests you have seen" });
+    expect(within(pests).getByRole("checkbox", { name: /Mealybugs/ })).toBeChecked();
+    expect(screen.getByLabelText(/What have you noticed/)).toHaveValue("Dahon naninilaw");
+  });
+
+  it("starts over empty when asked", async () => {
+    const user = await answerSome();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Start over" }));
+
+    expect(screen.queryByText(/Your answers from earlier today are back/)).toBeNull();
+    const leaves = screen.getByRole("radiogroup", { name: /Leaf condition/ });
+    expect(within(leaves).queryByRole("radio", { checked: true })).toBeNull();
+    expect(window.localStorage.length).toBe(0);
+  });
+
+  it("does not bring back a draft from another day", () => {
+    window.localStorage.setItem(
+      "bulantanom:assessment-draft:7",
+      JSON.stringify({
+        savedOn: "2026-01-01",
+        answers: { leaf_condition: "spots" },
+        height: "",
+        notes: "",
+        pests: [],
+        diseases: [],
+      }),
+    );
+    renderForm();
+
+    expect(screen.queryByText(/Your answers from earlier today are back/)).toBeNull();
+    expect(window.localStorage.getItem("bulantanom:assessment-draft:7")).toBeNull();
   });
 });

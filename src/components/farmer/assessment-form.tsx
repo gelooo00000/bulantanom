@@ -7,11 +7,12 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  RotateCcw,
   LoaderCircle,
   ScanEye,
   Sparkles,
 } from "lucide-react";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
   EvidenceUpload,
@@ -43,6 +44,7 @@ import {
 } from "@/lib/api/risk-api";
 import type { AssessmentQuestion } from "@/lib/api/plants-api";
 import { useAuth } from "@/lib/auth/auth-context";
+import { clearDraft, readDraft, saveDraft } from "@/lib/assessment-draft";
 import { useLanguage } from "@/lib/i18n";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { symptomsFor, toObservationText, type Disease, type Pest } from "@/lib/symptoms";
@@ -99,16 +101,19 @@ const SOIL: ChoiceOption[] = [
 ];
 
 function FormSection({
+  id,
   title,
   description,
   children,
 }: {
+  /** Lets the "still needed" list scroll here. */
+  id?: string;
   title: string;
   description: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div id={id} className="flex scroll-mt-24 flex-col gap-4">
       <div>
         <h2 className="text-sm font-medium">{title}</h2>
         <p className="text-muted-foreground text-sm">{description}</p>
@@ -150,22 +155,43 @@ function carriedAnswers(
   return carried;
 }
 
+/** A draft's answers that still fit this form: known questions this crop is asked. */
+function draftAnswers(
+  draft: { answers: Record<string, string> } | null,
+  skipQuestions: AssessmentQuestion[],
+): Partial<Record<Prefilled, string>> {
+  if (!draft) return {};
+  return Object.fromEntries(
+    Object.entries(draft.answers).filter(
+      ([field]) =>
+        (CARRIED as string[]).includes(field) &&
+        !skipQuestions.includes(field as AssessmentQuestion),
+    ),
+  );
+}
+
 /** A question's label, marked while its answer came from the photo or the last check. */
 function AnswerLabel({
   id,
   source,
+  missing = false,
   children,
 }: {
   /** Named by the question's buttons through aria-labelledby. */
   id: string;
   source?: AnswerSource;
+  /** A required question still unanswered: marked so it is easy to find. */
+  missing?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useLanguage();
   const Icon = source === "photo" ? Camera : History;
   return (
-    <Label id={id} className="flex flex-wrap items-center gap-2">
+    <Label id={id} className="flex scroll-mt-24 flex-wrap items-center gap-2">
       {children}
+      {missing && (
+        <span className="text-risk-medium text-xs font-medium">{t("asmt.required")}</span>
+      )}
       {source && (
         <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
           <Icon className="size-3" />
@@ -182,15 +208,7 @@ function AnswerLabel({
  */
 type Status = "idle" | "checking" | "analyzing" | "done";
 
-export function AssessmentForm({
-  plantId,
-  plantLabel,
-  cropName,
-  cropId,
-  skipQuestions = [],
-  lastAssessment = null,
-  onLocked,
-}: {
+type AssessmentFormProps = {
   plantId: number;
   plantLabel: string;
   cropName: string;
@@ -202,7 +220,33 @@ export function AssessmentForm({
   lastAssessment?: BackendAssessment | null;
   /** Called when the server reports the weekly assessment is already done. */
   onLocked?: (eligibility: AssessmentEligibility) => void;
-}) {
+};
+
+export function AssessmentForm(props: AssessmentFormProps) {
+  // "Start over" drops the saved draft and remounts the form from scratch.
+  const [round, setRound] = useState(0);
+  return (
+    <AssessmentFormBody
+      key={round}
+      {...props}
+      onStartOver={() => {
+        clearDraft(props.plantId);
+        setRound((n) => n + 1);
+      }}
+    />
+  );
+}
+
+function AssessmentFormBody({
+  plantId,
+  plantLabel,
+  cropName,
+  cropId,
+  skipQuestions = [],
+  lastAssessment = null,
+  onLocked,
+  onStartOver,
+}: AssessmentFormProps & { onStartOver: () => void }) {
   const { accessToken } = useAuth();
   const { t, dateLocale } = useLanguage();
   const [status, setStatus] = useState<Status>("idle");
@@ -217,21 +261,32 @@ export function AssessmentForm({
   // has not changed needs no re-answering. Height and the written notes are
   // left empty; they are this week's to give.
   const [carried] = useState(() => carriedAnswers(lastAssessment, skipQuestions));
+  // Today's unsent answers for this plant, if the farmer left mid-way. They
+  // are the farmer's own, so they win over the last check and the photo.
+  const [draft] = useState(() => readDraft(plantId));
+  const [own] = useState(() => draftAnswers(draft, skipQuestions));
+  const start = (field: Prefilled, fallback: string | null = null): string | null =>
+    field in own ? own[field] || null : (carried[field] ?? fallback);
 
-  const [height, setHeight] = useState("");
-  const [growth, setGrowth] = useState<string | null>(carried.growth_condition ?? "as_expected");
-  const [health, setHealth] = useState<string | null>(carried.health_condition ?? "healthy");
-  const [leaf, setLeaf] = useState<string | null>(carried.leaf_condition ?? null);
-  const [flowering, setFlowering] = useState<string | null>(carried.flowering_status ?? null);
-  const [fruiting, setFruiting] = useState<string | null>(carried.fruiting_status ?? null);
-  const [watering, setWatering] = useState<string | null>(carried.watering_frequency ?? "daily");
-  const [soil, setSoil] = useState<string | null>(carried.soil_moisture ?? null);
+  const [height, setHeight] = useState(draft?.height ?? "");
+  const [growth, setGrowth] = useState<string | null>(start("growth_condition", "as_expected"));
+  const [health, setHealth] = useState<string | null>(start("health_condition", "healthy"));
+  const [leaf, setLeaf] = useState<string | null>(start("leaf_condition"));
+  const [flowering, setFlowering] = useState<string | null>(start("flowering_status"));
+  const [fruiting, setFruiting] = useState<string | null>(start("fruiting_status"));
+  const [watering, setWatering] = useState<string | null>(start("watering_frequency", "daily"));
+  const [soil, setSoil] = useState<string | null>(start("soil_moisture"));
   const symptoms = symptomsFor(cropId);
-  const [pests, setPests] = useState<ReadonlySet<Pest>>(new Set());
-  const [diseases, setDiseases] = useState<ReadonlySet<Disease>>(new Set());
-  // Height and notes sit behind "Add more details", closed to start.
-  const [showDetails, setShowDetails] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [pests, setPests] = useState<ReadonlySet<Pest>>(
+    () => new Set(symptoms.pests.filter((item) => draft?.pests.includes(item))),
+  );
+  const [diseases, setDiseases] = useState<ReadonlySet<Disease>>(
+    () => new Set(symptoms.diseases.filter((item) => draft?.diseases.includes(item))),
+  );
+  const [notes, setNotes] = useState(draft?.notes ?? "");
+  // Height and notes sit behind "Add more details": closed, unless a draft
+  // brought something back in there.
+  const [showDetails, setShowDetails] = useState(Boolean(draft?.height || draft?.notes));
   const [evidence, setEvidence] = useState<File | null>(null);
 
   // The photo comes first and is checked as soon as it is taken. An accepted
@@ -240,9 +295,13 @@ export function AssessmentForm({
   // ever replaces an answer the Farmer chose themselves.
   const [checkingPhoto, setCheckingPhoto] = useState(false);
   const [sources, setSources] = useState<Partial<Record<Prefilled, AnswerSource>>>(() =>
-    Object.fromEntries(Object.keys(carried).map((field) => [field, "last"])),
+    Object.fromEntries(
+      Object.keys(carried)
+        .filter((field) => !(field in own))
+        .map((field) => [field, "last"]),
+    ),
   );
-  const touched = useRef(new Set<Prefilled>());
+  const touched = useRef(new Set<Prefilled>(Object.keys(own) as Prefilled[]));
   // Only the latest photo's check may update the form.
   const checkRun = useRef(0);
 
@@ -271,14 +330,45 @@ export function AssessmentForm({
     setters[field](value);
   }
 
+  // Saved on every change. Reads `touched` here, in an effect: each answer
+  // the farmer gives also changes one of the values below, so this runs.
+  useEffect(() => {
+    if (status === "analyzing" || status === "done") return;
+    const values: Record<Prefilled, string | null> = {
+      growth_condition: growth,
+      health_condition: health,
+      leaf_condition: leaf,
+      flowering_status: flowering,
+      fruiting_status: fruiting,
+      watering_frequency: watering,
+      soil_moisture: soil,
+    };
+    saveDraft(plantId, {
+      answers: Object.fromEntries(
+        [...touched.current].map((field) => [field, values[field] ?? ""]),
+      ),
+      height,
+      notes,
+      pests: [...pests],
+      diseases: [...diseases],
+    });
+  }, [plantId, status, growth, health, leaf, flowering, fruiting, watering, soil, height, notes, pests, diseases]);
+
   // Evidence is mandatory: the risk reading is only meaningful when the photo
   // has been verified to show this crop.
   const asks = (question: AssessmentQuestion) => !skipQuestions.includes(question);
+  const leafMissing = asks("leaf_condition") && !leaf;
   const photoRefused = evidenceResult !== null && !evidenceResult.evidence_valid;
+  // What still stands between the farmer and Submit, in form order, each
+  // with where to scroll to. Growth, health and watering always have an
+  // answer (a tapped button cannot be cleared), so they are never listed.
+  const stillNeeded: { label: string; target: string }[] = [];
+  if (!evidence || photoRefused) stillNeeded.push({ label: t("asmt.photoItem"), target: "asmt-photo" });
+  if (leafMissing) stillNeeded.push({ label: t("asmt.leaf"), target: "leaf-label" });
   const canSubmit = Boolean(
     growth &&
       health &&
-      (leaf || !asks("leaf_condition")) &&
+      !leafMissing &&
       watering &&
       evidence &&
       !checkingPhoto &&
@@ -413,6 +503,7 @@ export function AssessmentForm({
       // Django raised assessment-submitted, evidence and AI-evaluation
       // notifications during this request — surface them at once.
       requestNotificationRefresh();
+      clearDraft(plantId);
       setResult(assessment);
       setStatus("done");
     } catch (err) {
@@ -497,7 +588,18 @@ export function AssessmentForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {draft && (
+        <div className="bg-primary/5 border-primary/20 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-4 py-3 text-sm">
+          <p className="flex-1">{t("asmt.draftBack")}</p>
+          <Button type="button" variant="outline" size="sm" onClick={onStartOver}>
+            <RotateCcw className="size-3.5" />
+            {t("asmt.startOver")}
+          </Button>
+        </div>
+      )}
+
       <FormSection
+        id="asmt-photo"
         title={t("asmt.evidence")}
         description={t("asmt.evidenceText", { crop: cropName.toLowerCase() })}
       >
@@ -568,7 +670,7 @@ export function AssessmentForm({
           </div>
           {asks("leaf_condition") && (
             <div className="flex flex-col gap-2">
-              <AnswerLabel id="leaf-label" source={sources.leaf_condition}>
+              <AnswerLabel id="leaf-label" source={sources.leaf_condition} missing={leafMissing}>
                 {t("asmt.leaf")}
               </AnswerLabel>
               <ChoiceButtons
@@ -733,10 +835,28 @@ export function AssessmentForm({
           {t("asmt.submit")}
           <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
         </Button>
-        {(!evidence || photoRefused) && (
-          <p className="text-muted-foreground text-sm">
-            {t(evidence ? "asmt.needNewPhoto" : "asmt.needPhoto")}
-          </p>
+        {checkingPhoto ? (
+          <p className="text-muted-foreground text-sm">{t("asmt.waitPhotoCheck")}</p>
+        ) : (
+          stillNeeded.length > 0 && (
+            <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+              <span>{t(photoRefused ? "asmt.needNewPhoto" : "asmt.stillNeeded")}</span>
+              {stillNeeded.map((item) => (
+                <button
+                  key={item.target}
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById(item.target)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                  className="border-risk-medium/40 text-risk-medium hover:bg-risk-medium/10 rounded-full border px-2.5 py-0.5 text-xs font-medium"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )
         )}
       </div>
     </form>
