@@ -122,7 +122,7 @@ function FormSection({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-sm font-medium">{title}</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{title}</h2>
         {description && <p className="text-muted-foreground text-sm">{description}</p>}
       </div>
       {children}
