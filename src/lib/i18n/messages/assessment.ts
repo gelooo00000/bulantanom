@@ -395,5 +395,10 @@ export const assessment = defineMessages({
     fil: "Hindi tugma ang litrato sa edad ng tanim",
     bik: "Dai angay an litrato sa edad san tanom",
   },
+  "verdict.different_plant": {
+    en: "Not the same plant as last time",
+    fil: "Hindi ito ang parehong tanim noong nakaraan",
+    bik: "Bako ini an parehong tanom kan nakaagi",
+  },
   "verdict.replace": { en: "Replace Image", fil: "Palitan ang Litrato", bik: "Liwanan an Litrato" },
 });

@@ -63,7 +63,9 @@ export type EvidenceVerdict =
   | "unclear"
   | "not_genuine"
   /** The right crop, but far older than its planting date allows. */
-  | "wrong_stage";
+  | "wrong_stage"
+  /** Cannot be the same plant as in its previous assessment's photo. */
+  | "different_plant";
 
 export type EvidenceValidation = {
   evidence_valid: boolean;

@@ -17,6 +17,12 @@ Architecture rules:
 * Poor image quality is reported as its own verdict, never as a crop
   mismatch: "I can't tell" and "that's the wrong plant" are different
   answers and get different messages.
+* The plant's previous photo is given as well, when it still exists, with
+  the stage the previous check saw (kept in the database, so this part
+  works even when the file is gone). The new photo must be believable as
+  the same plant that many days later; Django also refuses an annual that
+  went back to a seedling or jumped two stages in two weeks, as
+  `different_plant`.
 * The plant's age is checked in Django too. The model reports the growth
   stage it sees on a fixed scale (growth_stage.STAGES); a photo clearly
   older than the planting date allows (fruit on a plant sown 11 days ago)
@@ -37,13 +43,14 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass
 
 from django.conf import settings
 
 from .ai_language import write_in
 from .durations import human_duration
 from .gemini_models import generate_with_fallback
-from .growth_stage import STAGES, expected_stage, too_far_ahead
+from .growth_stage import STAGES, expected_stage, not_the_same_plant, too_far_ahead
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +58,23 @@ logger = logging.getLogger(__name__)
 # accepted, so an ambiguous photo never passes as verified evidence.
 MIN_MATCH_CONFIDENCE = 0.55
 
-VERDICTS = ("match", "mismatch", "no_plant", "unclear", "not_genuine", "wrong_stage")
+VERDICTS = (
+    "match", "mismatch", "no_plant", "unclear", "not_genuine", "wrong_stage", "different_plant",
+)
+
+
+@dataclass(frozen=True)
+class PreviousCheck:
+    """This plant's last assessment, as the photo check compares against it."""
+
+    days_ago: int
+    # The stage the photo check saw then, or None for checks made before
+    # stages were recorded.
+    observed_stage: str | None = None
+    # The photo itself, when the file still exists (uploads do not survive
+    # every redeploy on the current host).
+    image_bytes: bytes | None = None
+    mime_type: str = "image/jpeg"
 
 # Crops whose photo age is not judged against the planting date: mushrooms
 # do not grow through seedling-to-fruit stages, and long-lived crops (fruit
@@ -128,6 +151,17 @@ Choose exactly one verdict:
 - "unclear"   — a plant may be present but the photo is too blurry, too dark,
                 too distant, too obstructed, or too cropped to tell which crop
                 it is.
+- "different_plant" — only when you are given the plant's PREVIOUS photo or
+                previous stage: the new photo cannot be the same plant that
+                many days later. It is a different kind of plant from the
+                previous photo, or it went back to a much younger plant (was
+                fruiting, now a seedling), or it grew far more than possible in
+                that time. A different angle, distance, light or weather, some
+                lost or eaten leaves, pruning, staking, or fruit that has been
+                harvested are all normal and NOT a different plant. When in
+                doubt, it is the same plant. If the new photo is the previous
+                photo itself sent again (same framing, same leaves, same light),
+                that is "not_genuine".
 - "wrong_stage" — the photo shows the expected crop, but clearly far older
                 than the plant's recorded age allows: flowers, fruit, pods,
                 a large tuber or a full mature plant on a plant planted only
@@ -201,7 +235,10 @@ def is_configured() -> bool:
 
 
 def build_context(
-    crop, age_days: int | None = None, duration_days: int | None = None
+    crop,
+    age_days: int | None = None,
+    duration_days: int | None = None,
+    previous: PreviousCheck | None = None,
 ) -> dict:
     """
     What Gemini is told about the expectation.
@@ -222,6 +259,12 @@ def build_context(
             "readable": human_duration(age_days),
             "expected_stage": expected_stage(duration_days, age_days) or "unknown",
         }
+    if previous is not None:
+        context["previous_check"] = {
+            "days_ago": previous.days_ago,
+            "stage_seen_then": previous.observed_stage or "unknown",
+            "previous_photo_attached": previous.image_bytes is not None,
+        }
     return context
 
 
@@ -233,6 +276,11 @@ def _message_for(verdict: str, crop_name: str) -> str:
         return f"Please upload a clear photo of your {crop_name.lower()} plant."
     if verdict == "no_plant":
         return f"Please upload a photo showing your {crop_name.lower()} plant."
+    if verdict == "different_plant":
+        return (
+            f"This doesn't look like the same {crop_name.lower()} as in its last photo. "
+            "Take a photo of the same plant."
+        )
     if verdict == "wrong_stage":
         return (
             f"This doesn't look like the {crop_name.lower()} you planted. Take a photo of "
@@ -264,7 +312,11 @@ def _suggestions(observed) -> dict:
 
 
 def _validate(
-    payload, crop, age_days: int | None = None, duration_days: int | None = None
+    payload,
+    crop,
+    age_days: int | None = None,
+    duration_days: int | None = None,
+    previous: PreviousCheck | None = None,
 ) -> dict | None:
     """
     Turn a raw model response into a trusted result, or None if unusable.
@@ -295,6 +347,10 @@ def _validate(
     if verdict == "wrong_stage" and not stage_applies:
         # The model judged an age it was not asked to judge for this crop.
         verdict = "match"
+    if verdict == "different_plant" and (previous is None or crop.id in STAGE_CHECK_EXEMPT):
+        # Nothing to compare with, or a crop (mushrooms: harvested flush by
+        # flush) whose look changes completely between checks.
+        verdict = "match"
 
     observed_stage = payload.get("observed_stage")
     expected = expected_stage(duration_days, age_days) if stage_applies else None
@@ -304,6 +360,19 @@ def _validate(
             f"The photo shows a {crop.name.lower()} plant at the {observed_stage} stage, "
             f"but this plant was planted {human_duration(age_days)} ago and should still "
             f"be at the {expected} stage."
+        )
+
+    if (
+        verdict == "match"
+        and stage_applies
+        and previous is not None
+        and not_the_same_plant(previous.observed_stage, observed_stage, previous.days_ago)
+    ):
+        verdict = "different_plant"
+        reason = (
+            f"{previous.days_ago} days ago this {crop.name.lower()} plant was at the "
+            f"{previous.observed_stage} stage; the photo now shows the {observed_stage} "
+            "stage, which a plant cannot reach in that time."
         )
 
     # A weakly-held "match" is not evidence — downgrade rather than accept.
@@ -335,9 +404,11 @@ def validate_crop_evidence(
     language: str = "en",
     age_days: int | None = None,
     duration_days: int | None = None,
+    previous: PreviousCheck | None = None,
 ) -> dict | None:
     """
-    Ask Gemini whether `image_bytes` plausibly shows `crop`. `reason` - the
+    Ask Gemini whether `image_bytes` plausibly shows `crop`, at its age and,
+    given `previous`, as the same plant as last time. `reason` - the
     sentence the farmer reads when a photo is turned down - comes back in
     their app `language`; `verdict` stays one of the fixed English values.
 
@@ -359,12 +430,19 @@ def validate_crop_evidence(
         logger.exception("google-genai SDK unavailable.")
         return None
 
-    context = build_context(crop, age_days, duration_days)
+    context = build_context(crop, age_days, duration_days, previous)
     parts = [
         "Does this photo show the expected crop, at an age that fits?\n\n"
         + json.dumps(context, indent=2),
+        "CURRENT photo, the one to judge:",
         types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
     ]
+    if previous is not None and previous.image_bytes:
+        parts += [
+            f"PREVIOUS photo of this same plant, from {previous.days_ago} days ago "
+            "(for comparison only; do not judge it):",
+            types.Part.from_bytes(data=previous.image_bytes, mime_type=previous.mime_type),
+        ]
     if write_in(language):
         parts.append(write_in(language))
 
@@ -403,7 +481,7 @@ def validate_crop_evidence(
             logger.warning("Evidence validation returned non-JSON content.")
             return None
 
-    result = _validate(parsed, crop, age_days, duration_days)
+    result = _validate(parsed, crop, age_days, duration_days, previous)
     if result is None:
         logger.warning("Evidence validation response failed schema validation.")
     return result

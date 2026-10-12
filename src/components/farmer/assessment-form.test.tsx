@@ -456,3 +456,25 @@ describe("Weekly assessment: photo older than the plant", () => {
     expect(screen.getByRole("button", { name: /Submit Assessment/ })).toBeDisabled();
   });
 });
+
+describe("Weekly assessment: not the same plant", () => {
+  it("explains the refusal and keeps Submit off", async () => {
+    validateEvidence.mockResolvedValue({
+      ...ACCEPTED,
+      evidence_valid: false,
+      verdict: "different_plant",
+      evidence_token: undefined,
+      suggested_answers: {},
+      reason: "7 days ago this plant was fruiting; the photo now shows a seedling.",
+      message: "This doesn't look like the same papaya as in its last photo.",
+    });
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.upload(screen.getByLabelText("Take photo"), photo());
+
+    expect(await screen.findByText("Not the same plant as last time")).toBeInTheDocument();
+    expect(screen.getByText(/7 days ago this plant was fruiting/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Submit Assessment/ })).toBeDisabled();
+  });
+});

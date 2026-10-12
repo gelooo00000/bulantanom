@@ -1,6 +1,13 @@
 "use client";
 
-import { CalendarX, CircleCheck, ImageOff, ScanEye, TriangleAlert } from "lucide-react";
+import {
+  CalendarX,
+  CircleCheck,
+  ImageOff,
+  Images,
+  ScanEye,
+  TriangleAlert,
+} from "lucide-react";
 import type { ElementType } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -39,6 +46,12 @@ const STYLES: Record<
   wrong_stage: {
     icon: CalendarX,
     title: "verdict.wrong_stage",
+    tone: "text-risk-medium",
+    border: "border-risk-medium/30 bg-risk-medium/5",
+  },
+  different_plant: {
+    icon: Images,
+    title: "verdict.different_plant",
     tone: "text-risk-medium",
     border: "border-risk-medium/30 bg-risk-medium/5",
   },

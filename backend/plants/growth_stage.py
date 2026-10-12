@@ -58,6 +58,25 @@ def expected_stage(duration_days: int | None, age_days: int) -> str | None:
     return "mature"
 
 
+# Within this many days, a plant cannot have moved two stages on.
+FAST_JUMP_DAYS = 14
+
+
+def not_the_same_plant(previous: str | None, now: str | None, days_between: int) -> bool:
+    """
+    True when this photo and the plant's previous one cannot show the same
+    plant: it was flowering or later and is now a seedling (an annual never
+    goes back to one), or it moved on two or more stages within
+    FAST_JUMP_DAYS. Unknown stages never count.
+    """
+    if previous not in STAGES or now not in STAGES:
+        return False
+    before, after = STAGES.index(previous), STAGES.index(now)
+    went_back_to_seedling = now == "seedling" and before >= STAGES.index("flowering")
+    jumped = after - before >= 2 and days_between <= FAST_JUMP_DAYS
+    return went_back_to_seedling or jumped
+
+
 def too_far_ahead(expected: str | None, observed: str | None) -> bool:
     """
     True when the photo shows a plant clearly older than its recorded age:

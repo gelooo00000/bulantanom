@@ -326,6 +326,40 @@ def _read_upload(image) -> tuple[bytes, str]:
     return data, mime
 
 
+def _previous_check(plant):
+    """
+    The plant's last assessment for the photo check to compare against, or
+    None for a first assessment. The photo is attached only if its file can
+    still be read; the stage seen then comes from the database either way.
+    """
+    from .evidence_validation_service import PreviousCheck
+
+    last = (
+        Assessment.objects.filter(plant=plant)
+        .order_by("-assessment_date", "-created_at")
+        .first()
+    )
+    if last is None:
+        return None
+
+    image_bytes, mime = None, "image/jpeg"
+    if last.evidence_image:
+        try:
+            with last.evidence_image.open("rb") as stored:
+                image_bytes = stored.read() or None
+            if last.evidence_image.name.lower().endswith(".png"):
+                mime = "image/png"
+        except (OSError, ValueError):
+            image_bytes = None
+
+    return PreviousCheck(
+        days_ago=max(0, (timezone.localdate() - last.assessment_date).days),
+        observed_stage=(last.evidence_validation or {}).get("observed_stage"),
+        image_bytes=image_bytes,
+        mime_type=mime,
+    )
+
+
 def _age_today(plant) -> int:
     """Days since planting, as the photo check judges the photo against."""
     return max(0, (timezone.localdate() - plant.planting_date).days)
@@ -375,7 +409,7 @@ def _verify_evidence(request, plant, image) -> dict:
 
     result = validate_crop_evidence(
         plant.crop, image_bytes, mime, from_request(request), _age_today(plant),
-        growing_days(plant),
+        growing_days(plant), _previous_check(plant),
     )
     if result is None:
         # Fail closed: an unavailable check is never treated as a pass.
@@ -438,7 +472,7 @@ def validate_plant_evidence(request, plant_id):
     image_bytes, mime = _read_upload(image)
     result = _reused_photo_result(plant, image_bytes) or validate_crop_evidence(
         plant.crop, image_bytes, mime, from_request(request), _age_today(plant),
-        growing_days(plant),
+        growing_days(plant), _previous_check(plant),
     )
 
     if result is None:
