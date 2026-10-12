@@ -272,6 +272,14 @@ if USE_S3_MEDIA:
     AWS_DEFAULT_ACL = None
     AWS_S3_FILE_OVERWRITE = False
 
+    # boto3 1.36+ adds new integrity checksums to every upload by default,
+    # which S3-compatible providers (Backblaze B2, Cloudflare R2, MinIO) have
+    # rejected as unsupported headers. Only send them when an API requires
+    # them; AWS itself accepts either. botocore reads these when it builds
+    # the client, so they are set before any upload.
+    os.environ.setdefault("AWS_REQUEST_CHECKSUM_CALCULATION", "when_required")
+    os.environ.setdefault("AWS_RESPONSE_CHECKSUM_VALIDATION", "when_required")
+
     # Deliberately unsigned. Nothing in this project calls .url on an
     # evidence file - the serializer returns the authorized endpoint instead
     # (see plants.serializers.get_evidence_image_url). Signed URLs would mean
