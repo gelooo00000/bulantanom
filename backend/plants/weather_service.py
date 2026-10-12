@@ -111,3 +111,77 @@ def current_weather() -> dict:
 
     cache.set(CACHE_KEY, weather, ttl)
     return weather
+
+
+RECENT_CACHE_KEY = "layuan_weather_recent"
+RECENT_DAYS = 7
+# Below this a day's rain is a passing shower, not a rainy day.
+RAINY_DAY_MM = 1.0
+
+
+def _number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _fetch_recent() -> dict:
+    response = requests.get(
+        OPEN_METEO_URL,
+        params={
+            "latitude": settings.FARM_LATITUDE,
+            "longitude": settings.FARM_LONGITUDE,
+            "daily": "precipitation_sum,temperature_2m_max,temperature_2m_min",
+            "past_days": RECENT_DAYS,
+            "forecast_days": 1,
+            "timezone": "Asia/Manila",
+        },
+        timeout=settings.WEATHER_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    daily = response.json().get("daily") or {}
+
+    # The last RECENT_DAYS entries end with today (so far).
+    dates = (daily.get("time") or [])[-RECENT_DAYS:]
+    rain = (daily.get("precipitation_sum") or [])[-RECENT_DAYS:]
+    highs = (daily.get("temperature_2m_max") or [])[-RECENT_DAYS:]
+    lows = (daily.get("temperature_2m_min") or [])[-RECENT_DAYS:]
+    if not dates or not all(
+        len(values) == len(dates) and all(_number(v) for v in values)
+        for values in (rain, highs, lows)
+    ):
+        raise ValueError("incomplete daily weather in the response")
+
+    return {
+        "available": True,
+        "days": len(dates),
+        "from": dates[0],
+        "to": dates[-1],
+        "rain_total_mm": round(sum(rain), 1),
+        "rainy_days": sum(1 for mm in rain if mm >= RAINY_DAY_MM),
+        "wettest_day_mm": round(max(rain), 1),
+        "temperature_max_c": round(max(highs)),
+        "temperature_min_c": round(min(lows)),
+    }
+
+
+def recent_weather() -> dict:
+    """
+    The last week's rain and temperature at the farm, cached.
+
+    Attached to every weekly assessment, so the risk evaluation knows the
+    weather the farmer no longer has to describe. `{"available": False}` on
+    failure: an assessment is never held up by the weather.
+    """
+    cached = cache.get(RECENT_CACHE_KEY)
+    if cached is not None:
+        return cached
+
+    try:
+        weather = _fetch_recent()
+        ttl = settings.WEATHER_CACHE_SECONDS
+    except Exception as exc:
+        logger.warning("Recent weather unavailable: %s: %s", type(exc).__name__, exc)
+        weather = UNAVAILABLE
+        ttl = settings.WEATHER_FAILURE_CACHE_SECONDS
+
+    cache.set(RECENT_CACHE_KEY, weather, ttl)
+    return weather

@@ -4,7 +4,7 @@ from django.urls import include, path
 from accounts.urls import admin_urlpatterns, auth_urlpatterns, lgu_urlpatterns
 from analytics.urls import analytics_urlpatterns, report_urlpatterns
 from plants.urls import farmer_urlpatterns
-from plants.views import farm_weather
+from plants.views import farm_recent_weather, farm_weather
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -15,6 +15,7 @@ urlpatterns = [
     path("api/analytics/", include((analytics_urlpatterns, "api-analytics"))),
     path("api/reports/", include((report_urlpatterns, "api-reports"))),
     path("api/weather/", farm_weather, name="farm-weather"),
+    path("api/weather/recent/", farm_recent_weather, name="farm-recent-weather"),
 ]
 
 # MEDIA_URL is deliberately NOT served here, in development or anywhere else.

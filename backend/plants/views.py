@@ -325,6 +325,16 @@ def _read_upload(image) -> tuple[bytes, str]:
     return data, mime
 
 
+def _assessment_weather() -> dict:
+    """The farm's last week of weather for a new assessment, or {} if unknown."""
+    if not settings.ATTACH_WEATHER_TO_ASSESSMENTS:
+        return {}
+    from .weather_service import recent_weather
+
+    weather = recent_weather()
+    return weather if weather.get("available") else {}
+
+
 def _verify_evidence(request, plant, image) -> dict:
     """
     Confirm the uploaded photo shows this plant's crop.
@@ -549,6 +559,7 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
             plant=plant,
             assessment_date=assessment_date,
             plant_age_days=age_days,
+            weather=_assessment_weather(),
             evidence_validated=True,
             evidence_validation={
                 **verification["result"],
@@ -998,3 +1009,16 @@ def farm_weather(request):
     from .weather_service import current_weather
 
     return Response(current_weather())
+
+
+@api_view(["GET"])
+def farm_recent_weather(request):
+    """
+    GET /api/weather/recent/ — the last week's rain and temperature at the
+    farm, the same summary attached to each new assessment, so the form can
+    show the farmer what is added for them. Cached like /api/weather/, and an
+    outage returns `{"available": false}`.
+    """
+    from .weather_service import recent_weather
+
+    return Response(recent_weather())

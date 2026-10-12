@@ -121,6 +121,14 @@ The farmer's answers are the basis of your reading:
   clearly visible in the photo. Name the answer it comes from ("You reported
   yellowing leaves", "You water daily while the soil is wet"). Do not raise a
   problem that neither the answers nor the photo support.
+- `recent_weather_at_farm` is the rain and temperature measured at the farm
+  over the past week, added by the system (the farmer did not write it). Use
+  it to weigh the answers: daily watering in a week of heavy rain, or wet
+  soil after many rainy days, points to overwatering or rot; dry soil after a
+  hot, dry week points to water stress; a long wet spell makes reported
+  spots or mold more likely to spread. Weather alone is never a risk factor:
+  mention it only to explain or support something the farmer reported or the
+  photo shows. If it is "not available", ignore it.
 - Answers left blank or "none reported" are not problems. Do not guess at
   pests, disease or symptoms the farmer did not report and the photo does
   not show.
@@ -229,6 +237,19 @@ def _expected_stage(crop, age_days: int) -> str:
     return "harvest-ready or past expected harvest start"
 
 
+def _weather_for_ai(weather) -> dict | str:
+    """The stored week of farm weather, in words the model reads easily."""
+    if not isinstance(weather, dict) or not weather.get("available"):
+        return "not available"
+    return {
+        "period": f"{weather['from']} to {weather['to']} ({weather['days']} days)",
+        "total_rain_mm": weather["rain_total_mm"],
+        "rainy_days": weather["rainy_days"],
+        "wettest_day_mm": weather["wettest_day_mm"],
+        "temperature_range_c": f"{weather['temperature_min_c']} to {weather['temperature_max_c']}",
+    }
+
+
 def build_context(assessment) -> dict:
     """The structured EXPECTED + ACTUAL payload handed to Gemini."""
     plant = assessment.plant
@@ -286,6 +307,7 @@ def build_context(assessment) -> dict:
             "environmental_observations": assessment.environmental_observations or "none reported",
             "notes": assessment.notes or "none provided",
         },
+        "recent_weather_at_farm": _weather_for_ai(getattr(assessment, "weather", None)),
         "image_evidence": bool(assessment.evidence_image),
         # The photo has already passed a separate check confirming it shows
         # this crop, so the risk evaluation can treat it as genuine evidence

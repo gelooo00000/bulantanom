@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Camera, History, LoaderCircle, ScanEye, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Camera,
+  ChevronDown,
+  ChevronUp,
+  History,
+  LoaderCircle,
+  ScanEye,
+  Sparkles,
+} from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 
 import {
@@ -15,6 +24,7 @@ import {
   type ChoiceOption,
 } from "@/components/farmer/assessment-choices";
 import { EvidenceVerdict } from "@/components/farmer/evidence-verdict";
+import { FarmWeekWeather } from "@/components/farmer/farm-week-weather";
 import { NextDuePlant } from "@/components/farmer/next-due-plant";
 import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
 import { Button } from "@/components/ui/button";
@@ -221,7 +231,8 @@ export function AssessmentForm({
   const [pestOther, setPestOther] = useState("");
   const [diseases, setDiseases] = useState<ReadonlySet<Disease>>(new Set());
   const [diseaseOther, setDiseaseOther] = useState("");
-  const [environment, setEnvironment] = useState("");
+  // Height and notes sit behind "Add more details", closed to start.
+  const [showDetails, setShowDetails] = useState(false);
   const [notes, setNotes] = useState("");
   const [evidence, setEvidence] = useState<File | null>(null);
 
@@ -395,7 +406,9 @@ export function AssessmentForm({
             symptoms.diseases.filter((item) => diseases.has(item)),
             diseaseOther,
           ),
-          environmental_observations: environment,
+          // The weather is measured at the farm and attached by the server;
+          // anything else the farmer noticed goes in the one notes box.
+          environmental_observations: "",
           notes,
         },
         evidence,
@@ -529,20 +542,6 @@ export function AssessmentForm({
 
       <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
         <div className="flex flex-col gap-4">
-          {asks("plant_height_cm") && (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="height">{t("asmt.height")}</Label>
-              <Input
-                id="height"
-                type="number"
-                min={0}
-                step={0.1}
-                placeholder={t("asmt.heightExample")}
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
-              />
-            </div>
-          )}
           <div className="flex flex-col gap-2">
             <AnswerLabel id="growth-label" source={sources.growth_condition}>
               {t("asmt.growthCompared")}
@@ -650,6 +649,7 @@ export function AssessmentForm({
               columns={3}
             />
           </div>
+          <FarmWeekWeather />
         </div>
       </FormSection>
 
@@ -680,27 +680,48 @@ export function AssessmentForm({
         </div>
       </FormSection>
 
-      <FormSection title={t("asmt.observations")} description={t("asmt.observationsText")}>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="environment">{t("asmt.environment")}</Label>
-          <Textarea
-            id="environment"
-            placeholder={t("asmt.environmentExample")}
-            value={environment}
-            onChange={(e) => setEnvironment(e.target.value)}
-          />
+      {/* Optional extras, out of the way: most weeks need none of them. */}
+      <div className="flex flex-col gap-4">
+        <button
+          type="button"
+          aria-expanded={showDetails}
+          aria-controls="more-details"
+          onClick={() => setShowDetails((open) => !open)}
+          className="text-primary flex items-center gap-1.5 self-start text-sm font-medium underline-offset-4 hover:underline"
+        >
+          {showDetails ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          {t(showDetails ? "asmt.hideDetails" : "asmt.moreDetails")}
+        </button>
+        {!showDetails && (
+          <p className="text-muted-foreground -mt-3 text-sm">{t("asmt.moreDetailsHint")}</p>
+        )}
+        <div id="more-details" hidden={!showDetails} className="flex flex-col gap-4">
+          {asks("plant_height_cm") && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="height">{t("asmt.height")}</Label>
+              <Input
+                id="height"
+                type="number"
+                min={0}
+                step={0.1}
+                placeholder={t("asmt.heightExample")}
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+              />
+            </div>
+          )}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="notes">{t("asmt.notes")}</Label>
+            <Textarea
+              id="notes"
+              placeholder={t("asmt.notesPlaceholder")}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+            <p className="text-muted-foreground text-xs">{t("asmt.anyLanguage")}</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="notes">{t("asmt.notes")}</Label>
-          <Textarea
-            id="notes"
-            placeholder={t("asmt.notesPlaceholder")}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-          <p className="text-muted-foreground text-xs">{t("asmt.anyLanguage")}</p>
-        </div>
-      </FormSection>
+      </div>
 
       {error && (
         <div className="text-destructive text-sm">

@@ -16,6 +16,11 @@ vi.mock("@/lib/api/risk-api", async (original) => ({
   submitAssessment: (...args: unknown[]) => submitAssessment(...args),
 }));
 
+let recentWeather: unknown = { available: false };
+vi.mock("@/lib/api/weather-api", () => ({
+  fetchRecentFarmWeather: () => Promise.resolve(recentWeather),
+}));
+
 const ACCEPTED: EvidenceValidation = {
   evidence_valid: true,
   verdict: "match",
@@ -51,6 +56,7 @@ function chosen(question: RegExp) {
 }
 
 beforeEach(() => {
+  recentWeather = { available: false };
   validateEvidence.mockReset();
   submitAssessment.mockReset();
   // jsdom has no object URLs; the preview only needs a string.
@@ -189,5 +195,54 @@ describe("Weekly assessment: tap answers", () => {
       "Mealybugs or scale insects; Whiteflies; Other: maliit na uod",
     );
     expect(fields.disease_observation).toBe("");
+  });
+});
+
+describe("Weekly assessment: less to fill in", () => {
+  it("keeps height and notes behind 'Add more details' until asked for", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    expect(screen.getByLabelText(/Plant height/)).not.toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Add more details (optional)" }));
+    expect(screen.getByLabelText(/Plant height/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Hide details" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("shows the farm's week of weather and sends no weather text itself", async () => {
+    recentWeather = {
+      available: true,
+      days: 7,
+      from: "2026-10-06",
+      to: "2026-10-12",
+      rain_total_mm: 42.5,
+      rainy_days: 4,
+      wettest_day_mm: 25.5,
+      temperature_max_c: 32,
+      temperature_min_c: 23,
+    };
+    validateEvidence.mockResolvedValue(ACCEPTED);
+    submitAssessment.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderForm();
+
+    expect(
+      await screen.findByText(
+        "Weather at the farm, last 7 days: 42.5 mm of rain on 4 days, 23–32°C.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add more details (optional)" }));
+    await user.type(screen.getByLabelText(/What have you noticed/), "Bunga nahuhulog");
+    await user.upload(screen.getByLabelText("Take photo"), photo());
+    await screen.findByText(/filled in from your photo/);
+    await user.click(screen.getByRole("button", { name: /Submit Assessment/ }));
+
+    await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
+    const [, , fields] = submitAssessment.mock.calls[0];
+    expect(fields).toMatchObject({ notes: "Bunga nahuhulog", environmental_observations: "" });
   });
 });

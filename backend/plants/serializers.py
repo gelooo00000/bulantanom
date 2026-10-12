@@ -350,6 +350,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
             "disease_observation",
             "environmental_observations",
             "notes",
+            "weather",
             "evidence_image",
             "evidence_image_url",
             "evidence_validated",
@@ -369,6 +370,8 @@ class AssessmentSerializer(serializers.ModelSerializer):
             # Set by the server from the Gemini check — never client-supplied.
             "evidence_validated",
             "evidence_validation",
+            # Measured at the farm by the server — never client-supplied.
+            "weather",
             "created_at",
             "risk",
         ]

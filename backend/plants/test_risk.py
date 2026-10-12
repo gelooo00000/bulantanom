@@ -137,6 +137,19 @@ class RiskTestCase(APITestCase):
         )
 
 
+FARM_WEEK = {
+    "available": True,
+    "days": 7,
+    "from": "2026-10-06",
+    "to": "2026-10-12",
+    "rain_total_mm": 42.5,
+    "rainy_days": 4,
+    "wettest_day_mm": 25.5,
+    "temperature_max_c": 32,
+    "temperature_min_c": 23,
+}
+
+
 class AssessmentSubmissionTests(RiskTestCase):
     def setUp(self):
         super().setUp()
@@ -151,6 +164,50 @@ class AssessmentSubmissionTests(RiskTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["risk"]["risk_level"], "MEDIUM")
         self.assertEqual(response.data["risk"]["status"], "completed")
+
+    @override_settings(ATTACH_WEATHER_TO_ASSESSMENTS=True)
+    @patch("plants.weather_service.recent_weather", return_value=FARM_WEEK)
+    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    def test_the_farms_week_of_weather_is_attached_and_sent_to_the_ai(self, evaluate, _w):
+        response = self.client.post(self.url, payload_with_image(), **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["weather"]["rainy_days"], 4)
+
+        from .risk_evaluation_service import build_context
+
+        assessment = evaluate.call_args.args[0]
+        self.assertEqual(
+            build_context(assessment)["recent_weather_at_farm"],
+            {
+                "period": "2026-10-06 to 2026-10-12 (7 days)",
+                "total_rain_mm": 42.5,
+                "rainy_days": 4,
+                "wettest_day_mm": 25.5,
+                "temperature_range_c": "23 to 32",
+            },
+        )
+
+    @override_settings(ATTACH_WEATHER_TO_ASSESSMENTS=True)
+    @patch("plants.weather_service.recent_weather", return_value={"available": False})
+    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    def test_an_assessment_is_never_held_up_by_the_weather(self, evaluate, _w):
+        response = self.client.post(self.url, payload_with_image(), **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["weather"], {})
+
+        from .risk_evaluation_service import build_context
+
+        context = build_context(evaluate.call_args.args[0])
+        self.assertEqual(context["recent_weather_at_farm"], "not available")
+
+    def test_the_client_cannot_supply_the_weather(self):
+        with patch(
+            "plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK
+        ):
+            response = self.client.post(
+                self.url, payload_with_image(weather='{"rainy_days": 99}'), **self.auth
+            )
+        self.assertEqual(response.data["weather"], {})
 
     @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
     def test_plant_age_is_calculated_server_side(self, _mock):

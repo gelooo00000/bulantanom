@@ -24,7 +24,6 @@ export const assessment = defineMessages({
     bik: "Nasusi na an {name} ngunyan na semana.",
   },
 
-  "asmt.select": { en: "Select", fil: "Pumili", bik: "Pili" },
   "asmt.growth": { en: "Growth", fil: "Paglaki", bik: "Pagdakula" },
   "asmt.growthText": {
     en: "How the plant has developed this week.",
@@ -71,18 +70,6 @@ export const assessment = defineMessages({
   "asmt.watering": { en: "Watering frequency", fil: "Dalas ng pagdidilig", bik: "Kadalasan san pagbubo" },
   "asmt.soil": { en: "Soil moisture", fil: "Basa ng lupa", bik: "Kabasa san daga" },
   "asmt.symptoms": { en: "Symptoms", fil: "Mga sintomas", bik: "Mga sintomas" },
-  "asmt.symptomsText": {
-    en: "Leave blank if you haven't noticed anything.",
-    fil: "Iwanang blangko kung wala kang napansin.",
-    bik: "Pabayaan na blangko kun waray ka nahiling.",
-  },
-  "asmt.pest": { en: "Pest observations", fil: "Mga napansing peste", bik: "Mga nahiling na peste" },
-  "asmt.disease": {
-    en: "Disease-like symptoms",
-    fil: "Mga sintomas na parang sakit",
-    bik: "Mga sintomas na garo helang",
-  },
-  "asmt.noneObserved": { en: "None observed", fil: "Walang napansin", bik: "Waray nahiling" },
   "asmt.evidence": {
     en: "Plant condition evidence",
     fil: "Litrato ng kalagayan ng tanim",
@@ -92,22 +79,6 @@ export const assessment = defineMessages({
     en: "Start here: take a new, clear photo of your own {crop} today. Pictures from the internet, screenshots and old photos are refused, and the photo must agree with your answers below.",
     fil: "Magsimula rito: kumuha ng bago at malinaw na litrato ng sarili mong {crop} ngayong araw. Hindi tinatanggap ang litrato mula sa internet, screenshot o lumang litrato, at dapat tugma ang litrato sa iyong mga sagot sa ibaba.",
     bik: "Magpoon digdi: magkuha nin bag-o asin malinaw na litrato san imo mismo na {crop} niyan na adlaw. Dili inaako an litrato hali sa internet, screenshot o daan na litrato, asin dapat angay an litrato sa imo mga simbag sa ibaba.",
-  },
-  "asmt.observations": { en: "Observations", fil: "Mga obserbasyon", bik: "Mga obserbasyon" },
-  "asmt.observationsText": {
-    en: "Anything else worth noting.",
-    fil: "Iba pang dapat tandaan.",
-    bik: "Iba pa na dapat tandaan.",
-  },
-  "asmt.environment": {
-    en: "Environmental observations",
-    fil: "Mga napansin sa kapaligiran",
-    bik: "Mga nahiling sa palibot",
-  },
-  "asmt.environmentExample": {
-    en: "e.g. Heavy rain the past few days",
-    fil: "hal. Malakas na ulan nitong mga nakaraang araw",
-    bik: "pananglitan: Makusog na uran kan mga nakaagi na adlaw",
   },
   "asmt.notes": {
     en: "What have you noticed about your plant this week?",
@@ -154,6 +125,37 @@ export const assessment = defineMessages({
     en: "1 answer was filled in from your photo. Check it and change it if it is wrong.",
     fil: "1 sagot ang pinunan mula sa iyong litrato. Tingnan ito at palitan kung mali.",
     bik: "1 na simbag an pinunuan hali sa imo litrato. Hilingon ini asin liwanan kun sala.",
+  },
+  "asmt.moreDetails": {
+    en: "Add more details (optional)",
+    fil: "Magdagdag ng iba pang detalye (opsyonal)",
+    bik: "Magdugang nin iba pang detalye (opsyonal)",
+  },
+  "asmt.hideDetails": { en: "Hide details", fil: "Itago ang detalye", bik: "Itago an detalye" },
+  "asmt.moreDetailsHint": {
+    en: "Plant height, and anything else you noticed.",
+    fil: "Taas ng tanim, at iba pang napansin mo.",
+    bik: "Langkaw san tanom, asin iba pang nahiling mo.",
+  },
+  "weather.week": {
+    en: "Weather at the farm, last 7 days: {rain} mm of rain on {days} days, {min}–{max}°C.",
+    fil: "Panahon sa bukid, nakaraang 7 araw: {rain} mm na ulan sa {days} araw, {min}–{max}°C.",
+    bik: "Panahon sa uma, nakaagi na 7 aldaw: {rain} mm na uran sa {days} aldaw, {min}–{max}°C.",
+  },
+  "weather.weekOneRainyDay": {
+    en: "Weather at the farm, last 7 days: {rain} mm of rain on 1 day, {min}–{max}°C.",
+    fil: "Panahon sa bukid, nakaraang 7 araw: {rain} mm na ulan sa 1 araw, {min}–{max}°C.",
+    bik: "Panahon sa uma, nakaagi na 7 aldaw: {rain} mm na uran sa 1 aldaw, {min}–{max}°C.",
+  },
+  "weather.weekDry": {
+    en: "Weather at the farm, last 7 days: no rain, {min}–{max}°C.",
+    fil: "Panahon sa bukid, nakaraang 7 araw: walang ulan, {min}–{max}°C.",
+    bik: "Panahon sa uma, nakaagi na 7 aldaw: mayong uran, {min}–{max}°C.",
+  },
+  "weather.added": {
+    en: "This is added to your assessment for you, so you don't need to describe the weather.",
+    fil: "Kusang idinadagdag ito sa iyong pagsusuri, kaya hindi mo na kailangang ilarawan ang panahon.",
+    bik: "Kusang idinudugang ini sa imo pagsusi, kaya dai mo na kaipuhan isaysay an panahon.",
   },
   "asmt.fromPhoto": { en: "From photo", fil: "Mula sa litrato", bik: "Hali sa litrato" },
   "asmt.fromLastCheck": { en: "Last check", fil: "Huling pagsusuri", bik: "Huring pagsusi" },

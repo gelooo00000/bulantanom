@@ -341,6 +341,10 @@ class Assessment(models.Model):
     disease_observation = models.TextField(blank=True)
     environmental_observations = models.TextField(blank=True)
     notes = models.TextField(blank=True)
+    # The farm's measured weather for the week before the assessment
+    # (weather_service.recent_weather), attached by the server so the farmer
+    # does not have to describe it. Empty when it could not be fetched.
+    weather = models.JSONField(default=dict, blank=True)
 
     evidence_image = models.ImageField(upload_to=evidence_upload_path, blank=True, null=True)
 

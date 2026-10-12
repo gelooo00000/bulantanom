@@ -308,6 +308,9 @@ REST_FRAMEWORK = {
     },
 }
 
+# Running under `manage.py test`.
+TESTING = sys.argv[1:2] == ["test"]
+
 # "throttle" holds the sign-in rate-limit counts. It is a database table so
 # every gunicorn worker counts each attempt once; `manage.py createcachetable`
 # (run by the Dockerfile on start) creates it. Under `manage.py test` it
@@ -318,7 +321,7 @@ CACHES = {
     "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
     "throttle": (
         {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}
-        if sys.argv[1:2] == ["test"]
+        if TESTING
         else {
             "BACKEND": "django.core.cache.backends.db.DatabaseCache",
             "LOCATION": "django_cache",
@@ -355,6 +358,10 @@ FARM_LONGITUDE = float(os.environ.get("FARM_LONGITUDE", "123.88"))
 WEATHER_CACHE_SECONDS = int(os.environ.get("WEATHER_CACHE_SECONDS", "1800"))
 WEATHER_FAILURE_CACHE_SECONDS = int(os.environ.get("WEATHER_FAILURE_CACHE_SECONDS", "300"))
 WEATHER_TIMEOUT_SECONDS = int(os.environ.get("WEATHER_TIMEOUT_SECONDS", "5"))
+# Attach the farm's last week of weather to each assessment. Off under tests,
+# so submitting an assessment there never reaches Open-Meteo; the weather
+# tests switch it on with the network mocked.
+ATTACH_WEATHER_TO_ASSESSMENTS = not TESTING
 
 # Gemini (Crop Intelligence). Server-side only — the key must never be
 # exposed to the browser or prefixed NEXT_PUBLIC_. If GEMINI_API_KEY is

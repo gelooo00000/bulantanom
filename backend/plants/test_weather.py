@@ -140,3 +140,84 @@ class WeatherEndpointTests(TestCase):
         response = self.client.get(URL)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {"available": False})
+
+
+def upstream_daily(daily):
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"daily": daily}
+    return response
+
+
+# Eight days back to today; the summary keeps the last seven.
+WEEK = {
+    "time": [f"2026-10-{day:02d}" for day in range(5, 13)],
+    "precipitation_sum": [50.0, 0.0, 12.4, 0.6, 3.0, 0.0, 25.5, 1.0],
+    "temperature_2m_max": [30.0, 31.2, 29.8, 30.5, 32.4, 31.0, 28.9, 29.5],
+    "temperature_2m_min": [21.0, 24.1, 23.6, 23.0, 24.8, 23.9, 22.7, 23.2],
+}
+
+
+@override_settings(WEATHER_CACHE_SECONDS=1800, WEATHER_FAILURE_CACHE_SECONDS=300)
+class RecentWeatherTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch("plants.weather_service.requests.get")
+    def test_summarises_the_last_seven_days(self, get):
+        from .weather_service import recent_weather
+
+        get.return_value = upstream_daily(WEEK)
+        self.assertEqual(
+            recent_weather(),
+            {
+                "available": True,
+                "days": 7,
+                "from": "2026-10-06",
+                "to": "2026-10-12",
+                "rain_total_mm": 42.5,
+                "rainy_days": 4,
+                "wettest_day_mm": 25.5,
+                "temperature_max_c": 32,
+                "temperature_min_c": 23,
+            },
+        )
+        self.assertEqual(get.call_args.kwargs["params"]["past_days"], 7)
+
+    @patch("plants.weather_service.requests.get")
+    def test_incomplete_days_are_unavailable_not_guessed(self, get):
+        from .weather_service import recent_weather
+
+        get.return_value = upstream_daily({**WEEK, "precipitation_sum": [1.0, None] * 4})
+        self.assertEqual(recent_weather(), {"available": False})
+
+    @patch("plants.weather_service.requests.get", side_effect=requests.ConnectionError)
+    def test_an_outage_is_unavailable_and_cached_briefly(self, get):
+        from .weather_service import recent_weather
+
+        self.assertEqual(recent_weather(), {"available": False})
+        recent_weather()
+        self.assertEqual(get.call_count, 1)
+
+    @patch("plants.weather_service.requests.get")
+    def test_endpoint_needs_sign_in_and_serves_the_summary(self, get):
+        get.return_value = upstream_daily(WEEK)
+        client = APIClient()
+        self.assertEqual(client.get("/api/weather/recent/").status_code, 401)
+
+        User.objects.create_user(
+            email="farmer@example.com",
+            password=PW,
+            first_name="Test",
+            last_name="User",
+            role=UserRole.FARMER,
+            account_status=AccountStatus.APPROVED,
+        )
+        token = client.post(
+            "/api/auth/farmer/login/",
+            {"email": "farmer@example.com", "password": PW},
+            format="json",
+        ).data["access"]
+        response = client.get("/api/weather/recent/", HTTP_AUTHORIZATION=f"Bearer {token}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["rainy_days"], 4)
