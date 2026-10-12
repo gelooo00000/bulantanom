@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
@@ -20,9 +21,41 @@ from .serializers import (
     FarmerSignupSerializer,
     LguOfficerCreateSerializer,
     LoginSerializer,
+    ResendCodeSerializer,
     UserSerializer,
+    VerifyCodeSerializer,
 )
-from .throttles import LOGIN_THROTTLES
+from .throttles import LOGIN_THROTTLES, RESEND_THROTTLES, SIGNUP_THROTTLES, VERIFY_THROTTLES
+from .verification import (
+    RESEND_COOLDOWN,
+    CodeSendFailed,
+    ResendTooSoon,
+    check_code,
+    send_code,
+)
+
+CODE_SEND_FAILED = (
+    "We couldn't send a verification code to this email right now. "
+    "Please check the address and try again in a few minutes."
+)
+CODE_MESSAGES = {
+    "invalid": "That code is not correct. Check the email we sent and try again.",
+    "expired": 'That code has expired. Tap "Resend code" to get a new one.',
+    "locked": 'Too many wrong codes. Tap "Resend code" to get a new one.',
+}
+
+
+def _verification_pending(user, *, status_code, detail):
+    """The body the sign-up page and login page both turn into the code step."""
+    return Response(
+        {
+            "detail": detail,
+            "code": "email_not_verified",
+            "email": user.email,
+            "resend_after": int(RESEND_COOLDOWN.total_seconds()),
+        },
+        status=status_code,
+    )
 
 # Exact, user-facing messages for each non-approved account state.
 STATUS_MESSAGES = {
@@ -115,31 +148,126 @@ class FarmerSignupView(generics.CreateAPIView):
     """
     POST /api/auth/farmer/signup/
 
-    Creates an approved FARMER account and signs it in, so a new Farmer
-    lands on their own dashboard rather than a waiting screen. Returns the
-    same token shape as login — access token in the body, refresh token in
-    an HttpOnly cookie — so the client has one code path for both.
+    Creates an approved but unverified FARMER account and emails it a
+    one-time code (accounts.verification). No tokens yet: the farmer is
+    signed in by FarmerVerifyView once the code comes back, which proves the
+    address is real. If the code cannot be sent, nothing is kept.
 
-    The account record still reaches Admins and LGU Officers as a
-    notification; what is gone is the gate, not the visibility. An Admin can
-    still suspend or reject the account afterwards, and the status check in
-    `_authenticate_for_role` will refuse the next sign-in.
+    An Admin can still suspend or reject the account afterwards, and the
+    status check in `_authenticate_for_role` will refuse the next sign-in.
     """
 
     queryset = User.objects.all()
     serializer_class = FarmerSignupSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = SIGNUP_THROTTLES
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        try:
+            with transaction.atomic():
+                user = serializer.save()
+                send_code(user, enforce_cooldown=False)
+        except CodeSendFailed:
+            return Response(
+                {"detail": CODE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        return _verification_pending(
+            user,
+            status_code=status.HTTP_201_CREATED,
+            detail=f"We sent a 6-digit code to {user.email}.",
+        )
+
+
+def _unverified_farmer(email):
+    return User.objects.filter(
+        email__iexact=(email or "").strip().lower(),
+        role=UserRole.FARMER,
+        email_verified=False,
+    ).first()
+
+
+class FarmerVerifyView(APIView):
+    """
+    POST /api/auth/farmer/verify/ {email, code}
+
+    Checks the emailed code; on success the account is verified, announced
+    (welcome email, LGU and Admin notices - never for an address nobody
+    proved) and signed in with the same token shape as login.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = VERIFY_THROTTLES
+
+    def post(self, request):
+        serializer = VerifyCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = _unverified_farmer(serializer.validated_data["email"])
+        if user is None:
+            # Same answer for an unknown address as for a wrong code.
+            return Response(
+                {"detail": CODE_MESSAGES["invalid"]}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = check_code(user, serializer.validated_data["code"])
+        if result != "ok":
+            return Response(
+                {"detail": CODE_MESSAGES[result]}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not user.can_sign_in:
+            raise AuthenticationFailed(
+                STATUS_MESSAGES.get(user.account_status, "Your account cannot sign in right now.")
+            )
         RegistrationNotification.objects.create(user=user)
         # Welcome notice + an LGU heads-up that a new Farmer has joined.
         # Both are queued until this transaction commits.
         notify_farmer_registered(user)
         email_farmer_welcome(user)
-        return _tokens_response(user, status_code=status.HTTP_201_CREATED)
+        return _tokens_response(user)
+
+
+class FarmerResendCodeView(APIView):
+    """
+    POST /api/auth/farmer/resend-code/ {email}
+
+    A fresh code for an unfinished sign-up. Answers the same whether or not
+    the address has one, so it cannot be used to discover accounts.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = RESEND_THROTTLES
+
+    def post(self, request):
+        serializer = ResendCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"].strip().lower()
+        user = _unverified_farmer(email)
+        if user is not None:
+            try:
+                send_code(user)
+            except ResendTooSoon as exc:
+                return Response(
+                    {
+                        "detail": (
+                            f"Please wait {exc.wait_seconds} seconds "
+                            "before asking for another code."
+                        ),
+                        "resend_after": exc.wait_seconds,
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            except CodeSendFailed:
+                return Response(
+                    {"detail": CODE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+        return Response(
+            {
+                "detail": f"We sent a new code to {email}.",
+                "resend_after": int(RESEND_COOLDOWN.total_seconds()),
+            }
+        )
 
 
 class _LoginThrottleMixin:
@@ -175,6 +303,22 @@ class FarmerLoginView(_LoginThrottleMixin, APIView):
             serializer.validated_data["password"],
             UserRole.FARMER,
         )
+        if not user.email_verified:
+            # Right password, unfinished sign-up: send a code (unless one
+            # just went) and ask for it instead of signing in.
+            try:
+                send_code(user)
+            except ResendTooSoon:
+                pass
+            except CodeSendFailed:
+                return Response(
+                    {"detail": CODE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+            return _verification_pending(
+                user,
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Please verify your email first. We sent a 6-digit code to {user.email}.",
+            )
         return _tokens_response(user)
 
 

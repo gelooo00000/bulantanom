@@ -14,6 +14,7 @@ from rest_framework.test import APITestCase, APITransactionTestCase
 from notifications.models import Notification
 
 from .models import AccountStatus, User, UserRole
+from .testing import signup_and_verify
 
 DASHBOARD_URL = "/api/admin/dashboard/"
 USERS_URL = "/api/admin/users/"
@@ -196,15 +197,11 @@ class AdminNotificationTests(AdminNotificationTestCase):
         return Notification.objects.filter(recipient=user, **filters)
 
     def test_registration_notifies_the_admin(self):
-        self.client.post(
-            SIGNUP_URL,
-            {
+        signup_and_verify(self.client, {
                 "first_name": "New", "last_name": "Farmer",
                 "email": "new@example.com", "password": PW,
                 "password_confirm": PW,
-            },
-            format="json",
-        )
+            })
         rows = self.admin_rows(notification_type="ACCOUNT_CREATED")
         self.assertEqual(rows.count(), 1)
         self.assertIn("can now sign in", rows.first().message)
@@ -265,14 +262,10 @@ class AdminNotificationTests(AdminNotificationTestCase):
 
     def test_admin_unread_count_and_mark_all_read(self):
         make_user("x1@example.com", status_=AccountStatus.PENDING)
-        self.client.post(
-            SIGNUP_URL,
-            {
+        signup_and_verify(self.client, {
                 "first_name": "A", "last_name": "B", "email": "n2@example.com",
                 "password": PW, "password_confirm": PW,
-            },
-            format="json",
-        )
+            })
         headers = self.auth("admin@example.com")
 
         before = self.client.get(ADMIN_UNREAD_URL, **headers).data["unread"]
@@ -284,14 +277,10 @@ class AdminNotificationTests(AdminNotificationTestCase):
 
     def test_read_state_persists(self):
         """Marking read is a database write, not frontend state."""
-        self.client.post(
-            SIGNUP_URL,
-            {
+        signup_and_verify(self.client, {
                 "first_name": "A", "last_name": "B", "email": "n3@example.com",
                 "password": PW, "password_confirm": PW,
-            },
-            format="json",
-        )
+            })
         headers = self.auth("admin@example.com")
         row = self.admin_rows().first()
         self.client.post(f"/api/admin/notifications/{row.id}/read/", **headers)

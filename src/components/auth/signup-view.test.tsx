@@ -9,9 +9,24 @@ const router = { push: vi.fn(), replace: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const signup = vi.fn();
+const verifyEmail = vi.fn();
+const resendCode = vi.fn();
 vi.mock("@/lib/auth/auth-context", () => ({
-  useAuth: () => ({ currentUser: null, signup }),
+  useAuth: () => ({ currentUser: null, signup, verifyEmail, resendCode }),
 }));
+
+const CODE_SENT = {
+  email: "maria@example.com",
+  resendAfter: 60,
+  message: "We sent a 6-digit code to maria@example.com.",
+};
+
+async function enterCode(code: string) {
+  fireEvent.change(screen.getByLabelText(/verification code/i), { target: { value: code } });
+  await act(async () => {
+    fireEvent.submit(screen.getByLabelText(/verification code/i).closest("form")!);
+  });
+}
 vi.mock("@/components/shared/theme-toggle", () => ({ ThemeToggle: () => null }));
 
 const newFarmer: AuthUser = {
@@ -38,6 +53,8 @@ beforeEach(() => {
   router.push.mockClear();
   router.replace.mockClear();
   signup.mockReset();
+  verifyEmail.mockReset();
+  resendCode.mockReset();
 });
 
 afterEach(() => {
@@ -45,10 +62,53 @@ afterEach(() => {
 });
 
 describe("creating a Farmer account", () => {
-  it("shows the loading screen, then opens the dashboard after 5 seconds", async () => {
-    signup.mockResolvedValue(newFarmer);
+  it("asks for the emailed code before anything else", async () => {
+    signup.mockResolvedValue(CODE_SENT);
     render(<SignupView />);
     await createAccount();
+
+    expect(screen.getByText("Check your email.")).toBeInTheDocument();
+    expect(screen.getByText("maria@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("Preparing your dashboard...")).toBeNull();
+    // The button waits for all six digits.
+    expect(screen.getByRole("button", { name: /Verify and continue/ })).toBeDisabled();
+  });
+
+  it("keeps the farmer on the code step when the code is wrong", async () => {
+    signup.mockResolvedValue(CODE_SENT);
+    verifyEmail.mockRejectedValue(new Error("That code is not correct."));
+    render(<SignupView />);
+    await createAccount();
+    await enterCode("123456");
+
+    expect(verifyEmail).toHaveBeenCalledWith("maria@example.com", "123456");
+    expect(screen.getByText("That code is not correct.")).toBeInTheDocument();
+    expect(screen.queryByText("Preparing your dashboard...")).toBeNull();
+  });
+
+  it("only offers a new code once the wait is over", async () => {
+    signup.mockResolvedValue(CODE_SENT);
+    resendCode.mockResolvedValue(60);
+    render(<SignupView />);
+    await createAccount();
+
+    expect(screen.getByText("resend in 60s")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resend code" })).toBeNull();
+    for (let i = 0; i < 60; i++) act(() => vi.advanceTimersByTime(1000));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Resend code" }));
+    });
+    expect(resendCode).toHaveBeenCalledWith("maria@example.com");
+    expect(screen.getByText("We sent a new code to maria@example.com.")).toBeInTheDocument();
+  });
+
+  it("shows the loading screen once the code is right, then opens the dashboard", async () => {
+    signup.mockResolvedValue(CODE_SENT);
+    verifyEmail.mockResolvedValue(newFarmer);
+    render(<SignupView />);
+    await createAccount();
+    await enterCode("123456");
 
     expect(screen.getByText("Preparing your dashboard...")).toBeInTheDocument();
     // A new account is welcomed in, not welcomed back.

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DASHBOARD_LOADING_MS } from "@/components/auth/dashboard-loading-screen";
 import { LoginView } from "@/components/auth/login-view";
+import { EmailNotVerifiedError } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
 
 const router = { push: vi.fn(), replace: vi.fn() };
@@ -13,8 +14,18 @@ vi.mock("next/navigation", () => ({
 }));
 
 const login = vi.fn();
+const verifyEmail = vi.fn();
 vi.mock("@/lib/auth/auth-context", () => ({
-  useAuth: () => ({ currentUser: null, login }),
+  useAuth: () => ({ currentUser: null, login, verifyEmail, resendCode: vi.fn() }),
+  EmailNotVerifiedError: class extends Error {
+    constructor(
+      message: string,
+      public email: string,
+      public resendAfter: number,
+    ) {
+      super(message);
+    }
+  },
 }));
 vi.mock("@/components/shared/theme-toggle", () => ({ ThemeToggle: () => null }));
 
@@ -42,6 +53,7 @@ beforeEach(() => {
   router.push.mockClear();
   router.replace.mockClear();
   login.mockReset();
+  verifyEmail.mockReset();
   roleParam = null;
 });
 
@@ -112,5 +124,24 @@ describe("signing in", () => {
     act(() => vi.advanceTimersByTime(DASHBOARD_LOADING_MS * 2));
     expect(router.replace).not.toHaveBeenCalled();
     expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("asks a Farmer who never verified their email for the code", async () => {
+    login.mockRejectedValue(
+      new EmailNotVerifiedError("Please verify your email first.", "juan@example.com", 60),
+    );
+    verifyEmail.mockResolvedValue(user("farmer"));
+    render(<LoginView />);
+    await signIn();
+
+    expect(screen.getByText("Check your email.")).toBeInTheDocument();
+    expect(screen.queryByText("Preparing your dashboard...")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/verification code/i), { target: { value: "123456" } });
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText(/verification code/i).closest("form")!);
+    });
+    expect(verifyEmail).toHaveBeenCalledWith("juan@example.com", "123456");
+    expect(screen.getByText("Preparing your dashboard...")).toBeInTheDocument();
   });
 });

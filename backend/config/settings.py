@@ -322,11 +322,20 @@ REST_FRAMEWORK = {
         "login_email": "5/min",
         "login_email_hourly": "20/hour",
         "login_ip": "30/min",
+        # Sign-up verification codes: typing one back, asking for another,
+        # and signing up at all (each sign-up sends an email).
+        "verify_email": "20/hour",
+        "resend_email": "10/hour",
+        "signup_ip": "20/hour",
     },
 }
 
 # Running under `manage.py test`.
 TESTING = sys.argv[1:2] == ["test"]
+
+# Refuse a sign-up email whose domain has no mail server (accounts.email_check).
+# Off under test: test addresses use example.com, which publishes "no mail".
+EMAIL_DOMAIN_CHECK = _env_bool("EMAIL_DOMAIN_CHECK", not TESTING)
 
 # "throttle" holds the sign-in rate-limit counts. It is a database table so
 # every gunicorn worker counts each attempt once; `manage.py createcachetable`

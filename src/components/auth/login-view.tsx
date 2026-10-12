@@ -9,11 +9,12 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
+import { VerifyEmailStep } from "@/components/auth/verify-email-step";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
-import { useAuth } from "@/lib/auth/auth-context";
+import { EmailNotVerifiedError, useAuth } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
@@ -87,6 +88,9 @@ export function LoginView() {
   // Set once a Farmer or LGU Officer signs in: the form gives way to the
   // "Preparing your dashboard..." screen, which opens the dashboard itself.
   const [preparingFor, setPreparingFor] = useState<AuthUser | null>(null);
+  // A Farmer who never typed their sign-up code: the right password got a
+  // fresh code emailed, and the form gives way to "Enter the code".
+  const [unverified, setUnverified] = useState<EmailNotVerifiedError | null>(null);
   // True while this form is signing someone in, so the effect below does not
   // race the loading screen to the dashboard the moment the user is set.
   const signingIn = useRef(false);
@@ -116,7 +120,14 @@ export function LoginView() {
     } catch (err) {
       // A failed sign-in never shows the loading screen.
       signingIn.current = false;
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      if (err instanceof EmailNotVerifiedError) {
+        // Still signing in, through the code step: keep the loading screen
+        // ahead of the redirect once the code is accepted.
+        signingIn.current = true;
+        setUnverified(err);
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong.");
+      }
       setSubmitting(false);
     }
   }
@@ -127,6 +138,23 @@ export function LoginView() {
         <DashboardLoadingScreen
           destination={DASHBOARD_BY_ROLE[preparingFor.role]}
           firstName={preparingFor.firstName}
+        />
+      </AuthSplitLayout>
+    );
+  }
+
+  if (unverified) {
+    return (
+      <AuthSplitLayout>
+        <VerifyEmailStep
+          email={unverified.email}
+          resendAfter={unverified.resendAfter}
+          onVerified={setPreparingFor}
+          onBack={() => {
+            signingIn.current = false;
+            setUnverified(null);
+          }}
+          backLabel="Back to sign in"
         />
       </AuthSplitLayout>
     );

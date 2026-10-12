@@ -1,0 +1,12 @@
+Hello {{ name }},
+
+Your BulanTanom verification code is:
+
+    {{ code }}
+
+Enter it on BulanTanom to finish creating your Farmer account. It works once and expires in {{ minutes }} minutes.
+
+Didn't try to sign up? You can ignore this email - no account is created without this code. Never share this code with anyone.
+
+--
+BulanTanom will never ask you for your password by email.

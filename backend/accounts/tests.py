@@ -1,11 +1,17 @@
+from datetime import timedelta
+from unittest import mock
+
 from django.conf import settings
+from django.core import mail
 from django.core.cache import caches
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import AccountStatus, RegistrationNotification, User, UserRole
+from .models import AccountStatus, EmailVerification, RegistrationNotification, User, UserRole
+from .testing import RESEND_URL, VERIFY_URL, last_code, signup_and_verify
 
 SIGNUP_URL = "/api/auth/farmer/signup/"
 FARMER_LOGIN_URL = "/api/auth/farmer/login/"
@@ -38,8 +44,8 @@ def make_user(email, role, account_status, password="SecurePassword123!"):
 
 class FarmerSignupTests(APITestCase):
     def test_signup_creates_an_approved_farmer_and_notification(self):
-        response = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = signup_and_verify(self.client, VALID_SIGNUP)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         user = User.objects.get(email="juan@example.com")
         self.assertEqual(user.role, UserRole.FARMER)
@@ -47,17 +53,17 @@ class FarmerSignupTests(APITestCase):
         # Admins no longer gate the account, but they still get the record.
         self.assertEqual(RegistrationNotification.objects.filter(user=user).count(), 1)
 
-    def test_signup_signs_the_farmer_in(self):
+    def test_the_emailed_code_signs_the_farmer_in(self):
         """A new Farmer lands on their dashboard, not a waiting screen."""
-        response = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = signup_and_verify(self.client, VALID_SIGNUP)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access", response.data)
         self.assertEqual(response.data["user"]["email"], "juan@example.com")
         # Refresh token rides in the HttpOnly cookie, exactly as on login.
         self.assertIn(settings.REFRESH_COOKIE_NAME, response.cookies)
 
     def test_a_new_farmer_can_immediately_use_the_api(self):
-        signup = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        signup = signup_and_verify(self.client, VALID_SIGNUP)
         self.client.credentials(
             HTTP_AUTHORIZATION=f"Bearer {signup.data['access']}"
         )
@@ -71,7 +77,7 @@ class FarmerSignupTests(APITestCase):
         shut an account down afterwards - including one holding a token
         issued seconds earlier.
         """
-        signup = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        signup = signup_and_verify(self.client, VALID_SIGNUP)
         access = signup.data["access"]
 
         farmer = User.objects.get(email="juan@example.com")
@@ -96,12 +102,10 @@ class FarmerSignupTests(APITestCase):
 
     def test_signup_accepts_a_single_name(self):
         """A farmer who gives one name gets one name, not the same one twice."""
-        response = self.client.post(
-            SIGNUP_URL,
-            {**VALID_SIGNUP, "first_name": "Nonong", "last_name": ""},
-            format="json",
+        response = signup_and_verify(
+            self.client, {**VALID_SIGNUP, "first_name": "Nonong", "last_name": ""}
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["user"]["full_name"], "Nonong")
         self.assertEqual(User.objects.get(email="juan@example.com").last_name, "")
 
@@ -137,7 +141,7 @@ class FarmerSignupTests(APITestCase):
         self.assertFalse(user.is_staff)
 
     def test_duplicate_email_rejected(self):
-        self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        signup_and_verify(self.client, VALID_SIGNUP)
         response = self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("already exists", str(response.data))
@@ -146,6 +150,164 @@ class FarmerSignupTests(APITestCase):
         payload = {**VALID_SIGNUP, "password_confirm": "DifferentPassword123!"}
         response = self.client.post(SIGNUP_URL, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class FarmerEmailVerificationTests(APITestCase):
+    """Sign-up emails a one-time code; the account works only once it is typed back."""
+
+    def signup(self, payload=VALID_SIGNUP):
+        return self.client.post(SIGNUP_URL, payload, format="json")
+
+    def verify(self, code, email="juan@example.com"):
+        return self.client.post(VERIFY_URL, {"email": email, "code": code}, format="json")
+
+    def login(self):
+        return self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "juan@example.com", "password": VALID_SIGNUP["password"]},
+            format="json",
+        )
+
+    def wrong(self, code):
+        return "000000" if code != "000000" else "111111"
+
+    def test_signup_emails_a_code_and_signs_nobody_in(self):
+        response = self.signup()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["code"], "email_not_verified")
+        self.assertNotIn("access", response.data)
+        self.assertNotIn(settings.REFRESH_COOKIE_NAME, response.cookies)
+
+        self.assertEqual(len(mail.outbox), 1)
+        code = last_code("juan@example.com")
+        self.assertRegex(code, r"^\d{6}$")
+        self.assertIn(code, mail.outbox[0].body)
+        self.assertFalse(User.objects.get(email="juan@example.com").email_verified)
+
+    def test_the_code_is_never_stored_in_the_clear(self):
+        self.signup()
+        code = last_code("juan@example.com")
+        row = EmailVerification.objects.get(user__email="juan@example.com")
+        self.assertNotIn(code, row.code_hash)
+
+    def test_nobody_is_announced_until_the_code_comes_back(self):
+        self.signup()
+        self.assertFalse(RegistrationNotification.objects.exists())
+
+    def test_an_unverified_account_cannot_sign_in_and_is_sent_a_code(self):
+        self.signup()
+        mail.outbox.clear()
+        EmailVerification.objects.update(sent_at=timezone.now() - timedelta(minutes=5))
+
+        response = self.login()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "email_not_verified")
+        self.assertNotIn("access", response.data)
+        # A fresh code went out, and it works.
+        self.assertEqual(self.verify(last_code("juan@example.com")).status_code, 200)
+
+    def test_a_wrong_password_never_reveals_the_code_step(self):
+        self.signup()
+        response = self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "juan@example.com", "password": "WrongPassword123!"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn("code", response.data)
+
+    def test_after_verifying_the_farmer_signs_in_with_just_the_password(self):
+        signup_and_verify(self.client, VALID_SIGNUP)
+        response = self.login()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+
+    def test_a_code_works_only_once(self):
+        self.signup()
+        code = last_code("juan@example.com")
+        self.assertEqual(self.verify(code).status_code, 200)
+        self.assertEqual(self.verify(code).status_code, 400)
+
+    def test_a_wrong_code_is_refused(self):
+        self.signup()
+        response = self.verify(self.wrong(last_code("juan@example.com")))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("not correct", response.data["detail"])
+        self.assertFalse(User.objects.get(email="juan@example.com").email_verified)
+
+    def test_five_wrong_codes_lock_it_even_against_the_right_one(self):
+        self.signup()
+        code = last_code("juan@example.com")
+        for _ in range(5):
+            self.verify(self.wrong(code))
+        response = self.verify(code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Too many", response.data["detail"])
+
+    def test_an_expired_code_is_refused(self):
+        self.signup()
+        code = last_code("juan@example.com")
+        EmailVerification.objects.update(expires_at=timezone.now() - timedelta(seconds=1))
+        response = self.verify(code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("expired", response.data["detail"])
+
+    def test_resend_waits_a_minute_then_replaces_the_old_code(self):
+        self.signup()
+        old = last_code("juan@example.com")
+
+        too_soon = self.client.post(RESEND_URL, {"email": "juan@example.com"}, format="json")
+        self.assertEqual(too_soon.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+        EmailVerification.objects.update(sent_at=timezone.now() - timedelta(minutes=2))
+        response = self.client.post(RESEND_URL, {"email": "juan@example.com"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        new = last_code("juan@example.com")
+        if new != old:
+            self.assertEqual(self.verify(old).status_code, 400)
+        self.assertEqual(self.verify(new).status_code, 200)
+
+    def test_resend_answers_the_same_for_an_unknown_address(self):
+        response = self.client.post(RESEND_URL, {"email": "nobody@example.com"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_an_unfinished_signup_does_not_hold_the_address(self):
+        """Whoever can read the inbox may claim it, typo'd sign-up or not."""
+        self.signup({**VALID_SIGNUP, "first_name": "Typo"})
+        response = self.signup({**VALID_SIGNUP, "first_name": "Owner"})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.filter(email="juan@example.com").count(), 1)
+        self.assertEqual(User.objects.get(email="juan@example.com").first_name, "Owner")
+
+    def test_a_typo_of_a_common_provider_is_caught(self):
+        response = self.signup({**VALID_SIGNUP, "email": "juan@gmial.com"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("juan@gmail.com", str(response.data["email"]))
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(EMAIL_DOMAIN_CHECK=True)
+    def test_a_domain_with_no_mail_server_is_refused(self):
+        with mock.patch("accounts.email_check._domain_receives_mail", return_value=False):
+            response = self.signup({**VALID_SIGNUP, "email": "juan@nowhere-farm.test"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("could not be found", str(response.data["email"]))
+        self.assertFalse(User.objects.filter(email="juan@nowhere-farm.test").exists())
+
+    @override_settings(EMAIL_DOMAIN_CHECK=True)
+    def test_a_dns_outage_never_blocks_a_signup(self):
+        with mock.patch("accounts.email_check._domain_receives_mail", return_value=None):
+            response = self.signup()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_if_the_code_cannot_be_sent_nothing_is_kept(self):
+        with mock.patch(
+            "django.core.mail.EmailMultiAlternatives.send", side_effect=OSError("SMTP down")
+        ):
+            response = self.signup()
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn("couldn't send", response.data["detail"])
+        self.assertFalse(User.objects.filter(email="juan@example.com").exists())
 
 
 class FarmerLoginStatusTests(APITestCase):
@@ -386,7 +548,7 @@ class AdminAccountManagementTests(APITestCase):
         self.assertEqual(len(response.data), 0)
 
     def test_admin_still_sees_an_account_moved_back_to_pending(self):
-        self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        signup_and_verify(self.client, VALID_SIGNUP)
         farmer = User.objects.get(email="juan@example.com")
         farmer.account_status = AccountStatus.PENDING
         farmer.save()
@@ -396,7 +558,7 @@ class AdminAccountManagementTests(APITestCase):
         self.assertEqual(response.data[0]["user"]["email"], "juan@example.com")
 
     def test_notification_cleared_after_approval(self):
-        self.client.post(SIGNUP_URL, VALID_SIGNUP, format="json")
+        signup_and_verify(self.client, VALID_SIGNUP)
         farmer = User.objects.get(email="juan@example.com")
         # Approval only means something for an account that is not already
         # approved, which now takes an Admin putting it back.

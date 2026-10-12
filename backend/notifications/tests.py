@@ -21,6 +21,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APITransactionTestCase
 
 from accounts.models import AccountStatus, User, UserRole
+from accounts.testing import signup_and_verify
 from plants.models import Assessment, Crop, Plant, RiskAssessment, RiskStatus
 
 from .models import Notification, NotificationType
@@ -613,16 +614,12 @@ class AccountNotificationTests(NotificationTestMixin, APITransactionTestCase):
         self.officer = make_user("officer@example.com", UserRole.LGU_OFFICER)
 
     def test_signup_notifies_the_new_farmer_and_the_lgu(self):
-        response = self.client.post(
-            "/api/auth/farmer/signup/",
-            {
+        response = signup_and_verify(self.client, {
                 "first_name": "Juan", "last_name": "Dela Cruz",
                 "email": "juan@example.com",
                 "password": PW, "password_confirm": PW,
-            },
-            format="json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         farmer = User.objects.get(email="juan@example.com")
         own = Notification.objects.get(

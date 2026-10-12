@@ -47,3 +47,26 @@ class LoginIpThrottle(_LoginThrottle):
 
 
 LOGIN_THROTTLES = [LoginEmailThrottle, LoginEmailHourlyThrottle, LoginIpThrottle]
+
+
+class VerifyEmailThrottle(LoginEmailThrottle):
+    """Guesses at one account's sign-up code, on top of its 5-wrong-guess limit."""
+
+    scope = "verify_email"
+
+
+class ResendEmailThrottle(LoginEmailThrottle):
+    """New codes asked for one address, so it cannot be flooded with email."""
+
+    scope = "resend_email"
+
+
+class SignupIpThrottle(LoginIpThrottle):
+    """Every sign-up sends an email; one machine cannot send hundreds."""
+
+    scope = "signup_ip"
+
+
+VERIFY_THROTTLES = [VerifyEmailThrottle, LoginIpThrottle]
+RESEND_THROTTLES = [ResendEmailThrottle, LoginIpThrottle]
+SIGNUP_THROTTLES = [SignupIpThrottle]

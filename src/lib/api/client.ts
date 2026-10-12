@@ -7,12 +7,20 @@ export const API_BASE_URL =
 export class ApiError extends Error {
   status: number;
   fieldErrors?: Record<string, string[]>;
+  /** The parsed error body, for callers that act on more than the message. */
+  body?: unknown;
 
-  constructor(message: string, status: number, fieldErrors?: Record<string, string[]>) {
+  constructor(
+    message: string,
+    status: number,
+    fieldErrors?: Record<string, string[]>,
+    body?: unknown,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.fieldErrors = fieldErrors;
+    this.body = body;
   }
 }
 
@@ -253,11 +261,18 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   }
 
   if (!response.ok) {
-    if (response.status >= 500) {
+    // A 503 is the backend saying, in words meant for the user, that a
+    // service it relies on (e.g. the mail server) is down. Other 5xx bodies
+    // are never shown.
+    const detail =
+      response.status === 503 && data && typeof data === "object"
+        ? (data as Record<string, unknown>).detail
+        : undefined;
+    if (response.status >= 500 && typeof detail !== "string") {
       throw new ApiError("Something went wrong. Please try again later.", response.status);
     }
     const { message, fieldErrors } = extractError(data, "Something went wrong. Please try again.");
-    throw new ApiError(message, response.status, fieldErrors);
+    throw new ApiError(message, response.status, fieldErrors, data);
   }
 
   return data as T;

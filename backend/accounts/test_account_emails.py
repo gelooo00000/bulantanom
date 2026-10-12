@@ -24,6 +24,7 @@ from rest_framework.test import APITransactionTestCase
 from notifications.models import EmailLog, EmailStatus, Notification
 
 from .models import AccountStatus, User, UserRole
+from .testing import signup_and_verify
 
 SIGNUP_URL = "/api/auth/farmer/signup/"
 CREATE_OFFICER_URL = "/api/admin/lgu-officers/"
@@ -74,19 +75,18 @@ class AccountEmailTests(APITransactionTestCase):
         Signup approves the account at once, so no approval email will ever
         follow; the welcome email is the Farmer's only confirmation by mail.
         """
-        response = self.client.post(
-            SIGNUP_URL,
-            {
+        response = signup_and_verify(self.client, {
                 "first_name": "New", "last_name": "Farmer",
                 "email": "new@example.com", "password": PW, "password_confirm": PW,
-            },
-            format="json",
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         created = User.objects.get(email="new@example.com")
         self.assertEqual(created.account_status, AccountStatus.APPROVED)
 
-        sent = [m for m in mail.outbox if "new@example.com" in m.to]
+        sent = [
+            m for m in mail.outbox
+            if "new@example.com" in m.to and "verification code" not in m.subject
+        ]
         self.assertEqual(len(sent), 1)
         self.assertIn("Welcome", sent[0].subject)
         self.assertIn("New Farmer", sent[0].body)

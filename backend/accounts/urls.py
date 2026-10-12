@@ -12,6 +12,8 @@ from . import lgu_views, views
 auth_urlpatterns = [
     path("farmer/signup/", views.FarmerSignupView.as_view(), name="farmer-signup"),
     path("farmer/login/", views.FarmerLoginView.as_view(), name="farmer-login"),
+    path("farmer/verify/", views.FarmerVerifyView.as_view(), name="farmer-verify"),
+    path("farmer/resend-code/", views.FarmerResendCodeView.as_view(), name="farmer-resend-code"),
     path("lgu/login/", views.LguLoginView.as_view(), name="lgu-login"),
     path("admin/login/", views.AdminLoginView.as_view(), name="admin-login"),
     path("refresh/", views.RefreshView.as_view(), name="auth-refresh"),

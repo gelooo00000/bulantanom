@@ -9,11 +9,12 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
+import { VerifyEmailStep } from "@/components/auth/verify-email-step";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, type PendingVerification } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
 
 export function SignupView() {
@@ -29,6 +30,8 @@ export function SignupView() {
   // Set once the account is created: the form gives way to the same
   // "Preparing your dashboard..." screen a Farmer sees after signing in.
   const [preparingFor, setPreparingFor] = useState<AuthUser | null>(null);
+  // Set once the account exists: the form gives way to "Enter the code".
+  const [pending, setPending] = useState<PendingVerification | null>(null);
   // True while this form is creating the account, so the effect below does
   // not race the loading screen to the dashboard once the user is set.
   const signingUp = useRef(false);
@@ -57,16 +60,13 @@ export function SignupView() {
     setSubmitting(true);
     signingUp.current = true;
     try {
-      // Signing up signs the Farmer in; the loading screen then opens their
-      // own dashboard.
-      const user = await signup({ name: fullName, email, password });
-      setPreparingFor(user);
+      // The account exists but is not signed in: a code is on its way to
+      // the email, and typing it back is what opens the dashboard.
+      setPending(await signup({ name: fullName, email, password }));
     } catch (err) {
-      // A failed sign-up never shows the loading screen.
       signingUp.current = false;
       setError(err instanceof Error ? err.message : "Something went wrong.");
-      // Only on failure: on success the loading screen replaces the form,
-      // and clearing the flag first would flash the button back to idle.
+    } finally {
       setSubmitting(false);
     }
   }
@@ -78,6 +78,23 @@ export function SignupView() {
           destination={DASHBOARD_BY_ROLE[preparingFor.role]}
           firstName={preparingFor.firstName}
           newAccount
+        />
+      </AuthSplitLayout>
+    );
+  }
+
+  if (pending) {
+    return (
+      <AuthSplitLayout>
+        <VerifyEmailStep
+          email={pending.email}
+          resendAfter={pending.resendAfter}
+          onVerified={setPreparingFor}
+          onBack={() => {
+            setPending(null);
+            signingUp.current = false;
+          }}
+          backLabel="Use a different email"
         />
       </AuthSplitLayout>
     );

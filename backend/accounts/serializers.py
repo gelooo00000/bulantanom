@@ -2,6 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
+from .email_check import email_problem
 from .models import AccountStatus, User, UserRole
 
 
@@ -20,6 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "role",
             "account_status",
+            "email_verified",
             "date_joined",
         ]
         read_only_fields = fields
@@ -47,8 +49,13 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         normalized = value.strip().lower()
-        if User.objects.filter(email__iexact=normalized).exists():
+        # An unfinished sign-up (code never entered) does not hold the
+        # address: whoever can actually read that inbox may claim it.
+        if User.objects.filter(email__iexact=normalized, email_verified=True).exists():
             raise serializers.ValidationError("An account with this email already exists.")
+        problem = email_problem(normalized)
+        if problem:
+            raise serializers.ValidationError(problem)
         return normalized
 
     def validate(self, attrs):
@@ -63,6 +70,9 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
+        User.objects.filter(
+            email__iexact=validated_data["email"], email_verified=False, role=UserRole.FARMER
+        ).delete()
         # Farmers are approved on sign-up and go straight to their dashboard.
         # The status field is still a real gate, not a formality: an Admin can
         # suspend or reject an account afterwards and `_authenticate_for_role`
@@ -72,8 +82,19 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
             password=password,
             role=UserRole.FARMER,
             account_status=AccountStatus.APPROVED,
+            # Usable only once the emailed code is typed back.
+            email_verified=False,
             **validated_data,
         )
+
+
+class VerifyCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=12)
+
+
+class ResendCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
 
 class LoginSerializer(serializers.Serializer):

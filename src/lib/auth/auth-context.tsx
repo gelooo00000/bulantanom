@@ -7,8 +7,11 @@ import {
   loginFarmer,
   loginLgu,
   logoutSession,
+  isVerificationPending,
   refreshSession,
+  resendFarmerCode,
   signupFarmer,
+  verifyFarmerEmail,
   type BackendRole,
   type BackendUser,
 } from "@/lib/api/auth-api";
@@ -23,17 +26,42 @@ import {
 import { getAccessToken, setAccessToken } from "@/lib/auth/token-storage";
 import type { AuthUser, Role } from "@/lib/auth/types";
 
+/**
+ * Thrown by `login` for a Farmer whose email was never verified: the
+ * password was right, a code has been emailed, and the page should ask for
+ * it instead of signing in.
+ */
+export class EmailNotVerifiedError extends Error {
+  email: string;
+  resendAfter: number;
+
+  constructor(message: string, email: string, resendAfter: number) {
+    super(message);
+    this.name = "EmailNotVerifiedError";
+    this.email = email;
+    this.resendAfter = resendAfter;
+  }
+}
+
+/** A sign-up waiting for its emailed code. */
+export type PendingVerification = { email: string; resendAfter: number; message: string };
+
 type AuthContextValue = {
   currentUser: AuthUser | null;
   isAuthenticated: boolean;
   loading: boolean;
   accessToken: string | null;
   login: (email: string, password: string, role: Role) => Promise<AuthUser>;
+  /** Creates the account and emails a code; nobody is signed in yet. */
   signup: (input: {
     name: string;
     email: string;
     password: string;
-  }) => Promise<AuthUser>;
+  }) => Promise<PendingVerification>;
+  /** Types the emailed code back, which signs the Farmer in. */
+  verifyEmail: (email: string, code: string) => Promise<AuthUser>;
+  /** Emails a new code; resolves to the seconds until another may be asked. */
+  resendCode: (email: string) => Promise<number>;
   /**
    * Signs out. `redirectTo` is where the page goes afterwards; without it a
    * protected page falls back to /login, as it does when a session expires.
@@ -134,17 +162,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Lets a newly opened tab join this session instead of starting signed out.
   useEffect(() => answerPresence(isTabSignedIn), []);
 
+  function startSession(access: string, user: BackendUser): AuthUser {
+    setAccessToken(access);
+    const mapped = mapBackendUser(user);
+    markTabSignedIn();
+    setSignedOutTo(null);
+    setCurrentUser(mapped);
+    setTokenVersion((v) => v + 1);
+    return mapped;
+  }
+
   async function login(email: string, password: string, role: Role): Promise<AuthUser> {
     try {
       const { access, user } = await LOGIN_BY_ROLE[role](email, password);
-      setAccessToken(access);
-      const mapped = mapBackendUser(user);
-      markTabSignedIn();
-      setSignedOutTo(null);
-      setCurrentUser(mapped);
-      setTokenVersion((v) => v + 1);
-      return mapped;
+      return startSession(access, user);
     } catch (err) {
+      if (err instanceof ApiError && isVerificationPending(err.body)) {
+        throw new EmailNotVerifiedError(err.message, err.body.email, err.body.resend_after);
+      }
+      throw new Error(messageFrom(err));
+    }
+  }
+
+  async function verifyEmail(email: string, code: string): Promise<AuthUser> {
+    try {
+      const { access, user } = await verifyFarmerEmail(email, code);
+      return startSession(access, user);
+    } catch (err) {
+      throw new Error(messageFrom(err));
+    }
+  }
+
+  async function resendCode(email: string): Promise<number> {
+    try {
+      return (await resendFarmerCode(email)).resend_after;
+    } catch (err) {
+      // Asked too soon: the body still says how long to wait.
+      if (err instanceof ApiError && err.status === 429) {
+        const wait = (err.body as { resend_after?: unknown } | undefined)?.resend_after;
+        if (typeof wait === "number") return wait;
+      }
       throw new Error(messageFrom(err));
     }
   }
@@ -153,13 +210,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string;
     email: string;
     password: string;
-  }): Promise<AuthUser> {
+  }): Promise<PendingVerification> {
     const [firstName, ...rest] = input.name.trim().split(/\s+/);
     const lastName = rest.join(" ");
     try {
-      // Signing up signs the Farmer in — the account is approved on
-      // creation, so this establishes a session exactly as login does.
-      const { access, user } = await signupFarmer({
+      // No session yet: the account works once the emailed code comes back
+      // through `verifyEmail`.
+      const pending = await signupFarmer({
         first_name: firstName || input.name,
         // A single name has no last name; it is sent empty, never repeated.
         last_name: lastName,
@@ -167,13 +224,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password: input.password,
         password_confirm: input.password,
       });
-      setAccessToken(access);
-      const mapped = mapBackendUser(user);
-      markTabSignedIn();
-      setSignedOutTo(null);
-      setCurrentUser(mapped);
-      setTokenVersion((v) => v + 1);
-      return mapped;
+      return {
+        email: pending.email,
+        resendAfter: pending.resend_after,
+        message: pending.detail,
+      };
     } catch (err) {
       throw new Error(messageFrom(err));
     }
@@ -202,6 +257,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: tokenVersion >= 0 ? getAccessToken() : null,
         login,
         signup,
+        verifyEmail,
+        resendCode,
         logout,
         signedOutTo,
       }}

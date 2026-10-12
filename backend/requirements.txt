@@ -9,6 +9,7 @@ charset-normalizer==3.5.1
 cloudinary==1.46.3
 cryptography==50.0.0
 distro==1.9.0
+dnspython==2.9.0
 Django==6.1
 django-cors-headers==4.9.0
 django-storages==1.14.6

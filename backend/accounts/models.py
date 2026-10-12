@@ -80,6 +80,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    # False only for a Farmer who signed up and has not yet typed the code
+    # emailed to them; such an account cannot sign in. Every account that
+    # existed before verification (and every officer or admin) is True.
+    email_verified = models.BooleanField(default=True)
 
     date_joined = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
@@ -169,3 +173,23 @@ class RegistrationNotification(models.Model):
 
     def __str__(self):
         return f"Registration: {self.user.email}"
+
+
+class EmailVerification(models.Model):
+    """
+    The one-time sign-up code currently outstanding for an account. One row
+    per user: sending a new code replaces the old one, so only the latest
+    code works. The code itself is never stored, only its keyed hash.
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="email_verification"
+    )
+    code_hash = models.CharField(max_length=64)
+    sent_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    # Wrong guesses against this code; at the limit it stops working.
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    def __str__(self):
+        return f"Email code for {self.user.email}"

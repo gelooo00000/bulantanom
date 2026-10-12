@@ -17,9 +17,31 @@ export type BackendUser = {
 type AuthResponse = { access: string; user: BackendUser };
 
 /**
- * Signing up also signs the Farmer in: the account is approved on creation,
- * so the response carries the same tokens a login does and the client has
- * one code path for both.
+ * A Farmer account waiting for the 6-digit code emailed to it. Returned by
+ * sign-up, and in the body of a 403 from a Farmer login whose email was
+ * never verified.
+ */
+export type VerificationPending = {
+  detail: string;
+  code: "email_not_verified";
+  email: string;
+  /** Seconds until "Resend code" may be used. */
+  resend_after: number;
+};
+
+export function isVerificationPending(body: unknown): body is VerificationPending {
+  return (
+    !!body &&
+    typeof body === "object" &&
+    (body as Record<string, unknown>).code === "email_not_verified" &&
+    typeof (body as Record<string, unknown>).email === "string"
+  );
+}
+
+/**
+ * Creates the Farmer account and emails it a one-time code. Nobody is
+ * signed in yet: that happens in `verifyFarmerEmail` once the code is typed
+ * back, which proves the email address is real.
  */
 export function signupFarmer(payload: {
   first_name: string;
@@ -27,8 +49,19 @@ export function signupFarmer(payload: {
   email: string;
   password: string;
   password_confirm: string;
-}): Promise<AuthResponse> {
+}): Promise<VerificationPending> {
   return apiFetch("/auth/farmer/signup/", { method: "POST", body: payload });
+}
+
+/** Checks the emailed code; signs the Farmer in exactly as a login does. */
+export function verifyFarmerEmail(email: string, code: string): Promise<AuthResponse> {
+  return apiFetch("/auth/farmer/verify/", { method: "POST", body: { email, code } });
+}
+
+export function resendFarmerCode(
+  email: string,
+): Promise<{ detail: string; resend_after: number }> {
+  return apiFetch("/auth/farmer/resend-code/", { method: "POST", body: { email } });
 }
 
 export function loginFarmer(email: string, password: string): Promise<AuthResponse> {
