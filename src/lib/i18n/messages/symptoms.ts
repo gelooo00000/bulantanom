@@ -17,9 +17,9 @@ export const symptoms = defineMessages({
     bik: "Mga tanda san helang",
   },
   "sym.tickAll": {
-    en: "Tick all you see. Leave empty if you saw none. Something not listed? Write it under \"Add more details\".",
-    fil: "Markahan ang lahat ng nakikita mo. Iwanang blangko kung wala. May iba pang wala sa listahan? Isulat ito sa \"Magdagdag ng iba pang detalye\".",
-    bik: "Markahan an gabos na nahihiling mo. Pabayaan na blangko kun mayo. Igwa nin iba na wara sa listahan? Isurat ini sa \"Magdugang nin iba pang detalye\".",
+    en: "Tick all you see. Leave empty if you saw none. Something not listed? Write it in the box below.",
+    fil: "Markahan ang lahat ng nakikita mo. Iwanang blangko kung wala. May iba pang wala sa listahan? Isulat ito sa kahon sa ibaba.",
+    bik: "Markahan an gabos na nahihiling mo. Pabayaan na blangko kun mayo. Igwa nin iba na wara sa listahan? Isurat ini sa kahon sa ibaba.",
   },
 
   "sym.pest.aphids": {

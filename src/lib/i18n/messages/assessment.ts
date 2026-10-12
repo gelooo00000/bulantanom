@@ -122,15 +122,15 @@ export const assessment = defineMessages({
     bik: "1 na simbag an pinunuan hali sa imo litrato. Hilingon ini asin liwanan kun sala.",
   },
   "asmt.moreDetails": {
-    en: "Add more details (optional)",
-    fil: "Magdagdag ng iba pang detalye (opsyonal)",
-    bik: "Magdugang nin iba pang detalye (opsyonal)",
+    en: "Add more details",
+    fil: "Magdagdag ng iba pang detalye",
+    bik: "Magdugang nin iba pang detalye",
   },
   "asmt.hideDetails": { en: "Hide details", fil: "Itago ang detalye", bik: "Itago an detalye" },
   "asmt.moreDetailsHint": {
-    en: "Plant height, and anything else you noticed.",
-    fil: "Taas ng tanim, at iba pang napansin mo.",
-    bik: "Langkaw san tanom, asin iba pang nahiling mo.",
+    en: "Pests or disease you saw, plant height, and anything else you noticed.",
+    fil: "Peste o sakit na nakita mo, taas ng tanim, at iba pang napansin mo.",
+    bik: "Peste o helang na nahiling mo, langkaw san tanom, asin iba pang nahiling mo.",
   },
   "weather.week": {
     en: "Weather at the farm, last 7 days: {rain} mm of rain on {days} days, {min}–{max}°C.",

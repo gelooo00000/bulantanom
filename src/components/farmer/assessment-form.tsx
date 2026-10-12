@@ -286,9 +286,11 @@ function AssessmentFormBody({
     () => new Set(symptoms.diseases.filter((item) => draft?.diseases.includes(item))),
   );
   const [notes, setNotes] = useState(draft?.notes ?? "");
-  // Height and notes sit behind "Add more details": closed, unless a draft
-  // brought something back in there.
-  const [showDetails, setShowDetails] = useState(Boolean(draft?.height || draft?.notes));
+  // Symptoms, height and notes sit behind "Add more details": closed, unless
+  // a draft brought something back in there.
+  const [showDetails, setShowDetails] = useState(
+    Boolean(draft?.height || draft?.notes || draft?.pests.length || draft?.diseases.length),
+  );
   const [evidence, setEvidence] = useState<File | null>(null);
 
   // The photo comes first and is checked as soon as it is taken. An accepted
@@ -747,30 +749,8 @@ function AssessmentFormBody({
         </div>
       </FormSection>
 
-      <FormSection title={t("asmt.symptoms")} description={t("sym.tickAll")}>
-        <div className="flex flex-col gap-2">
-          <Label id="pest-label">{t("sym.pestTitle")}</Label>
-          <SymptomChecklist
-            labelledBy="pest-label"
-            kind="pest"
-            items={symptoms.pests}
-            ticked={pests}
-            onToggle={(item) => toggle(setPests, item)}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label id="disease-label">{t("sym.diseaseTitle")}</Label>
-          <SymptomChecklist
-            labelledBy="disease-label"
-            kind="disease"
-            items={symptoms.diseases}
-            ticked={diseases}
-            onToggle={(item) => toggle(setDiseases, item)}
-          />
-        </div>
-      </FormSection>
-
-      {/* Optional extras, out of the way: most weeks need none of them. */}
+      {/* Optional extras, out of the way: most weeks need none of them.
+          Nothing in here is required. */}
       <div className="flex flex-col gap-4">
         <button
           type="button"
@@ -785,7 +765,29 @@ function AssessmentFormBody({
         {!showDetails && (
           <p className="text-muted-foreground -mt-3 text-sm">{t("asmt.moreDetailsHint")}</p>
         )}
-        <div id="more-details" hidden={!showDetails} className="flex flex-col gap-4">
+        <div id="more-details" hidden={!showDetails} className="flex flex-col gap-5">
+          <FormSection title={t("asmt.symptoms")} description={t("sym.tickAll")}>
+            <div className="flex flex-col gap-2">
+              <Label id="pest-label">{t("sym.pestTitle")}</Label>
+              <SymptomChecklist
+                labelledBy="pest-label"
+                kind="pest"
+                items={symptoms.pests}
+                ticked={pests}
+                onToggle={(item) => toggle(setPests, item)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label id="disease-label">{t("sym.diseaseTitle")}</Label>
+              <SymptomChecklist
+                labelledBy="disease-label"
+                kind="disease"
+                items={symptoms.diseases}
+                ticked={diseases}
+                onToggle={(item) => toggle(setDiseases, item)}
+              />
+            </div>
+          </FormSection>
           {asks("plant_height_cm") && (
             <div className="flex flex-col gap-2">
               <Label htmlFor="height">{t("asmt.height")}</Label>

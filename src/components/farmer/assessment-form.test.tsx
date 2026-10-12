@@ -185,6 +185,7 @@ describe("Weekly assessment: tap answers", () => {
     const user = userEvent.setup();
     renderForm();
 
+    await user.click(screen.getByRole("button", { name: "Add more details" }));
     const pests = screen.getByRole("group", { name: "Pests you have seen" });
     // Papaya's list, not every pest there is.
     expect(within(pests).getByRole("checkbox", { name: /Mealybugs/ })).toBeInTheDocument();
@@ -209,13 +210,15 @@ describe("Weekly assessment: tap answers", () => {
 });
 
 describe("Weekly assessment: less to fill in", () => {
-  it("keeps height and notes behind 'Add more details' until asked for", async () => {
+  it("keeps symptoms, height and notes behind 'Add more details' until asked for", async () => {
     const user = userEvent.setup();
     renderForm();
 
     expect(screen.getByLabelText(/Plant height/)).not.toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Add more details (optional)" }));
+    expect(screen.getByRole("group", { name: "Pests you have seen", hidden: true })).not.toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Add more details" }));
     expect(screen.getByLabelText(/Plant height/)).toBeVisible();
+    expect(screen.getByRole("group", { name: "Pests you have seen" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Hide details" })).toHaveAttribute(
       "aria-expanded",
       "true",
@@ -245,7 +248,7 @@ describe("Weekly assessment: less to fill in", () => {
       ),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Add more details (optional)" }));
+    await user.click(screen.getByRole("button", { name: "Add more details" }));
     await user.type(screen.getByLabelText(/What have you noticed/), "Bunga nahuhulog");
     await user.upload(screen.getByLabelText("Take photo"), photo());
     await screen.findByText(/filled in from your photo/);
@@ -305,9 +308,9 @@ describe("Weekly assessment: draft", () => {
     );
     const leaves = screen.getByRole("radiogroup", { name: /Leaf condition/ });
     await user.click(within(leaves).getByRole("radio", { name: "Slight yellowing" }));
+    await user.click(screen.getByRole("button", { name: "Add more details" }));
     const pests = screen.getByRole("group", { name: "Pests you have seen" });
     await user.click(within(pests).getByRole("checkbox", { name: /Mealybugs/ }));
-    await user.click(screen.getByRole("button", { name: "Add more details (optional)" }));
     await user.type(screen.getByLabelText(/What have you noticed/), "Dahon naninilaw");
     view.unmount();
     return user;
