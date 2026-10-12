@@ -25,7 +25,7 @@ import {
   type ChoiceOption,
 } from "@/components/farmer/assessment-choices";
 import { EvidenceVerdict } from "@/components/farmer/evidence-verdict";
-import { FarmWeekWeather } from "@/components/farmer/farm-week-weather";
+import { FarmTodayWeather } from "@/components/farmer/farm-today-weather";
 import { NextDuePlant } from "@/components/farmer/next-due-plant";
 import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,16 @@ const LEAF: ChoiceOption[] = [
   { value: "wilting", label: "opt.leaf.wilting", picture: <LeafPicture look="wilting" /> },
   { value: "damaged", label: "opt.leaf.damaged", picture: <LeafPicture look="damaged" /> },
 ];
+// Mushrooms, in place of leaf condition.
+const MUSHROOM: ChoiceOption[] = [
+  { value: "healthy", label: "opt.mushroom.healthy" },
+  { value: "discoloured", label: "opt.mushroom.discoloured" },
+  { value: "spots", label: "opt.mushroom.spots" },
+  { value: "slimy", label: "opt.mushroom.slimy" },
+  { value: "dry", label: "opt.mushroom.dry" },
+  { value: "misshapen", label: "opt.mushroom.misshapen" },
+  { value: "mold", label: "opt.mushroom.mold" },
+];
 const FLOWERING: ChoiceOption[] = [
   { value: "not_flowering", label: "opt.flowering.not_flowering" },
   { value: "starting", label: "opt.flowering.starting" },
@@ -101,22 +111,19 @@ const SOIL: ChoiceOption[] = [
 ];
 
 function FormSection({
-  id,
   title,
   description,
   children,
 }: {
-  /** Lets the "still needed" list scroll here. */
-  id?: string;
   title: string;
-  description: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div id={id} className="flex scroll-mt-24 flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-sm font-medium">{title}</h2>
-        <p className="text-muted-foreground text-sm">{description}</p>
+        {description && <p className="text-muted-foreground text-sm">{description}</p>}
       </div>
       {children}
     </div>
@@ -135,6 +142,7 @@ const CARRIED: Prefilled[] = [
   "growth_condition",
   "health_condition",
   "leaf_condition",
+  "mushroom_condition",
   "flowering_status",
   "fruiting_status",
   "watering_frequency",
@@ -187,7 +195,7 @@ function AnswerLabel({
   const { t } = useLanguage();
   const Icon = source === "photo" ? Camera : History;
   return (
-    <Label id={id} className="flex scroll-mt-24 flex-wrap items-center gap-2">
+    <Label id={id} className="flex flex-wrap items-center gap-2">
       {children}
       {missing && (
         <span className="text-risk-medium text-xs font-medium">{t("asmt.required")}</span>
@@ -274,6 +282,7 @@ function AssessmentFormBody({
   const [leaf, setLeaf] = useState<string | null>(start("leaf_condition"));
   const [flowering, setFlowering] = useState<string | null>(start("flowering_status"));
   const [fruiting, setFruiting] = useState<string | null>(start("fruiting_status"));
+  const [mushroom, setMushroom] = useState<string | null>(start("mushroom_condition"));
   const [watering, setWatering] = useState<string | null>(start("watering_frequency"));
   const [soil, setSoil] = useState<string | null>(start("soil_moisture"));
   const symptoms = symptomsFor(cropId);
@@ -313,6 +322,7 @@ function AssessmentFormBody({
     leaf_condition: setLeaf,
     flowering_status: setFlowering,
     fruiting_status: setFruiting,
+    mushroom_condition: setMushroom,
     watering_frequency: setWatering,
     soil_moisture: setSoil,
   };
@@ -342,6 +352,7 @@ function AssessmentFormBody({
       leaf_condition: leaf,
       flowering_status: flowering,
       fruiting_status: fruiting,
+      mushroom_condition: mushroom,
       watering_frequency: watering,
       soil_moisture: soil,
     };
@@ -354,29 +365,32 @@ function AssessmentFormBody({
       pests: [...pests],
       diseases: [...diseases],
     });
-  }, [plantId, status, growth, health, leaf, flowering, fruiting, watering, soil, height, notes, pests, diseases]);
+  }, [plantId, status, growth, health, leaf, mushroom, flowering, fruiting, watering, soil, height, notes, pests, diseases]);
 
   // Evidence is mandatory: the risk reading is only meaningful when the photo
   // has been verified to show this crop.
-  const asks = (question: AssessmentQuestion) => !skipQuestions.includes(question);
+  // The mushroom question is for mushrooms only, whatever the crop list
+  // says, so an older crop list can never make every crop ask it.
+  const asks = (question: AssessmentQuestion) =>
+    !skipQuestions.includes(question) &&
+    (question !== "mushroom_condition" || cropId === "mushroom");
   const leafMissing = asks("leaf_condition") && !leaf;
   // "Not flowering" / "Not fruiting" are answers too, so these are required
   // for every crop they are asked of.
   const floweringMissing = asks("flowering_status") && !flowering;
   const fruitingMissing = asks("fruiting_status") && !fruiting;
+  const mushroomMissing = asks("mushroom_condition") && !mushroom;
   const photoRefused = evidenceResult !== null && !evidenceResult.evidence_valid;
-  // What still stands between the farmer and Submit, in form order, each
-  // with where to scroll to.
-  const stillNeeded: { label: string; target: string }[] = [];
-  if (!evidence || photoRefused) stillNeeded.push({ label: t("asmt.photoItem"), target: "asmt-photo" });
-  if (!growth) stillNeeded.push({ label: t("asmt.growthCompared"), target: "growth-label" });
-  if (!health) stillNeeded.push({ label: t("asmt.overallHealth"), target: "health-label" });
-  if (leafMissing) stillNeeded.push({ label: t("asmt.leaf"), target: "leaf-label" });
-  if (floweringMissing) stillNeeded.push({ label: t("asmt.flowering"), target: "flowering-label" });
-  if (fruitingMissing) stillNeeded.push({ label: t("asmt.fruiting"), target: "fruiting-label" });
-  if (!watering) stillNeeded.push({ label: t("asmt.watering"), target: "watering-label" });
-  if (!soil) stillNeeded.push({ label: t("asmt.soil"), target: "soil-label" });
-  const canSubmit = stillNeeded.length === 0 && !checkingPhoto;
+  // Every required answer given (each unanswered one is marked Required),
+  // and an accepted, already-checked photo.
+  const canSubmit =
+    Boolean(evidence && growth && health && watering && soil) &&
+    !photoRefused &&
+    !leafMissing &&
+    !mushroomMissing &&
+    !floweringMissing &&
+    !fruitingMissing &&
+    !checkingPhoto;
 
   function changeEvidence(file: File | null) {
     setEvidence(file);
@@ -419,7 +433,7 @@ function AssessmentFormBody({
       if (
         !value ||
         !(key in setters) ||
-        skipQuestions.includes(key as AssessmentQuestion) ||
+        !asks(key as AssessmentQuestion) ||
         touched.current.has(key)
       ) {
         continue;
@@ -486,6 +500,7 @@ function AssessmentFormBody({
           leaf_condition: asks("leaf_condition") ? leaf! : "",
           flowering_status: asks("flowering_status") ? (flowering ?? "") : "",
           fruiting_status: asks("fruiting_status") ? (fruiting ?? "") : "",
+          mushroom_condition: asks("mushroom_condition") ? (mushroom ?? "") : "",
           watering_frequency: watering!,
           soil_moisture: soil!,
           // In list order, so the same ticks always read the same way.
@@ -602,7 +617,7 @@ function AssessmentFormBody({
       )}
 
       {/* The photo comes first, with no heading: the upload box says what to do. */}
-      <div id="asmt-photo" className="flex scroll-mt-24 flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <EvidenceUpload ref={uploadRef} file={evidence} onChange={changeEvidence} />
         {checkingPhoto && (
           <div className="border-border flex items-start gap-3 rounded-xl border border-dashed px-4 py-3">
@@ -638,7 +653,7 @@ function AssessmentFormBody({
         </p>
       )}
 
-      <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
+      <FormSection title={t("asmt.growth")}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <AnswerLabel id="growth-label" source={sources.growth_condition} missing={!growth}>
@@ -654,7 +669,7 @@ function AssessmentFormBody({
         </div>
       </FormSection>
 
-      <FormSection title={t("asmt.health")} description={t("asmt.healthText")}>
+      <FormSection title={t("asmt.health")}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <AnswerLabel id="health-label" source={sources.health_condition} missing={!health}>
@@ -682,11 +697,28 @@ function AssessmentFormBody({
               />
             </div>
           )}
+          {asks("mushroom_condition") && (
+            <div className="flex flex-col gap-2">
+              <AnswerLabel
+                id="mushroom-label"
+                source={sources.mushroom_condition}
+                missing={mushroomMissing}
+              >
+                {t("asmt.mushroom")}
+              </AnswerLabel>
+              <ChoiceButtons
+                labelledBy="mushroom-label"
+                value={mushroom}
+                onChange={(v) => answer("mushroom_condition", v)}
+                options={MUSHROOM}
+              />
+            </div>
+          )}
         </div>
       </FormSection>
 
       {(asks("flowering_status") || asks("fruiting_status")) && (
-        <FormSection title={t("asmt.flowerFruit")} description={t("asmt.noneYet")}>
+        <FormSection title={t("asmt.flowerFruit")}>
           <div className="flex flex-col gap-4">
             {asks("flowering_status") && (
               <div className="flex flex-col gap-2">
@@ -726,7 +758,7 @@ function AssessmentFormBody({
         </FormSection>
       )}
 
-      <FormSection title={t("asmt.waterSoil")} description={t("asmt.waterSoilText")}>
+      <FormSection title={t("asmt.waterSoil")}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <AnswerLabel id="watering-label" source={sources.watering_frequency} missing={!watering}>
@@ -752,7 +784,7 @@ function AssessmentFormBody({
               columns={3}
             />
           </div>
-          <FarmWeekWeather />
+          <FarmTodayWeather />
         </div>
       </FormSection>
 
@@ -843,24 +875,8 @@ function AssessmentFormBody({
         {checkingPhoto ? (
           <p className="text-muted-foreground text-sm">{t("asmt.waitPhotoCheck")}</p>
         ) : (
-          stillNeeded.length > 0 && (
-            <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-              <span>{t(photoRefused ? "asmt.needNewPhoto" : "asmt.stillNeeded")}</span>
-              {stillNeeded.map((item) => (
-                <button
-                  key={item.target}
-                  type="button"
-                  onClick={() =>
-                    document
-                      .getElementById(item.target)
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                  }
-                  className="border-risk-medium/40 text-risk-medium hover:bg-risk-medium/10 rounded-full border px-2.5 py-0.5 text-xs font-medium"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
+          photoRefused && (
+            <p className="text-muted-foreground text-sm">{t("asmt.needNewPhoto")}</p>
           )
         )}
       </div>

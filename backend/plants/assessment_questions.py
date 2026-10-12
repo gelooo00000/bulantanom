@@ -18,8 +18,9 @@ HEIGHT = "plant_height_cm"
 LEAF = "leaf_condition"
 FLOWERING = "flowering_status"
 FRUITING = "fruiting_status"
+MUSHROOM = "mushroom_condition"
 
-SKIPPABLE = (HEIGHT, LEAF, FLOWERING, FRUITING)
+SKIPPABLE = (HEIGHT, LEAF, FLOWERING, FRUITING, MUSHROOM)
 
 _ROOT_CROP = (FRUITING,)  # the harvest grows underground, out of any photo
 _LEAFY_CROP = (FRUITING,)  # harvested for leaves or stalks, never for fruit
@@ -37,7 +38,15 @@ NOT_APPLICABLE: dict[str, tuple[str, ...]] = {
 }
 
 
+# Questions asked of these crops only. Mushrooms have no leaves, so they get
+# their own condition question in place of the leaf one.
+ONLY_FOR: dict[str, tuple[str, ...]] = {
+    MUSHROOM: ("mushroom",),
+}
+
+
 def not_applicable(crop) -> tuple[str, ...]:
     """The questions that do not apply to `crop` (a Crop or its id)."""
     crop_id = crop if isinstance(crop, str) else getattr(crop, "id", None)
-    return NOT_APPLICABLE.get(crop_id, ())
+    only_others = tuple(q for q, crops in ONLY_FOR.items() if crop_id not in crops)
+    return NOT_APPLICABLE.get(crop_id, ()) + only_others

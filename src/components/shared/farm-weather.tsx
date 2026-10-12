@@ -47,12 +47,20 @@ const ICONS: Record<WeatherCondition, { day: LucideIcon; night: LucideIcon }> = 
   thunderstorm: { day: CloudLightning, night: CloudLightning },
 };
 
-function WeatherIcon({ condition, isDay }: { condition: WeatherCondition; isDay: boolean }) {
+export function WeatherIcon({
+  condition,
+  isDay,
+  className = "size-3.5",
+}: {
+  condition: WeatherCondition;
+  isDay: boolean;
+  className?: string;
+}) {
   const { day: DayIcon, night: NightIcon } = ICONS[condition];
   return isDay ? (
-    <DayIcon className="size-3.5" aria-hidden="true" />
+    <DayIcon className={className} aria-hidden="true" />
   ) : (
-    <NightIcon className="size-3.5" aria-hidden="true" />
+    <NightIcon className={className} aria-hidden="true" />
   );
 }
 

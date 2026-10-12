@@ -114,7 +114,8 @@ would normally be EXPECTED for this crop at this age.
 The farmer's answers are the basis of your reading:
 
 - Build the risk level from what the farmer reported in `farmer_assessment`
-  (growth, health, leaves, flowering, fruiting, watering, soil moisture,
+  (growth, health, leaves or, for mushrooms, mushroom condition, flowering,
+  fruiting, watering, soil moisture,
   pests, disease, environment, and `notes`, which is the concern
   they wrote in their own words), checked against the photo and the crop's expected stage.
 - Every risk factor must trace back to a specific answer or to something
@@ -293,6 +294,12 @@ def build_context(assessment) -> dict:
             "health_condition": assessment.get_health_condition_display(),
             "leaf_condition": answer(
                 "leaf_condition", assessment.get_leaf_condition_display()
+            ),
+            # Asked of mushrooms only, in place of leaves.
+            **(
+                {"mushroom_condition": assessment.get_mushroom_condition_display() or None}
+                if "mushroom_condition" not in skip
+                else {}
             ),
             "flowering_status": answer(
                 "flowering_status", assessment.get_flowering_status_display() or None

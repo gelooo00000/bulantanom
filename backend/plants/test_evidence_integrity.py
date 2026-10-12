@@ -153,9 +153,10 @@ class NotApplicableAnswersTests(RiskTestCase):
     def test_root_crops_skip_fruiting_and_others_keep_every_question(self):
         from .assessment_questions import NOT_APPLICABLE, not_applicable
 
+        # Every crop but mushroom also skips the mushroom-only question.
         for crop_id in ("purple-sweet-potato", "ginger", "radish-jicama"):
-            self.assertEqual(not_applicable(crop_id), ("fruiting_status",))
-        self.assertEqual(not_applicable("tomato"), ())
+            self.assertEqual(not_applicable(crop_id), ("fruiting_status", "mushroom_condition"))
+        self.assertEqual(not_applicable("tomato"), ("mushroom_condition",))
         # Every crop named in the rule is a real catalog crop.
         self.assertEqual(
             set(Crop.objects.filter(pk__in=NOT_APPLICABLE).values_list("pk", flat=True)),
@@ -170,14 +171,16 @@ class NotApplicableAnswersTests(RiskTestCase):
             crops["mushroom"]["not_applicable_questions"],
             ["plant_height_cm", "leaf_condition", "flowering_status"],
         )
-        self.assertEqual(crops["tomato"]["not_applicable_questions"], [])
+        self.assertEqual(crops["tomato"]["not_applicable_questions"], ["mushroom_condition"])
 
     @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
     def test_mushroom_submits_without_leaf_and_stores_skipped_answers_blank(self, _mock):
         farmer = make_user("farmer@example.com")
         auth = self.login("farmer@example.com")
         plant = self.make_plant(farmer, crop_id="mushroom")
-        payload = payload_with_image(plant_height_cm="12", flowering_status="flowering")
+        payload = payload_with_image(
+            plant_height_cm="12", flowering_status="flowering", mushroom_condition="healthy"
+        )
         del payload["leaf_condition"]
 
         response = self.client.post(
@@ -189,6 +192,7 @@ class NotApplicableAnswersTests(RiskTestCase):
         self.assertEqual(saved.leaf_condition, "")
         self.assertEqual(saved.flowering_status, "")
         self.assertIsNone(saved.plant_height_cm)
+        self.assertEqual(saved.mushroom_condition, "healthy")
 
     def test_leaf_is_still_required_where_it_applies(self):
         farmer = make_user("farmer@example.com")

@@ -16,9 +16,9 @@ vi.mock("@/lib/api/risk-api", async (original) => ({
   submitAssessment: (...args: unknown[]) => submitAssessment(...args),
 }));
 
-let recentWeather: unknown = { available: false };
+let todayWeather: unknown = { available: false };
 vi.mock("@/lib/api/weather-api", () => ({
-  fetchRecentFarmWeather: () => Promise.resolve(recentWeather),
+  fetchFarmWeather: () => Promise.resolve(todayWeather),
 }));
 
 const ACCEPTED: EvidenceValidation = {
@@ -70,7 +70,7 @@ function chosen(question: RegExp) {
 
 beforeEach(() => {
   window.localStorage.clear();
-  recentWeather = { available: false };
+  todayWeather = { available: false };
   validateEvidence.mockReset();
   submitAssessment.mockReset();
   // jsdom has no object URLs; the preview only needs a string.
@@ -240,17 +240,13 @@ describe("Weekly assessment: less to fill in", () => {
     );
   });
 
-  it("shows the farm's week of weather and sends no weather text itself", async () => {
-    recentWeather = {
+  it("shows today's weather at the farm and sends no weather text itself", async () => {
+    todayWeather = {
       available: true,
-      days: 7,
-      from: "2026-10-06",
-      to: "2026-10-12",
-      rain_total_mm: 42.5,
-      rainy_days: 4,
-      wettest_day_mm: 25.5,
-      temperature_max_c: 32,
-      temperature_min_c: 23,
+      temperature_c: 28,
+      condition: "drizzle",
+      is_day: true,
+      observed_at: "2026-10-12T11:15",
     };
     validateEvidence.mockResolvedValue(ACCEPTED);
     submitAssessment.mockReturnValue(new Promise(() => {}));
@@ -258,10 +254,9 @@ describe("Weekly assessment: less to fill in", () => {
     renderForm();
 
     expect(
-      await screen.findByText(
-        "Weather at the farm, last 7 days: 42.5 mm of rain on 4 days, 23–32°C.",
-      ),
+      await screen.findByText("Weather at the farm today: 28°C · Drizzle"),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/added to your assessment/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Add more details" }));
     await user.type(screen.getByLabelText(/What have you noticed/), "Bunga nahuhulog");
@@ -294,35 +289,70 @@ describe("Weekly assessment: what is still needed", () => {
     }
   });
 
-  it("names each missing item and marks the unanswered required questions", () => {
+  it("marks each unanswered required question, with no list under Submit", () => {
     renderForm();
 
-    expect(screen.getByText("To submit, still needed:")).toBeInTheDocument();
-    for (const item of [
-      "Plant photo",
-      "Growth compared with expected",
-      "Overall health",
-      "Leaf condition",
-      "Flowering status",
-      "Fruiting status",
-      "Watering frequency",
-      "Soil moisture",
-    ]) {
-      expect(screen.getByRole("button", { name: item })).toBeInTheDocument();
-    }
     expect(screen.getAllByText("Required")).toHaveLength(7);
+    expect(screen.queryByText("To submit, still needed:")).toBeNull();
+    expect(screen.getByRole("button", { name: /Submit Assessment/ })).toBeDisabled();
   });
 
-  it("drops an item once it is answered", async () => {
+  it("drops the Required mark once a question is answered", async () => {
     const user = userEvent.setup();
     renderForm();
 
     const leaves = screen.getByRole("radiogroup", { name: /Leaf condition/ });
     await user.click(within(leaves).getByRole("radio", { name: "Healthy green leaves" }));
 
-    expect(screen.queryByRole("button", { name: "Leaf condition" })).toBeNull();
     expect(screen.getAllByText("Required")).toHaveLength(6);
-    expect(screen.getByRole("button", { name: "Plant photo" })).toBeInTheDocument();
+  });
+});
+
+describe("Weekly assessment: mushrooms", () => {
+  const MUSHROOM_SKIPS = ["plant_height_cm", "leaf_condition", "flowering_status"] as const;
+
+  it("asks mushroom condition in place of leaves, and requires it", async () => {
+    validateEvidence.mockResolvedValue({ ...ACCEPTED, suggested_answers: {} });
+    submitAssessment.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    render(
+      <AssessmentForm
+        plantId={8}
+        plantLabel="Straw Mushroom"
+        cropId="mushroom"
+        skipQuestions={[...MUSHROOM_SKIPS]}
+      />,
+    );
+
+    expect(screen.queryByRole("radiogroup", { name: /Leaf condition/ })).toBeNull();
+    const condition = screen.getByRole("radiogroup", { name: /Mushroom condition/ });
+    expect(screen.getByText("Mushroom condition").parentElement).toHaveTextContent("Required");
+
+    await user.upload(screen.getByLabelText("Take photo"), photo());
+    await screen.findByText(/Plant Evidence Verified|Plant evidence accepted|Verified/i);
+    for (const [question, answer] of [
+      [/Growth compared/, "About as expected"],
+      [/Overall health/, "Healthy"],
+      [/Fruiting status/, "Fruit forming"],
+      [/Watering frequency/, "Daily"],
+      [/Soil moisture/, "Moist"],
+    ] as const) {
+      const group = screen.getByRole("radiogroup", { name: question });
+      await user.click(within(group).getByRole("radio", { name: answer }));
+    }
+    expect(screen.getByRole("button", { name: /Submit Assessment/ })).toBeDisabled();
+
+    await user.click(within(condition).getByRole("radio", { name: "Slimy, soft or bad smell" }));
+    await user.click(screen.getByRole("button", { name: /Submit Assessment/ }));
+
+    await waitFor(() => expect(submitAssessment).toHaveBeenCalled());
+    const [, , fields] = submitAssessment.mock.calls[0];
+    expect(fields).toMatchObject({ mushroom_condition: "slimy", leaf_condition: "" });
+  });
+
+  it("never asks it of other crops, even if the crop list does not say so", () => {
+    renderForm();
+    expect(screen.queryByRole("radiogroup", { name: /Mushroom condition/ })).toBeNull();
   });
 });
 

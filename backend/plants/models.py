@@ -287,6 +287,15 @@ class Assessment(models.Model):
         WILTING = "wilting", "Wilting or drooping"
         DAMAGED = "damaged", "Visible damage / holes"
 
+    class MushroomCondition(models.TextChoices):
+        HEALTHY = "healthy", "Firm, normal colour"
+        DISCOLOURED = "discoloured", "Yellow or brown patches"
+        SPOTS = "spots", "Spots or blotches"
+        SLIMY = "slimy", "Slimy, soft or bad smell"
+        DRY = "dry", "Dry or cracked caps"
+        MISSHAPEN = "misshapen", "Misshapen, or long thin stems"
+        MOLD = "mold", "Green or other mold"
+
     class FloweringStatus(models.TextChoices):
         NOT_FLOWERING = "not_flowering", "Not flowering"
         STARTING = "starting", "Starting to flower"
@@ -327,6 +336,10 @@ class Assessment(models.Model):
     # Blank for crops the leaf question doesn't fit (see assessment_questions).
     leaf_condition = models.CharField(
         max_length=32, choices=LeafCondition.choices, blank=True
+    )
+    # Mushrooms only, in place of the leaf question (assessment_questions).
+    mushroom_condition = models.CharField(
+        max_length=32, choices=MushroomCondition.choices, blank=True
     )
     flowering_status = models.CharField(
         max_length=32, choices=FloweringStatus.choices, blank=True

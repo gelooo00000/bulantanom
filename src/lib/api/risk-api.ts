@@ -79,7 +79,8 @@ export type SuggestibleAnswer =
   | "health_condition"
   | "leaf_condition"
   | "flowering_status"
-  | "fruiting_status";
+  | "fruiting_status"
+  | "mushroom_condition";
 
 export type BackendAssessment = {
   id: number;
@@ -93,6 +94,8 @@ export type BackendAssessment = {
   growth_condition: string;
   health_condition: string;
   leaf_condition: string;
+  /** Mushrooms only; "" for every other crop. */
+  mushroom_condition: string;
   flowering_status: string;
   fruiting_status: string;
   watering_frequency: string;

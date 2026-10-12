@@ -198,26 +198,3 @@ class RecentWeatherTests(TestCase):
         self.assertEqual(recent_weather(), {"available": False})
         recent_weather()
         self.assertEqual(get.call_count, 1)
-
-    @patch("plants.weather_service.requests.get")
-    def test_endpoint_needs_sign_in_and_serves_the_summary(self, get):
-        get.return_value = upstream_daily(WEEK)
-        client = APIClient()
-        self.assertEqual(client.get("/api/weather/recent/").status_code, 401)
-
-        User.objects.create_user(
-            email="farmer@example.com",
-            password=PW,
-            first_name="Test",
-            last_name="User",
-            role=UserRole.FARMER,
-            account_status=AccountStatus.APPROVED,
-        )
-        token = client.post(
-            "/api/auth/farmer/login/",
-            {"email": "farmer@example.com", "password": PW},
-            format="json",
-        ).data["access"]
-        response = client.get("/api/weather/recent/", HTTP_AUTHORIZATION=f"Bearer {token}")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["rainy_days"], 4)

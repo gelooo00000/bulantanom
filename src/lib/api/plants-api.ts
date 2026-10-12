@@ -63,7 +63,9 @@ export type AssessmentQuestion =
   | "plant_height_cm"
   | "leaf_condition"
   | "flowering_status"
-  | "fruiting_status";
+  | "fruiting_status"
+  /** Asked of mushrooms only, in place of leaf condition. */
+  | "mushroom_condition";
 
 export type BackendPlant = {
   id: number;

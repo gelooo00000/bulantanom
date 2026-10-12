@@ -54,6 +54,9 @@ SUGGESTIBLE = {
     ),
     "flowering_status": ("not_flowering", "starting", "flowering", "finished"),
     "fruiting_status": ("not_fruiting", "forming", "developing", "ripening"),
+    "mushroom_condition": (
+        "healthy", "discoloured", "spots", "slimy", "dry", "misshapen", "mold",
+    ),
 }
 
 RESPONSE_SCHEMA = {
@@ -141,6 +144,10 @@ set every field to "unknown".
   tears, chewed).
 - flowering_status: "not_flowering", "starting", "flowering" or "finished".
 - fruiting_status: "not_fruiting", "forming", "developing" or "ripening".
+- mushroom_condition (mushrooms only; "unknown" for any other crop):
+  "healthy" (firm, normal colour), "discoloured" (yellow or brown patches),
+  "spots", "slimy" (slimy or soft), "dry" (dry or cracked caps), "misshapen"
+  (misshapen, or long thin stems) or "mold" (green or other mold).
 Use "unknown" whenever the photo does not clearly show it (leaves out of
 frame, too far away, too dark). A wrong guess makes the farmer correct it;
 "unknown" just leaves the question to them.

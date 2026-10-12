@@ -238,13 +238,49 @@ class AssessmentSubmissionTests(RiskTestCase):
     def test_questions_a_crop_is_not_asked_are_not_required(self, _mock):
         # Mushrooms are not asked about leaves or flowers (assessment_questions).
         mushroom = self.make_plant(self.farmer, crop_id="mushroom")
-        payload = payload_with_image()
+        payload = payload_with_image(mushroom_condition="healthy")
         for field in ("leaf_condition", "flowering_status"):
             del payload[field]
         response = self.client.post(
             f"/api/farmer/plants/{mushroom.id}/assessments/", payload, **self.auth
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_mushrooms_must_give_their_condition(self):
+        mushroom = self.make_plant(self.farmer, crop_id="mushroom")
+        response = self.client.post(
+            f"/api/farmer/plants/{mushroom.id}/assessments/", payload_with_image(), **self.auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("mushroom_condition", response.data)
+
+    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    def test_other_crops_store_no_mushroom_condition(self, evaluate):
+        response = self.client.post(
+            self.url, payload_with_image(mushroom_condition="slimy"), **self.auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["mushroom_condition"], "")
+
+        from .risk_evaluation_service import build_context
+
+        context = build_context(evaluate.call_args.args[0])
+        self.assertNotIn("mushroom_condition", context["farmer_assessment"])
+
+    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    def test_the_ai_reads_a_mushroom_condition(self, evaluate):
+        mushroom = self.make_plant(self.farmer, crop_id="mushroom")
+        self.client.post(
+            f"/api/farmer/plants/{mushroom.id}/assessments/",
+            payload_with_image(mushroom_condition="mold"),
+            **self.auth,
+        )
+        from .risk_evaluation_service import build_context
+
+        context = build_context(evaluate.call_args.args[0])
+        self.assertEqual(
+            context["farmer_assessment"]["mushroom_condition"], "Green or other mold"
+        )
 
     @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
     def test_plant_age_is_calculated_server_side(self, _mock):
@@ -1144,3 +1180,14 @@ class EvidenceTokenTests(RiskTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.mock_validate_evidence.assert_called_once()
+
+
+class MushroomQuestionTests(APITestCase):
+    def test_only_mushrooms_are_asked_their_condition(self):
+        from .assessment_questions import not_applicable
+
+        self.assertNotIn("mushroom_condition", not_applicable("mushroom"))
+        self.assertIn("leaf_condition", not_applicable("mushroom"))
+        for crop in ("guava", "ginger", "lettuce-cabbage"):
+            self.assertIn("mushroom_condition", not_applicable(crop))
+            self.assertNotIn("leaf_condition", not_applicable(crop))

@@ -25,11 +25,6 @@ export const assessment = defineMessages({
   },
 
   "asmt.growth": { en: "Growth", fil: "Paglaki", bik: "Pagdakula" },
-  "asmt.growthText": {
-    en: "How the plant has developed this week.",
-    fil: "Paano lumaki ang tanim ngayong linggo.",
-    bik: "Paano nagdakula an tanom ngunyan na semana.",
-  },
   "asmt.height": {
     en: "Plant height (cm, optional)",
     fil: "Taas ng tanim (cm, opsyonal)",
@@ -42,11 +37,6 @@ export const assessment = defineMessages({
     bik: "Pagdakula kumpara sa inaasahan",
   },
   "asmt.health": { en: "Plant health", fil: "Kalusugan ng tanim", bik: "Salud san tanom" },
-  "asmt.healthText": {
-    en: "Overall condition and what the leaves look like.",
-    fil: "Pangkalahatang kalagayan at hitsura ng mga dahon.",
-    bik: "Kabuuan na kamutangan asin hitsura san mga dahon.",
-  },
   "asmt.overallHealth": { en: "Overall health", fil: "Pangkalahatang kalusugan", bik: "Kabuuan na salud" },
   "asmt.leaf": { en: "Leaf condition", fil: "Kalagayan ng dahon", bik: "Kamutangan san dahon" },
   "asmt.flowerFruit": {
@@ -57,11 +47,6 @@ export const assessment = defineMessages({
   "asmt.flowering": { en: "Flowering status", fil: "Pamumulaklak", bik: "Pagburak" },
   "asmt.fruiting": { en: "Fruiting status", fil: "Pamumunga", bik: "Pagbunga" },
   "asmt.waterSoil": { en: "Water & soil", fil: "Tubig at lupa", bik: "Tubig asin daga" },
-  "asmt.waterSoilText": {
-    en: "How the plant has been watered and how the soil feels.",
-    fil: "Paano dinidiligan ang tanim at ano ang pakiramdam ng lupa.",
-    bik: "Paano binububoan an tanom asin ano an pakiramdam san daga.",
-  },
   "asmt.watering": { en: "Watering frequency", fil: "Dalas ng pagdidilig", bik: "Kadalasan san pagbubo" },
   "asmt.soil": { en: "Soil moisture", fil: "Basa ng lupa", bik: "Kabasa san daga" },
   "asmt.symptoms": { en: "Symptoms", fil: "Mga sintomas", bik: "Mga sintomas" },
@@ -117,33 +102,7 @@ export const assessment = defineMessages({
     fil: "Peste o sakit na nakita mo, taas ng tanim, at iba pang napansin mo.",
     bik: "Peste o helang na nahiling mo, langkaw san tanom, asin iba pang nahiling mo.",
   },
-  "weather.week": {
-    en: "Weather at the farm, last 7 days: {rain} mm of rain on {days} days, {min}–{max}°C.",
-    fil: "Panahon sa bukid, nakaraang 7 araw: {rain} mm na ulan sa {days} araw, {min}–{max}°C.",
-    bik: "Panahon sa uma, nakaagi na 7 aldaw: {rain} mm na uran sa {days} aldaw, {min}–{max}°C.",
-  },
-  "weather.weekOneRainyDay": {
-    en: "Weather at the farm, last 7 days: {rain} mm of rain on 1 day, {min}–{max}°C.",
-    fil: "Panahon sa bukid, nakaraang 7 araw: {rain} mm na ulan sa 1 araw, {min}–{max}°C.",
-    bik: "Panahon sa uma, nakaagi na 7 aldaw: {rain} mm na uran sa 1 aldaw, {min}–{max}°C.",
-  },
-  "weather.weekDry": {
-    en: "Weather at the farm, last 7 days: no rain, {min}–{max}°C.",
-    fil: "Panahon sa bukid, nakaraang 7 araw: walang ulan, {min}–{max}°C.",
-    bik: "Panahon sa uma, nakaagi na 7 aldaw: mayong uran, {min}–{max}°C.",
-  },
-  "weather.added": {
-    en: "This is added to your assessment for you, so you don't need to describe the weather.",
-    fil: "Kusang idinadagdag ito sa iyong pagsusuri, kaya hindi mo na kailangang ilarawan ang panahon.",
-    bik: "Kusang idinudugang ini sa imo pagsusi, kaya dai mo na kaipuhan isaysay an panahon.",
-  },
   "asmt.required": { en: "Required", fil: "Kailangan", bik: "Kaipuhan" },
-  "asmt.stillNeeded": {
-    en: "To submit, still needed:",
-    fil: "Kailangan pa bago maisumite:",
-    bik: "Kaipuhan pa bago maisumite:",
-  },
-  "asmt.photoItem": { en: "Plant photo", fil: "Litrato ng tanim", bik: "Litrato san tanom" },
   "asmt.waitPhotoCheck": {
     en: "Wait for the photo check to finish.",
     fil: "Hintaying matapos ang pagsusuri ng litrato.",
@@ -155,10 +114,50 @@ export const assessment = defineMessages({
     bik: "Nagbalik an mga simbag mo kaina, kaya pwede ka magpadagos. Magkuha giraray nin litrato para maisumite.",
   },
   "asmt.startOver": { en: "Start over", fil: "Magsimula muli", bik: "Magpoon giraray" },
-  "asmt.noneYet": {
-    en: "None yet? Choose \"Not flowering\" or \"Not fruiting\".",
-    fil: "Wala pa? Piliin ang \"Hindi namumulaklak\" o \"Hindi namumunga\".",
-    bik: "Mayo pa? Pilion an \"Dili nagbuburak\" o \"Dili nagbubunga\".",
+  "asmt.mushroom": {
+    en: "Mushroom condition",
+    fil: "Kalagayan ng kabute",
+    bik: "Kamutangan san kabuti",
+  },
+  "opt.mushroom.healthy": {
+    en: "Firm, normal colour",
+    fil: "Matigas, normal ang kulay",
+    bik: "Matagas, normal an kolor",
+  },
+  "opt.mushroom.discoloured": {
+    en: "Yellow or brown patches",
+    fil: "May dilaw o kayumangging bahagi",
+    bik: "Igwang duyaw o kayumanggi na parte",
+  },
+  "opt.mushroom.spots": {
+    en: "Spots or blotches",
+    fil: "May batik o mantsa",
+    bik: "May mantsa o batik",
+  },
+  "opt.mushroom.slimy": {
+    en: "Slimy, soft or bad smell",
+    fil: "Malagkit, malambot o mabaho",
+    bik: "Malagkit, malumoy o mabaho",
+  },
+  "opt.mushroom.dry": {
+    en: "Dry or cracked caps",
+    fil: "Tuyo o may bitak na takip",
+    bik: "Mamara o may bitak na payong",
+  },
+  "opt.mushroom.misshapen": {
+    en: "Misshapen, or long thin stems",
+    fil: "Kakaiba ang hugis, o mahaba at manipis na tangkay",
+    bik: "Iba an porma, o halaba asin manipis na tangkay",
+  },
+  "opt.mushroom.mold": {
+    en: "Green or other mold",
+    fil: "Berde o ibang amag",
+    bik: "Berde o iba na agupong",
+  },
+  "weather.today": {
+    en: "Weather at the farm today: {temperature}°C · {condition}",
+    fil: "Panahon sa bukid ngayon: {temperature}°C · {condition}",
+    bik: "Panahon sa uma ngunyan: {temperature}°C · {condition}",
   },
   "asmt.fromPhoto": { en: "From photo", fil: "Mula sa litrato", bik: "Hali sa litrato" },
   "asmt.fromLastCheck": { en: "Last check", fil: "Huling pagsusuri", bik: "Huring pagsusi" },

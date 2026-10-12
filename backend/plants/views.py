@@ -1010,15 +1010,3 @@ def farm_weather(request):
 
     return Response(current_weather())
 
-
-@api_view(["GET"])
-def farm_recent_weather(request):
-    """
-    GET /api/weather/recent/ — the last week's rain and temperature at the
-    farm, the same summary attached to each new assessment, so the form can
-    show the farmer what is added for them. Cached like /api/weather/, and an
-    outage returns `{"available": false}`.
-    """
-    from .weather_service import recent_weather
-
-    return Response(recent_weather())

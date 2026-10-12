@@ -4,7 +4,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 from . import crop_calendar
-from .assessment_questions import FLOWERING, FRUITING, HEIGHT, LEAF, not_applicable
+from .assessment_questions import FLOWERING, FRUITING, HEIGHT, LEAF, MUSHROOM, not_applicable
 from .models import (
     Assessment,
     Crop,
@@ -342,6 +342,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
             "growth_condition",
             "health_condition",
             "leaf_condition",
+            "mushroom_condition",
             "flowering_status",
             "fruiting_status",
             "watering_frequency",
@@ -407,7 +408,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
     # don't fit), but required on a new assessment wherever they apply - the
     # same questions the farmer's form marks Required. "Not flowering" and
     # "Not fruiting" are answers, so there is always one to give.
-    REQUIRED_WHERE_ASKED = (LEAF, FLOWERING, FRUITING)
+    REQUIRED_WHERE_ASKED = (LEAF, MUSHROOM, FLOWERING, FRUITING)
     ALWAYS_REQUIRED = ("soil_moisture",)
 
     def validate(self, attrs):
