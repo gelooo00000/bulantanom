@@ -6,6 +6,7 @@ botocore==1.43.90
 certifi==2026.7.22
 cffi==2.1.1
 charset-normalizer==3.5.1
+cloudinary==1.46.3
 cryptography==50.0.0
 distro==1.9.0
 Django==6.1

@@ -222,6 +222,9 @@ STORAGES = {
         "BACKEND": (
             "storages.backends.s3.S3Storage"
             if os.environ.get("AWS_STORAGE_BUCKET_NAME", "").strip()
+            # Private Cloudinary storage; see plants/cloudinary_storage.py.
+            else "plants.cloudinary_storage.CloudinaryEvidenceStorage"
+            if os.environ.get("CLOUDINARY_URL", "").strip()
             else "django.core.files.storage.FileSystemStorage"
         ),
     },
@@ -287,6 +290,12 @@ if USE_S3_MEDIA:
     # bypasses authorization. Unsigned, such a call fails against the private
     # bucket, so the mistake surfaces instead of leaking a photo.
     AWS_QUERYSTRING_AUTH = False
+
+# Cloudinary, as an alternative to an S3 bucket: setting CLOUDINARY_URL
+# (cloudinary://<api_key>:<api_secret>@<cloud_name>, from the Cloudinary
+# console) stores evidence there as private "authenticated" images. The
+# SDK reads that variable itself; nothing else is needed.
+CLOUDINARY_TIMEOUT_SECONDS = int(os.environ.get("CLOUDINARY_TIMEOUT_SECONDS", "20"))
 
 # Hard cap on evidence uploads, enforced in the serializer as well.
 MAX_EVIDENCE_IMAGE_BYTES = int(os.environ.get("MAX_EVIDENCE_IMAGE_BYTES", 5 * 1024 * 1024))
