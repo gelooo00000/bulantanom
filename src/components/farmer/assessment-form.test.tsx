@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AssessmentForm } from "@/components/farmer/assessment-form";
-import type { EvidenceValidation } from "@/lib/api/risk-api";
+import type { BackendAssessment, EvidenceValidation } from "@/lib/api/risk-api";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => ({ accessToken: "token" }) }));
@@ -91,6 +91,49 @@ describe("Weekly assessment: photo first", () => {
 
     expect(await screen.findByText(/1 answer was filled in from your photo/)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /Overall health/ })).toHaveTextContent(/^Unhealthy$/);
+  });
+
+  it("starts from the last check's answers, and the photo's are newer", async () => {
+    validateEvidence.mockResolvedValue(ACCEPTED);
+    const user = userEvent.setup();
+    render(
+      <AssessmentForm
+        plantId={7}
+        plantLabel="Sinta"
+        cropName="Papaya"
+        lastAssessment={
+          {
+            assessment_date: "2026-10-05",
+            growth_condition: "slower_than_expected",
+            health_condition: "healthy",
+            leaf_condition: "healthy",
+            flowering_status: "",
+            fruiting_status: "",
+            watering_frequency: "twice_weekly",
+            soil_moisture: "moist",
+            plant_height_cm: "40",
+            notes: "Leaves look pale",
+          } as unknown as BackendAssessment
+        }
+      />,
+    );
+
+    expect(screen.getByText(/answers from the last check/)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Watering frequency/ })).toHaveTextContent(
+      "Twice a week",
+    );
+    expect(screen.getByRole("combobox", { name: /Growth compared/ })).toHaveTextContent(/slower/i);
+    // Height and written notes are this week's to give.
+    expect(screen.getByLabelText(/Plant height/)).toHaveValue(null);
+
+    await user.upload(screen.getByLabelText("Take photo"), photo());
+    await screen.findByText(/2 answers were filled in from your photo/);
+    expect(screen.getByRole("combobox", { name: /Leaf condition/ })).toHaveTextContent(
+      "Spots or lesions",
+    );
+    expect(screen.getByRole("combobox", { name: /Watering frequency/ })).toHaveTextContent(
+      "Twice a week",
+    );
   });
 
   it("keeps submit off while a refused photo is selected", async () => {

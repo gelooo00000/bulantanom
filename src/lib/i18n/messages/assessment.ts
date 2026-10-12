@@ -156,6 +156,32 @@ export const assessment = defineMessages({
     bik: "1 na simbag an pinunuan hali sa imo litrato. Hilingon ini asin liwanan kun sala.",
   },
   "asmt.fromPhoto": { en: "From photo", fil: "Mula sa litrato", bik: "Hali sa litrato" },
+  "asmt.fromLastCheck": { en: "Last check", fil: "Huling pagsusuri", bik: "Huring pagsusi" },
+  "asmt.lastCheckFilled": {
+    en: "Your answers from the last check ({date}) are filled in. Change anything that is different now.",
+    fil: "Nakalagay na ang mga sagot mo noong huling pagsusuri ({date}). Palitan ang anumang naiba ngayon.",
+    bik: "Nakalaag na an mga simbag mo kan huring pagsusi ({date}). Liwanan an ano man na naiba ngunyan.",
+  },
+  "asmt.nextPlant": {
+    en: "Assess next: {name}",
+    fil: "Susunod na suriin: {name}",
+    bik: "Sunod na susihon: {name}",
+  },
+  "asmt.stillDue": {
+    en: "{n} plants are still due for their weekly check.",
+    fil: "{n} tanim pa ang kailangang suriin ngayong linggo.",
+    bik: "{n} pang tanom an kaipuhan susihon ngunyan na semana.",
+  },
+  "asmt.stillDueOne": {
+    en: "1 plant is still due for its weekly check.",
+    fil: "1 tanim pa ang kailangang suriin ngayong linggo.",
+    bik: "1 pang tanom an kaipuhan susihon ngunyan na semana.",
+  },
+  "asmt.allChecked": {
+    en: "All your plants are checked for this week.",
+    fil: "Nasuri na ang lahat ng iyong tanim ngayong linggo.",
+    bik: "Nasusi na an gabos mong tanom ngunyan na semana.",
+  },
   "asmt.checking": {
     en: "Checking plant evidence…",
     fil: "Sinusuri ang litrato ng tanim…",

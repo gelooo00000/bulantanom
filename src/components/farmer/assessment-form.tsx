@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Camera, LoaderCircle, ScanEye, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, History, LoaderCircle, ScanEye, Sparkles } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 
 import {
@@ -9,8 +9,10 @@ import {
   type EvidenceUploadHandle,
 } from "@/components/farmer/evidence-upload";
 import { EvidenceVerdict } from "@/components/farmer/evidence-verdict";
+import { NextDuePlant } from "@/components/farmer/next-due-plant";
 import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
 import { Button } from "@/components/ui/button";
+import { formatDisplayDate } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -141,24 +143,57 @@ function Choice({
   );
 }
 
-/** A question's label, marked while its answer is the one the photo suggested. */
+/** The choice questions the form can start already answered. */
+type Prefilled =
+  | SuggestibleAnswer
+  | "growth_condition"
+  | "watering_frequency"
+  | "soil_moisture";
+type AnswerSource = "photo" | "last";
+
+const CARRIED: Prefilled[] = [
+  "growth_condition",
+  "health_condition",
+  "leaf_condition",
+  "flowering_status",
+  "fruiting_status",
+  "watering_frequency",
+  "soil_moisture",
+];
+
+/** The last check's answers worth starting from: given, and still asked. */
+function carriedAnswers(
+  last: BackendAssessment | null,
+  skipQuestions: AssessmentQuestion[],
+): Partial<Record<Prefilled, string>> {
+  if (!last) return {};
+  const carried: Partial<Record<Prefilled, string>> = {};
+  for (const field of CARRIED) {
+    const value = last[field];
+    if (value && !skipQuestions.includes(field as AssessmentQuestion)) carried[field] = value;
+  }
+  return carried;
+}
+
+/** A question's label, marked while its answer came from the photo or the last check. */
 function AnswerLabel({
   htmlFor,
-  fromPhoto,
+  source,
   children,
 }: {
   htmlFor: string;
-  fromPhoto: boolean;
+  source?: AnswerSource;
   children: React.ReactNode;
 }) {
   const { t } = useLanguage();
+  const Icon = source === "photo" ? Camera : History;
   return (
     <Label htmlFor={htmlFor} className="flex flex-wrap items-center gap-2">
       {children}
-      {fromPhoto && (
+      {source && (
         <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
-          <Camera className="size-3" />
-          {t("asmt.fromPhoto")}
+          <Icon className="size-3" />
+          {t(source === "photo" ? "asmt.fromPhoto" : "asmt.fromLastCheck")}
         </span>
       )}
     </Label>
@@ -176,6 +211,7 @@ export function AssessmentForm({
   plantLabel,
   cropName,
   skipQuestions = [],
+  lastAssessment = null,
   onLocked,
 }: {
   plantId: number;
@@ -183,11 +219,13 @@ export function AssessmentForm({
   cropName: string;
   /** Questions that don't fit this crop (e.g. leaves on a mushroom). */
   skipQuestions?: AssessmentQuestion[];
+  /** This plant's previous assessment; its answers start the form. */
+  lastAssessment?: BackendAssessment | null;
   /** Called when the server reports the weekly assessment is already done. */
   onLocked?: (eligibility: AssessmentEligibility) => void;
 }) {
   const { accessToken } = useAuth();
-  const { t } = useLanguage();
+  const { t, dateLocale } = useLanguage();
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<BackendAssessment | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -196,14 +234,19 @@ export function AssessmentForm({
   const [evidenceResult, setEvidenceResult] = useState<EvidenceValidation | null>(null);
   const uploadRef = useRef<EvidenceUploadHandle>(null);
 
+  // Where the choice answers start: the last check's answers, so a plant that
+  // has not changed needs no re-answering. Height and the written notes are
+  // left empty; they are this week's to give.
+  const [carried] = useState(() => carriedAnswers(lastAssessment, skipQuestions));
+
   const [height, setHeight] = useState("");
-  const [growth, setGrowth] = useState<string | null>("as_expected");
-  const [health, setHealth] = useState<string | null>("healthy");
-  const [leaf, setLeaf] = useState<string | null>(null);
-  const [flowering, setFlowering] = useState<string | null>(null);
-  const [fruiting, setFruiting] = useState<string | null>(null);
-  const [watering, setWatering] = useState<string | null>("daily");
-  const [soil, setSoil] = useState<string | null>(null);
+  const [growth, setGrowth] = useState<string | null>(carried.growth_condition ?? "as_expected");
+  const [health, setHealth] = useState<string | null>(carried.health_condition ?? "healthy");
+  const [leaf, setLeaf] = useState<string | null>(carried.leaf_condition ?? null);
+  const [flowering, setFlowering] = useState<string | null>(carried.flowering_status ?? null);
+  const [fruiting, setFruiting] = useState<string | null>(carried.fruiting_status ?? null);
+  const [watering, setWatering] = useState<string | null>(carried.watering_frequency ?? "daily");
+  const [soil, setSoil] = useState<string | null>(carried.soil_moisture ?? null);
   const [pest, setPest] = useState("");
   const [disease, setDisease] = useState("");
   const [environment, setEnvironment] = useState("");
@@ -212,27 +255,36 @@ export function AssessmentForm({
 
   // The photo comes first and is checked as soon as it is taken. An accepted
   // photo also suggests the answers it shows (health, leaves, flowering,
-  // fruiting), filled in for the Farmer to check. A suggestion never replaces
-  // an answer the Farmer chose themselves.
+  // fruiting), which replace the last check's: the photo is newer. Neither
+  // ever replaces an answer the Farmer chose themselves.
   const [checkingPhoto, setCheckingPhoto] = useState(false);
-  const [fromPhoto, setFromPhoto] = useState<ReadonlySet<SuggestibleAnswer>>(new Set());
-  const touched = useRef(new Set<SuggestibleAnswer>());
+  const [sources, setSources] = useState<Partial<Record<Prefilled, AnswerSource>>>(() =>
+    Object.fromEntries(Object.keys(carried).map((field) => [field, "last"])),
+  );
+  const touched = useRef(new Set<Prefilled>());
   // Only the latest photo's check may update the form.
   const checkRun = useRef(0);
 
-  const setters: Record<SuggestibleAnswer, (value: string | null) => void> = {
+  const setters: Record<Prefilled, (value: string | null) => void> = {
+    growth_condition: setGrowth,
     health_condition: setHealth,
     leaf_condition: setLeaf,
     flowering_status: setFlowering,
     fruiting_status: setFruiting,
+    watering_frequency: setWatering,
+    soil_moisture: setSoil,
   };
+  const countFrom = (source: AnswerSource) =>
+    Object.values(sources).filter((s) => s === source).length;
+  const fromPhotoCount = countFrom("photo");
+  const fromLastCount = countFrom("last");
 
-  /** The Farmer's own answer: kept from now on, and no longer "from photo". */
-  function answer(field: SuggestibleAnswer, value: string | null) {
+  /** The Farmer's own answer: kept from now on, and no longer marked. */
+  function answer(field: Prefilled, value: string | null) {
     touched.current.add(field);
-    setFromPhoto((current) => {
-      const next = new Set(current);
-      next.delete(field);
+    setSources((current) => {
+      const next = { ...current };
+      delete next[field];
       return next;
     });
     setters[field](value);
@@ -258,7 +310,10 @@ export function AssessmentForm({
     setEvidenceResult(null);
     setError(null);
     setConflicts([]);
-    setFromPhoto(new Set());
+    // The answers stay; they are just no longer this photo's suggestions.
+    setSources((current) =>
+      Object.fromEntries(Object.entries(current).filter(([, source]) => source !== "photo")),
+    );
     const run = ++checkRun.current;
     if (file && accessToken) {
       void checkPhoto(file, run, accessToken);
@@ -284,7 +339,7 @@ export function AssessmentForm({
   }
 
   function applySuggestions(verification: EvidenceValidation) {
-    const filled = new Set<SuggestibleAnswer>();
+    const filled: Partial<Record<Prefilled, AnswerSource>> = {};
     for (const [field, value] of Object.entries(verification.suggested_answers ?? {})) {
       const key = field as SuggestibleAnswer;
       if (
@@ -296,9 +351,9 @@ export function AssessmentForm({
         continue;
       }
       setters[key](value);
-      filled.add(key);
+      filled[key] = "photo";
     }
-    setFromPhoto(filled);
+    setSources((current) => ({ ...current, ...filled }));
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -423,10 +478,14 @@ export function AssessmentForm({
       <div className="flex flex-col gap-4">
         <RiskResultCard assessment={result} />
         <RiskInfoNote />
+        <NextDuePlant currentPlantId={plantId} />
         <div className="flex flex-wrap gap-2">
-          <Button nativeButton={false} render={<Link href="/farmer/risk-indicator" />}>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/farmer/risk-indicator" />}
+          >
             {t("asmt.backToRisk")}
-            <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>
           <Button
             variant="outline"
@@ -462,15 +521,24 @@ export function AssessmentForm({
             onReplace={() => uploadRef.current?.openPicker()}
           />
         )}
-        {fromPhoto.size > 0 && (
+        {fromPhotoCount > 0 && (
           <p className="bg-primary/5 border-primary/20 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm">
             <Sparkles className="text-primary mt-0.5 size-4 shrink-0" />
-            {fromPhoto.size === 1
+            {fromPhotoCount === 1
               ? t("asmt.prefilledOne")
-              : t("asmt.prefilled", { n: fromPhoto.size })}
+              : t("asmt.prefilled", { n: fromPhotoCount })}
           </p>
         )}
       </FormSection>
+
+      {fromLastCount > 0 && lastAssessment && (
+        <p className="bg-muted/40 border-border flex items-start gap-2 rounded-xl border px-4 py-3 text-sm">
+          <History className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+          {t("asmt.lastCheckFilled", {
+            date: formatDisplayDate(lastAssessment.assessment_date, dateLocale),
+          })}
+        </p>
+      )}
 
       <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -489,11 +557,13 @@ export function AssessmentForm({
             </div>
           )}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="growth">{t("asmt.growthCompared")}</Label>
+            <AnswerLabel htmlFor="growth" source={sources.growth_condition}>
+              {t("asmt.growthCompared")}
+            </AnswerLabel>
             <Choice
               id="growth"
               value={growth}
-              onChange={setGrowth}
+              onChange={(v) => answer("growth_condition", v)}
               options={GROWTH}
               placeholder={t("asmt.select")}
             />
@@ -504,14 +574,14 @@ export function AssessmentForm({
       <FormSection title={t("asmt.health")} description={t("asmt.healthText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <AnswerLabel htmlFor="health" fromPhoto={fromPhoto.has("health_condition")}>
+            <AnswerLabel htmlFor="health" source={sources.health_condition}>
               {t("asmt.overallHealth")}
             </AnswerLabel>
             <Choice id="health" value={health} onChange={(v) => answer("health_condition", v)} options={HEALTH} placeholder={t("asmt.select")} />
           </div>
           {asks("leaf_condition") && (
             <div className="flex flex-col gap-2">
-              <AnswerLabel htmlFor="leaf" fromPhoto={fromPhoto.has("leaf_condition")}>
+              <AnswerLabel htmlFor="leaf" source={sources.leaf_condition}>
                 {t("asmt.leaf")}
               </AnswerLabel>
               <Choice id="leaf" value={leaf} onChange={(v) => answer("leaf_condition", v)} options={LEAF} placeholder={t("asmt.select")} />
@@ -525,7 +595,7 @@ export function AssessmentForm({
           <div className="grid gap-4 sm:grid-cols-2">
             {asks("flowering_status") && (
               <div className="flex flex-col gap-2">
-                <AnswerLabel htmlFor="flowering" fromPhoto={fromPhoto.has("flowering_status")}>
+                <AnswerLabel htmlFor="flowering" source={sources.flowering_status}>
                   {t("asmt.flowering")}
                 </AnswerLabel>
                 <Choice id="flowering" value={flowering} onChange={(v) => answer("flowering_status", v)} options={FLOWERING} placeholder={t("asmt.select")} />
@@ -533,7 +603,7 @@ export function AssessmentForm({
             )}
             {asks("fruiting_status") && (
               <div className="flex flex-col gap-2">
-                <AnswerLabel htmlFor="fruiting" fromPhoto={fromPhoto.has("fruiting_status")}>
+                <AnswerLabel htmlFor="fruiting" source={sources.fruiting_status}>
                   {t("asmt.fruiting")}
                 </AnswerLabel>
                 <Choice id="fruiting" value={fruiting} onChange={(v) => answer("fruiting_status", v)} options={FRUITING} placeholder={t("asmt.select")} />
@@ -546,12 +616,16 @@ export function AssessmentForm({
       <FormSection title={t("asmt.waterSoil")} description={t("asmt.waterSoilText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="watering">{t("asmt.watering")}</Label>
-            <Choice id="watering" value={watering} onChange={setWatering} options={WATERING} placeholder={t("asmt.select")} />
+            <AnswerLabel htmlFor="watering" source={sources.watering_frequency}>
+              {t("asmt.watering")}
+            </AnswerLabel>
+            <Choice id="watering" value={watering} onChange={(v) => answer("watering_frequency", v)} options={WATERING} placeholder={t("asmt.select")} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="soil">{t("asmt.soil")}</Label>
-            <Choice id="soil" value={soil} onChange={setSoil} options={SOIL} placeholder={t("asmt.select")} />
+            <AnswerLabel htmlFor="soil" source={sources.soil_moisture}>
+              {t("asmt.soil")}
+            </AnswerLabel>
+            <Choice id="soil" value={soil} onChange={(v) => answer("soil_moisture", v)} options={SOIL} placeholder={t("asmt.select")} />
           </div>
         </div>
       </FormSection>
