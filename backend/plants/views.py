@@ -31,6 +31,7 @@ from notifications.services import (
 from . import dashboard_service, evidence_token
 from .ai_language import from_request
 from .assessment_questions import not_applicable
+from .growth_stage import growing_days
 from .assessment_schedule import eligibility, with_last_assessment_date
 from .crop_intelligence_service import get_or_create_crop_intelligence, is_configured
 from .soil_recommendation_service import (
@@ -325,6 +326,11 @@ def _read_upload(image) -> tuple[bytes, str]:
     return data, mime
 
 
+def _age_today(plant) -> int:
+    """Days since planting, as the photo check judges the photo against."""
+    return max(0, (timezone.localdate() - plant.planting_date).days)
+
+
 def _assessment_weather() -> dict:
     """The farm's last week of weather for a new assessment, or {} if unknown."""
     if not settings.ATTACH_WEATHER_TO_ASSESSMENTS:
@@ -367,7 +373,10 @@ def _verify_evidence(request, plant, image) -> dict:
             },
         }
 
-    result = validate_crop_evidence(plant.crop, image_bytes, mime, from_request(request))
+    result = validate_crop_evidence(
+        plant.crop, image_bytes, mime, from_request(request), _age_today(plant),
+        growing_days(plant),
+    )
     if result is None:
         # Fail closed: an unavailable check is never treated as a pass.
         return {"outcome": "unavailable", "result": None}
@@ -428,7 +437,8 @@ def validate_plant_evidence(request, plant_id):
 
     image_bytes, mime = _read_upload(image)
     result = _reused_photo_result(plant, image_bytes) or validate_crop_evidence(
-        plant.crop, image_bytes, mime, from_request(request)
+        plant.crop, image_bytes, mime, from_request(request), _age_today(plant),
+        growing_days(plant),
     )
 
     if result is None:

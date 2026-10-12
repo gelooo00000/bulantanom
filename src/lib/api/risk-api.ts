@@ -56,7 +56,14 @@ export type AssessmentEligibility = {
   interval_days: number;
 };
 
-export type EvidenceVerdict = "match" | "mismatch" | "no_plant" | "unclear" | "not_genuine";
+export type EvidenceVerdict =
+  | "match"
+  | "mismatch"
+  | "no_plant"
+  | "unclear"
+  | "not_genuine"
+  /** The right crop, but far older than its planting date allows. */
+  | "wrong_stage";
 
 export type EvidenceValidation = {
   evidence_valid: boolean;

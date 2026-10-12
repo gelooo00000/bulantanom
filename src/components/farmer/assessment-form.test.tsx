@@ -433,3 +433,26 @@ describe("Weekly assessment: an empty draft", () => {
     expect(window.localStorage.getItem("bulantanom:assessment-draft:7")).toBeNull();
   });
 });
+
+describe("Weekly assessment: photo older than the plant", () => {
+  it("explains the refusal and keeps Submit off", async () => {
+    validateEvidence.mockResolvedValue({
+      ...ACCEPTED,
+      evidence_valid: false,
+      verdict: "wrong_stage",
+      evidence_token: undefined,
+      suggested_answers: {},
+      reason: "Pods are visible, but this plant was planted 11 days ago.",
+      message: "This doesn't look like the radish / jicama you planted.",
+    });
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.upload(screen.getByLabelText("Take photo"), photo());
+
+    expect(await screen.findByText("Photo doesn't match the plant's age")).toBeInTheDocument();
+    expect(screen.getByText(/planted 11 days ago/)).toBeInTheDocument();
+    expect(screen.queryByText(/filled in from your photo/)).toBeNull();
+    expect(screen.getByRole("button", { name: /Submit Assessment/ })).toBeDisabled();
+  });
+});

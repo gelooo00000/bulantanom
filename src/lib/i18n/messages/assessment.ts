@@ -390,5 +390,10 @@ export const assessment = defineMessages({
     fil: "Hindi Sapat ang Linaw ng Litrato",
     bik: "Dili Igo an Linaw san Litrato",
   },
+  "verdict.wrong_stage": {
+    en: "Photo doesn't match the plant's age",
+    fil: "Hindi tugma ang litrato sa edad ng tanim",
+    bik: "Dai angay an litrato sa edad san tanom",
+  },
   "verdict.replace": { en: "Replace Image", fil: "Palitan ang Litrato", bik: "Liwanan an Litrato" },
 });

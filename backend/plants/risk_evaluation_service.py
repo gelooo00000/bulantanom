@@ -27,6 +27,7 @@ from .ai_language import write_in
 from .assessment_questions import not_applicable
 from .durations import human_duration
 from .gemini_models import generate_with_fallback
+from .growth_stage import STAGE_WORDS, expected_stage, growing_days
 
 logger = logging.getLogger(__name__)
 
@@ -218,24 +219,15 @@ def is_configured() -> bool:
     return bool(settings.GEMINI_API_KEY)
 
 
-def _expected_stage(crop, age_days: int) -> str:
+def _expected_stage(plant, age_days: int) -> str:
     """
-    Coarse expected stage derived from the system's own configured growing
-    duration. Deliberately descriptive, not a precise agronomic claim.
+    Coarse expected stage from the plant's own growing time (its variety's).
+    Deliberately descriptive, not a precise agronomic claim.
     """
-    duration = crop.growing_duration_days or 0
-    if duration <= 0:
+    stage = expected_stage(growing_days(plant), age_days)
+    if stage is None:
         return "unknown (no growing duration configured for this crop)"
-    fraction = age_days / duration
-    if fraction < 0.15:
-        return "early establishment / seedling"
-    if fraction < 0.45:
-        return "vegetative growth"
-    if fraction < 0.70:
-        return "flowering / early reproductive"
-    if fraction < 1.0:
-        return "fruiting / maturing"
-    return "harvest-ready or past expected harvest start"
+    return STAGE_WORDS[stage]
 
 
 def _weather_for_ai(weather) -> dict | str:
@@ -269,7 +261,7 @@ def build_context(assessment) -> dict:
             # days" is not how anyone reports that.
             "growing_duration_readable": human_duration(crop.growing_duration_days),
             "harvest_window_days": crop.harvest_window_days,
-            "expected_growth_stage": _expected_stage(crop, assessment.plant_age_days),
+            "expected_growth_stage": _expected_stage(plant, assessment.plant_age_days),
             "expected_harvest_start": plant.expected_harvest_start.isoformat(),
             "expected_harvest_end": plant.expected_harvest_end.isoformat(),
             "system_description": crop.description,

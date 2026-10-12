@@ -3,8 +3,9 @@ Plant Evidence Validation — a Gemini boundary kept separate from risk
 evaluation (`risk_evaluation_service.py`) and from crop information
 (`crop_intelligence_service.py`).
 
-Its single job: decide whether an uploaded photo plausibly shows the crop the
-Farmer selected, *before* any risk evaluation runs.
+Its job: decide whether an uploaded photo plausibly shows the crop the
+Farmer selected, at an age that fits its planting date, *before* any risk
+evaluation runs.
 
 Architecture rules:
 
@@ -16,6 +17,11 @@ Architecture rules:
 * Poor image quality is reported as its own verdict, never as a crop
   mismatch: "I can't tell" and "that's the wrong plant" are different
   answers and get different messages.
+* The plant's age is checked in Django too. The model reports the growth
+  stage it sees on a fixed scale (growth_stage.STAGES); a photo clearly
+  older than the planting date allows (fruit on a plant sown 11 days ago)
+  becomes `wrong_stage` even when the model called it a match, because the
+  photo and the planting date cannot both be right.
 * Fail closed. If Gemini is unavailable this returns None and the caller
   must reject the submission — it must never assume the evidence is valid.
 * The API key is read from settings and never logged.
@@ -35,7 +41,9 @@ import logging
 from django.conf import settings
 
 from .ai_language import write_in
+from .durations import human_duration
 from .gemini_models import generate_with_fallback
+from .growth_stage import STAGES, expected_stage, too_far_ahead
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +51,23 @@ logger = logging.getLogger(__name__)
 # accepted, so an ambiguous photo never passes as verified evidence.
 MIN_MATCH_CONFIDENCE = 0.55
 
-VERDICTS = ("match", "mismatch", "no_plant", "unclear", "not_genuine")
+VERDICTS = ("match", "mismatch", "no_plant", "unclear", "not_genuine", "wrong_stage")
+
+# Crops whose photo age is not judged against the planting date: mushrooms
+# do not grow through seedling-to-fruit stages, and long-lived crops (fruit
+# trees, banana) are usually planted as nursery saplings or suckers already
+# months old, which may even flower early. The risk evaluation still flags a
+# plain planting-date mismatch for them after submission.
+STAGE_CHECK_MAX_DURATION_DAYS = 365
+STAGE_CHECK_EXEMPT = {"mushroom"}
+
+
+def stage_check_applies(crop, duration_days: int | None) -> bool:
+    duration = duration_days or 0
+    return (
+        getattr(crop, "id", None) not in STAGE_CHECK_EXEMPT
+        and 0 < duration <= STAGE_CHECK_MAX_DURATION_DAYS
+    )
 
 # Answers a photo can suggest, with the values the assessment form accepts
 # (Assessment's TextChoices). "unknown" means the photo does not show it.
@@ -66,6 +90,7 @@ RESPONSE_SCHEMA = {
         "confidence": {"type": "number"},
         "detected_subject": {"type": "string"},
         "reason": {"type": "string"},
+        "observed_stage": {"type": "string", "enum": [*STAGES, "unknown"]},
         "observed": {
             "type": "object",
             "properties": {
@@ -75,7 +100,9 @@ RESPONSE_SCHEMA = {
             "required": list(SUGGESTIBLE),
         },
     },
-    "required": ["verdict", "confidence", "detected_subject", "reason", "observed"],
+    "required": [
+        "verdict", "confidence", "detected_subject", "reason", "observed_stage", "observed",
+    ],
 }
 
 SYSTEM_INSTRUCTION = """
@@ -84,8 +111,9 @@ selected in BulanTanom, an agricultural monitoring system for Layuan Nature
 Integrated Farm in Bulan, Sorsogon, Philippines.
 
 You are NOT diagnosing plant health here. Your questions are: is this a
-real photo the farmer took of a growing plant, and does it plausibly show the
-expected crop?
+real photo the farmer took of a growing plant, does it plausibly show the
+expected crop, and could it be the plant the farmer recorded, given how long
+ago it was planted?
 
 Choose exactly one verdict:
 
@@ -100,6 +128,13 @@ Choose exactly one verdict:
 - "unclear"   — a plant may be present but the photo is too blurry, too dark,
                 too distant, too obstructed, or too cropped to tell which crop
                 it is.
+- "wrong_stage" — the photo shows the expected crop, but clearly far older
+                than the plant's recorded age allows: flowers, fruit, pods,
+                a large tuber or a full mature plant on a plant planted only
+                days or a few weeks ago. Then it is not this plant, or the
+                planting date is wrong. Name what you see and the age in
+                `reason`. A plant that looks a little ahead of its age, or
+                younger than expected, is NOT wrong_stage.
 - "not_genuine" — the image is not a real photo of a living plant taken in
                 the field. Use this, even when the crop is right, for: stock
                 or internet images (watermarks, website logos, copyright
@@ -134,6 +169,13 @@ Rules:
   blur. That is normal and is NOT a reason for "not_genuine". Use it only
   when you see an actual sign listed above, and name that sign in `reason`.
 
+`observed_stage` — the growth stage the photo shows, judged from the photo
+alone: "seedling" (first leaves, just emerged), "vegetative" (leafy growth,
+no flowers), "flowering" (flower buds or open flowers), "fruiting" (fruit,
+pods or a tuber/root visibly forming), or "mature" (full-grown, ready to
+harvest). Use "unknown" when you cannot tell. Report what you see honestly
+even when it does not fit the plant's age: the system makes the comparison.
+
 `observed` — what the photo shows of the plant, used to pre-fill the
 farmer's weekly checklist. Fill it only for a "match"; for any other verdict
 set every field to "unknown".
@@ -158,20 +200,29 @@ def is_configured() -> bool:
     return bool(settings.GEMINI_API_KEY)
 
 
-def build_context(crop) -> dict:
+def build_context(
+    crop, age_days: int | None = None, duration_days: int | None = None
+) -> dict:
     """
     What Gemini is told about the expectation.
 
-    Deliberately crop metadata only — no farmer name, email, id, tokens or
-    any other account information is ever sent.
+    Deliberately crop metadata and the plant's age only — no farmer name,
+    email, id, tokens or any other account information is ever sent.
     """
-    return {
+    context = {
         "expected_crop": crop.name,
         "crop_category": crop.get_category_display(),
         "crop_description": crop.description,
         "typical_growing_duration_days": crop.growing_duration_days,
         "also_known_as": list(crop.search_terms or []),
     }
+    if age_days is not None:
+        context["plant_age"] = {
+            "days_since_planting": age_days,
+            "readable": human_duration(age_days),
+            "expected_stage": expected_stage(duration_days, age_days) or "unknown",
+        }
+    return context
 
 
 def _message_for(verdict: str, crop_name: str) -> str:
@@ -182,6 +233,12 @@ def _message_for(verdict: str, crop_name: str) -> str:
         return f"Please upload a clear photo of your {crop_name.lower()} plant."
     if verdict == "no_plant":
         return f"Please upload a photo showing your {crop_name.lower()} plant."
+    if verdict == "wrong_stage":
+        return (
+            f"This doesn't look like the {crop_name.lower()} you planted. Take a photo of "
+            "that plant. If its planting date is wrong, remove it in My Plants and add it "
+            "again with the right date."
+        )
     if verdict == "not_genuine":
         return (
             f"Take a new photo of your own {crop_name.lower()} plant with your camera. "
@@ -206,12 +263,15 @@ def _suggestions(observed) -> dict:
     }
 
 
-def _validate(payload, crop) -> dict | None:
+def _validate(
+    payload, crop, age_days: int | None = None, duration_days: int | None = None
+) -> dict | None:
     """
     Turn a raw model response into a trusted result, or None if unusable.
 
     `evidence_valid` is decided here, never read from the model — it requires
-    both a "match" verdict and sufficient confidence.
+    a "match" verdict, sufficient confidence, and (where the stage check
+    applies) a growth stage the plant's age allows.
     """
     if not isinstance(payload, dict):
         return None
@@ -231,6 +291,21 @@ def _validate(payload, crop) -> dict | None:
 
     detected = str(payload.get("detected_subject", "")).strip() or "unidentified subject"
 
+    stage_applies = age_days is not None and stage_check_applies(crop, duration_days)
+    if verdict == "wrong_stage" and not stage_applies:
+        # The model judged an age it was not asked to judge for this crop.
+        verdict = "match"
+
+    observed_stage = payload.get("observed_stage")
+    expected = expected_stage(duration_days, age_days) if stage_applies else None
+    if verdict == "match" and too_far_ahead(expected, observed_stage):
+        verdict = "wrong_stage"
+        reason = (
+            f"The photo shows a {crop.name.lower()} plant at the {observed_stage} stage, "
+            f"but this plant was planted {human_duration(age_days)} ago and should still "
+            f"be at the {expected} stage."
+        )
+
     # A weakly-held "match" is not evidence — downgrade rather than accept.
     if verdict == "match" and confidence < MIN_MATCH_CONFIDENCE:
         verdict = "unclear"
@@ -245,6 +320,8 @@ def _validate(payload, crop) -> dict | None:
         "verdict": verdict,
         "confidence": confidence,
         "detected_subject": detected,
+        "observed_stage": observed_stage if observed_stage in STAGES else None,
+        "expected_stage": expected,
         "expected_crop": crop.name,
         "reason": reason,
         "message": _message_for(verdict, crop.name),
@@ -252,7 +329,12 @@ def _validate(payload, crop) -> dict | None:
 
 
 def validate_crop_evidence(
-    crop, image_bytes: bytes, mime_type: str, language: str = "en"
+    crop,
+    image_bytes: bytes,
+    mime_type: str,
+    language: str = "en",
+    age_days: int | None = None,
+    duration_days: int | None = None,
 ) -> dict | None:
     """
     Ask Gemini whether `image_bytes` plausibly shows `crop`. `reason` - the
@@ -277,9 +359,10 @@ def validate_crop_evidence(
         logger.exception("google-genai SDK unavailable.")
         return None
 
-    context = build_context(crop)
+    context = build_context(crop, age_days, duration_days)
     parts = [
-        "Does this photo show the expected crop?\n\n" + json.dumps(context, indent=2),
+        "Does this photo show the expected crop, at an age that fits?\n\n"
+        + json.dumps(context, indent=2),
         types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
     ]
     if write_in(language):
@@ -320,7 +403,7 @@ def validate_crop_evidence(
             logger.warning("Evidence validation returned non-JSON content.")
             return None
 
-    result = _validate(parsed, crop)
+    result = _validate(parsed, crop, age_days, duration_days)
     if result is None:
         logger.warning("Evidence validation response failed schema validation.")
     return result
