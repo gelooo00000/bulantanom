@@ -203,7 +203,9 @@ export function LoginView() {
             </p>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Fields start empty on every visit, for every role: the browser
+              does not fill in a saved email or password. */}
+          <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="email" className="text-foreground">
                 Email
@@ -212,6 +214,7 @@ export function LoginView() {
                 icon={Mail}
                 id="email"
                 type="email"
+                autoComplete="off"
                 required
                 placeholder="you@example.com"
                 value={email}
@@ -225,6 +228,7 @@ export function LoginView() {
               <AuthPasswordField
                 icon={Lock}
                 id="password"
+                autoComplete="new-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

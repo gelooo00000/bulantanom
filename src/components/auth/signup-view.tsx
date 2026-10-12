@@ -105,7 +105,9 @@ export function SignupView() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Fields start empty: the browser does not fill in a saved email
+              or password from another account. */}
+          <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="fullName" className="text-foreground">
                 Full Name
@@ -126,6 +128,7 @@ export function SignupView() {
                 icon={Mail}
                 id="email"
                 type="email"
+                autoComplete="off"
                 required
                 placeholder="farmer@layuan.ph"
                 value={email}
@@ -139,6 +142,7 @@ export function SignupView() {
               <AuthPasswordField
                 icon={Lock}
                 id="password"
+                autoComplete="new-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -151,6 +155,7 @@ export function SignupView() {
               <AuthPasswordField
                 icon={Lock}
                 id="confirmPassword"
+                autoComplete="new-password"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
