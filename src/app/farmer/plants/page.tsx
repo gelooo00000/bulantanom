@@ -6,6 +6,7 @@ import {
   CircleHelp,
   LoaderCircle,
   Plus,
+  Search,
   Sprout,
   Trash2,
   TriangleAlert,
@@ -49,6 +50,40 @@ function rememberGuideHidden(hidden: boolean) {
   } catch {
     // Storage unavailable — the guide just reappears next visit.
   }
+}
+
+/** Every word typed must appear in the plant's names or its crop's search terms. */
+function matchesQuery(plant: BackendPlant, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const haystack = [
+    plant.variant?.name,
+    plant.crop.name,
+    plant.label,
+    plant.display_name,
+    ...(plant.crop.search_terms ?? []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return words.every((w) => haystack.includes(w));
+}
+
+/** The crops the farmer actually grows, A–Z, with how many plants of each. */
+function cropsIn(plants: BackendPlant[]) {
+  const byId = new Map<string, { id: string; name: string; emoji: string; count: number }>();
+  for (const p of plants) {
+    const entry = byId.get(p.crop.id);
+    if (entry) entry.count += 1;
+    else
+      byId.set(p.crop.id, {
+        id: p.crop.id,
+        name: p.crop.name,
+        emoji: p.crop.emoji,
+        count: 1,
+      });
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export default function MyPlantsPage() {
@@ -98,8 +133,23 @@ export default function MyPlantsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const chosen: BackendPlant[] = (plants ?? []).filter((p) => selected.has(p.id));
-  const allSelected = !!plants && plants.length > 0 && selected.size === plants.length;
+  // Search and crop filter. Narrow the grid only; selection and delete act on
+  // what is on screen, so a plant hidden by the filter is never deleted.
+  const [query, setQuery] = useState("");
+  const [cropId, setCropId] = useState("");
+  const crops = cropsIn(plants ?? []);
+  const filtering = query.trim() !== "" || cropId !== "";
+  const visible = (plants ?? []).filter(
+    (p) => (!cropId || p.crop.id === cropId) && matchesQuery(p, query),
+  );
+
+  function clearFilters() {
+    setQuery("");
+    setCropId("");
+  }
+
+  const chosen: BackendPlant[] = visible.filter((p) => selected.has(p.id));
+  const allSelected = visible.length > 0 && chosen.length === visible.length;
 
   function toggle(id: number) {
     setSelected((current) => {
@@ -214,16 +264,14 @@ export default function MyPlantsPage() {
           className="bg-card border-border sticky top-[calc(env(safe-area-inset-top,0px)+0.5rem)] z-20 flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 shadow-sm"
         >
           <span className="font-heading text-sm font-medium" role="status">
-            {selected.size === 0
+            {chosen.length === 0
               ? t("myPlants.tapToSelect")
-              : t("myPlants.selected", { n: selected.size })}
+              : t("myPlants.selected", { n: chosen.length })}
           </span>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
-              setSelected(allSelected ? new Set() : new Set(plants!.map((p) => p.id)))
-            }
+            onClick={() => setSelected(allSelected ? new Set() : new Set(visible.map((p) => p.id)))}
           >
             {allSelected ? t("myPlants.clearAll") : t("myPlants.selectAll")}
           </Button>
@@ -231,7 +279,7 @@ export default function MyPlantsPage() {
             <Button
               variant="destructive"
               size="sm"
-              disabled={selected.size === 0}
+              disabled={chosen.length === 0}
               onClick={() => {
                 setDeleteError(null);
                 setConfirming(true);
@@ -239,7 +287,7 @@ export default function MyPlantsPage() {
             >
               <Trash2 className="size-4" />
               {t("common.delete")}
-              {selected.size > 0 ? ` (${selected.size})` : ""}
+              {chosen.length > 0 ? ` (${chosen.length})` : ""}
             </Button>
             <Button variant="outline" size="sm" onClick={stopSelecting}>
               <X className="size-4" />
@@ -269,21 +317,82 @@ export default function MyPlantsPage() {
           action={firstPlantButton}
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {plants!.map((plant) => (
-            <PlantCard
-              key={plant.id}
-              plant={plant}
-              selected={selected.has(plant.id)}
-              highlighted={plant.id === addedId}
-              onToggle={selecting ? () => toggle(plant.id) : undefined}
-            />
-          ))}
-          {/* Closes the grid, so adding another is where the farmer's eye
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && setQuery("")}
+                placeholder={t("myPlants.search")}
+                aria-label={t("myPlants.search")}
+                className="border-border bg-card focus-visible:ring-ring/50 h-11 w-full rounded-lg border pr-10 pl-9 text-base focus-visible:ring-[3px] focus-visible:outline-none sm:text-sm [&::-webkit-search-cancel-button]:hidden"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label={t("common.close")}
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 rounded p-1"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+            <select
+              value={cropId}
+              onChange={(e) => setCropId(e.target.value)}
+              aria-label={t("myPlants.cropFilter")}
+              className="border-border bg-card h-11 rounded-lg border px-3 text-base sm:w-56 sm:text-sm"
+            >
+              <option value="">{t("myPlants.allCrops", { n: plants!.length })}</option>
+              {crops.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.emoji} {c.name} ({c.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {filtering && visible.length > 0 && (
+            <p className="text-muted-foreground -mt-2 text-sm" role="status">
+              {t("myPlants.showing", {
+                shown: visible.length,
+                total: plants!.length,
+              })}
+            </p>
+          )}
+
+          {visible.length === 0 ? (
+            <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-8 text-center">
+              <Search className="text-muted-foreground size-5" />
+              <p className="font-heading text-sm font-medium" role="status">
+                {t("myPlants.noMatch")}
+              </p>
+              <Button variant="outline" onClick={clearFilters}>
+                {t("myPlants.clearFilters")}
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {visible.map((plant) => (
+                <PlantCard
+                  key={plant.id}
+                  plant={plant}
+                  selected={selected.has(plant.id)}
+                  highlighted={plant.id === addedId}
+                  onToggle={selecting ? () => toggle(plant.id) : undefined}
+                />
+              ))}
+              {/* Closes the grid, so adding another is where the farmer's eye
               already is after reading the last card. Hidden while
               selecting, where it would be one more thing to tap by mistake. */}
-          {!selecting && <AddPlantTile />}
-        </div>
+              {!selecting && !filtering && <AddPlantTile />}
+            </div>
+          )}
+        </>
       )}
 
       {/* "Plant added" pop-up, after arriving from the Add Plant page. */}

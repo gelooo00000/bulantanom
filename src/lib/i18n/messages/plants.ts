@@ -124,6 +124,24 @@ export const plants = defineMessages({
     bik: "Oo, paraon an {n} tanom",
   },
   "myPlants.deleting": { en: "Deleting…", fil: "Binubura…", bik: "Pinapara…" },
+  "myPlants.search": {
+    en: "Search your plants",
+    fil: "Hanapin ang iyong mga tanim",
+    bik: "Hanapon an imo mga tanom",
+  },
+  "myPlants.cropFilter": { en: "Filter by crop", fil: "Salain ayon sa pananim", bik: "Salaon segun sa tanom" },
+  "myPlants.allCrops": { en: "All crops ({n})", fil: "Lahat ng pananim ({n})", bik: "Ngatanan na tanom ({n})" },
+  "myPlants.showing": {
+    en: "Showing {shown} of {total} plants.",
+    fil: "Ipinapakita ang {shown} sa {total} tanim.",
+    bik: "Pinapahiling an {shown} sa {total} tanom.",
+  },
+  "myPlants.noMatch": {
+    en: "No plants match your search.",
+    fil: "Walang tanim na tugma sa iyong hinahanap.",
+    bik: "Waray tanom na tugma sa imo hinahanap.",
+  },
+  "myPlants.clearFilters": { en: "Show all plants", fil: "Ipakita lahat ng tanim", bik: "Ipahiling ngatanan na tanom" },
 
   "plantsGuide.open": { en: "How to use", fil: "Paano gamitin", bik: "Paano gamiton" },
   "plantsGuide.hide": { en: "Hide", fil: "Itago", bik: "Itago" },
