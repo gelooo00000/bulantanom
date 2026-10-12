@@ -54,11 +54,6 @@ export const assessment = defineMessages({
     fil: "Pamumulaklak at pamumunga",
     bik: "Pagburak asin pagbunga",
   },
-  "asmt.blankIfNA": {
-    en: "Leave blank if not applicable yet.",
-    fil: "Iwanang blangko kung hindi pa angkop.",
-    bik: "Pabayaan na blangko kun dili pa angay.",
-  },
   "asmt.flowering": { en: "Flowering status", fil: "Pamumulaklak", bik: "Pagburak" },
   "asmt.fruiting": { en: "Fruiting status", fil: "Pamumunga", bik: "Pagbunga" },
   "asmt.waterSoil": { en: "Water & soil", fil: "Tubig at lupa", bik: "Tubig asin daga" },
@@ -70,16 +65,6 @@ export const assessment = defineMessages({
   "asmt.watering": { en: "Watering frequency", fil: "Dalas ng pagdidilig", bik: "Kadalasan san pagbubo" },
   "asmt.soil": { en: "Soil moisture", fil: "Basa ng lupa", bik: "Kabasa san daga" },
   "asmt.symptoms": { en: "Symptoms", fil: "Mga sintomas", bik: "Mga sintomas" },
-  "asmt.evidence": {
-    en: "Plant condition evidence",
-    fil: "Litrato ng kalagayan ng tanim",
-    bik: "Litrato san kamutangan san tanom",
-  },
-  "asmt.evidenceText": {
-    en: "Start here: take a new, clear photo of your own {crop} today. Pictures from the internet, screenshots and old photos are refused, and the photo must agree with your answers below.",
-    fil: "Magsimula rito: kumuha ng bago at malinaw na litrato ng sarili mong {crop} ngayong araw. Hindi tinatanggap ang litrato mula sa internet, screenshot o lumang litrato, at dapat tugma ang litrato sa iyong mga sagot sa ibaba.",
-    bik: "Magpoon digdi: magkuha nin bag-o asin malinaw na litrato san imo mismo na {crop} niyan na adlaw. Dili inaako an litrato hali sa internet, screenshot o daan na litrato, asin dapat angay an litrato sa imo mga simbag sa ibaba.",
-  },
   "asmt.notes": {
     en: "What have you noticed about your plant this week?",
     fil: "Ano ang napansin mo sa iyong tanim ngayong linggo?",
@@ -170,6 +155,11 @@ export const assessment = defineMessages({
     bik: "Nagbalik an mga simbag mo kaina, kaya pwede ka magpadagos. Magkuha giraray nin litrato para maisumite.",
   },
   "asmt.startOver": { en: "Start over", fil: "Magsimula muli", bik: "Magpoon giraray" },
+  "asmt.noneYet": {
+    en: "None yet? Choose \"Not flowering\" or \"Not fruiting\".",
+    fil: "Wala pa? Piliin ang \"Hindi namumulaklak\" o \"Hindi namumunga\".",
+    bik: "Mayo pa? Pilion an \"Dili nagbuburak\" o \"Dili nagbubunga\".",
+  },
   "asmt.fromPhoto": { en: "From photo", fil: "Mula sa litrato", bik: "Hali sa litrato" },
   "asmt.fromLastCheck": { en: "Last check", fil: "Huling pagsusuri", bik: "Huring pagsusi" },
   "asmt.lastCheckFilled": {

@@ -211,7 +211,6 @@ type Status = "idle" | "checking" | "analyzing" | "done";
 type AssessmentFormProps = {
   plantId: number;
   plantLabel: string;
-  cropName: string;
   /** Picks the pests and disease signs offered as tick boxes. */
   cropId: string;
   /** Questions that don't fit this crop (e.g. leaves on a mushroom). */
@@ -240,7 +239,6 @@ export function AssessmentForm(props: AssessmentFormProps) {
 function AssessmentFormBody({
   plantId,
   plantLabel,
-  cropName,
   cropId,
   skipQuestions = [],
   lastAssessment = null,
@@ -362,6 +360,10 @@ function AssessmentFormBody({
   // has been verified to show this crop.
   const asks = (question: AssessmentQuestion) => !skipQuestions.includes(question);
   const leafMissing = asks("leaf_condition") && !leaf;
+  // "Not flowering" / "Not fruiting" are answers too, so these are required
+  // for every crop they are asked of.
+  const floweringMissing = asks("flowering_status") && !flowering;
+  const fruitingMissing = asks("fruiting_status") && !fruiting;
   const photoRefused = evidenceResult !== null && !evidenceResult.evidence_valid;
   // What still stands between the farmer and Submit, in form order, each
   // with where to scroll to.
@@ -370,6 +372,8 @@ function AssessmentFormBody({
   if (!growth) stillNeeded.push({ label: t("asmt.growthCompared"), target: "growth-label" });
   if (!health) stillNeeded.push({ label: t("asmt.overallHealth"), target: "health-label" });
   if (leafMissing) stillNeeded.push({ label: t("asmt.leaf"), target: "leaf-label" });
+  if (floweringMissing) stillNeeded.push({ label: t("asmt.flowering"), target: "flowering-label" });
+  if (fruitingMissing) stillNeeded.push({ label: t("asmt.fruiting"), target: "fruiting-label" });
   if (!watering) stillNeeded.push({ label: t("asmt.watering"), target: "watering-label" });
   const canSubmit = stillNeeded.length === 0 && !checkingPhoto;
 
@@ -596,11 +600,8 @@ function AssessmentFormBody({
         </div>
       )}
 
-      <FormSection
-        id="asmt-photo"
-        title={t("asmt.evidence")}
-        description={t("asmt.evidenceText", { crop: cropName.toLowerCase() })}
-      >
+      {/* The photo comes first, with no heading: the upload box says what to do. */}
+      <div id="asmt-photo" className="flex scroll-mt-24 flex-col gap-4">
         <EvidenceUpload ref={uploadRef} file={evidence} onChange={changeEvidence} />
         {checkingPhoto && (
           <div className="border-border flex items-start gap-3 rounded-xl border border-dashed px-4 py-3">
@@ -625,7 +626,7 @@ function AssessmentFormBody({
               : t("asmt.prefilled", { n: fromPhotoCount })}
           </p>
         )}
-      </FormSection>
+      </div>
 
       {fromLastCount > 0 && lastAssessment && (
         <p className="bg-muted/40 border-border flex items-start gap-2 rounded-xl border px-4 py-3 text-sm">
@@ -684,11 +685,15 @@ function AssessmentFormBody({
       </FormSection>
 
       {(asks("flowering_status") || asks("fruiting_status")) && (
-        <FormSection title={t("asmt.flowerFruit")} description={t("asmt.blankIfNA")}>
+        <FormSection title={t("asmt.flowerFruit")} description={t("asmt.noneYet")}>
           <div className="flex flex-col gap-4">
             {asks("flowering_status") && (
               <div className="flex flex-col gap-2">
-                <AnswerLabel id="flowering-label" source={sources.flowering_status}>
+                <AnswerLabel
+                  id="flowering-label"
+                  source={sources.flowering_status}
+                  missing={floweringMissing}
+                >
                   {t("asmt.flowering")}
                 </AnswerLabel>
                 <ChoiceButtons
@@ -696,13 +701,16 @@ function AssessmentFormBody({
                   value={flowering}
                   onChange={(v) => answer("flowering_status", v)}
                   options={FLOWERING}
-                  optional
                 />
               </div>
             )}
             {asks("fruiting_status") && (
               <div className="flex flex-col gap-2">
-                <AnswerLabel id="fruiting-label" source={sources.fruiting_status}>
+                <AnswerLabel
+                  id="fruiting-label"
+                  source={sources.fruiting_status}
+                  missing={fruitingMissing}
+                >
                   {t("asmt.fruiting")}
                 </AnswerLabel>
                 <ChoiceButtons
@@ -710,7 +718,6 @@ function AssessmentFormBody({
                   value={fruiting}
                   onChange={(v) => answer("fruiting_status", v)}
                   options={FRUITING}
-                  optional
                 />
               </div>
             )}
