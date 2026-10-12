@@ -51,7 +51,7 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
         normalized = value.strip().lower()
         # An unfinished sign-up (code never entered) does not hold the
         # address: whoever can actually read that inbox may claim it.
-        if User.objects.filter(email__iexact=normalized, email_verified=True).exists():
+        if User.objects.filter(email__iexact=normalized, pending_signup=False).exists():
             raise serializers.ValidationError("An account with this email already exists.")
         problem = email_problem(normalized)
         if problem:
@@ -71,7 +71,7 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
         User.objects.filter(
-            email__iexact=validated_data["email"], email_verified=False, role=UserRole.FARMER
+            email__iexact=validated_data["email"], pending_signup=True, role=UserRole.FARMER
         ).delete()
         # Farmers are approved on sign-up and go straight to their dashboard.
         # The status field is still a real gate, not a formality: an Admin can
@@ -84,6 +84,7 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
             account_status=AccountStatus.APPROVED,
             # Usable only once the emailed code is typed back.
             email_verified=False,
+            pending_signup=True,
             **validated_data,
         )
 

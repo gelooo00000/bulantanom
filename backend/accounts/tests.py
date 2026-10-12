@@ -300,6 +300,12 @@ class FarmerEmailVerificationTests(APITestCase):
             response = self.signup()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_a_pending_signup_is_the_only_kind_that_can_be_replaced(self):
+        self.signup()
+        self.assertTrue(User.objects.get(email="juan@example.com").pending_signup)
+        signup_and_verify(self.client, {**VALID_SIGNUP, "email": "maria@example.com"})
+        self.assertFalse(User.objects.get(email="maria@example.com").pending_signup)
+
     def test_if_the_code_cannot_be_sent_nothing_is_kept(self):
         with mock.patch(
             "django.core.mail.EmailMultiAlternatives.send", side_effect=OSError("SMTP down")
@@ -308,6 +314,67 @@ class FarmerEmailVerificationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertIn("couldn't send", response.data["detail"])
         self.assertFalse(User.objects.filter(email="juan@example.com").exists())
+
+
+class ExistingFarmerReverifyTests(APITestCase):
+    """
+    Accounts made before email codes existed confirm their email once, at
+    their next sign-in, without being treated as new or put at risk.
+    """
+
+    def setUp(self):
+        self.farmer = make_user("old@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        RegistrationNotification.objects.create(user=self.farmer)
+        # What migration 0008 does to every existing Farmer.
+        User.objects.filter(pk=self.farmer.pk).update(email_verified=False)
+
+    def login(self):
+        return self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "old@example.com", "password": "SecurePassword123!"},
+            format="json",
+        )
+
+    def test_the_next_sign_in_emails_a_code_and_asks_for_it(self):
+        response = self.login()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data["code"], "email_not_verified")
+        verify = self.client.post(
+            VERIFY_URL,
+            {"email": "old@example.com", "code": last_code("old@example.com")},
+            format="json",
+        )
+        self.assertEqual(verify.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.login().status_code, status.HTTP_200_OK)
+
+    def test_verifying_does_not_announce_the_account_as_new(self):
+        self.login()
+        self.client.post(
+            VERIFY_URL,
+            {"email": "old@example.com", "code": last_code("old@example.com")},
+            format="json",
+        )
+        self.assertEqual(RegistrationNotification.objects.filter(user=self.farmer).count(), 1)
+        self.assertFalse(any("Welcome" in m.subject for m in mail.outbox))
+
+    def test_a_new_signup_can_never_take_over_or_delete_it(self):
+        response = self.client.post(
+            SIGNUP_URL, {**VALID_SIGNUP, "email": "old@example.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("already exists", str(response.data))
+        self.assertTrue(User.objects.filter(pk=self.farmer.pk).exists())
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_an_open_session_ends_at_its_next_renewal(self):
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        self.client.cookies[settings.REFRESH_COOKIE_NAME] = str(
+            RefreshToken.for_user(self.farmer)
+        )
+        response = self.client.post(REFRESH_URL)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn("access", response.data)
 
 
 class FarmerLoginStatusTests(APITestCase):

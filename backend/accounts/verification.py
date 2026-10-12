@@ -133,5 +133,6 @@ def check_code(user, code: str) -> str:
 
     row.delete()
     user.email_verified = True
-    user.save(update_fields=["email_verified", "updated_at"])
+    user.pending_signup = False
+    user.save(update_fields=["email_verified", "pending_signup", "updated_at"])
     return "ok"

@@ -220,11 +220,14 @@ class FarmerVerifyView(APIView):
             raise AuthenticationFailed(
                 STATUS_MESSAGES.get(user.account_status, "Your account cannot sign in right now.")
             )
-        RegistrationNotification.objects.create(user=user)
-        # Welcome notice + an LGU heads-up that a new Farmer has joined.
-        # Both are queued until this transaction commits.
-        notify_farmer_registered(user)
-        email_farmer_welcome(user)
+        # Announced once. An older account re-verifying its email was
+        # announced when it first signed up, so nobody is told it is new.
+        if not RegistrationNotification.objects.filter(user=user).exists():
+            RegistrationNotification.objects.create(user=user)
+            # Welcome notice + an LGU heads-up that a new Farmer has joined.
+            # Both are queued until this transaction commits.
+            notify_farmer_registered(user)
+            email_farmer_welcome(user)
         return _tokens_response(user)
 
 
@@ -381,6 +384,20 @@ class RefreshView(APIView):
                 {"detail": "Session expired. Please sign in again."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+            _clear_refresh_cookie(response)
+            return response
+
+        # An email not yet verified (an older account asked to confirm its
+        # address) ends the session here; signing in again asks for the code.
+        if not user.email_verified:
+            response = Response(
+                {"detail": "Please sign in again to verify your email."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+            try:
+                old_refresh.blacklist()
+            except AttributeError:
+                pass
             _clear_refresh_cookie(response)
             return response
 

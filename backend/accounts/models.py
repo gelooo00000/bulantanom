@@ -80,10 +80,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    # False only for a Farmer who signed up and has not yet typed the code
-    # emailed to them; such an account cannot sign in. Every account that
-    # existed before verification (and every officer or admin) is True.
+    # False for a Farmer who has not yet typed back a code emailed to them;
+    # such an account cannot sign in or renew a session until they do.
+    # Officers and admins are always True.
     email_verified = models.BooleanField(default=True)
+    # True only for a brand-new sign-up still waiting for its first code.
+    # Such an account holds nothing yet, so a later sign-up with the same
+    # email may replace it. An older account asked to re-verify is never
+    # replaced: it may own plants and history.
+    pending_signup = models.BooleanField(default=False)
 
     date_joined = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
