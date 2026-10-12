@@ -6,7 +6,6 @@ import {
   CircleHelp,
   LoaderCircle,
   Plus,
-  Search,
   Sprout,
   Trash2,
   TriangleAlert,
@@ -18,6 +17,7 @@ import { AddPlantButton } from "@/components/farmer/add-plant-button";
 import { AddPlantTile } from "@/components/farmer/add-plant-tile";
 import { MyPlantsGuide } from "@/components/farmer/my-plants-guide";
 import { PlantCard } from "@/components/farmer/plant-card";
+import { NoPlantsMatch, PlantFilterBar } from "@/components/farmer/plant-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { deletePlant, fetchPlants, type BackendPlant } from "@/lib/api/plants-ap
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useLanguage } from "@/lib/i18n";
+import { filterPlants } from "@/lib/plant-filter";
 import { plantTitle } from "@/lib/plant-summary";
 
 /**
@@ -50,40 +51,6 @@ function rememberGuideHidden(hidden: boolean) {
   } catch {
     // Storage unavailable — the guide just reappears next visit.
   }
-}
-
-/** Every word typed must appear in the plant's names or its crop's search terms. */
-function matchesQuery(plant: BackendPlant, query: string): boolean {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return true;
-  const haystack = [
-    plant.variant?.name,
-    plant.crop.name,
-    plant.label,
-    plant.display_name,
-    ...(plant.crop.search_terms ?? []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return words.every((w) => haystack.includes(w));
-}
-
-/** The crops the farmer actually grows, A–Z, with how many plants of each. */
-function cropsIn(plants: BackendPlant[]) {
-  const byId = new Map<string, { id: string; name: string; emoji: string; count: number }>();
-  for (const p of plants) {
-    const entry = byId.get(p.crop.id);
-    if (entry) entry.count += 1;
-    else
-      byId.set(p.crop.id, {
-        id: p.crop.id,
-        name: p.crop.name,
-        emoji: p.crop.emoji,
-        count: 1,
-      });
-  }
-  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export default function MyPlantsPage() {
@@ -137,11 +104,8 @@ export default function MyPlantsPage() {
   // what is on screen, so a plant hidden by the filter is never deleted.
   const [query, setQuery] = useState("");
   const [cropId, setCropId] = useState("");
-  const crops = cropsIn(plants ?? []);
   const filtering = query.trim() !== "" || cropId !== "";
-  const visible = (plants ?? []).filter(
-    (p) => (!cropId || p.crop.id === cropId) && matchesQuery(p, query),
-  );
+  const visible = filterPlants(plants ?? [], query, cropId);
 
   function clearFilters() {
     setQuery("");
@@ -318,63 +282,17 @@ export default function MyPlantsPage() {
         />
       ) : (
         <>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative min-w-0 flex-1">
-              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Escape" && setQuery("")}
-                placeholder={t("myPlants.search")}
-                aria-label={t("myPlants.search")}
-                className="border-border bg-card focus-visible:ring-ring/50 h-11 w-full rounded-lg border pr-10 pl-9 text-base focus-visible:ring-[3px] focus-visible:outline-none sm:text-sm [&::-webkit-search-cancel-button]:hidden"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label={t("common.close")}
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 rounded p-1"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
-            <select
-              value={cropId}
-              onChange={(e) => setCropId(e.target.value)}
-              aria-label={t("myPlants.cropFilter")}
-              className="border-border bg-card h-11 rounded-lg border px-3 text-base sm:w-56 sm:text-sm"
-            >
-              <option value="">{t("myPlants.allCrops", { n: plants!.length })}</option>
-              {crops.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.emoji} {c.name} ({c.count})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {filtering && visible.length > 0 && (
-            <p className="text-muted-foreground -mt-2 text-sm" role="status">
-              {t("myPlants.showing", {
-                shown: visible.length,
-                total: plants!.length,
-              })}
-            </p>
-          )}
+          <PlantFilterBar
+            plants={plants!}
+            shown={visible.length}
+            query={query}
+            onQueryChange={setQuery}
+            cropId={cropId}
+            onCropChange={setCropId}
+          />
 
           {visible.length === 0 ? (
-            <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-8 text-center">
-              <Search className="text-muted-foreground size-5" />
-              <p className="font-heading text-sm font-medium" role="status">
-                {t("myPlants.noMatch")}
-              </p>
-              <Button variant="outline" onClick={clearFilters}>
-                {t("myPlants.clearFilters")}
-              </Button>
-            </div>
+            <NoPlantsMatch onClear={clearFilters} />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {visible.map((plant) => (
