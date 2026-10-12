@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CircleHelp,
+  Clock,
   Leaf,
   LoaderCircle,
   OctagonAlert,
@@ -30,16 +31,18 @@ import { cn } from "@/lib/utils";
 type Entry = { plant: BackendPlant; latest: BackendAssessment | null };
 
 /**
- * The page groups plants the way the overview chart does. A "Too Early" or
- * failed check is not a Low / Medium / High verdict, so it sits with the
- * plants that have no reading yet.
+ * The page groups plants the way the overview chart does. A "Too Early"
+ * check is saved but has no level, so it has a group of its own rather than
+ * looking unchecked; a failed check sits with the plants that have no
+ * reading yet.
  */
-type Group = "high" | "medium" | "low" | "none";
+type Group = "high" | "medium" | "low" | "early" | "none";
 
 const GROUPS: { key: Group; label: MessageKey; color: string; icon: typeof Leaf }[] = [
   { key: "high", label: "riskBadge.high", color: "var(--risk-high)", icon: OctagonAlert },
   { key: "medium", label: "riskBadge.medium", color: "var(--risk-medium)", icon: TriangleAlert },
   { key: "low", label: "riskBadge.low", color: "var(--risk-low)", icon: Leaf },
+  { key: "early", label: "early.level", color: "var(--risk-early)", icon: Clock },
   { key: "none", label: "riskCounts.noReading", color: "var(--muted-foreground)", icon: CircleHelp },
 ];
 const COLOR = Object.fromEntries(GROUPS.map((g) => [g.key, g.color])) as Record<Group, string>;
@@ -55,7 +58,8 @@ function levelOf(latest: BackendAssessment | null): BadgeLevel | undefined {
 
 function groupOf(latest: BackendAssessment | null): Group {
   const level = levelOf(latest);
-  return level === "high" || level === "medium" || level === "low" ? level : "none";
+  if (level === "high" || level === "medium" || level === "low") return level;
+  return level === "inconclusive" ? "early" : "none";
 }
 
 export default function RiskIndicatorPage() {
@@ -112,8 +116,12 @@ export default function RiskIndicatorPage() {
           <PlantGroup
             title={t("riskPage.withReading")}
             entries={entries
-              .filter((e) => groupOf(e.latest) !== "none")
+              .filter((e) => !["early", "none"].includes(groupOf(e.latest)))
               .sort((a, b) => SEVERITY[groupOf(a.latest)] - SEVERITY[groupOf(b.latest)])}
+          />
+          <PlantGroup
+            title={t("early.level")}
+            entries={entries.filter((e) => groupOf(e.latest) === "early")}
           />
           <PlantGroup
             title={t("riskPage.withoutReading")}

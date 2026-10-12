@@ -166,26 +166,6 @@ export const assessment = defineMessages({
     fil: "Nakalagay na ang mga sagot mo noong huling pagsusuri ({date}). Palitan ang anumang naiba ngayon.",
     bik: "Nakalaag na an mga simbag mo kan huring pagsusi ({date}). Liwanan an ano man na naiba ngunyan.",
   },
-  "asmt.nextPlant": {
-    en: "Assess next: {name}",
-    fil: "Susunod na suriin: {name}",
-    bik: "Sunod na susihon: {name}",
-  },
-  "asmt.stillDue": {
-    en: "{n} plants are still due for their weekly check.",
-    fil: "{n} tanim pa ang kailangang suriin ngayong linggo.",
-    bik: "{n} pang tanom an kaipuhan susihon ngunyan na semana.",
-  },
-  "asmt.stillDueOne": {
-    en: "1 plant is still due for its weekly check.",
-    fil: "1 tanim pa ang kailangang suriin ngayong linggo.",
-    bik: "1 pang tanom an kaipuhan susihon ngunyan na semana.",
-  },
-  "asmt.allChecked": {
-    en: "All your plants are checked for this week.",
-    fil: "Nasuri na ang lahat ng iyong tanim ngayong linggo.",
-    bik: "Nasusi na an gabos mong tanom ngunyan na semana.",
-  },
   "asmt.checking": {
     en: "Checking plant evidence…",
     fil: "Sinusuri ang litrato ng tanim…",

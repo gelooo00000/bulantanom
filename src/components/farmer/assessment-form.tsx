@@ -26,7 +26,6 @@ import {
 } from "@/components/farmer/assessment-choices";
 import { EvidenceVerdict } from "@/components/farmer/evidence-verdict";
 import { FarmTodayWeather } from "@/components/farmer/farm-today-weather";
-import { NextDuePlant } from "@/components/farmer/next-due-plant";
 import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
 import { Button } from "@/components/ui/button";
 import { formatDisplayDate } from "@/components/ui/date-picker";
@@ -221,6 +220,8 @@ type AssessmentFormProps = {
   plantLabel: string;
   /** Picks the pests and disease signs offered as tick boxes. */
   cropId: string;
+  /** The crop's emoji, shown while the evaluation runs. */
+  cropEmoji?: string;
   /** Questions that don't fit this crop (e.g. leaves on a mushroom). */
   skipQuestions?: AssessmentQuestion[];
   /** This plant's previous assessment; its answers start the form. */
@@ -248,6 +249,7 @@ function AssessmentFormBody({
   plantId,
   plantLabel,
   cropId,
+  cropEmoji,
   skipQuestions = [],
   lastAssessment = null,
   onLocked,
@@ -567,7 +569,13 @@ function AssessmentFormBody({
       <div className="flex flex-col gap-4">
         {evidenceResult && <EvidenceVerdict result={evidenceResult} />}
         <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-10 text-center">
-          <LoaderCircle className="text-primary size-6 animate-spin" />
+          {cropEmoji ? (
+            <span aria-hidden="true" className="animate-bounce text-4xl">
+              {cropEmoji}
+            </span>
+          ) : (
+            <LoaderCircle className="text-primary size-6 animate-spin" />
+          )}
           <p className="font-heading text-sm font-medium">{t("asmt.evaluating", { name: plantLabel })}</p>
           <ul className="text-muted-foreground space-y-1 text-sm">
             <li>{t("asmt.step1")}</li>
@@ -583,21 +591,9 @@ function AssessmentFormBody({
       <div className="flex flex-col gap-4">
         <RiskResultCard assessment={result} />
         <RiskInfoNote />
-        <NextDuePlant currentPlantId={plantId} />
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/farmer/risk-indicator" />}
-          >
+        <div>
+          <Button nativeButton={false} render={<Link href="/farmer/risk-indicator" />}>
             {t("asmt.backToRisk")}
-          </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/farmer/assessments" />}
-          >
-            {t("lock.past")}
           </Button>
         </div>
       </div>

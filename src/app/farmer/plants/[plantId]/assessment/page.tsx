@@ -89,13 +89,13 @@ export default function AssessmentPage({
 
       {eligibility.can_assess ? (
         <AssessmentForm
-          // "Assess next" opens another plant on this same page: a new key
-          // gives it a fresh form instead of the last plant's result.
+          // A new key gives each plant a fresh form.
           key={plant.id}
           plantId={plant.id}
           lastAssessment={history.data?.[0] ?? null}
           plantLabel={plantLabel}
           cropId={plant.crop.id}
+          cropEmoji={plant.crop.emoji}
           skipQuestions={plant.crop.not_applicable_questions}
           onLocked={setLockedBySubmit}
         />

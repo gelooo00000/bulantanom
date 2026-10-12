@@ -85,6 +85,8 @@
   --risk-low: oklch(0.55 0.15 145);
   --risk-medium: oklch(0.63 0.14 72);
   --risk-high: oklch(0.55 0.19 30);
+  /* A "too early to tell" check: saved, but no level yet. */
+  --risk-early: oklch(0.6 0.1 235);
   --risk-foreground: oklch(0.99 0.005 150);
   --secondary: oklch(0.925 0.014 150);
   --secondary-foreground: oklch(0.26 0.03 155);
@@ -147,6 +149,7 @@
   --risk-low: oklch(0.7 0.16 145);
   --risk-medium: oklch(0.8 0.14 85);
   --risk-high: oklch(0.65 0.18 30);
+  --risk-early: oklch(0.74 0.1 235);
   --risk-foreground: oklch(0.12 0.02 155);
   --secondary: oklch(0.22 0.025 150);
   --secondary-foreground: oklch(0.97 0.005 155);
