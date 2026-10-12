@@ -1,4 +1,6 @@
 from django.conf import settings
+from django.core.cache import caches
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -550,3 +552,57 @@ class RefreshCookieLifetimeTests(APITestCase):
         response = self.client.post(REFRESH_URL, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assert_session_cookie(response)
+
+
+# The test settings make the "throttle" cache count nothing; these tests
+# give it a real one.
+@override_settings(
+    CACHES={
+        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+        "throttle": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "login-rate-limit-tests",
+        },
+    }
+)
+class LoginRateLimitTests(APITestCase):
+    def setUp(self):
+        caches["throttle"].clear()
+        make_user("admin@example.com", UserRole.ADMIN, AccountStatus.APPROVED)
+
+    def test_wrong_passwords_for_one_account_are_cut_off(self):
+        wrong = {"email": "admin@example.com", "password": "guess"}
+        for _ in range(5):
+            response = self.client.post(ADMIN_LOGIN_URL, wrong, format="json")
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        response = self.client.post(ADMIN_LOGIN_URL, wrong, format="json")
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn("Too many sign-in attempts", response.data["detail"])
+
+        # Even the right password waits: the limit is on the account.
+        right = {"email": "admin@example.com", "password": "SecurePassword123!"}
+        response = self.client.post(ADMIN_LOGIN_URL, right, format="json")
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_the_account_limit_ignores_email_case(self):
+        for i in range(5):
+            email = "ADMIN@example.com" if i % 2 else "admin@example.com"
+            self.client.post(ADMIN_LOGIN_URL, {"email": email, "password": "x"}, format="json")
+        response = self.client.post(
+            ADMIN_LOGIN_URL, {"email": "Admin@Example.com", "password": "x"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_other_accounts_can_still_sign_in(self):
+        for _ in range(6):
+            self.client.post(
+                ADMIN_LOGIN_URL, {"email": "admin@example.com", "password": "x"}, format="json"
+            )
+        make_user("farmer@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        response = self.client.post(
+            FARMER_LOGIN_URL,
+            {"email": "farmer@example.com", "password": "SecurePassword123!"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -112,7 +112,9 @@ export function CreateOfficerDialog({
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* A form for someone else's account: autofill would drop the
+              signed-in Admin's own saved email and password in here. */}
+          <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="officer-first">First name</Label>
@@ -139,6 +141,7 @@ export function CreateOfficerDialog({
               <Input
                 id="officer-email"
                 type="email"
+                autoComplete="off"
                 required
                 placeholder="officer@example.com"
                 value={email}
@@ -150,6 +153,7 @@ export function CreateOfficerDialog({
               <Label htmlFor="officer-password">Password</Label>
               <PasswordInput
                 id="officer-password"
+                autoComplete="new-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -160,6 +164,7 @@ export function CreateOfficerDialog({
               <Label htmlFor="officer-confirm">Confirm password</Label>
               <PasswordInput
                 id="officer-confirm"
+                autoComplete="new-password"
                 required
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}

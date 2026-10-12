@@ -3,6 +3,7 @@ Django settings for the BulanTanom backend (Authentication milestone).
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -298,6 +299,31 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    # Sign-in rate limits (accounts.throttles). Per account: 5 a minute and
+    # 20 an hour stop password guessing; per address: 30 a minute.
+    "DEFAULT_THROTTLE_RATES": {
+        "login_email": "5/min",
+        "login_email_hourly": "20/hour",
+        "login_ip": "30/min",
+    },
+}
+
+# "throttle" holds the sign-in rate-limit counts. It is a database table so
+# every gunicorn worker counts each attempt once; `manage.py createcachetable`
+# (run by the Dockerfile on start) creates it. Under `manage.py test` it
+# counts nothing: TransactionTestCase's flush skips this table, so counts
+# would leak from one test's logins into the next. The rate-limit tests
+# switch a real cache on for themselves.
+CACHES = {
+    "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+    "throttle": (
+        {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}
+        if sys.argv[1:2] == ["test"]
+        else {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache",
+        }
+    ),
 }
 
 

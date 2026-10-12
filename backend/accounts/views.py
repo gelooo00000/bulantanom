@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import check_password
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, Throttled
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -22,6 +22,7 @@ from .serializers import (
     LoginSerializer,
     UserSerializer,
 )
+from .throttles import LOGIN_THROTTLES
 
 # Exact, user-facing messages for each non-approved account state.
 STATUS_MESSAGES = {
@@ -141,7 +142,23 @@ class FarmerSignupView(generics.CreateAPIView):
         return _tokens_response(user, status_code=status.HTTP_201_CREATED)
 
 
-class FarmerLoginView(APIView):
+class _LoginThrottleMixin:
+    """Rate-limits a sign-in view (see accounts.throttles) with a plain message."""
+
+    throttle_classes = LOGIN_THROTTLES
+
+    def throttled(self, request, wait):
+        minutes = max(1, -(-int(wait or 60) // 60))
+        raise Throttled(
+            wait=wait,
+            detail=(
+                "Too many sign-in attempts. Please wait "
+                f"{minutes} minute{'s' if minutes != 1 else ''} and try again."
+            ),
+        )
+
+
+class FarmerLoginView(_LoginThrottleMixin, APIView):
     """POST /api/auth/farmer/login/"""
 
     permission_classes = [permissions.AllowAny]
@@ -157,7 +174,7 @@ class FarmerLoginView(APIView):
         return _tokens_response(user)
 
 
-class LguLoginView(APIView):
+class LguLoginView(_LoginThrottleMixin, APIView):
     """
     POST /api/auth/lgu/login/
     There is no LGU signup endpoint anywhere — Officer accounts exist only
@@ -177,7 +194,7 @@ class LguLoginView(APIView):
         return _tokens_response(user)
 
 
-class AdminLoginView(APIView):
+class AdminLoginView(_LoginThrottleMixin, APIView):
     """POST /api/auth/admin/login/ — Admin accounts come from createsuperuser."""
 
     permission_classes = [permissions.AllowAny]
