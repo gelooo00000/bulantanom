@@ -34,6 +34,20 @@ function today(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+/**
+ * Nothing the farmer gave: no answer (a cleared one alone brings nothing
+ * back), no height or notes, no ticks.
+ */
+function isEmpty(content: DraftContent): boolean {
+  return (
+    Object.values(content.answers).every((value) => !value) &&
+    !content.height.trim() &&
+    !content.notes.trim() &&
+    content.pests.length === 0 &&
+    content.diseases.length === 0
+  );
+}
+
 const isStrings = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
@@ -51,7 +65,7 @@ export function readDraft(plantId: number): AssessmentDraft | null {
       typeof draft.notes === "string" &&
       isStrings(draft.pests) &&
       isStrings(draft.diseases);
-    if (!valid || draft.savedOn !== today()) {
+    if (!valid || draft.savedOn !== today() || isEmpty(draft as AssessmentDraft)) {
       window.localStorage.removeItem(key(plantId));
       return null;
     }
@@ -63,14 +77,8 @@ export function readDraft(plantId: number): AssessmentDraft | null {
 
 /** Keeps the draft, or removes it when nothing in it is the farmer's own. */
 export function saveDraft(plantId: number, content: DraftContent): void {
-  const empty =
-    Object.keys(content.answers).length === 0 &&
-    !content.height.trim() &&
-    !content.notes.trim() &&
-    content.pests.length === 0 &&
-    content.diseases.length === 0;
   try {
-    if (empty) {
+    if (isEmpty(content)) {
       window.localStorage.removeItem(key(plantId));
     } else {
       window.localStorage.setItem(key(plantId), JSON.stringify({ ...content, savedOn: today() }));

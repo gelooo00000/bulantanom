@@ -380,3 +380,23 @@ describe("Weekly assessment: draft", () => {
     expect(window.localStorage.getItem("bulantanom:assessment-draft:7")).toBeNull();
   });
 });
+
+describe("Weekly assessment: an empty draft", () => {
+  it("does not claim answers are back when only a cleared answer was saved", () => {
+    window.localStorage.setItem(
+      "bulantanom:assessment-draft:7",
+      JSON.stringify({
+        savedOn: new Date().toLocaleDateString("en-CA"),
+        answers: { soil_moisture: "" },
+        height: "",
+        notes: "",
+        pests: [],
+        diseases: [],
+      }),
+    );
+    renderForm();
+
+    expect(screen.queryByText(/Your answers from earlier today are back/)).toBeNull();
+    expect(window.localStorage.getItem("bulantanom:assessment-draft:7")).toBeNull();
+  });
+});
