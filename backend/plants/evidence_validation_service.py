@@ -19,6 +19,12 @@ Architecture rules:
 * Fail closed. If Gemini is unavailable this returns None and the caller
   must reject the submission — it must never assume the evidence is valid.
 * The API key is read from settings and never logged.
+
+On an accepted photo it also suggests answers for the parts of the weekly
+assessment a photo can show (overall health, leaves, flowering, fruiting),
+so the Farmer checks them instead of filling them in. These are only
+suggestions: the form shows them for the Farmer to confirm or change, and
+the risk evaluation still compares the photo with the final answers.
 """
 
 from __future__ import annotations
@@ -39,6 +45,17 @@ MIN_MATCH_CONFIDENCE = 0.55
 
 VERDICTS = ("match", "mismatch", "no_plant", "unclear", "not_genuine")
 
+# Answers a photo can suggest, with the values the assessment form accepts
+# (Assessment's TextChoices). "unknown" means the photo does not show it.
+SUGGESTIBLE = {
+    "health_condition": ("healthy", "slightly_unhealthy", "unhealthy"),
+    "leaf_condition": (
+        "healthy", "slight_yellowing", "yellowing", "spots", "wilting", "damaged",
+    ),
+    "flowering_status": ("not_flowering", "starting", "flowering", "finished"),
+    "fruiting_status": ("not_fruiting", "forming", "developing", "ripening"),
+}
+
 RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -46,8 +63,16 @@ RESPONSE_SCHEMA = {
         "confidence": {"type": "number"},
         "detected_subject": {"type": "string"},
         "reason": {"type": "string"},
+        "observed": {
+            "type": "object",
+            "properties": {
+                field: {"type": "string", "enum": [*values, "unknown"]}
+                for field, values in SUGGESTIBLE.items()
+            },
+            "required": list(SUGGESTIBLE),
+        },
     },
-    "required": ["verdict", "confidence", "detected_subject", "reason"],
+    "required": ["verdict", "confidence", "detected_subject", "reason", "observed"],
 }
 
 SYSTEM_INSTRUCTION = """
@@ -105,6 +130,20 @@ Rules:
   natural light, soil, weeds, other plants, fences or a hand in frame, some
   blur. That is normal and is NOT a reason for "not_genuine". Use it only
   when you see an actual sign listed above, and name that sign in `reason`.
+
+`observed` — what the photo shows of the plant, used to pre-fill the
+farmer's weekly checklist. Fill it only for a "match"; for any other verdict
+set every field to "unknown".
+- health_condition: overall look of the plant. "healthy", "slightly_unhealthy"
+  or "unhealthy".
+- leaf_condition: "healthy" (green), "slight_yellowing", "yellowing",
+  "spots" (spots or lesions), "wilting" (drooping) or "damaged" (holes,
+  tears, chewed).
+- flowering_status: "not_flowering", "starting", "flowering" or "finished".
+- fruiting_status: "not_fruiting", "forming", "developing" or "ripening".
+Use "unknown" whenever the photo does not clearly show it (leaves out of
+frame, too far away, too dark). A wrong guess makes the farmer correct it;
+"unknown" just leaves the question to them.
 """.strip()
 
 
@@ -144,6 +183,22 @@ def _message_for(verdict: str, crop_name: str) -> str:
     return "Please upload a clearer photo showing the plant."
 
 
+def _suggestions(observed) -> dict:
+    """
+    The usable answers from the model's `observed` block: known fields with
+    allowed values only. Anything else, including "unknown", is left out, so
+    the Farmer answers it. A missing or malformed block just suggests nothing;
+    it never rejects the photo.
+    """
+    if not isinstance(observed, dict):
+        return {}
+    return {
+        field: observed[field]
+        for field, values in SUGGESTIBLE.items()
+        if observed.get(field) in values
+    }
+
+
 def _validate(payload, crop) -> dict | None:
     """
     Turn a raw model response into a trusted result, or None if unusable.
@@ -179,6 +234,7 @@ def _validate(payload, crop) -> dict | None:
 
     return {
         "evidence_valid": verdict == "match",
+        "suggested_answers": _suggestions(payload.get("observed")) if verdict == "match" else {},
         "verdict": verdict,
         "confidence": confidence,
         "detected_subject": detected,

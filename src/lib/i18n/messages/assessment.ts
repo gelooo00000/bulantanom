@@ -89,9 +89,9 @@ export const assessment = defineMessages({
     bik: "Litrato san kamutangan san tanom",
   },
   "asmt.evidenceText": {
-    en: "Take a new, clear photo of your own {crop} today. Pictures from the internet, screenshots and old photos are refused, and the photo must agree with your answers above.",
-    fil: "Kumuha ng bago at malinaw na litrato ng sarili mong {crop} ngayong araw. Hindi tinatanggap ang litrato mula sa internet, screenshot o lumang litrato, at dapat tugma ang litrato sa iyong mga sagot sa itaas.",
-    bik: "Magkuha nin bag-o asin malinaw na litrato san imo mismo na {crop} niyan na adlaw. Dili inaako an litrato hali sa internet, screenshot o daan na litrato, asin dapat angay an litrato sa imo mga simbag sa itaas.",
+    en: "Start here: take a new, clear photo of your own {crop} today. Pictures from the internet, screenshots and old photos are refused, and the photo must agree with your answers below.",
+    fil: "Magsimula rito: kumuha ng bago at malinaw na litrato ng sarili mong {crop} ngayong araw. Hindi tinatanggap ang litrato mula sa internet, screenshot o lumang litrato, at dapat tugma ang litrato sa iyong mga sagot sa ibaba.",
+    bik: "Magpoon digdi: magkuha nin bag-o asin malinaw na litrato san imo mismo na {crop} niyan na adlaw. Dili inaako an litrato hali sa internet, screenshot o daan na litrato, asin dapat angay an litrato sa imo mga simbag sa ibaba.",
   },
   "asmt.observations": { en: "Observations", fil: "Mga obserbasyon", bik: "Mga obserbasyon" },
   "asmt.observationsText": {
@@ -130,6 +130,32 @@ export const assessment = defineMessages({
     fil: "Magdagdag ng litrato ng tanim para maisumite ang pagsusuring ito.",
     bik: "Magdugang san litrato san tanom para maisumite an pagsusi na ini.",
   },
+  "asmt.needNewPhoto": {
+    en: "Take a new photo to submit this assessment.",
+    fil: "Kumuha ng bagong litrato para maisumite ang pagsusuring ito.",
+    bik: "Magkuha nin bag-ong litrato para maisumite an pagsusi na ini.",
+  },
+  "asmt.photoChecking": {
+    en: "Checking your photo…",
+    fil: "Sinusuri ang iyong litrato…",
+    bik: "Sinususi an imo litrato…",
+  },
+  "asmt.photoCheckingText": {
+    en: "We'll fill in what the photo shows, so you have less to answer.",
+    fil: "Pupunan namin ang makikita sa litrato para mas kaunti ang sasagutin mo.",
+    bik: "Pupunuan mi an nahihiling sa litrato para mas dikit an simbagon mo.",
+  },
+  "asmt.prefilled": {
+    en: "{n} answers were filled in from your photo. Check them and change any that are wrong.",
+    fil: "{n} sagot ang pinunan mula sa iyong litrato. Tingnan ang mga ito at palitan kung may mali.",
+    bik: "{n} na simbag an pinunuan hali sa imo litrato. Hilingon an mga ini asin liwanan kun igwa nin sala.",
+  },
+  "asmt.prefilledOne": {
+    en: "1 answer was filled in from your photo. Check it and change it if it is wrong.",
+    fil: "1 sagot ang pinunan mula sa iyong litrato. Tingnan ito at palitan kung mali.",
+    bik: "1 na simbag an pinunuan hali sa imo litrato. Hilingon ini asin liwanan kun sala.",
+  },
+  "asmt.fromPhoto": { en: "From photo", fil: "Mula sa litrato", bik: "Hali sa litrato" },
   "asmt.checking": {
     en: "Checking plant evidence…",
     fil: "Sinusuri ang litrato ng tanim…",
@@ -283,20 +309,30 @@ export const assessment = defineMessages({
   "upload.replace": { en: "Replace", fil: "Palitan", bik: "Liwanan" },
   "upload.remove": { en: "Remove", fil: "Alisin", bik: "Halion" },
   "upload.title": {
-    en: "Upload Plant Photo",
-    fil: "Mag-upload ng Litrato ng Tanim",
-    bik: "Mag-upload san Litrato san Tanom",
+    en: "Photo of your plant",
+    fil: "Litrato ng iyong tanim",
+    bik: "Litrato san imo tanom",
   },
   "upload.hint": {
     en: "Show the plant clearly in good lighting for better evaluation.",
     fil: "Ipakita nang malinaw ang tanim sa maliwanag na lugar para mas mahusay na masuri.",
     bik: "Ipahiling nin malinaw an tanom sa maliwanag na lugar para mas marhay an pagsusi.",
   },
-  "upload.choose": { en: "Choose photo", fil: "Pumili ng litrato", bik: "Pili san litrato" },
+  "upload.takePhoto": { en: "Take photo", fil: "Kumuha ng litrato", bik: "Magkuha nin litrato" },
+  "upload.fromGallery": {
+    en: "Choose from gallery",
+    fil: "Pumili mula sa gallery",
+    bik: "Pumili hali sa gallery",
+  },
+  "upload.preparing": {
+    en: "Preparing photo…",
+    fil: "Inihahanda ang litrato…",
+    bik: "Inaandam an litrato…",
+  },
   "upload.limits": {
-    en: "JPEG or PNG · up to 5MB",
-    fil: "JPEG o PNG · hanggang 5MB",
-    bik: "JPEG o PNG · sagkod 5MB",
+    en: "Large photos are made smaller automatically.",
+    fil: "Awtomatikong pinaliliit ang malalaking litrato.",
+    bik: "Awtomatikong pinapasadit an darakulang litrato.",
   },
 
   "verdict.match": {

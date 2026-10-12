@@ -68,7 +68,18 @@ export type EvidenceValidation = {
   message: string;
   /** Present only when the photo was accepted; replays validation at submit. */
   evidence_token?: string;
+  /**
+   * Answers the photo shows, to pre-fill the form for the Farmer to check.
+   * Only for an accepted photo, and only questions this crop is asked.
+   */
+  suggested_answers?: Partial<Record<SuggestibleAnswer, string>>;
 };
+
+export type SuggestibleAnswer =
+  | "health_condition"
+  | "leaf_condition"
+  | "flowering_status"
+  | "fruiting_status";
 
 export type BackendAssessment = {
   id: number;

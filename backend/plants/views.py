@@ -30,6 +30,7 @@ from notifications.services import (
 
 from . import dashboard_service, evidence_token
 from .ai_language import from_request
+from .assessment_questions import not_applicable
 from .assessment_schedule import eligibility, with_last_assessment_date
 from .crop_intelligence_service import get_or_create_crop_intelligence, is_configured
 from .soil_recommendation_service import (
@@ -432,6 +433,13 @@ def validate_plant_evidence(request, plant_id):
     notify_evidence_result(plant, accepted=result["evidence_valid"])
 
     payload = dict(result)
+    # No suggestion for a question this crop is not asked (fruit on ginger).
+    skipped = not_applicable(plant.crop)
+    payload["suggested_answers"] = {
+        field: value
+        for field, value in (result.get("suggested_answers") or {}).items()
+        if field not in skipped
+    }
     if result["evidence_valid"]:
         payload["evidence_token"] = evidence_token.issue(
             request.user.id, plant.id, image_bytes

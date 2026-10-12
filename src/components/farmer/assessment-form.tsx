@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, LoaderCircle, ScanEye } from "lucide-react";
+import { ArrowRight, Camera, LoaderCircle, ScanEye, Sparkles } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 
 import {
@@ -28,6 +28,7 @@ import {
   type AssessmentEligibility,
   type BackendAssessment,
   type EvidenceValidation,
+  type SuggestibleAnswer,
 } from "@/lib/api/risk-api";
 import type { AssessmentQuestion } from "@/lib/api/plants-api";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -140,6 +141,30 @@ function Choice({
   );
 }
 
+/** A question's label, marked while its answer is the one the photo suggested. */
+function AnswerLabel({
+  htmlFor,
+  fromPhoto,
+  children,
+}: {
+  htmlFor: string;
+  fromPhoto: boolean;
+  children: React.ReactNode;
+}) {
+  const { t } = useLanguage();
+  return (
+    <Label htmlFor={htmlFor} className="flex flex-wrap items-center gap-2">
+      {children}
+      {fromPhoto && (
+        <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+          <Camera className="size-3" />
+          {t("asmt.fromPhoto")}
+        </span>
+      )}
+    </Label>
+  );
+}
+
 /**
  * `checking` = verifying the photo shows the right crop;
  * `analyzing` = the risk evaluation, which only runs on verified evidence.
@@ -185,11 +210,46 @@ export function AssessmentForm({
   const [notes, setNotes] = useState("");
   const [evidence, setEvidence] = useState<File | null>(null);
 
+  // The photo comes first and is checked as soon as it is taken. An accepted
+  // photo also suggests the answers it shows (health, leaves, flowering,
+  // fruiting), filled in for the Farmer to check. A suggestion never replaces
+  // an answer the Farmer chose themselves.
+  const [checkingPhoto, setCheckingPhoto] = useState(false);
+  const [fromPhoto, setFromPhoto] = useState<ReadonlySet<SuggestibleAnswer>>(new Set());
+  const touched = useRef(new Set<SuggestibleAnswer>());
+  // Only the latest photo's check may update the form.
+  const checkRun = useRef(0);
+
+  const setters: Record<SuggestibleAnswer, (value: string | null) => void> = {
+    health_condition: setHealth,
+    leaf_condition: setLeaf,
+    flowering_status: setFlowering,
+    fruiting_status: setFruiting,
+  };
+
+  /** The Farmer's own answer: kept from now on, and no longer "from photo". */
+  function answer(field: SuggestibleAnswer, value: string | null) {
+    touched.current.add(field);
+    setFromPhoto((current) => {
+      const next = new Set(current);
+      next.delete(field);
+      return next;
+    });
+    setters[field](value);
+  }
+
   // Evidence is mandatory: the risk reading is only meaningful when the photo
   // has been verified to show this crop.
   const asks = (question: AssessmentQuestion) => !skipQuestions.includes(question);
+  const photoRefused = evidenceResult !== null && !evidenceResult.evidence_valid;
   const canSubmit = Boolean(
-    growth && health && (leaf || !asks("leaf_condition")) && watering && evidence,
+    growth &&
+      health &&
+      (leaf || !asks("leaf_condition")) &&
+      watering &&
+      evidence &&
+      !checkingPhoto &&
+      !photoRefused,
   );
 
   function changeEvidence(file: File | null) {
@@ -197,6 +257,48 @@ export function AssessmentForm({
     // A new photo invalidates the previous verdict and its token.
     setEvidenceResult(null);
     setError(null);
+    setConflicts([]);
+    setFromPhoto(new Set());
+    const run = ++checkRun.current;
+    if (file && accessToken) {
+      void checkPhoto(file, run, accessToken);
+    } else {
+      setCheckingPhoto(false);
+    }
+  }
+
+  async function checkPhoto(file: File, run: number, token: string) {
+    setCheckingPhoto(true);
+    try {
+      const verification = await validateEvidence(token, plantId, file);
+      if (run !== checkRun.current) return;
+      setEvidenceResult(verification);
+      if (verification.evidence_valid) applySuggestions(verification);
+    } catch (err) {
+      if (run !== checkRun.current) return;
+      // The check runs again on submit, so the Farmer can carry on.
+      setError(err instanceof Error ? err.message : t("asmt.verifyFailed"));
+    } finally {
+      if (run === checkRun.current) setCheckingPhoto(false);
+    }
+  }
+
+  function applySuggestions(verification: EvidenceValidation) {
+    const filled = new Set<SuggestibleAnswer>();
+    for (const [field, value] of Object.entries(verification.suggested_answers ?? {})) {
+      const key = field as SuggestibleAnswer;
+      if (
+        !value ||
+        !(key in setters) ||
+        skipQuestions.includes(key as AssessmentQuestion) ||
+        touched.current.has(key)
+      ) {
+        continue;
+      }
+      setters[key](value);
+      filled.add(key);
+    }
+    setFromPhoto(filled);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -205,29 +307,33 @@ export function AssessmentForm({
 
     setError(null);
     setConflicts([]);
-    setEvidenceResult(null);
 
     // Step 1 — verify the photo actually shows this crop. Nothing is saved
-    // and no risk evaluation runs until this passes.
-    setStatus("checking");
+    // and no risk evaluation runs until this passes. Usually already done
+    // when the photo was taken; it runs here only if that check failed.
     let verification: EvidenceValidation;
-    try {
-      verification = await validateEvidence(accessToken, plantId, evidence);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t("asmt.verifyFailed"),
-      );
-      setStatus("idle");
-      return;
-    }
+    if (evidenceResult?.evidence_valid) {
+      verification = evidenceResult;
+    } else {
+      setStatus("checking");
+      try {
+        verification = await validateEvidence(accessToken, plantId, evidence);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t("asmt.verifyFailed"),
+        );
+        setStatus("idle");
+        return;
+      }
 
-    setEvidenceResult(verification);
-    if (!verification.evidence_valid) {
-      // The photo stays selected so the Farmer can replace it deliberately.
-      setStatus("idle");
-      return;
+      setEvidenceResult(verification);
+      if (!verification.evidence_valid) {
+        // The photo stays selected so the Farmer can replace it deliberately.
+        setStatus("idle");
+        return;
+      }
     }
 
     // Step 2 — risk evaluation, on verified evidence.
@@ -336,6 +442,36 @@ export function AssessmentForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <FormSection
+        title={t("asmt.evidence")}
+        description={t("asmt.evidenceText", { crop: cropName.toLowerCase() })}
+      >
+        <EvidenceUpload ref={uploadRef} file={evidence} onChange={changeEvidence} />
+        {checkingPhoto && (
+          <div className="border-border flex items-start gap-3 rounded-xl border border-dashed px-4 py-3">
+            <ScanEye className="text-primary mt-0.5 size-4 shrink-0 animate-pulse" />
+            <div>
+              <p className="text-sm font-medium">{t("asmt.photoChecking")}</p>
+              <p className="text-muted-foreground text-sm">{t("asmt.photoCheckingText")}</p>
+            </div>
+          </div>
+        )}
+        {evidenceResult && (
+          <EvidenceVerdict
+            result={evidenceResult}
+            onReplace={() => uploadRef.current?.openPicker()}
+          />
+        )}
+        {fromPhoto.size > 0 && (
+          <p className="bg-primary/5 border-primary/20 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm">
+            <Sparkles className="text-primary mt-0.5 size-4 shrink-0" />
+            {fromPhoto.size === 1
+              ? t("asmt.prefilledOne")
+              : t("asmt.prefilled", { n: fromPhoto.size })}
+          </p>
+        )}
+      </FormSection>
+
       <FormSection title={t("asmt.growth")} description={t("asmt.growthText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           {asks("plant_height_cm") && (
@@ -368,13 +504,17 @@ export function AssessmentForm({
       <FormSection title={t("asmt.health")} description={t("asmt.healthText")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="health">{t("asmt.overallHealth")}</Label>
-            <Choice id="health" value={health} onChange={setHealth} options={HEALTH} placeholder={t("asmt.select")} />
+            <AnswerLabel htmlFor="health" fromPhoto={fromPhoto.has("health_condition")}>
+              {t("asmt.overallHealth")}
+            </AnswerLabel>
+            <Choice id="health" value={health} onChange={(v) => answer("health_condition", v)} options={HEALTH} placeholder={t("asmt.select")} />
           </div>
           {asks("leaf_condition") && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="leaf">{t("asmt.leaf")}</Label>
-              <Choice id="leaf" value={leaf} onChange={setLeaf} options={LEAF} placeholder={t("asmt.select")} />
+              <AnswerLabel htmlFor="leaf" fromPhoto={fromPhoto.has("leaf_condition")}>
+                {t("asmt.leaf")}
+              </AnswerLabel>
+              <Choice id="leaf" value={leaf} onChange={(v) => answer("leaf_condition", v)} options={LEAF} placeholder={t("asmt.select")} />
             </div>
           )}
         </div>
@@ -385,14 +525,18 @@ export function AssessmentForm({
           <div className="grid gap-4 sm:grid-cols-2">
             {asks("flowering_status") && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="flowering">{t("asmt.flowering")}</Label>
-                <Choice id="flowering" value={flowering} onChange={setFlowering} options={FLOWERING} placeholder={t("asmt.select")} />
+                <AnswerLabel htmlFor="flowering" fromPhoto={fromPhoto.has("flowering_status")}>
+                  {t("asmt.flowering")}
+                </AnswerLabel>
+                <Choice id="flowering" value={flowering} onChange={(v) => answer("flowering_status", v)} options={FLOWERING} placeholder={t("asmt.select")} />
               </div>
             )}
             {asks("fruiting_status") && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="fruiting">{t("asmt.fruiting")}</Label>
-                <Choice id="fruiting" value={fruiting} onChange={setFruiting} options={FRUITING} placeholder={t("asmt.select")} />
+                <AnswerLabel htmlFor="fruiting" fromPhoto={fromPhoto.has("fruiting_status")}>
+                  {t("asmt.fruiting")}
+                </AnswerLabel>
+                <Choice id="fruiting" value={fruiting} onChange={(v) => answer("fruiting_status", v)} options={FRUITING} placeholder={t("asmt.select")} />
               </div>
             )}
           </div>
@@ -423,19 +567,6 @@ export function AssessmentForm({
             <Textarea id="disease" placeholder={t("asmt.noneObserved")} value={disease} onChange={(e) => setDisease(e.target.value)} />
           </div>
         </div>
-      </FormSection>
-
-      <FormSection
-        title={t("asmt.evidence")}
-        description={t("asmt.evidenceText", { crop: cropName.toLowerCase() })}
-      >
-        <EvidenceUpload ref={uploadRef} file={evidence} onChange={changeEvidence} />
-        {evidenceResult && (
-          <EvidenceVerdict
-            result={evidenceResult}
-            onReplace={() => uploadRef.current?.openPicker()}
-          />
-        )}
       </FormSection>
 
       <FormSection title={t("asmt.observations")} description={t("asmt.observationsText")}>
@@ -478,9 +609,9 @@ export function AssessmentForm({
           {t("asmt.submit")}
           <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
         </Button>
-        {!evidence && (
+        {(!evidence || photoRefused) && (
           <p className="text-muted-foreground text-sm">
-            {t("asmt.needPhoto")}
+            {t(evidence ? "asmt.needNewPhoto" : "asmt.needPhoto")}
           </p>
         )}
       </div>

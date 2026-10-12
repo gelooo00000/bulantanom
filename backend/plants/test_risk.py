@@ -781,6 +781,54 @@ class EvidenceValidationServiceTests(APITestCase):
         ):
             self.assertIsNone(self._validate(payload), payload)
 
+    def test_accepted_photo_suggests_only_known_answers(self):
+        result = self._validate(
+            {
+                "verdict": "match",
+                "confidence": 0.9,
+                "detected_subject": "papaya plant",
+                "reason": "A papaya plant.",
+                "observed": {
+                    "health_condition": "slightly_unhealthy",
+                    "leaf_condition": "slight_yellowing",
+                    "flowering_status": "unknown",
+                    "fruiting_status": "bananas",
+                },
+            }
+        )
+        self.assertEqual(
+            result["suggested_answers"],
+            {"health_condition": "slightly_unhealthy", "leaf_condition": "slight_yellowing"},
+        )
+
+    def test_rejected_or_low_confidence_photo_suggests_nothing(self):
+        observed = {"health_condition": "healthy", "leaf_condition": "healthy"}
+        for verdict, confidence in (("mismatch", 0.9), ("match", 0.3)):
+            result = self._validate(
+                {
+                    "verdict": verdict,
+                    "confidence": confidence,
+                    "detected_subject": "a plant",
+                    "reason": "Some reason.",
+                    "observed": observed,
+                }
+            )
+            self.assertEqual(result["suggested_answers"], {}, verdict)
+
+    def test_missing_or_malformed_observations_do_not_reject_the_photo(self):
+        for observed in (None, "healthy", ["healthy"]):
+            payload = {
+                "verdict": "match",
+                "confidence": 0.9,
+                "detected_subject": "papaya plant",
+                "reason": "A papaya plant.",
+            }
+            if observed is not None:
+                payload["observed"] = observed
+            result = self._validate(payload)
+            self.assertTrue(result["evidence_valid"])
+            self.assertEqual(result["suggested_answers"], {})
+
     def test_confidence_is_clamped_to_a_sane_range(self):
         result = self._validate(
             {
@@ -820,6 +868,19 @@ class EvidenceValidationEndpointTests(RiskTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["evidence_valid"])
         self.assertTrue(response.data["evidence_token"])
+
+    def test_suggestions_skip_questions_the_crop_is_not_asked(self):
+        ginger = self.make_plant(self.farmer, crop_id="ginger")
+        self.mock_validate_evidence.return_value = {
+            **EVIDENCE_MATCH,
+            "suggested_answers": {"leaf_condition": "spots", "fruiting_status": "forming"},
+        }
+        response = self.client.post(
+            f"/api/farmer/plants/{ginger.id}/evidence/validate/",
+            {"evidence_image": make_image()},
+            **self.auth,
+        )
+        self.assertEqual(response.data["suggested_answers"], {"leaf_condition": "spots"})
 
     def test_rejected_evidence_gets_no_token_and_saves_nothing(self):
         self.mock_validate_evidence.return_value = EVIDENCE_MISMATCH
