@@ -61,7 +61,7 @@ SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG els
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
 SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", False)
 
-# Behind a load balancer or reverse proxy (Render, Railway, nginx) Django
+# Behind a load balancer or reverse proxy (Render, nginx) Django
 # only ever sees plain HTTP on the inside, so SECURE_SSL_REDIRECT would
 # redirect to HTTPS forever - an infinite loop that looks like the app is
 # down. Setting this tells Django to trust the proxy's protocol header.
@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "axes",
     "accounts",
     "plants",
     "notifications",
@@ -101,6 +102,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Last, so it can turn a locked-out Django Admin login into a 429.
+    "axes.middleware.AxesMiddleware",
+]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -326,12 +334,43 @@ REST_FRAMEWORK = {
         # and signing up at all (each sign-up sends an email).
         "verify_email": "20/hour",
         "resend_email": "10/hour",
+        "signup_email": "5/hour",
         "signup_ip": "20/hour",
     },
 }
 
 # Running under `manage.py test`.
 TESTING = sys.argv[1:2] == ["test"]
+
+# Which request header holds the real client address for the per-address rate
+# limits. Render appends to X-Forwarded-For without clearing it, so a client
+# can forge that header and get a fresh limit per request. Render's edge is
+# Cloudflare, which sets CF-Connecting-IP itself. Empty falls back to DRF's
+# X-Forwarded-For handling, which is what local development gets.
+CLIENT_IP_HEADER = os.environ.get(
+    "CLIENT_IP_HEADER", "CF-Connecting-IP" if RENDER_EXTERNAL_HOSTNAME else ""
+).strip()
+
+# Emailed codes (sign-up, password reset) allowed a day, across all accounts.
+# The live mail provider stops at 300 a day; the rest stays free for the
+# lifecycle emails, so a flood of codes cannot silence those as well.
+EMAIL_CODES_PER_DAY = int(os.environ.get("EMAIL_CODES_PER_DAY", "250"))
+
+# Django Admin login limits (django-axes). The API's own sign-in throttles do
+# not cover /admin/. Counted per account, not per address: the address is what
+# an attacker can change. A lockout clears after the cool-off, or at once with
+# `manage.py axes_reset`. Off under test, where client.login() has no request.
+AXES_ENABLED = not TESTING
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(hours=1)
+AXES_LOCKOUT_PARAMETERS = ["username"]
+AXES_RESET_ON_SUCCESS = True
+# Django's login form posts the address as "username", whatever USERNAME_FIELD
+# says. Left at axes' default, failures are counted against no account at all.
+AXES_USERNAME_FORM_FIELD = "username"
+# W006 asks for the address as a lockout parameter too. Behind Render's proxy
+# axes sees the proxy's address, so that would lock every Admin out together.
+SILENCED_SYSTEM_CHECKS = ["axes.W006"]
 
 # Refuse a sign-up email whose domain has no mail server (accounts.email_check).
 # Off under test: test addresses use example.com, which publishes "no mail".
@@ -354,6 +393,31 @@ CACHES = {
         }
     ),
 }
+
+
+# With DEBUG off, Django's default logging sends django.* errors only to
+# ADMINS email, so an unhandled 500 left no traceback anywhere. Everything
+# goes to the console here, which is what the host's log viewer shows.
+_LOG_LEVEL = "CRITICAL" if TESTING else "INFO"
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
+    },
+    "root": {"handlers": ["console"], "level": _LOG_LEVEL},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": _LOG_LEVEL, "propagate": False},
+    },
+}
+
+
+# Shared secret for POST /api/jobs/daily/ (notifications.views.DailyJobsView).
+# Left empty, that route does not exist as far as any caller can tell.
+DAILY_JOBS_SECRET = os.environ.get("DAILY_JOBS_SECRET", "").strip()
 
 
 # SimpleJWT

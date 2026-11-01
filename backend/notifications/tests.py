@@ -815,3 +815,37 @@ class RiskNotificationSourceTests(NotificationTestMixin, TransactionTestCase):
         )
         notify_assessment_evaluated(assessment, risk)
         self.assertEqual(Notification.objects.count(), 0)
+
+
+class DailyJobsTests(APITestCase):
+    URL = "/api/jobs/daily/"
+
+    def call(self, secret):
+        return self.client.post(self.URL, HTTP_X_JOBS_SECRET=secret)
+
+    @override_settings(DAILY_JOBS_SECRET="the-secret")
+    def test_the_right_secret_runs_both_jobs(self):
+        response = self.call("the-secret")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("active plants checked", response.data["notify_harvest_windows"])
+        self.assertEqual(response.data["retry_failed_emails"], "No failed emails to retry.")
+
+    @override_settings(DAILY_JOBS_SECRET="the-secret")
+    def test_a_wrong_secret_finds_nothing(self):
+        self.assertEqual(self.call("wrong").status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.client.post(self.URL).status_code, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(DAILY_JOBS_SECRET="")
+    def test_with_no_secret_configured_nothing_can_call_it(self):
+        self.assertEqual(self.call("").status_code, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(DAILY_JOBS_SECRET="the-secret")
+    def test_one_failed_job_does_not_stop_the_other_and_is_reported(self):
+        with patch(
+            "notifications.management.commands.notify_harvest_windows.Plant.objects.filter",
+            side_effect=RuntimeError("boom"),
+        ):
+            response = self.call("the-secret")
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["notify_harvest_windows"], "failed")
+        self.assertEqual(response.data["retry_failed_emails"], "No failed emails to retry.")

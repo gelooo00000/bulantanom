@@ -6,8 +6,14 @@ read from a query parameter or request body, so `?user_id=` cannot expose
 another account's notifications — the parameter simply does not exist.
 """
 
+import hmac
+import io
+import logging
+
+from django.conf import settings
+from django.core.management import call_command
 from django.utils import timezone
-from rest_framework import generics, status
+from rest_framework import generics, permissions, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +22,10 @@ from accounts.permissions import IsApproved
 
 from .models import Notification
 from .serializers import NotificationSerializer
+
+logger = logging.getLogger(__name__)
+
+DAILY_JOBS = ("notify_harvest_windows", "retry_failed_emails")
 
 
 class NotificationPagination(PageNumberPagination):
@@ -90,3 +100,40 @@ class MarkAllReadView(APIView):
             .update(is_read=True, read_at=timezone.now())
         )
         return Response({"updated": updated, "unread": 0})
+
+
+class DailyJobsView(APIView):
+    """
+    POST /api/jobs/daily/ with an X-Jobs-Secret header.
+
+    The free Render plan has no cron, so a scheduled GitHub Action calls this
+    (.github/workflows/daily-jobs.yml). Both commands are safe to run twice.
+    A wrong or missing secret gets a 404, so the route does not advertise
+    itself. One job failing does not stop the other, and answers 500 so the
+    Action shows as failed.
+    """
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        secret = settings.DAILY_JOBS_SECRET
+        supplied = request.headers.get("X-Jobs-Secret", "")
+        if not secret or not hmac.compare_digest(secret.encode(), supplied.encode()):
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        results = {}
+        failed = False
+        for job in DAILY_JOBS:
+            output = io.StringIO()
+            try:
+                call_command(job, stdout=output)
+                results[job] = output.getvalue().strip()
+            except Exception:
+                logger.exception("Daily job %s failed", job)
+                results[job] = "failed"
+                failed = True
+        return Response(
+            results,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR if failed else status.HTTP_200_OK,
+        )

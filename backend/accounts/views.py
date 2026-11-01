@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -9,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from notifications.emails import email_account_deleted, email_farmer_welcome
@@ -22,6 +25,7 @@ from .serializers import (
     LguOfficerCreateSerializer,
     LoginSerializer,
     ResendCodeSerializer,
+    ResetPasswordSerializer,
     UserSerializer,
     VerifyCodeSerializer,
 )
@@ -231,6 +235,23 @@ class FarmerVerifyView(APIView):
         return _tokens_response(user)
 
 
+def _send_code_or_error(user, *, purpose="signup"):
+    """Sends a code; the Response to return instead if it could not go."""
+    try:
+        send_code(user, purpose=purpose)
+    except ResendTooSoon as exc:
+        return Response(
+            {
+                "detail": f"Please wait {exc.wait_seconds} seconds before asking for another code.",
+                "resend_after": exc.wait_seconds,
+            },
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+    except CodeSendFailed:
+        return Response({"detail": CODE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return None
+
+
 class FarmerResendCodeView(APIView):
     """
     POST /api/auth/farmer/resend-code/ {email}
@@ -248,29 +269,97 @@ class FarmerResendCodeView(APIView):
         email = serializer.validated_data["email"].strip().lower()
         user = _unverified_farmer(email)
         if user is not None:
-            try:
-                send_code(user)
-            except ResendTooSoon as exc:
-                return Response(
-                    {
-                        "detail": (
-                            f"Please wait {exc.wait_seconds} seconds "
-                            "before asking for another code."
-                        ),
-                        "resend_after": exc.wait_seconds,
-                    },
-                    status=status.HTTP_429_TOO_MANY_REQUESTS,
-                )
-            except CodeSendFailed:
-                return Response(
-                    {"detail": CODE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE
-                )
+            error = _send_code_or_error(user)
+            if error is not None:
+                return error
         return Response(
             {
                 "detail": f"We sent a new code to {email}.",
                 "resend_after": int(RESEND_COOLDOWN.total_seconds()),
             }
         )
+
+
+def _resettable_farmer(email):
+    """A finished Farmer account allowed to sign in; only these reset a password."""
+    return User.objects.filter(
+        email__iexact=(email or "").strip().lower(),
+        role=UserRole.FARMER,
+        pending_signup=False,
+        is_active=True,
+        account_status=AccountStatus.APPROVED,
+    ).first()
+
+
+class FarmerForgotPasswordView(APIView):
+    """
+    POST /api/auth/farmer/forgot-password/ {email}
+
+    Emails a one-time code for FarmerResetPasswordView. Answers the same
+    whether or not the address has an account. LGU Officers and Admins are
+    not served here: their passwords are reset by an Admin.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = RESEND_THROTTLES
+
+    def post(self, request):
+        serializer = ResendCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"].strip().lower()
+        user = _resettable_farmer(email)
+        if user is not None:
+            error = _send_code_or_error(user, purpose="reset")
+            if error is not None:
+                return error
+        return Response(
+            {
+                "detail": f"If {email} has an account, we sent it a 6-digit code.",
+                "resend_after": int(RESEND_COOLDOWN.total_seconds()),
+            }
+        )
+
+
+class FarmerResetPasswordView(APIView):
+    """
+    POST /api/auth/farmer/reset-password/ {email, code, password, password_confirm}
+
+    Sets a new password and ends every session of the account, so anyone
+    already signed in with the old password is signed out too. The Farmer
+    then signs in as usual.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = VERIFY_THROTTLES
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        user = _resettable_farmer(data["email"])
+        if user is None:
+            # Same answer for an unknown address as for a wrong code.
+            return Response(
+                {"detail": CODE_MESSAGES["invalid"]}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Before the code is checked, so a weak password does not spend it.
+        try:
+            validate_password(data["password"], user)
+        except DjangoValidationError as exc:
+            return Response({"password": list(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            result = check_code(user, data["code"])
+            if result != "ok":
+                return Response(
+                    {"detail": CODE_MESSAGES[result]}, status=status.HTTP_400_BAD_REQUEST
+                )
+            user.set_password(data["password"])
+            user.save(update_fields=["password", "updated_at"])
+            for token in OutstandingToken.objects.filter(user=user):
+                BlacklistedToken.objects.get_or_create(token=token)
+        return Response({"detail": "Your password has been changed. Please sign in."})
 
 
 class _LoginThrottleMixin:

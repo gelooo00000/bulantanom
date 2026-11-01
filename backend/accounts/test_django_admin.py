@@ -350,3 +350,36 @@ class AdminPanelEmailTests(TestCase):
         self._save_status(farmer, AccountStatus.APPROVED)
 
         self.assertEqual(mail.outbox, [])
+
+
+@override_settings(AXES_ENABLED=True)
+class AdminLoginLockoutTests(TestCase):
+    """The API's sign-in throttles do not cover /admin/, so axes does."""
+
+    LOGIN_URL = "/admin/login/"
+
+    def setUp(self):
+        self.admin = make_superuser()
+
+    def attempt(self, password):
+        return self.client.post(
+            self.LOGIN_URL, {"username": self.admin.email, "password": password}
+        )
+
+    def test_five_wrong_passwords_lock_the_account_even_for_the_right_one(self):
+        for _ in range(5):
+            self.attempt("wrong-password")
+        self.assertEqual(self.attempt(PW).status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_the_lockout_follows_the_account_not_the_address(self):
+        for number in range(5):
+            self.client.post(
+                self.LOGIN_URL,
+                {"username": self.admin.email, "password": "wrong-password"},
+                REMOTE_ADDR=f"10.0.0.{number + 1}",
+            )
+        self.assertEqual(self.attempt(PW).status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_the_right_password_still_signs_in(self):
+        self.attempt("wrong-password")
+        self.assertEqual(self.attempt(PW).status_code, status.HTTP_302_FOUND)

@@ -8,13 +8,14 @@ Two limits apply to every login request:
   address or headers: it is what protects one known account, such as the
   Admin's, from being guessed;
 - per client address, which slows one machine trying many accounts. The
-  address comes from X-Forwarded-For behind Render's proxy, so it is a
-  best effort; the per-account limit is the one that holds.
+  address comes from settings.CLIENT_IP_HEADER, because X-Forwarded-For can
+  be forged behind Render's proxy.
 
 Counts live in the "throttle" cache (settings.CACHES), a database table
 shared by every gunicorn worker so each attempt is counted once.
 """
 
+from django.conf import settings
 from django.core.cache import caches
 from rest_framework.throttling import SimpleRateThrottle
 
@@ -23,6 +24,13 @@ class _LoginThrottle(SimpleRateThrottle):
     @property
     def cache(self):
         return caches["throttle"]
+
+    def get_ident(self, request):
+        if settings.CLIENT_IP_HEADER:
+            address = request.headers.get(settings.CLIENT_IP_HEADER, "").strip()
+            if address:
+                return address
+        return super().get_ident(request)
 
 
 class LoginEmailThrottle(_LoginThrottle):
@@ -61,6 +69,12 @@ class ResendEmailThrottle(LoginEmailThrottle):
     scope = "resend_email"
 
 
+class SignupEmailThrottle(LoginEmailThrottle):
+    """Sign-ups for one address, each of which emails it a code."""
+
+    scope = "signup_email"
+
+
 class SignupIpThrottle(LoginIpThrottle):
     """Every sign-up sends an email; one machine cannot send hundreds."""
 
@@ -69,4 +83,4 @@ class SignupIpThrottle(LoginIpThrottle):
 
 VERIFY_THROTTLES = [VerifyEmailThrottle, LoginIpThrottle]
 RESEND_THROTTLES = [ResendEmailThrottle, LoginIpThrottle]
-SIGNUP_THROTTLES = [SignupIpThrottle]
+SIGNUP_THROTTLES = [SignupEmailThrottle, SignupIpThrottle]

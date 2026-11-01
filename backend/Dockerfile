@@ -1,4 +1,4 @@
-# BulanTanom backend (Django + gunicorn) for Railway, or any Docker host.
+# BulanTanom backend (Django + gunicorn) for Render, or any Docker host.
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -22,7 +22,10 @@ COPY . .
 # GEMINI_SOIL_TIMEOUT_SECONDS (120s). gunicorn's default 30s would kill the
 # worker mid-request and the farmer would get an error instead of a result.
 #
+# gthread: those requests spend their time waiting on Gemini, and a sync worker
+# waiting is a worker serving nobody. Two of them would stall the whole API.
+#
 # DJANGO_SUPERUSER_EMAIL/_PASSWORD/_FIRST_NAME/_LAST_NAME, when set, create
 # the first Admin on boot - hosts like Render's free tier have no shell to run
 # createsuperuser in. It is a no-op once that email exists.
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py createcachetable && python manage.py collectstatic --noinput && { [ -z \"$DJANGO_SUPERUSER_EMAIL\" ] || python manage.py createsuperuser --noinput || true; } && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-2} --timeout 180 --access-logfile -"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py createcachetable && python manage.py collectstatic --noinput && { [ -z \"$DJANGO_SUPERUSER_EMAIL\" ] || python manage.py createsuperuser --noinput || true; } && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers ${WEB_CONCURRENCY:-2} --worker-class gthread --threads 4 --timeout 180 --access-logfile -"]

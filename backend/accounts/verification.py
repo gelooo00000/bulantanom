@@ -1,9 +1,11 @@
 """
-One-time email codes that prove a new Farmer's address is real.
+One-time email codes that prove someone reads a Farmer's inbox.
 
 Sign-up creates the account unverified and emails a 6-digit code; the
 account cannot sign in until that code is typed back. An address nobody
-reads never gets the code, so its account can never be used.
+reads never gets the code, so its account can never be used. A forgotten
+password is proved the same way, with the same row: either code shows the
+same thing, so only the wording of the email differs.
 
 * The code is never stored, only an HMAC of it keyed with SECRET_KEY, so a
   database dump does not reveal live codes.
@@ -23,6 +25,7 @@ import secrets
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.cache import caches
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -36,6 +39,12 @@ logger = logging.getLogger(__name__)
 CODE_TTL = timedelta(minutes=10)
 MAX_ATTEMPTS = 5
 RESEND_COOLDOWN = timedelta(seconds=60)
+
+# What each kind of code says: the email's subject and its template.
+PURPOSES = {
+    "signup": ("{code} is your BulanTanom verification code", "verification_code"),
+    "reset": ("{code} is your BulanTanom password reset code", "password_reset_code"),
+}
 
 
 class CodeSendFailed(Exception):
@@ -63,17 +72,36 @@ def seconds_until_resend(user) -> int:
     return max(0, int(-(-remaining // 1)))
 
 
-def send_code(user, *, enforce_cooldown: bool = True) -> None:
+def _within_daily_budget() -> bool:
+    """
+    Counts this send against settings.EMAIL_CODES_PER_DAY. The count is
+    approximate under concurrent sends, which is fine for a safety limit.
+    """
+    throttle_cache = caches["throttle"]
+    key = f"email_codes_{timezone.localdate():%Y%m%d}"
+    throttle_cache.add(key, 0, timeout=2 * 24 * 60 * 60)
+    try:
+        return throttle_cache.incr(key) <= settings.EMAIL_CODES_PER_DAY
+    except ValueError:  # The test cache keeps nothing, so nothing to count.
+        return True
+
+
+def send_code(user, *, enforce_cooldown: bool = True, purpose: str = "signup") -> None:
     """
     Emails `user` a fresh code, replacing any earlier one. Raises
     ResendTooSoon inside the cooldown and CodeSendFailed if the email could
-    not be handed to the mail server.
+    not be handed to the mail server or the day's budget is spent.
     """
     if enforce_cooldown:
         wait = seconds_until_resend(user)
         if wait:
             raise ResendTooSoon(wait)
 
+    if not _within_daily_budget():
+        logger.error("Daily email code budget of %s is spent.", settings.EMAIL_CODES_PER_DAY)
+        raise CodeSendFailed
+
+    subject, template = PURPOSES[purpose]
     code = f"{secrets.randbelow(1_000_000):06d}"
     now = timezone.now()
     EmailVerification.objects.update_or_create(
@@ -94,13 +122,13 @@ def send_code(user, *, enforce_cooldown: bool = True) -> None:
     }
     try:
         message = EmailMultiAlternatives(
-            subject=f"{code} is your BulanTanom verification code",
-            body=render_to_string("emails/verification_code.txt", context),
+            subject=subject.format(code=code),
+            body=render_to_string(f"emails/{template}.txt", context),
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[user.email],
         )
         message.attach_alternative(
-            render_to_string("emails/verification_code.html", context), "text/html"
+            render_to_string(f"emails/{template}.html", context), "text/html"
         )
         message.send(fail_silently=False)
     except Exception as exc:
