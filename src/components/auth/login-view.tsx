@@ -85,6 +85,7 @@ export function LoginView() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const justSignedUp = searchParams.get("signedUp") === "1";
+  const justReset = searchParams.get("reset") === "1";
   // Set once a Farmer or LGU Officer signs in: the form gives way to the
   // "Preparing your dashboard..." screen, which opens the dashboard itself.
   const [preparingFor, setPreparingFor] = useState<AuthUser | null>(null);
@@ -231,6 +232,12 @@ export function LoginView() {
             </p>
           )}
 
+          {justReset && (
+            <p className="text-risk-low bg-risk-low/10 rounded-lg px-3 py-2 text-sm" role="status">
+              Your password has been changed. Please sign in.
+            </p>
+          )}
+
           {/* Fields start empty on every visit, for every role: the browser
               does not fill in a saved email or password. */}
           <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
@@ -250,9 +257,20 @@ export function LoginView() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password" className="text-foreground">
-                Password
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="password" className="text-foreground">
+                  Password
+                </Label>
+                {selectedRole === "farmer" && (
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium"
+                    style={{ color: "var(--landing-accent)" }}
+                  >
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
               <AuthPasswordField
                 icon={Lock}
                 id="password"

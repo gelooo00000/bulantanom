@@ -145,3 +145,16 @@ describe("signing in", () => {
     expect(screen.getByText("Preparing your dashboard...")).toBeInTheDocument();
   });
 });
+
+describe("LoginView forgot password", () => {
+  it("offers a reset to Farmers only", () => {
+    render(<LoginView />);
+    expect(screen.getByRole("link", { name: /forgot password/i })).toHaveAttribute(
+      "href",
+      "/forgot-password",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /lgu officer/i }));
+    expect(screen.queryByRole("link", { name: /forgot password/i })).toBeNull();
+  });
+});

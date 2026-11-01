@@ -64,6 +64,23 @@ export function resendFarmerCode(
   return apiFetch("/auth/farmer/resend-code/", { method: "POST", body: { email } });
 }
 
+/** Emails a one-time code for `resetPassword`; answers alike for an unknown address. */
+export function requestPasswordReset(
+  email: string,
+): Promise<{ detail: string; resend_after: number }> {
+  return apiFetch("/auth/farmer/forgot-password/", { method: "POST", body: { email } });
+}
+
+/** Sets a new password with the emailed code. Nobody is signed in by this. */
+export function resetPassword(payload: {
+  email: string;
+  code: string;
+  password: string;
+  password_confirm: string;
+}): Promise<{ detail: string }> {
+  return apiFetch("/auth/farmer/reset-password/", { method: "POST", body: payload });
+}
+
 export function loginFarmer(email: string, password: string): Promise<AuthResponse> {
   return apiFetch("/auth/farmer/login/", { method: "POST", body: { email, password } });
 }
