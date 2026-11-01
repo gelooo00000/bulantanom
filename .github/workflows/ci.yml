@@ -40,6 +40,8 @@ jobs:
           --health-retries 10
     env:
       DJANGO_SECRET_KEY: ci-only-not-a-real-secret-ci-only-not-a-real-secret
+      # Off, every test request is redirected to HTTPS.
+      DJANGO_DEBUG: "True"
       DB_ENGINE: postgresql
       DB_NAME: bulantanom
       DB_USER: postgres
