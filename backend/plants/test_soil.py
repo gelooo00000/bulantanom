@@ -410,7 +410,9 @@ class SoilGeminiFallbackTests(SoilTestCase):
 
     def _post(self, side_effect, fallbacks=("fallback-model",)):
         with override_settings(
-            GEMINI_MODEL="primary-model", GEMINI_FALLBACK_MODELS=list(fallbacks)
+            GEMINI_API_KEY="test-key",
+            GEMINI_MODEL="primary-model",
+            GEMINI_FALLBACK_MODELS=list(fallbacks),
         ), patch("google.genai.Client") as client_cls:
             generate = client_cls.return_value.models.generate_content
             generate.side_effect = side_effect
