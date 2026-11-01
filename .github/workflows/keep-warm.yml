@@ -1,0 +1,19 @@
+# Render's free plan puts the API to sleep after 15 idle minutes, and waking it
+# took 75 seconds when measured. This pings it from 06:00 to 16:59 in Manila,
+# when farmers are working, and lets it sleep otherwise: awake around the clock
+# would use up the account's free monthly hours, shared with its other services.
+# GitHub can start scheduled runs late, so a sleep can still slip through.
+name: Keep API warm
+
+on:
+  schedule:
+    - cron: "*/14 22-23,0-8 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      # A 401 is a healthy answer: this route needs a sign-in, and reaching
+      # it does not wake the database.
+      - run: curl --silent --output /dev/null --max-time 100 https://bulantanom-api.onrender.com/api/weather/

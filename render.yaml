@@ -77,6 +77,19 @@ services:
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
+      # Render's free plan blocks outbound 25, 465 and 587.
+      - key: EMAIL_PORT
+        value: "2525"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: DEFAULT_FROM_EMAIL
+        value: BulanTanom <bulantanom.official@gmail.com>
+      # Evidence photos; without it they land on disk and vanish on deploy.
+      - key: CLOUDINARY_URL
+        sync: false
+      # Must equal the GitHub secret used by .github/workflows/daily-jobs.yml.
+      - key: DAILY_JOBS_SECRET
+        sync: false
 
   - type: web
     name: bulantanom
