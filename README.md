@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BulanTanom
 
-## Getting Started
+Crop monitoring for the farmers of Layuan Nature Integrated Farm in Bulan,
+Sorsogon. Farmers record plants and weekly assessments, get AI-assisted risk
+and soil guidance, and LGU Officers follow the farm through dashboards and
+reports. Administrators manage accounts.
 
-First, run the development server:
+- **Frontend:** Next.js and React, in `src/`
+- **Backend:** Django REST Framework, in `backend/`
+- **AI:** Gemini, called only from the backend
+
+Live at <https://bulantanom.onrender.com>, with the API at
+<https://bulantanom-api.onrender.com>.
+
+## Run it locally
+
+The backend needs a MySQL 8 database named `bulantanom`.
 
 ```bash
+# Backend, on port 8000
+cd backend
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+cp .env.example .env              # then fill it in
+.venv/Scripts/python manage.py migrate
+.venv/Scripts/python manage.py createcachetable
+.venv/Scripts/python manage.py runserver 8000
+
+# Frontend, on port 3000
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Check your work
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm test
+npx tsc --noEmit
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+cd backend
+.venv/Scripts/python manage.py test
+```
 
-## Learn More
+If `tsc` reports files under `.next/` that no longer exist, delete `.next`.
+GitHub Actions runs all of this on every push, with the backend on Postgres
+because production uses it.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Pushing to `main` redeploys both services on Render, as described in
+`render.yaml`. The database is a Neon Postgres.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- New `sync: false` variables must be added by hand in Render's Environment
+  page before deploying. A Blueprint sync does not prompt for them.
+- Evidence photos are stored privately on Cloudinary through `CLOUDINARY_URL`.
+- Email goes through Brevo on port 2525, because Render's free plan blocks
+  the usual SMTP ports. Farmer sign-up and password reset depend on it.
+- `manage.py axes_reset` clears a Django Admin lockout.
 
-## Deploy on Vercel
+Scheduled work runs from `.github/workflows/`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Workflow | When (Manila) | Does |
+|---|---|---|
+| `daily-jobs.yml` | 06:00 | Harvest notifications and retrying failed emails |
+| `keep-warm.yml` | Every 14 minutes, 06:00 to 16:59 | Keeps the API awake while farmers work |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`daily-jobs.yml` needs `DAILY_JOBS_SECRET` set to the same value in GitHub's
+repository secrets and on `bulantanom-api` in Render. GitHub pauses scheduled
+workflows after 60 days without repository activity.
