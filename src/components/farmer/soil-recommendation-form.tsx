@@ -8,8 +8,9 @@ import {
   RotateCw,
   TriangleAlert,
 } from "lucide-react";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
+import { ArduinoSensorSign, ArduinoSensorWizard } from "@/components/farmer/arduino-sensor-wizard";
 import { SoilResultCard } from "@/components/farmer/soil-result-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   type SoilRecommendationInput,
   type SoilRecommendation,
 } from "@/lib/api/soil-api";
+import type { MeasuredField } from "@/lib/arduino/soil-sensor";
 import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
@@ -134,6 +136,10 @@ export function SoilRecommendationForm() {
   const [readings, setReadings] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
+  // The optional Arduino flow replaces the readings section while it is open.
+  const [usingSensor, setUsingSensor] = useState(false);
+  const [sensorNotice, setSensorNotice] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   function setReading(key: string, value: string) {
     setReadings((prev) => ({ ...prev, [key]: value }));
@@ -175,6 +181,33 @@ export function SoilRecommendationForm() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    await analyze(readings);
+  }
+
+  /**
+   * The sensor's seven readings arrive. Soil Fertility is not one of them:
+   * with it already typed, the recommendation starts straight away; without
+   * it, the farmer is sent to that one field.
+   */
+  async function handleSensorReadings(values: Record<MeasuredField, string>) {
+    const merged: Record<string, string> = { ...readings, ...values };
+    setReadings(merged);
+    setFieldErrors({});
+    setUsingSensor(false);
+    const fertility = SENSOR_FIELDS.find((field) => field.key === "soil_fertility")!;
+    if (validateReading(fertility, merged.soil_fertility ?? "") === null) {
+      setSensorNotice(null);
+      await analyze(merged);
+      return;
+    }
+    setSensorNotice(translate("arduino.filledNotice"));
+    // After the readings section is back on screen.
+    window.setTimeout(() => {
+      formRef.current?.querySelector<HTMLInputElement>("#soil-soil-fertility")?.focus();
+    }, 0);
+  }
+
+  async function analyze(values: Record<string, string>) {
     if (!accessToken || status === "analyzing") return;
 
     // Check every reading before the request. Django validates these again -
@@ -182,7 +215,7 @@ export function SoilRecommendationForm() {
     // that caused it, rather than after a round trip.
     const errors: Record<string, string> = {};
     for (const field of SENSOR_FIELDS) {
-      const message = validateReading(field, readings[field.key] ?? "", translate);
+      const message = validateReading(field, values[field.key] ?? "", translate);
       if (message) errors[field.key] = message;
     }
     if (Object.keys(errors).length > 0) {
@@ -196,7 +229,7 @@ export function SoilRecommendationForm() {
     setError(null);
 
     try {
-      const created = await createSoilRecommendation(currentInput(), accessToken);
+      const created = await createSoilRecommendation(inputFrom(values), accessToken);
       // Django raised "Soil recommendation ready" — reflect it immediately.
       requestNotificationRefresh();
       // Straight to the result: the row is already saved, and the result is
@@ -266,9 +299,9 @@ export function SoilRecommendationForm() {
    * Only called once validation has passed, so every field is present and
    * parses - Number() here cannot produce a NaN.
    */
-  function currentInput(): SoilRecommendationInput {
+  function inputFrom(values: Record<string, string>): SoilRecommendationInput {
     const numeric = Object.fromEntries(
-      SENSOR_FIELDS.map((field) => [field.key, Number(readings[field.key])]),
+      SENSOR_FIELDS.map((field) => [field.key, Number(values[field.key])]),
     ) as Omit<SoilRecommendationInput, "notes">;
     return { ...numeric, notes };
   }
@@ -286,6 +319,8 @@ export function SoilRecommendationForm() {
     setNotes("");
     setError(null);
     setRetryError(null);
+    setSensorNotice(null);
+    setUsingSensor(false);
     setStatus("idle");
   }
 
@@ -440,25 +475,48 @@ export function SoilRecommendationForm() {
   return (
     <>
       {header}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-        <div>
-          <h2 className="text-sm font-medium">{t.sensorSectionTitle}</h2>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {t.sensorSectionHint}
-          </p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {SENSOR_FIELDS.map((field) => (
-            <SoilNumberField
-              key={field.key}
-              field={field}
-              value={readings[field.key] ?? ""}
-              error={fieldErrors[field.key]}
-              onChange={(value) => setReading(field.key, value)}
+      <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
+        {usingSensor ? (
+          <ArduinoSensorWizard
+            onReadings={handleSensorReadings}
+            onCancel={() => setUsingSensor(false)}
+          />
+        ) : (
+          <>
+            <ArduinoSensorSign
+              onStart={() => {
+                setSensorNotice(null);
+                setUsingSensor(true);
+              }}
             />
-          ))}
-        </div>
+
+            <div>
+              <h2 className="text-sm font-medium">{t.sensorSectionTitle}</h2>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                {t.sensorSectionHint}
+              </p>
+            </div>
+
+            {sensorNotice ? (
+              <p className="text-risk-low flex items-center gap-1.5 text-sm" role="status">
+                <Check className="size-4 shrink-0" />
+                {sensorNotice}
+              </p>
+            ) : null}
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {SENSOR_FIELDS.map((field) => (
+                <SoilNumberField
+                  key={field.key}
+                  field={field}
+                  value={readings[field.key] ?? ""}
+                  error={fieldErrors[field.key]}
+                  onChange={(value) => setReading(field.key, value)}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="notes">

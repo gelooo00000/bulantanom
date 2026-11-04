@@ -273,3 +273,82 @@ describe("SoilRecommendationForm outdated advice", () => {
     expect(screen.getByText("Add organic compost.")).toBeInTheDocument();
   });
 });
+
+const readSoilSensor = vi.fn();
+vi.mock("@/lib/arduino/soil-sensor", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  isSerialSupported: () => true,
+  readSoilSensor: (...args: unknown[]) => readSoilSensor(...args),
+}));
+
+const SENSOR_READING = {
+  soil_moisture: 65.2,
+  soil_temperature: 28.5,
+  soil_conductivity: 850,
+  soil_ph: 6.5,
+  nitrogen: 120,
+  phosphorus: 80,
+  potassium: 150,
+};
+
+/** Sign -> instructions -> Go -> readings -> "Use these readings". */
+async function readWithSensor() {
+  await userEvent.click(screen.getByRole("button", { name: "Use the Arduino sensor" }));
+  expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /next/i }));
+  expect(await screen.findByText("How to use the sensor")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /next/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /^go$/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /use these readings/i }));
+}
+
+describe("SoilRecommendationForm with the Arduino sensor", () => {
+  beforeEach(() => {
+    fetchHistory.mockResolvedValue([]);
+    readSoilSensor.mockReset().mockResolvedValue(SENSOR_READING);
+  });
+
+  it("shows that the feature works with the Arduino hardware", async () => {
+    render(<SoilRecommendationForm />);
+    expect(
+      await screen.findByText("This feature can be used with the Arduino hardware"),
+    ).toBeInTheDocument();
+  });
+
+  it("fills seven readings and asks for Soil Fertility, which the probe does not measure", async () => {
+    render(<SoilRecommendationForm />);
+    await readWithSensor();
+
+    expect(await screen.findByLabelText("Soil pH")).toHaveValue(6.5);
+    expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(120);
+    expect(screen.getByLabelText("Soil Fertility")).toHaveValue(null);
+    expect(screen.getByRole("status")).toHaveTextContent(/type soil fertility/i);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("goes straight to the recommendation when Soil Fertility is already typed", async () => {
+    create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
+    render(<SoilRecommendationForm />);
+    await userEvent.type(await screen.findByLabelText("Soil Fertility"), "600");
+    await readWithSensor();
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({
+      soil_ph: 6.5,
+      nitrogen: 120,
+      soil_fertility: 600,
+    });
+  });
+
+  it("explains a probe that is not answering and keeps manual entry available", async () => {
+    const { SensorError } = await import("@/lib/arduino/soil-sensor");
+    readSoilSensor.mockRejectedValue(new SensorError("probe_not_answering"));
+    render(<SoilRecommendationForm />);
+    await userEvent.click(await screen.findByRole("button", { name: "Use the Arduino sensor" }));
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /^go$/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/probe is not answering/i);
+  });
+});
