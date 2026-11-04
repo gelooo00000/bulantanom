@@ -57,7 +57,7 @@ type ReadState =
   | { kind: "ready" }
   | { kind: "reading" }
   | { kind: "done"; readings: SensorReadings }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; received?: string };
 
 const MEASURED_SPECS = SENSOR_FIELDS.filter((field) => field.key !== "soil_fertility");
 
@@ -91,7 +91,11 @@ export function ArduinoSensorWizard({
       setState({ kind: "done", readings: await readSoilSensor() });
     } catch (err) {
       const code = err instanceof SensorError ? err.code : "disconnected";
-      setState({ kind: "error", message: t(`arduino.error.${code}` as MessageKey) });
+      setState({
+        kind: "error",
+        message: t(`arduino.error.${code}` as MessageKey),
+        received: err instanceof SensorError ? err.received : undefined,
+      });
     }
   }
 
@@ -176,9 +180,17 @@ export function ArduinoSensorWizard({
           <>
             <p className="text-muted-foreground text-sm">{t("arduino.goBody")}</p>
             {state.kind === "error" && (
-              <p className="text-risk-high text-sm" role="alert">
-                {state.message}
-              </p>
+              <div className="flex flex-col gap-1.5" role="alert">
+                <p className="text-risk-high text-sm">{state.message}</p>
+                {state.received ? (
+                  <p className="text-muted-foreground text-xs">
+                    {t("arduino.received")}{" "}
+                    <code className="bg-muted rounded px-1.5 py-0.5 break-all">
+                      {state.received}
+                    </code>
+                  </p>
+                ) : null}
+              </div>
             )}
           </>
         )}

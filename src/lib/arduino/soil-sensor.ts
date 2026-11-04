@@ -55,14 +55,22 @@ export type SensorErrorCode =
   | "cancelled"
   | "busy"
   | "no_data"
+  | "unrecognized"
   | "probe_not_answering"
   | "disconnected";
 
 export class SensorError extends Error {
-  constructor(public code: SensorErrorCode) {
+  /** For "unrecognized": the last line the Arduino sent, to show the farmer. */
+  constructor(
+    public code: SensorErrorCode,
+    public received?: string,
+  ) {
     super(code);
   }
 }
+
+/** Longest stretch of a received line shown back to the farmer. */
+const RECEIVED_PREVIEW = 120;
 
 export type ParsedLine =
   | { kind: "reading"; readings: SensorReadings }
@@ -167,6 +175,9 @@ export async function readSoilSensor(): Promise<SensorReadings> {
   const decoder = new TextDecoder();
   const samples: SensorReadings[] = [];
   let probeErrors = 0;
+  // The last line that was not a reading: a sketch other than BulanTanom's,
+  // or the ESP32's own boot messages, tell the farmer what is wrong.
+  let lastIgnored = "";
   let buffer = "";
 
   try {
@@ -178,7 +189,10 @@ export async function readSoilSensor(): Promise<SensorReadings> {
         throw new SensorError("disconnected");
       }
       if (chunk.done) {
-        throw new SensorError(probeErrors > 0 ? "probe_not_answering" : "no_data");
+        if (probeErrors > 0) throw new SensorError("probe_not_answering");
+        const tail = (lastIgnored || buffer).trim();
+        if (tail) throw new SensorError("unrecognized", tail.slice(0, RECEIVED_PREVIEW));
+        throw new SensorError("no_data");
       }
       buffer += decoder.decode(chunk.value, { stream: true });
       const lines = buffer.split("\n");
@@ -187,6 +201,7 @@ export async function readSoilSensor(): Promise<SensorReadings> {
         const parsed = parseSensorLine(line);
         if (parsed.kind === "reading") samples.push(parsed.readings);
         if (parsed.kind === "probe_error") probeErrors += 1;
+        if (parsed.kind === "ignored" && line.trim()) lastIgnored = line.trim();
       }
     }
     return averageReadings(samples.slice(0, SAMPLES_PER_READING));

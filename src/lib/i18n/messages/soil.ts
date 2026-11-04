@@ -120,9 +120,19 @@ export const soil = defineMessages({
     bik: "May iba na programa na naggagamit sa Arduino. Isara an Serial Monitor san Arduino IDE, dangan probaran giraray.",
   },
   "arduino.error.no_data": {
-    en: "No readings came from the Arduino. Check that the soil sensor program is uploaded, then try again.",
-    fil: "Walang dumating na sukat mula sa Arduino. Tiyaking naka-upload ang programa ng soil sensor, saka subukan muli.",
-    bik: "Waray nag-abot na sukat hali sa Arduino. Siguraduhon na naka-upload an programa san soil sensor, dangan probaran giraray.",
+    en: "Nothing came from the Arduino. Check that you picked the Arduino's port (often named CP2102 or USB to UART) and that the BulanTanom soil sensor sketch is uploaded, then try again.",
+    fil: "Walang dumating mula sa Arduino. Tiyaking port ng Arduino ang napili mo (kadalasang CP2102 o USB to UART ang pangalan) at naka-upload ang BulanTanom soil sensor sketch, saka subukan muli.",
+    bik: "Waray nag-abot hali sa Arduino. Siguraduhon na port san Arduino an napili mo (parati CP2102 o USB to UART an ngaran) asin naka-upload an BulanTanom soil sensor sketch, dangan probaran giraray.",
+  },
+  "arduino.error.unrecognized": {
+    en: "The Arduino is sending something, but not BulanTanom soil readings. Upload the BulanTanom soil sensor sketch (hardware/soil-sensor), then try again.",
+    fil: "May ipinapadala ang Arduino, pero hindi ito mga sukat ng BulanTanom. I-upload ang BulanTanom soil sensor sketch (hardware/soil-sensor), saka subukan muli.",
+    bik: "May pinapadara an Arduino, pero bako ini mga sukat san BulanTanom. I-upload an BulanTanom soil sensor sketch (hardware/soil-sensor), dangan probaran giraray.",
+  },
+  "arduino.received": {
+    en: "Last thing the Arduino sent:",
+    fil: "Huling ipinadala ng Arduino:",
+    bik: "Huring pinadara san Arduino:",
   },
   "arduino.error.probe_not_answering": {
     en: "The Arduino is connected, but the soil probe is not answering. Check the probe's power and its A and B wires.",

@@ -97,6 +97,19 @@ describe("readSoilSensor", () => {
     await expect(readSoilSensor()).rejects.toMatchObject({ code: "probe_not_answering" });
   });
 
+  it("shows what a different sketch sent instead of readings", async () => {
+    fakePort(["Moisture: 65.2 %", "Temp: 28.5 C"]);
+    await expect(readSoilSensor()).rejects.toMatchObject({
+      code: "unrecognized",
+      received: "Temp: 28.5 C",
+    });
+  });
+
+  it("says nothing arrived when the port stays silent", async () => {
+    fakePort([]);
+    await expect(readSoilSensor()).rejects.toMatchObject({ code: "no_data" });
+  });
+
   it("says when the browser has no Web Serial", async () => {
     await expect(readSoilSensor()).rejects.toBeInstanceOf(SensorError);
     await expect(readSoilSensor()).rejects.toMatchObject({ code: "unsupported" });
