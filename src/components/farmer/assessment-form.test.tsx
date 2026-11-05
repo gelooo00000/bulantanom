@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AssessmentForm } from "@/components/farmer/assessment-form";
-import type { BackendAssessment, EvidenceValidation } from "@/lib/api/risk-api";
+import type { EvidenceValidation } from "@/lib/api/risk-api";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => ({ accessToken: "token" }) }));
@@ -37,15 +37,8 @@ function photo() {
   return new File(["jpeg-bytes"], "plant.jpg", { type: "image/jpeg" });
 }
 
-function renderForm(lastAssessment: BackendAssessment | null = null) {
-  render(
-    <AssessmentForm
-      plantId={7}
-      plantLabel="Sinta"
-      cropId="papaya"
-      lastAssessment={lastAssessment}
-    />,
-  );
+function renderForm() {
+  render(<AssessmentForm plantId={7} plantLabel="Sinta" cropId="papaya" />);
 }
 
 /** The required answers the photo in these tests does not give. */
@@ -66,6 +59,11 @@ async function answerTheRest(user: ReturnType<typeof userEvent.setup>) {
 function chosen(question: RegExp) {
   const group = screen.getByRole("radiogroup", { name: question });
   return within(group).getByRole("radio", { checked: true });
+}
+
+function noneChosen(question: RegExp) {
+  const group = screen.getByRole("radiogroup", { name: question });
+  return within(group).queryByRole("radio", { checked: true }) === null;
 }
 
 beforeEach(() => {
@@ -124,32 +122,19 @@ describe("Weekly assessment: photo first", () => {
     expect(chosen(/Overall health/)).toHaveAccessibleName("Unhealthy");
   });
 
-  it("starts from the last check's answers, and the photo's are newer", async () => {
+  it("starts with nothing chosen; only the photo's analysis fills answers in", async () => {
     validateEvidence.mockResolvedValue(ACCEPTED);
     const user = userEvent.setup();
-    renderForm({
-      assessment_date: "2026-10-05",
-      growth_condition: "slower_than_expected",
-      health_condition: "healthy",
-      leaf_condition: "healthy",
-      flowering_status: "",
-      fruiting_status: "",
-      watering_frequency: "twice_weekly",
-      soil_moisture: "moist",
-      plant_height_cm: "40",
-      notes: "Leaves look pale",
-    } as unknown as BackendAssessment);
+    renderForm();
 
-    expect(screen.getByText(/answers from the last check/)).toBeInTheDocument();
-    expect(chosen(/Watering frequency/)).toHaveAccessibleName("Twice a week");
-    expect(chosen(/Growth compared/)).toHaveAccessibleName("Slower than expected");
-    // Height and written notes are this week's to give.
-    expect(screen.getByLabelText(/Plant height/)).toHaveValue(null);
+    for (const question of [/Growth compared/, /Overall health/, /Leaf condition/, /Watering frequency/]) {
+      expect(noneChosen(question)).toBe(true);
+    }
 
     await user.upload(screen.getByLabelText("Take photo"), photo());
     await screen.findByText(/2 answers were filled in from your photo/);
     expect(chosen(/Leaf condition/)).toHaveAccessibleName("Spots or lesions");
-    expect(chosen(/Watering frequency/)).toHaveAccessibleName("Twice a week");
+    expect(noneChosen(/Watering frequency/)).toBe(true);
   });
 
   it("keeps submit off while a refused photo is selected", async () => {

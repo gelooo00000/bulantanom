@@ -8,7 +8,7 @@ import { AssessmentForm } from "@/components/farmer/assessment-form";
 import { AssessmentLockCard } from "@/components/farmer/assessment-lock-card";
 import { Button } from "@/components/ui/button";
 import { fetchPlant } from "@/lib/api/plants-api";
-import { fetchPlantAssessments, type AssessmentEligibility } from "@/lib/api/risk-api";
+import type { AssessmentEligibility } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useLanguage } from "@/lib/i18n";
 
@@ -23,19 +23,13 @@ export default function AssessmentPage({
     (token) => fetchPlant(token, plantId),
     [plantId],
   );
-  // The last check's answers start the form. Newest first; a failed load
-  // just means an empty form, never a blocked one.
-  const history = useAuthedQuery(
-    (token) => fetchPlantAssessments(token, plantId),
-    [plantId],
-  );
   // Set if the server rejects a submission because the week is already used —
   // it wins over whatever the page loaded with.
   const [lockedBySubmit, setLockedBySubmit] = useState<AssessmentEligibility | null>(
     null,
   );
 
-  if (loading || history.loading) {
+  if (loading) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
         <LoaderCircle className="text-primary size-6 animate-spin" />
@@ -92,7 +86,6 @@ export default function AssessmentPage({
           // A new key gives each plant a fresh form.
           key={plant.id}
           plantId={plant.id}
-          lastAssessment={history.data?.[0] ?? null}
           plantLabel={plantLabel}
           cropId={plant.crop.id}
           cropEmoji={plant.crop.emoji}

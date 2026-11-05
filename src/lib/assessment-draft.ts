@@ -5,7 +5,7 @@
  *
  * Only what the farmer chose themselves is kept (answers they tapped, height,
  * notes, ticked symptoms); the photo is not, since it must be taken fresh,
- * and suggestions from the photo or the last check are made again. A draft
+ * and the photo's suggestions are made again. A draft
  * comes back only on the day it was saved: by the next day the plant may
  * look different, so starting over is the honest default.
  *

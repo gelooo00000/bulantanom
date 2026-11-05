@@ -160,12 +160,6 @@ export const assessment = defineMessages({
     bik: "Panahon sa uma ngunyan: {temperature}°C · {condition}",
   },
   "asmt.fromPhoto": { en: "From photo", fil: "Mula sa litrato", bik: "Hali sa litrato" },
-  "asmt.fromLastCheck": { en: "Last check", fil: "Huling pagsusuri", bik: "Huring pagsusi" },
-  "asmt.lastCheckFilled": {
-    en: "Your answers from the last check ({date}) are filled in. Change anything that is different now.",
-    fil: "Nakalagay na ang mga sagot mo noong huling pagsusuri ({date}). Palitan ang anumang naiba ngayon.",
-    bik: "Nakalaag na an mga simbag mo kan huring pagsusi ({date}). Liwanan an ano man na naiba ngunyan.",
-  },
   "asmt.checking": {
     en: "Checking plant evidence…",
     fil: "Sinusuri ang litrato ng tanim…",

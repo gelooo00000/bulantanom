@@ -6,7 +6,6 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
-  History,
   RotateCcw,
   LoaderCircle,
   ScanEye,
@@ -28,7 +27,6 @@ import { EvidenceVerdict } from "@/components/farmer/evidence-verdict";
 import { FarmTodayWeather } from "@/components/farmer/farm-today-weather";
 import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
 import { Button } from "@/components/ui/button";
-import { formatDisplayDate } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -135,7 +133,7 @@ type Prefilled =
   | "growth_condition"
   | "watering_frequency"
   | "soil_moisture";
-type AnswerSource = "photo" | "last";
+type AnswerSource = "photo";
 
 const CARRIED: Prefilled[] = [
   "growth_condition",
@@ -147,20 +145,6 @@ const CARRIED: Prefilled[] = [
   "watering_frequency",
   "soil_moisture",
 ];
-
-/** The last check's answers worth starting from: given, and still asked. */
-function carriedAnswers(
-  last: BackendAssessment | null,
-  skipQuestions: AssessmentQuestion[],
-): Partial<Record<Prefilled, string>> {
-  if (!last) return {};
-  const carried: Partial<Record<Prefilled, string>> = {};
-  for (const field of CARRIED) {
-    const value = last[field];
-    if (value && !skipQuestions.includes(field as AssessmentQuestion)) carried[field] = value;
-  }
-  return carried;
-}
 
 /** A draft's answers that still fit this form: known questions this crop is asked. */
 function draftAnswers(
@@ -177,7 +161,7 @@ function draftAnswers(
   );
 }
 
-/** A question's label, marked while its answer came from the photo or the last check. */
+/** A question's label, marked while its answer came from the photo. */
 function AnswerLabel({
   id,
   source,
@@ -192,7 +176,6 @@ function AnswerLabel({
   children: React.ReactNode;
 }) {
   const { t } = useLanguage();
-  const Icon = source === "photo" ? Camera : History;
   return (
     <Label id={id} className="flex flex-wrap items-center gap-2">
       {children}
@@ -201,8 +184,8 @@ function AnswerLabel({
       )}
       {source && (
         <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
-          <Icon className="size-3" />
-          {t(source === "photo" ? "asmt.fromPhoto" : "asmt.fromLastCheck")}
+          <Camera className="size-3" />
+          {t("asmt.fromPhoto")}
         </span>
       )}
     </Label>
@@ -224,8 +207,6 @@ type AssessmentFormProps = {
   cropEmoji?: string;
   /** Questions that don't fit this crop (e.g. leaves on a mushroom). */
   skipQuestions?: AssessmentQuestion[];
-  /** This plant's previous assessment; its answers start the form. */
-  lastAssessment?: BackendAssessment | null;
   /** Called when the server reports the weekly assessment is already done. */
   onLocked?: (eligibility: AssessmentEligibility) => void;
 };
@@ -251,12 +232,11 @@ function AssessmentFormBody({
   cropId,
   cropEmoji,
   skipQuestions = [],
-  lastAssessment = null,
   onLocked,
   onStartOver,
 }: AssessmentFormProps & { onStartOver: () => void }) {
   const { accessToken } = useAuth();
-  const { t, dateLocale } = useLanguage();
+  const { t } = useLanguage();
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<BackendAssessment | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -265,18 +245,14 @@ function AssessmentFormBody({
   const [evidenceResult, setEvidenceResult] = useState<EvidenceValidation | null>(null);
   const uploadRef = useRef<EvidenceUploadHandle>(null);
 
-  // Where the choice answers start: the last check's answers, so a plant that
-  // has not changed needs no re-answering. Height and the written notes are
-  // left empty; they are this week's to give.
-  const [carried] = useState(() => carriedAnswers(lastAssessment, skipQuestions));
   // Today's unsent answers for this plant, if the farmer left mid-way. They
-  // are the farmer's own, so they win over the last check and the photo.
+  // are the farmer's own, so they win over the photo.
   const [draft] = useState(() => readDraft(plantId));
   const [own] = useState(() => draftAnswers(draft, skipQuestions));
-  // Otherwise a question starts unanswered: a ready-made "Healthy" or
-  // "Daily" could be submitted without a thought, and looks like the AI's.
-  const start = (field: Prefilled): string | null =>
-    field in own ? own[field] || null : (carried[field] ?? null);
+  // Otherwise a question starts unanswered - not even the last check's
+  // answer: a ready-made "Healthy" or "Daily" could be submitted without a
+  // thought. The photo's analysis fills in what it can see.
+  const start = (field: Prefilled): string | null => own[field] || null;
 
   const [height, setHeight] = useState(draft?.height ?? "");
   const [growth, setGrowth] = useState<string | null>(start("growth_condition"));
@@ -304,16 +280,9 @@ function AssessmentFormBody({
 
   // The photo comes first and is checked as soon as it is taken. An accepted
   // photo also suggests the answers it shows (health, leaves, flowering,
-  // fruiting), which replace the last check's: the photo is newer. Neither
-  // ever replaces an answer the Farmer chose themselves.
+  // fruiting). It never replaces an answer the Farmer chose themselves.
   const [checkingPhoto, setCheckingPhoto] = useState(false);
-  const [sources, setSources] = useState<Partial<Record<Prefilled, AnswerSource>>>(() =>
-    Object.fromEntries(
-      Object.keys(carried)
-        .filter((field) => !(field in own))
-        .map((field) => [field, "last"]),
-    ),
-  );
+  const [sources, setSources] = useState<Partial<Record<Prefilled, AnswerSource>>>({});
   const touched = useRef(new Set<Prefilled>(Object.keys(own) as Prefilled[]));
   // Only the latest photo's check may update the form.
   const checkRun = useRef(0);
@@ -328,10 +297,7 @@ function AssessmentFormBody({
     watering_frequency: setWatering,
     soil_moisture: setSoil,
   };
-  const countFrom = (source: AnswerSource) =>
-    Object.values(sources).filter((s) => s === source).length;
-  const fromPhotoCount = countFrom("photo");
-  const fromLastCount = countFrom("last");
+  const fromPhotoCount = Object.keys(sources).length;
 
   /** The Farmer's own answer: kept from now on, and no longer marked. */
   function answer(field: Prefilled, value: string | null) {
@@ -639,15 +605,6 @@ function AssessmentFormBody({
           </p>
         )}
       </div>
-
-      {fromLastCount > 0 && lastAssessment && (
-        <p className="bg-muted/40 border-border flex items-start gap-2 rounded-xl border px-4 py-3 text-sm">
-          <History className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-          {t("asmt.lastCheckFilled", {
-            date: formatDisplayDate(lastAssessment.assessment_date, dateLocale),
-          })}
-        </p>
-      )}
 
       <FormSection title={t("asmt.growth")}>
         <div className="flex flex-col gap-4">
