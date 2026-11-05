@@ -11,7 +11,7 @@ import {
   Usb,
 } from "lucide-react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,13 +62,18 @@ type ReadState =
  * Three pages: what the sensor does, how to use it, then Go. Go reads the
  * probe over USB and shows the readings; "Use these readings" hands them to
  * the form, which carries on to the recommendation.
+ *
+ * `afterReadings` is shown under the readings once they are in - the form
+ * passes its Additional Soil Information box.
  */
 export function ArduinoSensorWizard({
   onReadings,
   onCancel,
+  afterReadings,
 }: {
   onReadings: (values: Record<MeasuredField, string>) => void;
   onCancel: () => void;
+  afterReadings?: ReactNode;
 }) {
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>(1);
@@ -151,19 +156,22 @@ export function ArduinoSensorWizard({
             {t("arduino.unsupported")}
           </p>
         ) : state.kind === "done" ? (
-          <dl className="grid gap-2 sm:grid-cols-2">
-            {SENSOR_FIELDS.map((field) => (
-              <div
-                key={field.key}
-                className="border-border flex items-baseline justify-between rounded-md border px-3 py-2"
-              >
-                <dt className="text-muted-foreground text-xs">{sensorLabel(field, t)}</dt>
-                <dd className="text-sm font-medium">
-                  {toFormValues(state.readings)[field.key]} {field.unit}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <>
+            <dl className="grid gap-2 sm:grid-cols-2">
+              {SENSOR_FIELDS.map((field) => (
+                <div
+                  key={field.key}
+                  className="border-border flex items-baseline justify-between rounded-md border px-3 py-2"
+                >
+                  <dt className="text-muted-foreground text-xs">{sensorLabel(field, t)}</dt>
+                  <dd className="text-sm font-medium">
+                    {toFormValues(state.readings)[field.key]} {field.unit}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {afterReadings}
+          </>
         ) : state.kind === "reading" ? (
           <p className="text-muted-foreground flex items-center gap-2 text-sm" role="status">
             <LoaderCircle className="text-primary size-4 animate-spin" />

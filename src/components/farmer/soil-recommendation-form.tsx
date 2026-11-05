@@ -462,6 +462,21 @@ export function SoilRecommendationForm() {
     );
   }
 
+  const notesField = (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="notes">
+        {t.additionalInfo}{" "}
+        <span className="text-muted-foreground font-normal">({t.optional})</span>
+      </Label>
+      <Textarea
+        id="notes"
+        placeholder={t.additionalInfoHint}
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+      />
+    </div>
+  );
+
   return (
     <>
       {header}
@@ -470,6 +485,7 @@ export function SoilRecommendationForm() {
           <ArduinoSensorWizard
             onReadings={handleSensorReadings}
             onCancel={() => setUsingSensor(false)}
+            afterReadings={notesField}
           />
         ) : (
           <>
@@ -508,23 +524,10 @@ export function SoilRecommendationForm() {
           </>
         )}
 
-        {/* Hidden while the Arduino flow is open: it only asks for the
-            sensor, and anything typed earlier is kept. The submit button
-            below is hidden for the same reason. */}
-        {!usingSensor && (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="notes">
-              {t.additionalInfo}{" "}
-              <span className="text-muted-foreground font-normal">({t.optional})</span>
-            </Label>
-            <Textarea
-              id="notes"
-              placeholder={t.additionalInfoHint}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-        )}
+        {/* In the Arduino flow this box moves under the sensor readings. The
+            submit button below is hidden there: "Use these readings" starts
+            the recommendation itself. */}
+        {!usingSensor && notesField}
 
         {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 

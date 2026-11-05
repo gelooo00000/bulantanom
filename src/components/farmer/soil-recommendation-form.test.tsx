@@ -328,6 +328,24 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(create.mock.calls[0][0]).not.toHaveProperty("soil_fertility");
   });
 
+  it("asks for Additional Soil Information under the readings and sends it", async () => {
+    create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
+    render(<SoilRecommendationForm />);
+    await userEvent.click(await screen.findByRole("button", { name: /use the arduino sensor/i }));
+    expect(screen.queryByLabelText(/additional soil information/i)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /^go$/i }));
+    await userEvent.type(
+      await screen.findByLabelText(/additional soil information/i),
+      "Dries out fast",
+    );
+    await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({ notes: "Dries out fast" });
+  });
+
   it("explains a probe that is not answering and keeps manual entry available", async () => {
     const { SensorError } = await import("@/lib/arduino/soil-sensor");
     readSoilSensor.mockRejectedValue(new SensorError("probe_not_answering"));
