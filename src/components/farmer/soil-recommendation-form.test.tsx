@@ -354,6 +354,16 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(create.mock.calls[0][0]).toMatchObject({ nitrogen: 40, phosphorus: 30, potassium: 50 });
   });
 
+  it("hides See Result while the Arduino steps are open", async () => {
+    fetchHistory.mockResolvedValue([analyzed]);
+    render(<SoilRecommendationForm />);
+    expect(await screen.findByRole("button", { name: /see result/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /use the arduino sensor/i }));
+    expect(screen.queryByRole("button", { name: /see result/i })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /type the readings instead/i }));
+    expect(screen.getByRole("button", { name: /see result/i })).toBeInTheDocument();
+  });
+
   it("asks for Additional Soil Information under the readings and sends it", async () => {
     create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
     render(<SoilRecommendationForm />);

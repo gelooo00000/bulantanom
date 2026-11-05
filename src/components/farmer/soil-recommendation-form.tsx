@@ -275,7 +275,8 @@ export function SoilRecommendationForm() {
   }
 
   let headerAction: ReactNode = null;
-  if (status === "idle" && history.length > 0) {
+  // Not during the Arduino steps: they lead to the result themselves.
+  if (status === "idle" && history.length > 0 && !usingSensor) {
     headerAction = (
       <Button variant="outline" onClick={showResult}>
         {t.seeResult}
