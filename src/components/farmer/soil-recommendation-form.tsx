@@ -508,18 +508,22 @@ export function SoilRecommendationForm() {
           </>
         )}
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="notes">
-            {t.additionalInfo}{" "}
-            <span className="text-muted-foreground font-normal">({t.optional})</span>
-          </Label>
-          <Textarea
-            id="notes"
-            placeholder={t.additionalInfoHint}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
+        {/* Hidden while the Arduino flow is open: it only asks for the
+            sensor, and anything typed earlier is kept. */}
+        {!usingSensor && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="notes">
+              {t.additionalInfo}{" "}
+              <span className="text-muted-foreground font-normal">({t.optional})</span>
+            </Label>
+            <Textarea
+              id="notes"
+              placeholder={t.additionalInfoHint}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+        )}
 
         {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 

@@ -8,7 +8,6 @@ import {
   LoaderCircle,
   RotateCw,
   Sprout,
-  TriangleAlert,
   Usb,
 } from "lucide-react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
@@ -113,10 +112,6 @@ export function ArduinoSensorWizard({
         </span>
         <h2 className="font-heading text-lg font-semibold">{t("arduino.signTitle")}</h2>
         <p className="text-muted-foreground text-sm">{t("arduino.introBody")}</p>
-        <p className="text-muted-foreground flex gap-2 text-xs">
-          <TriangleAlert className="text-risk-medium mt-0.5 size-3.5 shrink-0" />
-          {t("arduino.npkNote")}
-        </p>
       </div>
     );
   } else if (step === 2) {
@@ -191,10 +186,6 @@ export function ArduinoSensorWizard({
               </div>
             )}
           </>
-        )}
-
-        {supported && state.kind === "done" && (
-          <p className="text-muted-foreground text-xs">{t("arduino.npkNote")}</p>
         )}
       </div>
     );

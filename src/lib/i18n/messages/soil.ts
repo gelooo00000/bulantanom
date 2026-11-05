@@ -47,11 +47,6 @@ export const soil = defineMessages({
     fil: "Sinusukat ng sensor ang temperatura, basa, conductivity, pH, nitrogen, phosphorus at potassium ng lupa - lahat ng sukat na kailangan ng form.",
     bik: "Sinusukat san sensor an temperatura, kabasa, conductivity, pH, nitrogen, phosphorus asin potassium san daga - ngatanan na sukat na kinahanglan san form.",
   },
-  "arduino.npkNote": {
-    en: "Nitrogen, phosphorus and potassium from the sensor are estimates, not lab results.",
-    fil: "Tantiya lang ang nitrogen, phosphorus at potassium mula sa sensor, hindi resulta ng laboratoryo.",
-    bik: "Tantiya sana an nitrogen, phosphorus asin potassium hali sa sensor, bako resulta san laboratoryo.",
-  },
   "arduino.howTitle": {
     en: "How to use the sensor",
     fil: "Paano gamitin ang sensor",
