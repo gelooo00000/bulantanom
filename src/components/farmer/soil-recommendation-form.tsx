@@ -509,7 +509,8 @@ export function SoilRecommendationForm() {
         )}
 
         {/* Hidden while the Arduino flow is open: it only asks for the
-            sensor, and anything typed earlier is kept. */}
+            sensor, and anything typed earlier is kept. The submit button
+            below is hidden for the same reason. */}
         {!usingSensor && (
           <div className="flex flex-col gap-2">
             <Label htmlFor="notes">
@@ -527,10 +528,13 @@ export function SoilRecommendationForm() {
 
         {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 
-        <Button type="submit" size="lg" className="self-start">
-          {t.submit}
-          <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-        </Button>
+        {/* The Arduino flow starts the recommendation itself. */}
+        {!usingSensor && (
+          <Button type="submit" size="lg" className="self-start">
+            {t.submit}
+            <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
+          </Button>
+        )}
       </form>
     </>
   );
