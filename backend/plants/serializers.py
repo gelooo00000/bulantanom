@@ -454,9 +454,9 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
         "soil_moisture": (Decimal("0"), Decimal("100"), "%"),
         "soil_conductivity": (0, 20000, "µS/cm"),
         "soil_ph": (Decimal("3"), Decimal("10"), "pH"),
-        "nitrogen": (1, 1999, "mg/kg"),
-        "phosphorus": (1, 1999, "mg/kg"),
-        "potassium": (1, 1999, "mg/kg"),
+        "nitrogen": (0, 1999, "mg/kg"),
+        "phosphorus": (0, 1999, "mg/kg"),
+        "potassium": (0, 1999, "mg/kg"),
     }
 
     class Meta:

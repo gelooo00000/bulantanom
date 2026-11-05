@@ -34,10 +34,10 @@ Temperature 28.5 °C · Moisture 45 % · Conductivity 850 µS/cm · pH 6.5 · Ni
 | CR-07 | Temperature out of range | Farmer A | Enter temperature 90, submit | Temp = 90 | Rejected: "Must be between -40 and 80 °C …" | | |
 | CR-08 | Moisture out of range | Farmer A | Enter moisture 120, submit | Moisture = 120 | Rejected: "Must be between 0 and 100 % …" | | |
 | CR-09 | Conductivity out of range | Farmer A | Enter conductivity 25000, submit | Conductivity = 25000 | Rejected: "Must be between 0 and 20000 µS/cm …" | | |
-| CR-10 | Nitrogen / Phosphorus / Potassium at 0 | Farmer A | Enter N = 0, submit. Repeat for P and K | N/P/K = 0 | Rejected: "Must be between 1 and 1999 mg/kg …" | | |
-| CR-11 | Nitrogen / Phosphorus / Potassium too high | Farmer A | Enter N = 2000, submit. Repeat for P and K | N/P/K = 2000 | Rejected with the 1–1999 mg/kg message. | | |
+| CR-10 | Nitrogen / Phosphorus / Potassium at 0 | Farmer A | Enter N = 0, submit. Repeat for P and K | N/P/K = 0 | Accepted: the Arduino probe reports 0 when it reads no nutrient. | | |
+| CR-11 | Nitrogen / Phosphorus / Potassium too high | Farmer A | Enter N = 2000, submit. Repeat for P and K | N/P/K = 2000 | Rejected with the 0–1999 mg/kg message. | | |
 | CR-12 | No Soil Fertility field | Farmer A | Open Crop Recommendation | – | Only the seven readings the Arduino sensor reports are shown; there is no Soil Fertility field. | | |
-| CR-13 | Boundary values are accepted | Farmer A | Submit readings exactly on the limits | Temp -40 / 80, Moisture 0 / 100, pH 3 / 10, N/P/K 1 / 1999, Conductivity 0 / 20000 | Accepted (no range error) for every boundary value. | | |
+| CR-13 | Boundary values are accepted | Farmer A | Submit readings exactly on the limits | Temp -40 / 80, Moisture 0 / 100, pH 3 / 10, N/P/K 0 / 1999, Conductivity 0 / 20000 | Accepted (no range error) for every boundary value. | | |
 | CR-14 | Notes too long | Farmer A | Paste more than 2000 characters into Notes, submit | 2001 characters | Rejected: "Please keep additional soil information under 2000 characters." | | |
 | CR-15 | Recommended crops come only from the catalog | CR-01 done | Look at every crop in the three crop sections | Result of CR-01 | Every crop is one that exists in the Add Plant crop list and has an emoji. No crop appears in more than one section. | | |
 | CR-16 | Different soil gives different advice | CR-01 done | Submit a clearly different reading set | Temp 33, Moisture 12, Conductivity 150, pH 4.8, N 15, P 8, K 30 | Recommended crops and warnings differ from CR-01 and refer to the low pH / dry soil / low nutrients. | | |
