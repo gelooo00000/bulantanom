@@ -457,7 +457,6 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
         "nitrogen": (1, 1999, "mg/kg"),
         "phosphorus": (1, 1999, "mg/kg"),
         "potassium": (1, 1999, "mg/kg"),
-        "soil_fertility": (0, 3000, "mg/kg"),
     }
 
     class Meta:
@@ -472,6 +471,7 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
             "nitrogen",
             "phosphorus",
             "potassium",
+            # No longer collected; read-only so older rows still return it.
             "soil_fertility",
             "notes",
             # Pre-detector categorical answers, read-only so the LGU report
@@ -510,6 +510,7 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
             "legacy_potassium",
             "legacy_organic_matter",
             "has_sensor_readings",
+            "soil_fertility",
             "suitable_fruits",
             "suitable_vegetables",
             "suitable_crops",
@@ -529,11 +530,11 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """
-        Range-check every reading, and require all eight on a new assessment.
+        Range-check every reading, and require all seven on a new assessment.
 
         Reported per field rather than as one combined message, so the form
         can mark the offending input instead of the farmer hunting for which
-        of eight numbers was wrong.
+        of seven numbers was wrong.
         """
         errors = {}
         creating = self.instance is None

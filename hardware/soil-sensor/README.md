@@ -36,7 +36,7 @@ If readings never arrive, swap A and B first: it is the most common mistake.
 
 Use Chrome or Edge on a computer; Safari and iPhones cannot read USB devices.
 On Crop Recommendation, choose **Use the Arduino sensor**, push the probe into
-the soil, plug in the ESP32, and press **Go**. Soil Fertility is not measured by
-this probe, so it is still typed in by hand.
+the soil, plug in the ESP32, and press **Go**. The probe fills in all seven readings
+and the recommendation starts straight away.
 
 The probe's N, P and K are estimates, not lab results.

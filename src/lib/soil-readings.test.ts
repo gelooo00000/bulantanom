@@ -14,7 +14,7 @@ import { SENSOR_FIELDS, validateReading } from "@/lib/soil-options";
 const byKey = Object.fromEntries(SENSOR_FIELDS.map((f) => [f.key, f]));
 
 describe("sensor field definitions", () => {
-  it("covers exactly the eight readings the detector reports", () => {
+  it("covers exactly the seven readings the detector reports", () => {
     expect(SENSOR_FIELDS.map((f) => f.key)).toEqual([
       "soil_temperature",
       "soil_moisture",
@@ -23,7 +23,6 @@ describe("sensor field definitions", () => {
       "nitrogen",
       "phosphorus",
       "potassium",
-      "soil_fertility",
     ]);
   });
 
@@ -36,7 +35,6 @@ describe("sensor field definitions", () => {
       nitrogen: [1, 1999],
       phosphorus: [1, 1999],
       potassium: [1, 1999],
-      soil_fertility: [0, 3000],
     };
     for (const field of SENSOR_FIELDS) {
       expect([field.min, field.max]).toEqual(expected[field.key]);
@@ -78,7 +76,6 @@ describe("validateReading", () => {
     expect(validateReading(byKey.soil_moisture, "101")).toMatch(/between 0 and 100/);
     expect(validateReading(byKey.soil_conductivity, "20001")).toMatch(/20000/);
     expect(validateReading(byKey.nitrogen, "2000")).toMatch(/1999/);
-    expect(validateReading(byKey.soil_fertility, "3001")).toMatch(/3000/);
   });
 
   it("rejects readings below the sensor's range", () => {

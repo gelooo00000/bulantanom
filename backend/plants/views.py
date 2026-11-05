@@ -822,7 +822,6 @@ class SoilRecommendationListCreateView(generics.ListCreateAPIView):
         "nitrogen",
         "phosphorus",
         "potassium",
-        "soil_fertility",
         "notes",
     )
 

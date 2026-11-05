@@ -10,14 +10,13 @@
  * reads those lines with the Web Serial API, which Chrome and Edge offer on
  * computers. Safari and iPhones have no Web Serial at all.
  *
- * The probe measures seven of the form's eight readings. Soil Fertility is
- * not one of them and stays a manual entry.
+ * The probe measures all seven of the form's readings.
  */
 
 import type { SensorField } from "@/lib/soil-options";
 
-/** The form fields the probe fills in; Soil Fertility is not among them. */
-export type MeasuredField = Exclude<SensorField["key"], "soil_fertility">;
+/** The form fields the probe fills in: every one of them. */
+export type MeasuredField = SensorField["key"];
 
 export type SensorReadings = Record<MeasuredField, number>;
 

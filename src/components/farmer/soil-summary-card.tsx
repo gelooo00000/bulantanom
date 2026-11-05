@@ -94,10 +94,8 @@ export function SoilSummaryCard({ soil }: { soil: SoilRecommendation | null }) {
                 value={soil.nitrogen === null ? null : `${soil.nitrogen} mg/kg`}
               />
               <Fact
-                label="Soil Fertility"
-                value={
-                  soil.soil_fertility === null ? null : `${soil.soil_fertility} mg/kg`
-                }
+                label="Potassium (K)"
+                value={soil.potassium === null ? null : `${soil.potassium} mg/kg`}
               />
             </>
           ) : (

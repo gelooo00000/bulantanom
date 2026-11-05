@@ -43,9 +43,9 @@ export const soil = defineMessages({
   "arduino.next": { en: "Next", fil: "Susunod", bik: "Sunod" },
   "arduino.back": { en: "Back", fil: "Bumalik", bik: "Balik" },
   "arduino.introBody": {
-    en: "The sensor measures soil moisture, temperature, conductivity, pH, nitrogen, phosphorus and potassium. You still type Soil Fertility yourself.",
-    fil: "Sinusukat ng sensor ang basa, temperatura, conductivity, pH, nitrogen, phosphorus at potassium ng lupa. Ikaw pa rin ang magta-type ng Soil Fertility.",
-    bik: "Sinusukat san sensor an kabasa, temperatura, conductivity, pH, nitrogen, phosphorus asin potassium san daga. Ikaw pa man an mata-type san Soil Fertility.",
+    en: "The sensor measures soil temperature, moisture, conductivity, pH, nitrogen, phosphorus and potassium - every reading the form needs.",
+    fil: "Sinusukat ng sensor ang temperatura, basa, conductivity, pH, nitrogen, phosphorus at potassium ng lupa - lahat ng sukat na kailangan ng form.",
+    bik: "Sinusukat san sensor an temperatura, kabasa, conductivity, pH, nitrogen, phosphorus asin potassium san daga - ngatanan na sukat na kinahanglan san form.",
   },
   "arduino.npkNote": {
     en: "Nitrogen, phosphorus and potassium from the sensor are estimates, not lab results.",
@@ -145,9 +145,9 @@ export const soil = defineMessages({
     bik: "Natanggal an Arduino. Isaksak ini giraray asin probaran utro.",
   },
   "arduino.filledNotice": {
-    en: "Seven readings were filled in from the sensor. Type Soil Fertility, then press Get Recommendation.",
-    fil: "Napunan na ang pitong sukat mula sa sensor. I-type ang Soil Fertility, saka pindutin ang Kunin ang Rekomendasyon.",
-    bik: "Napunan na an pito na sukat hali sa sensor. I-type an Soil Fertility, dangan pinduton an Kuaon an Rekomendasyon.",
+    en: "All seven readings were filled in from the sensor.",
+    fil: "Napunan na ang pitong sukat mula sa sensor.",
+    bik: "Napunan na an pito na sukat hali sa sensor.",
   },
 
   "soil.resultTitle": {
@@ -232,9 +232,9 @@ export const soil = defineMessages({
     bik: "Mga Sukat san Soil Detector",
   },
   "soil.sensorSectionHint": {
-    en: "Enter the readings from your soil detector. All eight are needed for a crop recommendation.",
-    fil: "Ilagay ang mga sukat mula sa iyong soil detector. Kailangan ang lahat ng walo para sa rekomendasyon ng pananim.",
-    bik: "Ibutang an mga sukat hali sa imo soil detector. Kinahanglan an ngatanan na walo para sa rekomendasyon san tanom.",
+    en: "Enter the readings from your soil detector. All seven are needed for a crop recommendation.",
+    fil: "Ilagay ang mga sukat mula sa iyong soil detector. Kailangan ang lahat ng pito para sa rekomendasyon ng pananim.",
+    bik: "Ibutang an mga sukat hali sa imo soil detector. Kinahanglan an ngatanan na pito para sa rekomendasyon san tanom.",
   },
   "soil.analyzing": {
     en: "Analyzing your soil information…",
@@ -335,11 +335,6 @@ export const soil = defineMessages({
   "sensor.nitrogen": { en: "Nitrogen (N)", fil: "Nitrogen (N)", bik: "Nitrogen (N)" },
   "sensor.phosphorus": { en: "Phosphorus (P)", fil: "Phosphorus (P)", bik: "Phosphorus (P)" },
   "sensor.potassium": { en: "Potassium (K)", fil: "Potassium (K)", bik: "Potassium (K)" },
-  "sensor.soil_fertility": {
-    en: "Soil Fertility",
-    fil: "Taba ng Lupa",
-    bik: "Kataba san Daga",
-  },
   "sensor.range": {
     en: "{min} to {max} {unit}",
     fil: "{min} hanggang {max} {unit}",

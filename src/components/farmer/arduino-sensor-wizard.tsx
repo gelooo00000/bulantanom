@@ -59,8 +59,6 @@ type ReadState =
   | { kind: "done"; readings: SensorReadings }
   | { kind: "error"; message: string; received?: string };
 
-const MEASURED_SPECS = SENSOR_FIELDS.filter((field) => field.key !== "soil_fertility");
-
 /**
  * Three pages: what the sensor does, how to use it, then Go. Go reads the
  * probe over USB and shows the readings; "Use these readings" hands them to
@@ -159,14 +157,14 @@ export function ArduinoSensorWizard({
           </p>
         ) : state.kind === "done" ? (
           <dl className="grid gap-2 sm:grid-cols-2">
-            {MEASURED_SPECS.map((field) => (
+            {SENSOR_FIELDS.map((field) => (
               <div
                 key={field.key}
                 className="border-border flex items-baseline justify-between rounded-md border px-3 py-2"
               >
                 <dt className="text-muted-foreground text-xs">{sensorLabel(field, t)}</dt>
                 <dd className="text-sm font-medium">
-                  {toFormValues(state.readings)[field.key as MeasuredField]} {field.unit}
+                  {toFormValues(state.readings)[field.key]} {field.unit}
                 </dd>
               </div>
             ))}

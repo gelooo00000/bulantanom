@@ -112,7 +112,7 @@ describe("SoilRecommendationForm retry", () => {
   });
 });
 
-/** Types a valid reading into all eight soil detector fields. */
+/** Types a valid reading into all seven soil detector fields. */
 async function fillReadings() {
   const values: Record<string, string> = {
     "soil-soil-temperature": "28.5",
@@ -122,7 +122,6 @@ async function fillReadings() {
     "soil-nitrogen": "120",
     "soil-phosphorus": "80",
     "soil-potassium": "150",
-    "soil-soil-fertility": "600",
   };
   for (const [id, value] of Object.entries(values)) {
     await userEvent.type(document.getElementById(id) as HTMLElement, value);
@@ -315,29 +314,18 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     ).toBeInTheDocument();
   });
 
-  it("fills seven readings and asks for Soil Fertility, which the probe does not measure", async () => {
-    render(<SoilRecommendationForm />);
-    await readWithSensor();
-
-    expect(await screen.findByLabelText("Soil pH")).toHaveValue(6.5);
-    expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(120);
-    expect(screen.getByLabelText("Soil Fertility")).toHaveValue(null);
-    expect(screen.getByRole("status")).toHaveTextContent(/type soil fertility/i);
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it("goes straight to the recommendation when Soil Fertility is already typed", async () => {
+  it("fills all seven readings and goes straight to the recommendation", async () => {
     create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
     render(<SoilRecommendationForm />);
-    await userEvent.type(await screen.findByLabelText("Soil Fertility"), "600");
     await readWithSensor();
 
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0][0]).toMatchObject({
+      soil_temperature: 28.5,
       soil_ph: 6.5,
       nitrogen: 120,
-      soil_fertility: 600,
     });
+    expect(create.mock.calls[0][0]).not.toHaveProperty("soil_fertility");
   });
 
   it("explains a probe that is not answering and keeps manual entry available", async () => {

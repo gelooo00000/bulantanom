@@ -58,7 +58,6 @@ VALID_SOIL = {
     "nitrogen": 120,
     "phosphorus": 80,
     "potassium": 150,
-    "soil_fertility": 600,
     "notes": "The soil dries quickly after two sunny days.",
 }
 

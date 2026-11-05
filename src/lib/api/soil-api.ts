@@ -80,7 +80,6 @@ export type SoilRecommendationInput = {
   nitrogen: number;
   phosphorus: number;
   potassium: number;
-  soil_fertility: number;
   notes: string;
 };
 

@@ -65,7 +65,8 @@ export const NUTRIENT_OPTIONS: SoilOption[] = [
 
 /** The six AI result section titles, plus the form's own copy. */
 /**
- * The eight readings the farm's soil detector reports.
+ * The seven readings the farm's soil detector reports - the same seven the
+ * Arduino sensor fills in.
  *
  * One definition drives the label, the unit, the input constraints and the
  * client-side range check, so the form and its validation can never disagree
@@ -82,8 +83,7 @@ export type SensorField = {
     | "soil_ph"
     | "nitrogen"
     | "phosphorus"
-    | "potassium"
-    | "soil_fertility";
+    | "potassium";
   label: string;
   unit: string;
   min: number;
@@ -157,15 +157,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     step: 1,
     placeholder: "150",
   },
-  {
-    key: "soil_fertility",
-    label: "Soil Fertility",
-    unit: "mg/kg",
-    min: 0,
-    max: 3000,
-    step: 1,
-    placeholder: "600",
-  },
 ];
 
 /**
@@ -225,7 +216,7 @@ export const SOIL_STRINGS = {
   submit: "Get Recommendation",
   sensorSectionTitle: "Soil Detector Readings",
   sensorSectionHint:
-    "Enter the readings from your soil detector. All eight are needed for a crop recommendation.",
+    "Enter the readings from your soil detector. All seven are needed for a crop recommendation.",
   analyzing: "Analyzing your soil information…",
   analyzingHint: "Reviewing what you reported to suggest suitable crops.",
   aiUnavailable: "AI recommendation is temporarily unavailable.",

@@ -21,7 +21,7 @@
 Page: **Farmer → Crop Recommendation** (`/farmer/soil-recommendation`)
 
 **Valid reading set used below ("Set V"):**
-Temperature 28.5 °C · Moisture 45 % · Conductivity 850 µS/cm · pH 6.5 · Nitrogen 120 mg/kg · Phosphorus 45 mg/kg · Potassium 180 mg/kg · Fertility 900 mg/kg
+Temperature 28.5 °C · Moisture 45 % · Conductivity 850 µS/cm · pH 6.5 · Nitrogen 120 mg/kg · Phosphorus 45 mg/kg · Potassium 180 mg/kg
 
 | ID | Test Scenario | Pre-condition | Test Steps | Test Data | Expected Result | Actual Result | Status |
 |---|---|---|---|---|---|---|---|
@@ -36,11 +36,11 @@ Temperature 28.5 °C · Moisture 45 % · Conductivity 850 µS/cm · pH 6.5 · Ni
 | CR-09 | Conductivity out of range | Farmer A | Enter conductivity 25000, submit | Conductivity = 25000 | Rejected: "Must be between 0 and 20000 µS/cm …" | | |
 | CR-10 | Nitrogen / Phosphorus / Potassium at 0 | Farmer A | Enter N = 0, submit. Repeat for P and K | N/P/K = 0 | Rejected: "Must be between 1 and 1999 mg/kg …" | | |
 | CR-11 | Nitrogen / Phosphorus / Potassium too high | Farmer A | Enter N = 2000, submit. Repeat for P and K | N/P/K = 2000 | Rejected with the 1–1999 mg/kg message. | | |
-| CR-12 | Fertility out of range | Farmer A | Enter fertility 3500, submit | Fertility = 3500 | Rejected: "Must be between 0 and 3000 mg/kg …" | | |
-| CR-13 | Boundary values are accepted | Farmer A | Submit readings exactly on the limits | Temp -40 / 80, Moisture 0 / 100, pH 3 / 10, N/P/K 1 / 1999, Conductivity 0 / 20000, Fertility 0 / 3000 | Accepted (no range error) for every boundary value. | | |
+| CR-12 | No Soil Fertility field | Farmer A | Open Crop Recommendation | – | Only the seven readings the Arduino sensor reports are shown; there is no Soil Fertility field. | | |
+| CR-13 | Boundary values are accepted | Farmer A | Submit readings exactly on the limits | Temp -40 / 80, Moisture 0 / 100, pH 3 / 10, N/P/K 1 / 1999, Conductivity 0 / 20000 | Accepted (no range error) for every boundary value. | | |
 | CR-14 | Notes too long | Farmer A | Paste more than 2000 characters into Notes, submit | 2001 characters | Rejected: "Please keep additional soil information under 2000 characters." | | |
 | CR-15 | Recommended crops come only from the catalog | CR-01 done | Look at every crop in the three crop sections | Result of CR-01 | Every crop is one that exists in the Add Plant crop list and has an emoji. No crop appears in more than one section. | | |
-| CR-16 | Different soil gives different advice | CR-01 done | Submit a clearly different reading set | Temp 33, Moisture 12, Conductivity 150, pH 4.8, N 15, P 8, K 30, Fertility 80 | Recommended crops and warnings differ from CR-01 and refer to the low pH / dry soil / low nutrients. | | |
+| CR-16 | Different soil gives different advice | CR-01 done | Submit a clearly different reading set | Temp 33, Moisture 12, Conductivity 150, pH 4.8, N 15, P 8, K 30 | Recommended crops and warnings differ from CR-01 and refer to the low pH / dry soil / low nutrients. | | |
 | CR-17 | AI is unavailable | Farmer A; turn off internet on the server or remove `GEMINI_API_KEY` | Submit Set V | Set V | Readings are still **saved**. Page shows "AI recommendation is temporarily unavailable." with a **Try Again** button. The entry appears in history as not analyzed. | | |
 | CR-18 | Try Again after a failed analysis | CR-17 done, AI back online | Click **Try Again** | Saved record from CR-17 | The same readings are analyzed (not re-typed) and the six-section result appears. | | |
 | CR-19 | Try Again on an already-analyzed record | CR-01 done | Call Try Again / reanalyze on the CR-01 record | Record from CR-01 | Same result is returned unchanged; no new AI call is made. | | |

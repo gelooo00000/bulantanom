@@ -182,7 +182,6 @@ def _sensor_lines(soil) -> list[str]:
         f"  Nitrogen (N): {_reading(soil.nitrogen, 'mg/kg')}",
         f"  Phosphorus (P): {_reading(soil.phosphorus, 'mg/kg')}",
         f"  Potassium (K): {_reading(soil.potassium, 'mg/kg')}",
-        f"  Soil fertility: {_reading(soil.soil_fertility, 'mg/kg')}",
     ]
 
 

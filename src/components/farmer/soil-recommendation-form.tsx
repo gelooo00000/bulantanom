@@ -44,7 +44,7 @@ type Status = "idle" | "analyzing" | "done";
 /**
  * One labelled numeric reading with its unit.
  *
- * Extracted because the form has eight of them and they differ only by the
+ * Extracted because the form has seven of them and they differ only by the
  * spec they are handed. The unit sits inside the field rather than beside
  * the label, so it stays attached to the number when the grid wraps to one
  * column on a phone.
@@ -185,26 +185,16 @@ export function SoilRecommendationForm() {
   }
 
   /**
-   * The sensor's seven readings arrive. Soil Fertility is not one of them:
-   * with it already typed, the recommendation starts straight away; without
-   * it, the farmer is sent to that one field.
+   * The sensor's seven readings arrive - every field the form has - so the
+   * recommendation starts straight away.
    */
   async function handleSensorReadings(values: Record<MeasuredField, string>) {
     const merged: Record<string, string> = { ...readings, ...values };
     setReadings(merged);
     setFieldErrors({});
     setUsingSensor(false);
-    const fertility = SENSOR_FIELDS.find((field) => field.key === "soil_fertility")!;
-    if (validateReading(fertility, merged.soil_fertility ?? "") === null) {
-      setSensorNotice(null);
-      await analyze(merged);
-      return;
-    }
     setSensorNotice(translate("arduino.filledNotice"));
-    // After the readings section is back on screen.
-    window.setTimeout(() => {
-      formRef.current?.querySelector<HTMLInputElement>("#soil-soil-fertility")?.focus();
-    }, 0);
+    await analyze(merged);
   }
 
   async function analyze(values: Record<string, string>) {
