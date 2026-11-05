@@ -137,6 +137,19 @@ describe("Weekly assessment: photo first", () => {
     expect(noneChosen(/Watering frequency/)).toBe(true);
   });
 
+  it("lets the photo's analysis answer Growth", async () => {
+    validateEvidence.mockResolvedValue({
+      ...ACCEPTED,
+      suggested_answers: { growth_condition: "slower_than_expected" },
+    });
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.upload(screen.getByLabelText("Take photo"), photo());
+    await screen.findByText(/1 answer was filled in from your photo/);
+    expect(chosen(/Growth compared/)).toHaveAccessibleName("Slower than expected");
+  });
+
   it("keeps submit off while a refused photo is selected", async () => {
     validateEvidence.mockResolvedValue({
       ...ACCEPTED,

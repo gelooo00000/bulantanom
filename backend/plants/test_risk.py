@@ -919,6 +919,7 @@ class EvidenceValidationServiceTests(APITestCase):
                 "detected_subject": "papaya plant",
                 "reason": "A papaya plant.",
                 "observed": {
+                    "growth_condition": "slower_than_expected",
                     "health_condition": "slightly_unhealthy",
                     "leaf_condition": "slight_yellowing",
                     "flowering_status": "unknown",
@@ -928,7 +929,11 @@ class EvidenceValidationServiceTests(APITestCase):
         )
         self.assertEqual(
             result["suggested_answers"],
-            {"health_condition": "slightly_unhealthy", "leaf_condition": "slight_yellowing"},
+            {
+                "growth_condition": "slower_than_expected",
+                "health_condition": "slightly_unhealthy",
+                "leaf_condition": "slight_yellowing",
+            },
         )
 
     def test_rejected_or_low_confidence_photo_suggests_nothing(self):

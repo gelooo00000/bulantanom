@@ -85,6 +85,7 @@ export type EvidenceValidation = {
 };
 
 export type SuggestibleAnswer =
+  | "growth_condition"
   | "health_condition"
   | "leaf_condition"
   | "flowering_status"

@@ -130,7 +130,6 @@ function FormSection({
 /** The choice questions the form can start already answered. */
 type Prefilled =
   | SuggestibleAnswer
-  | "growth_condition"
   | "watering_frequency"
   | "soil_moisture";
 type AnswerSource = "photo";

@@ -95,6 +95,9 @@ def stage_check_applies(crop, duration_days: int | None) -> bool:
 # Answers a photo can suggest, with the values the assessment form accepts
 # (Assessment's TextChoices). "unknown" means the photo does not show it.
 SUGGESTIBLE = {
+    "growth_condition": (
+        "faster_than_expected", "as_expected", "slower_than_expected", "stunted",
+    ),
     "health_condition": ("healthy", "slightly_unhealthy", "unhealthy"),
     "leaf_condition": (
         "healthy", "slight_yellowing", "yellowing", "spots", "wilting", "damaged",
@@ -213,6 +216,12 @@ even when it does not fit the plant's age: the system makes the comparison.
 `observed` — what the photo shows of the plant, used to pre-fill the
 farmer's weekly checklist. Fill it only for a "match"; for any other verdict
 set every field to "unknown".
+- growth_condition: the plant's size and stage compared with what its age
+  allows (`plant_age` in the context: days since planting and the expected
+  stage), and, when given, with the previous photo. "faster_than_expected"
+  (clearly bigger or further along than its age), "as_expected",
+  "slower_than_expected" (smaller or behind for its age) or "stunted" (barely
+  grown, tiny for its age). With no plant age in the context, "unknown".
 - health_condition: overall look of the plant. "healthy", "slightly_unhealthy"
   or "unhealthy".
 - leaf_condition: "healthy" (green), "slight_yellowing", "yellowing",
