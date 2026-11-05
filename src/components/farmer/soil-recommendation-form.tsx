@@ -11,10 +11,10 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { ArduinoSensorSign, ArduinoSensorWizard } from "@/components/farmer/arduino-sensor-wizard";
+import { SoilNumberField } from "@/components/farmer/soil-number-field";
 import { SoilResultCard } from "@/components/farmer/soil-result-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/client";
@@ -28,81 +28,11 @@ import {
 } from "@/lib/api/soil-api";
 import type { MeasuredField } from "@/lib/arduino/soil-sensor";
 import { useAuth } from "@/lib/auth/auth-context";
-import { cn } from "@/lib/utils";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { useLanguage } from "@/lib/i18n";
-import {
-  SENSOR_FIELDS,
-  sensorLabel,
-  useSoilStrings,
-  validateReading,
-  type SensorField,
-} from "@/lib/soil-options";
+import { SENSOR_FIELDS, useSoilStrings, validateReading } from "@/lib/soil-options";
 
 type Status = "idle" | "analyzing" | "done";
-
-/**
- * One labelled numeric reading with its unit.
- *
- * Extracted because the form has seven of them and they differ only by the
- * spec they are handed. The unit sits inside the field rather than beside
- * the label, so it stays attached to the number when the grid wraps to one
- * column on a phone.
- */
-function SoilNumberField({
-  field,
-  value,
-  error,
-  onChange,
-}: {
-  field: SensorField;
-  value: string;
-  error?: string;
-  onChange: (value: string) => void;
-}) {
-  const { t } = useLanguage();
-  const id = `soil-${field.key.replace(/_/g, "-")}`;
-  const errorId = `${id}-error`;
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{sensorLabel(field, t)}</Label>
-      <div className="relative">
-        <Input
-          id={id}
-          type="number"
-          inputMode="decimal"
-          min={field.min}
-          max={field.max}
-          step={field.step}
-          placeholder={field.placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className={cn("pr-16", error && "border-destructive")}
-        />
-        {/* Not a <label>: it names the unit, not the control, and a second
-            label would compete with the real one for the field's name. */}
-        <span
-          aria-hidden="true"
-          className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs"
-        >
-          {field.unit}
-        </span>
-      </div>
-      {error ? (
-        <p id={errorId} className="text-destructive text-xs">
-          {error}
-        </p>
-      ) : (
-        <p className="text-muted-foreground text-xs">
-          {t("sensor.range", { min: field.min, max: field.max, unit: field.unit })}
-        </p>
-      )}
-    </div>
-  );
-}
 
 export function SoilRecommendationForm() {
   const { accessToken } = useAuth();

@@ -328,6 +328,32 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(create.mock.calls[0][0]).not.toHaveProperty("soil_fertility");
   });
 
+  it("flags a 0 N, P or K reading on the sensor page and sends once it is fixed", async () => {
+    readSoilSensor.mockResolvedValue({ ...SENSOR_READING, nitrogen: 0, phosphorus: 0, potassium: 0 });
+    create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
+    render(<SoilRecommendationForm />);
+    await readWithSensor();
+
+    expect(await screen.findByText(/nitrogen \(n\) must be between 1 and 1999/i)).toBeInTheDocument();
+    expect(screen.getByText(/potassium \(k\) must be between 1 and 1999/i)).toBeInTheDocument();
+    expect(screen.getByText("Step 3 of 3")).toBeInTheDocument();
+    expect(create).not.toHaveBeenCalled();
+
+    for (const [label, value] of [
+      ["Nitrogen (N)", "40"],
+      ["Phosphorus (P)", "30"],
+      ["Potassium (K)", "50"],
+    ]) {
+      const input = screen.getByLabelText(label);
+      await userEvent.clear(input);
+      await userEvent.type(input, value);
+    }
+    await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({ nitrogen: 40, phosphorus: 30, potassium: 50 });
+  });
+
   it("asks for Additional Soil Information under the readings and sends it", async () => {
     create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
     render(<SoilRecommendationForm />);

@@ -605,18 +605,18 @@ class SoilRecommendation(models.Model):
     )
     nitrogen = models.PositiveIntegerField(
         null=True, blank=True,
-        validators=[MaxValueValidator(1999)],
-        help_text="Nitrogen in mg/kg, 0 to 1999.",
+        validators=[MinValueValidator(1), MaxValueValidator(1999)],
+        help_text="Nitrogen in mg/kg, 1 to 1999.",
     )
     phosphorus = models.PositiveIntegerField(
         null=True, blank=True,
-        validators=[MaxValueValidator(1999)],
-        help_text="Phosphorus in mg/kg, 0 to 1999.",
+        validators=[MinValueValidator(1), MaxValueValidator(1999)],
+        help_text="Phosphorus in mg/kg, 1 to 1999.",
     )
     potassium = models.PositiveIntegerField(
         null=True, blank=True,
-        validators=[MaxValueValidator(1999)],
-        help_text="Potassium in mg/kg, 0 to 1999.",
+        validators=[MinValueValidator(1), MaxValueValidator(1999)],
+        help_text="Potassium in mg/kg, 1 to 1999.",
     )
     soil_fertility = models.PositiveIntegerField(
         null=True, blank=True,

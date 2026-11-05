@@ -200,14 +200,16 @@ class SoilSubmissionTests(SoilTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(SoilRecommendation.objects.count(), 0)
 
-    def test_zero_npk_from_the_arduino_probe_is_accepted(self):
+    def test_zero_npk_is_rejected(self):
+        """A probe that reads no nutrient reports 0, which is not a reading."""
         payload = dict(VALID_SOIL, nitrogen=0, phosphorus=0, potassium=0)
-        with patch("plants.views.generate_soil_recommendation", return_value=None):
-            response = self.client.post(
-                LIST_URL, payload, format="json", **self.auth("farmer@example.com")
-            )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
-        self.assertEqual(SoilRecommendation.objects.get().nitrogen, 0)
+        response = self.client.post(
+            LIST_URL, payload, format="json", **self.auth("farmer@example.com")
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        for field in ("nitrogen", "phosphorus", "potassium"):
+            self.assertIn(field, response.data)
+        self.assertEqual(SoilRecommendation.objects.count(), 0)
 
     def test_ai_fields_cannot_be_injected_by_the_client(self):
         """Every AI field is read-only — a client cannot fabricate advice."""

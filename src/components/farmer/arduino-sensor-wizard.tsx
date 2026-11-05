@@ -13,6 +13,7 @@ import {
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { useState, type ReactNode } from "react";
 
+import { SoilNumberField } from "@/components/farmer/soil-number-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +22,9 @@ import {
   SensorError,
   toFormValues,
   type MeasuredField,
-  type SensorReadings,
 } from "@/lib/arduino/soil-sensor";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
-import { SENSOR_FIELDS, sensorLabel } from "@/lib/soil-options";
+import { SENSOR_FIELDS, validateReading } from "@/lib/soil-options";
 
 /** The sign above the form: the feature works with the Arduino sensor. */
 export function ArduinoSensorSign({ onStart }: { onStart: () => void }) {
@@ -55,7 +55,7 @@ type Step = 1 | 2 | 3;
 type ReadState =
   | { kind: "ready" }
   | { kind: "reading" }
-  | { kind: "done"; readings: SensorReadings }
+  | { kind: "done" }
   | { kind: "error"; message: string; received?: string };
 
 /**
@@ -80,6 +80,10 @@ export function ArduinoSensorWizard({
   // Which way the pages slide: forward from the right, back from the left.
   const [direction, setDirection] = useState(1);
   const [state, setState] = useState<ReadState>({ kind: "ready" });
+  // What the sensor sent, as editable text, so a bad reading can be fixed
+  // here instead of sending the farmer back to the typed form.
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const supported = isSerialSupported();
 
   function goTo(next: Step) {
@@ -90,7 +94,10 @@ export function ArduinoSensorWizard({
   async function read() {
     setState({ kind: "reading" });
     try {
-      setState({ kind: "done", readings: await readSoilSensor() });
+      const readings = toFormValues(await readSoilSensor());
+      setValues(readings);
+      setErrors(validateAll(readings));
+      setState({ kind: "done" });
     } catch (err) {
       const code = err instanceof SensorError ? err.code : "disconnected";
       setState({
@@ -98,6 +105,33 @@ export function ArduinoSensorWizard({
         message: t(`arduino.error.${code}` as MessageKey),
         received: err instanceof SensorError ? err.received : undefined,
       });
+    }
+  }
+
+  function validateAll(next: Record<string, string>) {
+    const found: Record<string, string> = {};
+    for (const field of SENSOR_FIELDS) {
+      const message = validateReading(field, next[field.key] ?? "", t);
+      if (message) found[field.key] = message;
+    }
+    return found;
+  }
+
+  function setValue(key: string, value: string) {
+    setValues((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function submitReadings() {
+    const found = validateAll(values);
+    setErrors(found);
+    if (Object.keys(found).length === 0) {
+      onReadings(values as Record<MeasuredField, string>);
     }
   }
 
@@ -157,19 +191,17 @@ export function ArduinoSensorWizard({
           </p>
         ) : state.kind === "done" ? (
           <>
-            <dl className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               {SENSOR_FIELDS.map((field) => (
-                <div
+                <SoilNumberField
                   key={field.key}
-                  className="border-border flex items-baseline justify-between rounded-md border px-3 py-2"
-                >
-                  <dt className="text-muted-foreground text-xs">{sensorLabel(field, t)}</dt>
-                  <dd className="text-sm font-medium">
-                    {toFormValues(state.readings)[field.key]} {field.unit}
-                  </dd>
-                </div>
+                  field={field}
+                  value={values[field.key] ?? ""}
+                  error={errors[field.key]}
+                  onChange={(value) => setValue(field.key, value)}
+                />
               ))}
-            </dl>
+            </div>
             {afterReadings}
           </>
         ) : state.kind === "reading" ? (
@@ -266,7 +298,7 @@ export function ArduinoSensorWizard({
                 <RotateCw className="size-4" />
                 {t("arduino.readAgain")}
               </Button>
-              <Button type="button" onClick={() => onReadings(toFormValues(state.readings))}>
+              <Button type="button" onClick={submitReadings}>
                 {t("arduino.useReadings")}
                 <ArrowRight className="size-4" />
               </Button>
