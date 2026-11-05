@@ -134,32 +134,6 @@ type Prefilled =
   | "soil_moisture";
 type AnswerSource = "photo";
 
-const CARRIED: Prefilled[] = [
-  "growth_condition",
-  "health_condition",
-  "leaf_condition",
-  "mushroom_condition",
-  "flowering_status",
-  "fruiting_status",
-  "watering_frequency",
-  "soil_moisture",
-];
-
-/** A draft's answers that still fit this form: known questions this crop is asked. */
-function draftAnswers(
-  draft: { answers: Record<string, string> } | null,
-  skipQuestions: AssessmentQuestion[],
-): Partial<Record<Prefilled, string>> {
-  if (!draft) return {};
-  return Object.fromEntries(
-    Object.entries(draft.answers).filter(
-      ([field]) =>
-        (CARRIED as string[]).includes(field) &&
-        !skipQuestions.includes(field as AssessmentQuestion),
-    ),
-  );
-}
-
 /** A question's label, marked while its answer came from the photo. */
 function AnswerLabel({
   id,
@@ -244,24 +218,23 @@ function AssessmentFormBody({
   const [evidenceResult, setEvidenceResult] = useState<EvidenceValidation | null>(null);
   const uploadRef = useRef<EvidenceUploadHandle>(null);
 
-  // Today's unsent answers for this plant, if the farmer left mid-way. They
-  // are the farmer's own, so they win over the photo.
+  // Today's unsent height, notes and ticked symptoms, if the farmer left
+  // mid-way.
   const [draft] = useState(() => readDraft(plantId));
-  const [own] = useState(() => draftAnswers(draft, skipQuestions));
-  // Otherwise a question starts unanswered - not even the last check's
-  // answer: a ready-made "Healthy" or "Daily" could be submitted without a
-  // thought. The photo's analysis fills in what it can see.
-  const start = (field: Prefilled): string | null => own[field] || null;
+  // Every choice question starts unanswered, for every crop - not the last
+  // check's answer, and not one tapped earlier today: a ready-made answer
+  // could be submitted without a thought. The photo's analysis fills in
+  // what it can see; the farmer answers the rest.
 
   const [height, setHeight] = useState(draft?.height ?? "");
-  const [growth, setGrowth] = useState<string | null>(start("growth_condition"));
-  const [health, setHealth] = useState<string | null>(start("health_condition"));
-  const [leaf, setLeaf] = useState<string | null>(start("leaf_condition"));
-  const [flowering, setFlowering] = useState<string | null>(start("flowering_status"));
-  const [fruiting, setFruiting] = useState<string | null>(start("fruiting_status"));
-  const [mushroom, setMushroom] = useState<string | null>(start("mushroom_condition"));
-  const [watering, setWatering] = useState<string | null>(start("watering_frequency"));
-  const [soil, setSoil] = useState<string | null>(start("soil_moisture"));
+  const [growth, setGrowth] = useState<string | null>(null);
+  const [health, setHealth] = useState<string | null>(null);
+  const [leaf, setLeaf] = useState<string | null>(null);
+  const [flowering, setFlowering] = useState<string | null>(null);
+  const [fruiting, setFruiting] = useState<string | null>(null);
+  const [mushroom, setMushroom] = useState<string | null>(null);
+  const [watering, setWatering] = useState<string | null>(null);
+  const [soil, setSoil] = useState<string | null>(null);
   const symptoms = symptomsFor(cropId);
   const [pests, setPests] = useState<ReadonlySet<Pest>>(
     () => new Set(symptoms.pests.filter((item) => draft?.pests.includes(item))),
@@ -282,7 +255,7 @@ function AssessmentFormBody({
   // fruiting). It never replaces an answer the Farmer chose themselves.
   const [checkingPhoto, setCheckingPhoto] = useState(false);
   const [sources, setSources] = useState<Partial<Record<Prefilled, AnswerSource>>>({});
-  const touched = useRef(new Set<Prefilled>(Object.keys(own) as Prefilled[]));
+  const touched = useRef(new Set<Prefilled>());
   // Only the latest photo's check may update the form.
   const checkRun = useRef(0);
 
@@ -309,30 +282,12 @@ function AssessmentFormBody({
     setters[field](value);
   }
 
-  // Saved on every change. Reads `touched` here, in an effect: each answer
-  // the farmer gives also changes one of the values below, so this runs.
+  // Saved on every change. The choice answers are not kept: the form always
+  // starts them empty.
   useEffect(() => {
     if (status === "analyzing" || status === "done") return;
-    const values: Record<Prefilled, string | null> = {
-      growth_condition: growth,
-      health_condition: health,
-      leaf_condition: leaf,
-      flowering_status: flowering,
-      fruiting_status: fruiting,
-      mushroom_condition: mushroom,
-      watering_frequency: watering,
-      soil_moisture: soil,
-    };
-    saveDraft(plantId, {
-      answers: Object.fromEntries(
-        [...touched.current].map((field) => [field, values[field] ?? ""]),
-      ),
-      height,
-      notes,
-      pests: [...pests],
-      diseases: [...diseases],
-    });
-  }, [plantId, status, growth, health, leaf, mushroom, flowering, fruiting, watering, soil, height, notes, pests, diseases]);
+    saveDraft(plantId, { height, notes, pests: [...pests], diseases: [...diseases] });
+  }, [plantId, status, height, notes, pests, diseases]);
 
   // Evidence is mandatory: the risk reading is only meaningful when the photo
   // has been verified to show this crop.

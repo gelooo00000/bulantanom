@@ -3,9 +3,10 @@
  * in, so a dropped signal, a closed browser or a switch to another app does
  * not lose their answers.
  *
- * Only what the farmer chose themselves is kept (answers they tapped, height,
- * notes, ticked symptoms); the photo is not, since it must be taken fresh,
- * and the photo's suggestions are made again. A draft
+ * Only what the farmer wrote or ticked is kept (height, notes, ticked
+ * symptoms). The choice answers are not: the form always starts them empty,
+ * and the photo's analysis fills them in again. The photo is not kept
+ * either, since it must be taken fresh. A draft
  * comes back only on the day it was saved: by the next day the plant may
  * look different, so starting over is the honest default.
  *
@@ -16,8 +17,6 @@
 export type AssessmentDraft = {
   /** Local date it was saved, YYYY-MM-DD. */
   savedOn: string;
-  /** The farmer's own choice answers; "" means they cleared an optional one. */
-  answers: Record<string, string>;
   height: string;
   notes: string;
   pests: string[];
@@ -34,13 +33,9 @@ function today(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-/**
- * Nothing the farmer gave: no answer (a cleared one alone brings nothing
- * back), no height or notes, no ticks.
- */
+/** Nothing the farmer gave: no height or notes, no ticks. */
 function isEmpty(content: DraftContent): boolean {
   return (
-    Object.values(content.answers).every((value) => !value) &&
     !content.height.trim() &&
     !content.notes.trim() &&
     content.pests.length === 0 &&
@@ -58,9 +53,6 @@ export function readDraft(plantId: number): AssessmentDraft | null {
     const draft = JSON.parse(raw) as Partial<AssessmentDraft>;
     const valid =
       typeof draft.savedOn === "string" &&
-      typeof draft.answers === "object" &&
-      draft.answers !== null &&
-      Object.values(draft.answers).every((value) => typeof value === "string") &&
       typeof draft.height === "string" &&
       typeof draft.notes === "string" &&
       isStrings(draft.pests) &&

@@ -370,12 +370,12 @@ describe("Weekly assessment: draft", () => {
     return user;
   }
 
-  it("brings back today's unsent answers after the page is left", async () => {
+  it("brings back today's details but never a tapped answer", async () => {
     await answerSome();
     renderForm();
 
-    expect(screen.getByText(/Your answers from earlier today are back/)).toBeInTheDocument();
-    expect(chosen(/Leaf condition/)).toHaveAccessibleName("Slight yellowing");
+    expect(screen.getByText(/Your details from earlier today are back/)).toBeInTheDocument();
+    expect(noneChosen(/Leaf condition/)).toBe(true);
     const pests = screen.getByRole("group", { name: "Pests you have seen" });
     expect(within(pests).getByRole("checkbox", { name: /Mealybugs/ })).toBeChecked();
     expect(screen.getByLabelText(/What have you noticed/)).toHaveValue("Dahon naninilaw");
@@ -387,7 +387,7 @@ describe("Weekly assessment: draft", () => {
 
     await user.click(screen.getByRole("button", { name: "Start over" }));
 
-    expect(screen.queryByText(/Your answers from earlier today are back/)).toBeNull();
+    expect(screen.queryByText(/Your details from earlier today are back/)).toBeNull();
     const leaves = screen.getByRole("radiogroup", { name: /Leaf condition/ });
     expect(within(leaves).queryByRole("radio", { checked: true })).toBeNull();
     expect(window.localStorage.length).toBe(0);
@@ -398,27 +398,27 @@ describe("Weekly assessment: draft", () => {
       "bulantanom:assessment-draft:7",
       JSON.stringify({
         savedOn: "2026-01-01",
-        answers: { leaf_condition: "spots" },
         height: "",
-        notes: "",
+        notes: "Old note",
         pests: [],
         diseases: [],
       }),
     );
     renderForm();
 
-    expect(screen.queryByText(/Your answers from earlier today are back/)).toBeNull();
+    expect(screen.queryByText(/Your details from earlier today are back/)).toBeNull();
+    expect(noneChosen(/Growth compared/)).toBe(true);
     expect(window.localStorage.getItem("bulantanom:assessment-draft:7")).toBeNull();
   });
 });
 
 describe("Weekly assessment: an empty draft", () => {
-  it("does not claim answers are back when only a cleared answer was saved", () => {
+  it("ignores a saved answer from an older version and claims nothing is back", () => {
     window.localStorage.setItem(
       "bulantanom:assessment-draft:7",
       JSON.stringify({
         savedOn: new Date().toLocaleDateString("en-CA"),
-        answers: { soil_moisture: "" },
+        answers: { growth_condition: "as_expected" },
         height: "",
         notes: "",
         pests: [],
@@ -427,7 +427,8 @@ describe("Weekly assessment: an empty draft", () => {
     );
     renderForm();
 
-    expect(screen.queryByText(/Your answers from earlier today are back/)).toBeNull();
+    expect(screen.queryByText(/Your details from earlier today are back/)).toBeNull();
+    expect(noneChosen(/Growth compared/)).toBe(true);
     expect(window.localStorage.getItem("bulantanom:assessment-draft:7")).toBeNull();
   });
 });

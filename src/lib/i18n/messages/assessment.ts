@@ -109,9 +109,9 @@ export const assessment = defineMessages({
     bik: "Hulaton na matapos an pagsusi san litrato.",
   },
   "asmt.draftBack": {
-    en: "Your answers from earlier today are back, so you can carry on. Take the photo again to submit.",
-    fil: "Bumalik ang mga sagot mo kanina, kaya maaari kang magpatuloy. Kumuha ulit ng litrato para maisumite.",
-    bik: "Nagbalik an mga simbag mo kaina, kaya pwede ka magpadagos. Magkuha giraray nin litrato para maisumite.",
+    en: "Your details from earlier today are back, so you can carry on. Take the photo again to submit.",
+    fil: "Bumalik ang mga detalyeng inilagay mo kanina, kaya maaari kang magpatuloy. Kumuha ulit ng litrato para maisumite.",
+    bik: "Nagbalik an mga detalye na ibinutang mo kaina, kaya pwede ka magpadagos. Magkuha giraray nin litrato para maisumite.",
   },
   "asmt.startOver": { en: "Start over", fil: "Magsimula muli", bik: "Magpoon giraray" },
   "asmt.mushroom": {
