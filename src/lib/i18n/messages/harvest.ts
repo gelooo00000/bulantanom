@@ -193,4 +193,17 @@ export const harvest = defineMessages({
   "archive.view": { en: "View archive", fil: "Tingnan ang archive", bik: "Hilingon an archive" },
   "harvestCard.harvestedOn": { en: "Harvested on {date}", fil: "Naani noong {date}", bik: "Naani kan {date}" },
   "harvestCard.restore": { en: "Restore", fil: "Ibalik", bik: "Ibalik" },
+  // The celebration when a plant is marked harvested.
+  "celebrate.title": { en: "Successfully harvested!", fil: "Matagumpay na naani!", bik: "Matagumpay na naani!" },
+  "celebrate.text": {
+    en: "{name} is done. Great work, farmer!",
+    fil: "Tapos na ang {name}. Magaling, magsasaka!",
+    bik: "Tapos na an {name}. Marhay na trabaho, paraoma!",
+  },
+  "celebrate.archived": {
+    en: "You can find it in the Archive.",
+    fil: "Makikita mo ito sa Archive.",
+    bik: "Mahihiling mo ini sa Archive.",
+  },
+  "celebrate.continue": { en: "Continue", fil: "Magpatuloy", bik: "Padagos" },
 });

@@ -16,11 +16,12 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { HarvestPlantCard } from "@/components/farmer/harvest-plant-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { HarvestCelebration } from "@/components/farmer/harvest-celebration";
 import { SlidePager } from "@/components/shared/slide-pager";
 import { Button } from "@/components/ui/button";
 import { fetchPlants, setPlantStatus, type BackendPlant } from "@/lib/api/plants-api";
@@ -338,6 +339,9 @@ export default function HarvestPage() {
   const [moved, setMoved] = useState<{ plant: BackendPlant; to: "archive" | "active" } | null>(
     null,
   );
+  // The plant just harvested, for the confetti-and-balloons moment.
+  const [celebrating, setCelebrating] = useState<BackendPlant | null>(null);
+  const closeCelebration = useCallback(() => setCelebrating(null), []);
 
   const plants = (data ?? []).map((plant) => updated[plant.id] ?? plant);
   const sorted = [...plants].sort((a, b) =>
@@ -350,11 +354,16 @@ export default function HarvestPage() {
   const growing = byPhase("growing");
   const archived = archiveOrder(byPhase("harvested"));
 
-  async function changeStatus(plant: BackendPlant, status: "GROWING" | "HARVESTED") {
+  async function changeStatus(
+    plant: BackendPlant,
+    status: "GROWING" | "HARVESTED",
+    { celebrate = true } = {},
+  ) {
     if (!accessToken) throw new Error("Not signed in.");
     const saved = await setPlantStatus(accessToken, plant.id, status);
     setUpdated((current) => ({ ...current, [plant.id]: saved }));
     setMoved({ plant: saved, to: status === "HARVESTED" ? "archive" : "active" });
+    if (status === "HARVESTED" && celebrate) setCelebrating(saved);
     requestNotificationRefresh();
   }
 
@@ -362,7 +371,7 @@ export default function HarvestPage() {
     if (!moved) return;
     const { plant, to } = moved;
     try {
-      await changeStatus(plant, to === "archive" ? "GROWING" : "HARVESTED");
+      await changeStatus(plant, to === "archive" ? "GROWING" : "HARVESTED", { celebrate: false });
     } catch {
       // The card's own button is still there to try again.
     }
@@ -372,6 +381,7 @@ export default function HarvestPage() {
   function showView(next: "active" | "archive") {
     setView(next);
     setMoved(null);
+    setCelebrating(null);
   }
 
   const archiveButton = (
@@ -390,6 +400,7 @@ export default function HarvestPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {celebrating && <HarvestCelebration plant={celebrating} onClose={closeCelebration} />}
       <PageHeader
         title={view === "archive" ? t("archive.title") : t("harvestPage.title")}
         description={view === "archive" ? t("archive.description") : t("harvestPage.description")}

@@ -83,4 +83,29 @@ describe("the harvest archive", () => {
     expect(await screen.findByRole("button", { name: /Mark as harvested/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Archive\s*0/ })).toBeInTheDocument();
   });
+
+  it("celebrates a harvest with the crop in the middle, and not on undo", async () => {
+    setPlantStatus.mockImplementation(async (_token, _id, status) => ({
+      ...watermelon,
+      status,
+      harvested_at: status === "HARVESTED" ? `${isoIn(0)}T08:00:00Z` : null,
+    }));
+    render(<HarvestPage />);
+    await userEvent.click(screen.getByRole("button", { name: /Mark as harvested/ }));
+
+    const party = await screen.findByRole("dialog", { name: "Successfully harvested!" });
+    expect(within(party).getByText("🍉")).toBeInTheDocument();
+    expect(within(party).getByText(/Sugar Baby is done/)).toBeInTheDocument();
+
+    await userEvent.click(within(party).getByRole("button", { name: "Continue" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Restore it, then undo the restore: back in the Archive, no second party.
+    await userEvent.click(screen.getByRole("button", { name: "View archive" }));
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    expect(setPlantStatus).toHaveBeenLastCalledWith("token", 7, "HARVESTED");
+    expect(await screen.findByRole("button", { name: /Archive\s*1/ })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });
