@@ -114,6 +114,11 @@ export const harvest = defineMessages({
     fil: "Tingnan ang {name}: natapos ang anihan {time} na ang nakalipas. Markahan itong naani kung napitas mo na.",
     bik: "Hilingon an {name}: natapos an pag-ani {time} na an naagi. Markahan ining naani kun napuwa mo na.",
   },
+  "harvestTodo.passedMany": {
+    en: "Check your {n} {name} plants: their harvest time has ended. Mark them as harvested if you already picked them.",
+    fil: "Tingnan ang {n} mong {name}: tapos na ang kanilang anihan. Markahan silang naani kung napitas mo na.",
+    bik: "Hilingon an {n} mo na {name}: tapos na an saindang pag-ani. Markahan sindang naani kun napuwa mo na.",
+  },
   "harvestTodo.nothing": {
     en: "Nothing to harvest this week. Next up: {name} in {time}.",
     fil: "Walang aanihin ngayong linggo. Susunod: {name} sa loob ng {time}.",
@@ -137,11 +142,6 @@ export const harvest = defineMessages({
     bik: "Natapos an pag-ani kan {date}",
   },
   "harvestCard.headlineHarvested": { en: "Harvested", fil: "Naani na", bik: "Naani na" },
-  "harvestCard.window": {
-    en: "Harvest from {start} to {end} ({time})",
-    fil: "Anihan mula {start} hanggang {end} ({time})",
-    bik: "Pag-ani poon {start} sagkod {end} ({time})",
-  },
   "harvestCard.today": { en: "Today", fil: "Ngayon", bik: "Ngunyan" },
   "harvestCard.fullyGrown": { en: "Fully grown", fil: "Ganap nang lumaki", bik: "Dakula na" },
   "harvestCard.tipTitle": {

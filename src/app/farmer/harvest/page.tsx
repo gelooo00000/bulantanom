@@ -80,6 +80,15 @@ function OverviewTile({
 /** Plain sentences, most urgent first: what the farmer should do today. */
 function todoLines(plants: BackendPlant[], t: Translate): string[] {
   const lines: string[] = [];
+  // Several missed plants of one kind read as one line, not a list of
+  // near-identical reminders.
+  const missedCount = new Map<string, number>();
+  for (const plant of plants) {
+    if (phaseOf(plant) === "passed") {
+      missedCount.set(plant.display_name, (missedCount.get(plant.display_name) ?? 0) + 1);
+    }
+  }
+  const missedSaid = new Set<string>();
   for (const plant of sortByUrgency(plants)) {
     const phase = phaseOf(plant);
     const name = plant.display_name;
@@ -92,7 +101,14 @@ function todoLines(plants: BackendPlant[], t: Translate): string[] {
           : t("harvestTodo.harvest", { name, time: humanDuration(toEnd, t) }),
       );
     } else if (phase === "passed") {
-      lines.push(t("harvestTodo.passed", { name, time: humanDuration(Math.abs(toEnd), t) }));
+      if (missedSaid.has(name)) continue;
+      missedSaid.add(name);
+      const n = missedCount.get(name) ?? 1;
+      lines.push(
+        n > 1
+          ? t("harvestTodo.passedMany", { name, n })
+          : t("harvestTodo.passed", { name, time: humanDuration(Math.abs(toEnd), t) }),
+      );
     } else if (phase === "approaching") {
       lines.push(
         toStart === 1

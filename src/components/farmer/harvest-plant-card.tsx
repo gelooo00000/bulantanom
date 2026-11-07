@@ -232,7 +232,7 @@ export function HarvestPlantCard({
               <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
                 {plant.display_name}
               </p>
-              <p className="text-muted-foreground mt-0.5 truncate text-sm">
+              <p className="text-muted-foreground mt-0.5 text-sm">
                 {plant.crop.name} ·{" "}
                 {plant.crop.category === "fruit"
                   ? t("category.fruit")
@@ -262,11 +262,8 @@ export function HarvestPlantCard({
           {phase !== "harvested" && (
             <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
               <Hourglass className="size-3 shrink-0" aria-hidden="true" />
-              {t("harvestCard.window", {
-                start: date(plant.expected_harvest_start),
-                end: date(plant.expected_harvest_end),
-                time: humanDuration(harvestWindowDays(plant), t),
-              })}
+              {/* The dates are on the timeline below; this adds how long. */}
+              {t("harvestCard.lasts")} {humanDuration(harvestWindowDays(plant), t)}
             </p>
           )}
           {phase === "passed" && (
