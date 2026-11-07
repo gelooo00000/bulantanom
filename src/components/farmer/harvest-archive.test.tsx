@@ -94,7 +94,8 @@ describe("the harvest archive", () => {
     await userEvent.click(screen.getByRole("button", { name: /Mark as harvested/ }));
 
     const party = await screen.findByRole("dialog", { name: "Successfully harvested!" });
-    expect(within(party).getByText("🍉")).toBeInTheDocument();
+    // In the middle, and raining down.
+    expect(within(party).getAllByText("🍉").length).toBeGreaterThan(1);
     expect(within(party).getByText(/Sugar Baby is done/)).toBeInTheDocument();
 
     await userEvent.click(within(party).getByRole("button", { name: "Continue" }));

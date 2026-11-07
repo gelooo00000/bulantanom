@@ -8,7 +8,7 @@ import type { BackendPlant } from "@/lib/api/plants-api";
 import { useLanguage } from "@/lib/i18n";
 
 /** How long the celebration stays before closing by itself. */
-const SHOW_MS = 5000;
+const SHOW_MS = 6000;
 
 const CONFETTI_COLORS = ["#22c55e", "#facc15", "#f97316", "#ec4899", "#3b82f6", "#a855f7", "#14b8a6"];
 const BALLOON_COLORS = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#ec4899", "#a855f7", "#14b8a6", "#f97316"];
@@ -49,6 +49,28 @@ const BALLOONS = Array.from({ length: 10 }, (_, i) => ({
   delay: 0.1 + rand() * 0.9,
   duration: 4 + rand() * 2,
 }));
+
+/** The harvested crop raining down the screen, in two waves. */
+const RAIN = Array.from({ length: 36 }, (_, i) => ({
+  id: i,
+  left: rand() * 96,
+  size: 26 + rand() * 26,
+  spin: (rand() - 0.5) * 540,
+  drift: (rand() - 0.5) * 80,
+  delay: 0.3 + (i % 2) * 1.4 + rand() * 1.2,
+  duration: 2.4 + rand() * 1.6,
+}));
+
+/** Twinkles around the crop in the middle. */
+const SPARKLES = Array.from({ length: 8 }, (_, i) => {
+  const angle = (i / 8) * Math.PI * 2;
+  return {
+    id: i,
+    x: Math.cos(angle) * (95 + rand() * 25),
+    y: Math.sin(angle) * (95 + rand() * 25),
+    delay: 0.5 + rand() * 1.5,
+  };
+});
 
 function Balloon({ color, size }: { color: string; size: number }) {
   return (
@@ -95,6 +117,21 @@ export function HarvestCelebration({ plant, onClose }: { plant: BackendPlant; on
     >
       {!reduceMotion && (
         <>
+          {/* The crop raining down from above the screen. */}
+          {RAIN.map((drop) => (
+            <motion.span
+              key={`rain-${drop.id}`}
+              aria-hidden="true"
+              className="pointer-events-none absolute top-0 drop-shadow"
+              style={{ left: `${drop.left}%`, fontSize: drop.size }}
+              initial={{ y: "-15vh", x: 0, rotate: 0, opacity: 1 }}
+              animate={{ y: "110vh", x: drop.drift, rotate: drop.spin, opacity: [1, 1, 0.6] }}
+              transition={{ delay: drop.delay, duration: drop.duration, ease: "easeIn" }}
+            >
+              {plant.crop.emoji}
+            </motion.span>
+          ))}
+
           {/* Balloons rising from below the screen. */}
           {BALLOONS.map((b) => (
             <motion.div
@@ -156,6 +193,20 @@ export function HarvestCelebration({ plant, onClose }: { plant: BackendPlant; on
                 animate={{ scale: 1.8, opacity: 0 }}
                 transition={{ delay: 0.1 + ring * 0.35, duration: 1.6, ease: "easeOut", repeat: 1 }}
               />
+            ))}
+          {!reduceMotion &&
+            SPARKLES.map((sparkle) => (
+              <motion.span
+                key={`sparkle-${sparkle.id}`}
+                aria-hidden="true"
+                className="absolute text-2xl"
+                style={{ x: sparkle.x, y: sparkle.y }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [0, 1.2, 0], opacity: [0, 1, 0], rotate: [0, 90] }}
+                transition={{ delay: sparkle.delay, duration: 1.2, repeat: 2, repeatDelay: 0.4 }}
+              >
+                ✨
+              </motion.span>
             ))}
           <span
             aria-hidden="true"
