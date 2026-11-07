@@ -129,7 +129,8 @@ export const harvest = defineMessages({
     fil: "Wala pang aanihin. Ipagpatuloy ang pag-aalaga sa iyong mga tanim.",
     bik: "Waray pa aanihon. Padagosa an pag-ataman sa imo mga tanom.",
   },
-  "harvestTodo.more": { en: "+{n} more below", fil: "+{n} pa sa ibaba", bik: "+{n} pa sa ubos" },
+  "harvestTodo.seeMore": { en: "See {n} more", fil: "Tingnan ang {n} pa", bik: "Hilingon an {n} pa" },
+  "harvestTodo.seeLess": { en: "See less", fil: "Bawasan", bik: "Bawasan" },
   "harvestCard.headlineOpen": {
     en: "Harvest now, until {date}",
     fil: "Anihin na, hanggang {date}",

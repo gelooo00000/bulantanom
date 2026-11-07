@@ -2,6 +2,7 @@
 
 import {
   CalendarClock,
+  ChevronDown,
   CircleCheck,
   ClipboardList,
   LoaderCircle,
@@ -43,8 +44,8 @@ const PAGE_SIZE: Record<HarvestPhase, number> = {
   growing: 6,
   harvested: 6,
 };
-/** Lines in "What to do now" before "+n more below". */
-const TODO_LIMIT = 4;
+/** Tasks in "What to do now" before "See more". */
+const TODO_LIMIT = 3;
 
 const SECTION_ID: Record<HarvestPhase, string> = {
   open: "harvest-ready",
@@ -86,9 +87,33 @@ function OverviewTile({
   );
 }
 
+type TodoKind = "harvest" | "missed" | "prepare";
+type Todo = { kind: TodoKind; text: string };
+
+const TODO_STYLE: Record<TodoKind, { icon: LucideIcon; tone: string; row: string; section: HarvestPhase }> = {
+  harvest: {
+    icon: CircleCheck,
+    tone: "text-risk-low",
+    row: "border-risk-low/40 bg-risk-low/10 hover:bg-risk-low/15",
+    section: "open",
+  },
+  missed: {
+    icon: TriangleAlert,
+    tone: "text-risk-high",
+    row: "border-risk-high/40 bg-risk-high/10 hover:bg-risk-high/15",
+    section: "passed",
+  },
+  prepare: {
+    icon: CalendarClock,
+    tone: "text-risk-medium",
+    row: "border-risk-medium/40 bg-risk-medium/10 hover:bg-risk-medium/15",
+    section: "approaching",
+  },
+};
+
 /** Plain sentences, most urgent first: what the farmer should do today. */
-function todoLines(plants: BackendPlant[], t: Translate): string[] {
-  const lines: string[] = [];
+function todoItems(plants: BackendPlant[], t: Translate): Todo[] {
+  const items: Todo[] = [];
   // Several missed plants of one kind read as one line, not a list of
   // near-identical reminders.
   const missedCount = new Map<string, number>();
@@ -104,46 +129,71 @@ function todoLines(plants: BackendPlant[], t: Translate): string[] {
     const toStart = daysUntil(plant.expected_harvest_start);
     const toEnd = daysUntil(plant.expected_harvest_end);
     if (phase === "open") {
-      lines.push(
-        toEnd === 0
-          ? t("harvestTodo.lastDay", { name })
-          : t("harvestTodo.harvest", { name, time: humanDuration(toEnd, t) }),
-      );
+      items.push({
+        kind: "harvest",
+        text:
+          toEnd === 0
+            ? t("harvestTodo.lastDay", { name })
+            : t("harvestTodo.harvest", { name, time: humanDuration(toEnd, t) }),
+      });
     } else if (phase === "passed") {
       if (missedSaid.has(name)) continue;
       missedSaid.add(name);
       const n = missedCount.get(name) ?? 1;
-      lines.push(
-        n > 1
-          ? t("harvestTodo.passedMany", { name, n })
-          : t("harvestTodo.passed", { name, time: humanDuration(Math.abs(toEnd), t) }),
-      );
+      items.push({
+        kind: "missed",
+        text:
+          n > 1
+            ? t("harvestTodo.passedMany", { name, n })
+            : t("harvestTodo.passed", { name, time: humanDuration(Math.abs(toEnd), t) }),
+      });
     } else if (phase === "approaching") {
-      lines.push(
-        toStart === 1
-          ? t("harvestTodo.tomorrow", { name })
-          : t("harvestTodo.prepare", { name, time: humanDuration(toStart, t) }),
-      );
+      items.push({
+        kind: "prepare",
+        text:
+          toStart === 1
+            ? t("harvestTodo.tomorrow", { name })
+            : t("harvestTodo.prepare", { name, time: humanDuration(toStart, t) }),
+      });
     }
   }
-  return lines;
+  return items;
 }
 
+/**
+ * The most important part of the page, so it is the most prominent: large
+ * text, each task coloured by urgency, and a tap on a task jumps to its
+ * plants. A long list shows the first few and folds the rest behind
+ * "See more".
+ */
 function TodoBox({ plants }: { plants: BackendPlant[] }) {
   const { t } = useLanguage();
-  const lines = todoLines(plants, t);
+  const [expanded, setExpanded] = useState(false);
+  const items = todoItems(plants, t);
+  const shown = expanded ? items : items.slice(0, TODO_LIMIT);
+  const hidden = items.length - TODO_LIMIT;
   const next = plants
     .filter((p) => phaseOf(p) === "growing")
     .sort((a, b) => a.expected_harvest_start.localeCompare(b.expected_harvest_start))[0];
 
   return (
-    <section className="border-border bg-card flex flex-col gap-3 rounded-xl border px-4 py-4 sm:px-5">
-      <h2 className="font-heading flex items-center gap-2 text-base font-medium">
-        <ClipboardList className="text-primary size-5" aria-hidden="true" />
+    <section
+      aria-labelledby="harvest-todo-title"
+      className="border-primary/40 bg-card flex flex-col gap-4 rounded-2xl border-2 px-4 py-5 shadow-sm sm:px-6"
+    >
+      <h2 id="harvest-todo-title" className="font-heading flex items-center gap-2.5 text-xl font-medium sm:text-2xl">
+        <span className="bg-primary/15 text-primary flex size-9 items-center justify-center rounded-xl">
+          <ClipboardList className="size-5" aria-hidden="true" />
+        </span>
         {t("harvestTodo.title")}
+        {items.length > 0 && (
+          <span className="bg-primary text-primary-foreground rounded-full px-2.5 py-0.5 text-sm tabular-nums">
+            {items.length}
+          </span>
+        )}
       </h2>
-      {lines.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
+      {items.length === 0 ? (
+        <p className="text-muted-foreground text-base">
           {next
             ? t("harvestTodo.nothing", {
                 name: next.display_name,
@@ -152,21 +202,42 @@ function TodoBox({ plants }: { plants: BackendPlant[] }) {
             : t("harvestTodo.nothingAtAll")}
         </p>
       ) : (
-        <ol className="flex flex-col gap-2">
-          {lines.slice(0, TODO_LIMIT).map((line, i) => (
-            <li key={line} className="flex gap-2.5 text-sm">
-              <span className="bg-primary/15 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium">
-                {i + 1}
-              </span>
-              <span>{line}</span>
-            </li>
-          ))}
-          {lines.length > TODO_LIMIT && (
-            <li className="text-muted-foreground pl-7 text-xs">
-              {t("harvestTodo.more", { n: lines.length - TODO_LIMIT })}
-            </li>
+        <>
+          <ol className="flex flex-col gap-2.5">
+            {shown.map((item, i) => {
+              const style = TODO_STYLE[item.kind];
+              const Icon = style.icon;
+              return (
+                <li key={item.text} className="animate-in fade-in slide-in-from-top-1 duration-200">
+                  <a
+                    href={`#${SECTION_ID[style.section]}`}
+                    className={cn(
+                      "flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors",
+                      style.row,
+                    )}
+                  >
+                    <span className="bg-background/80 text-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums">
+                      {i + 1}
+                    </span>
+                    <Icon className={cn("mt-0.5 size-5 shrink-0", style.tone)} aria-hidden="true" />
+                    <span className="text-base leading-snug">{item.text}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+          {hidden > 0 && (
+            <Button
+              variant="outline"
+              className="self-center"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? t("harvestTodo.seeLess") : t("harvestTodo.seeMore", { n: hidden })}
+              <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
+            </Button>
           )}
-        </ol>
+        </>
       )}
     </section>
   );
