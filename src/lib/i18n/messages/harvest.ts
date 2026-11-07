@@ -200,10 +200,5 @@ export const harvest = defineMessages({
     fil: "Tapos na ang {name}. Magaling, magsasaka!",
     bik: "Tapos na an {name}. Marhay na trabaho, paraoma!",
   },
-  "celebrate.archived": {
-    en: "You can find it in the Archive.",
-    fil: "Makikita mo ito sa Archive.",
-    bik: "Mahihiling mo ini sa Archive.",
-  },
   "celebrate.continue": { en: "Continue", fil: "Magpatuloy", bik: "Padagos" },
 });

@@ -225,7 +225,6 @@ export function HarvestCelebration({ plant, onClose }: { plant: BackendPlant; on
 
         <h2 className="font-heading mt-4 text-3xl font-semibold">{t("celebrate.title")}</h2>
         <p className="mt-2 text-base">{t("celebrate.text", { name: plant.display_name })}</p>
-        <p className="text-muted-foreground mt-1 text-sm">{t("celebrate.archived")}</p>
         <Button ref={buttonRef} size="lg" className="mt-5" onClick={onClose}>
           {t("celebrate.continue")}
         </Button>
