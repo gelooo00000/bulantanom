@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { ColumnChart } from "@/components/lgu/dashboard-charts";
 import { formatDisplayDate } from "@/components/ui/date-picker";
@@ -39,8 +39,11 @@ function parseIso(iso: string) {
 export function HarvestCalendar({
   plants,
   today = new Date(),
+  action,
 }: {
   plants: BackendPlant[];
+  /** Shown beside the title, e.g. a link to the Harvest page. */
+  action?: ReactNode;
   /** Injected by tests; the page always renders with the real date. */
   today?: Date;
 }) {
@@ -95,7 +98,10 @@ export function HarvestCalendar({
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-medium">{t("calendarChart.title")}</h2>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-medium">{t("calendarChart.title")}</h2>
+        {action}
+      </div>
       <ColumnChart
         columns={buckets.map((bucket) => ({
           key: bucket.month.toISOString(),

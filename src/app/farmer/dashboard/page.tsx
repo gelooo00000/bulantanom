@@ -5,15 +5,18 @@ import { ArrowRight, LoaderCircle, Sprout, TriangleAlert } from "lucide-react";
 
 import { AssessmentTrendChart } from "@/components/farmer/assessment-trend-chart";
 import { CropSuggestionsCard } from "@/components/farmer/crop-suggestions-card";
+import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
 import { PlantedCrops } from "@/components/farmer/planted-crops";
 import { RiskCountsRow } from "@/components/risk/risk-counts";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { fetchFarmerDashboard } from "@/lib/api/dashboard-api";
 import { fetchPlants } from "@/lib/api/plants-api";
 import { fetchFarmerRisk } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
+import { CARD_OUTLINE } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 
 /**
@@ -24,6 +27,10 @@ import { useLanguage } from "@/lib/i18n";
  * the assessment history, the soil recommendation and the harvest tracker
  * each have their own page, so none of them is duplicated here; the
  * sections that used to mirror them were removed rather than restyled.
+ *
+ * The one exception is the harvest calendar: a month-by-month overview of
+ * the whole farm, it answers "what is coming up" and lives here, while the
+ * Harvest page keeps the per-plant detail and actions.
  *
  * The risk breakdown is the existing `RiskCountsRow`, the same component the
  * Risk Indicators page uses. It is reused, not reimplemented, so there is
@@ -126,6 +133,26 @@ export default function FarmerDashboardPage() {
             <PlantedCrops plants={plants ?? []} />
             <CropSuggestionsCard plants={plants ?? []} />
           </div>
+
+          {/* When this farm's plants become ready, month by month. The
+              per-plant detail and actions stay on the Harvest page. */}
+          <Card className={`gap-0 py-4 ${CARD_OUTLINE}`}>
+            <CardContent className="px-4">
+              <HarvestCalendar
+                plants={plants ?? []}
+                action={
+                  <Link
+                    href="/farmer/harvest"
+                    className="flex shrink-0 items-center gap-1 text-sm"
+                    style={{ color: "var(--landing-accent)" }}
+                  >
+                    {t("dash.details")}
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                }
+              />
+            </CardContent>
+          </Card>
 
           <AssessmentTrendChart trend={assessment_trend} />
         </>

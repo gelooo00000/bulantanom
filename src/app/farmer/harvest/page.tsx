@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
 import { HarvestPlantCard } from "@/components/farmer/harvest-plant-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -279,8 +278,6 @@ export default function HarvestPage() {
           </div>
 
           <TodoBox plants={sorted} />
-
-          <HarvestCalendar plants={sorted} />
 
           <Section id={SECTION_ID.open} title={t("harvestPage.ready")} plants={open} onStatusChange={changeStatus} />
           <Section
