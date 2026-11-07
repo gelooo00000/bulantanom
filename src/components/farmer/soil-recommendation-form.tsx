@@ -12,6 +12,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 
 import { ArduinoSensorSign, ArduinoSensorWizard } from "@/components/farmer/arduino-sensor-wizard";
 import { SoilNumberField } from "@/components/farmer/soil-number-field";
+import { SoilCheckPanel } from "@/components/farmer/soil-check-panel";
 import { SoilResultCard } from "@/components/farmer/soil-result-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -343,6 +344,9 @@ export function SoilRecommendationForm() {
             was actually called and failed, so a save-only row must not be
             reported as an outage the Farmer never hit.
           */}
+          {/* The fixed-rule warning signs - shown even without an AI result. */}
+          <SoilCheckPanel check={result.soil_check} />
+
           {!result.ai_generated ? (
             <div className="border-border flex gap-3 rounded-lg border border-dashed px-4 py-4">
               <TriangleAlert className="text-risk-medium mt-0.5 size-4 shrink-0" />

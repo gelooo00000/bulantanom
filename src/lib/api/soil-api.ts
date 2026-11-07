@@ -15,6 +15,31 @@ export type SoilAdvice = {
   recommendation: string;
 };
 
+/** One reading's grade from the fixed-rule soil check. */
+export type SoilCheckFinding = {
+  field:
+    | "soil_temperature"
+    | "soil_moisture"
+    | "soil_conductivity"
+    | "soil_ph"
+    | "nitrogen"
+    | "phosphorus"
+    | "potassium";
+  level: "good" | "caution" | "critical";
+  /** Names the problem, e.g. "ph_low"; "ok" when the reading is fine. */
+  code: string;
+  value: number | null;
+};
+
+/**
+ * Mirrors `SoilCheck.as_dict` in backend/plants/soil_check.py. `unsuitable`
+ * means no crop is recommended until the soil is fixed.
+ */
+export type SoilCheck = {
+  status: "favorable" | "needs_care" | "unsuitable";
+  findings: SoilCheckFinding[];
+};
+
 /**
  * A saved soil assessment and its AI result. Mirrors
  * `SoilRecommendationSerializer` — exactly the six result sections, with no
@@ -40,6 +65,9 @@ export type SoilRecommendation = {
 
   /** False for assessments recorded before the detector. */
   has_sensor_readings: boolean;
+
+  /** Graded readings and the overall verdict, computed by Django. */
+  soil_check: SoilCheck;
 
   /** Categorical answers the old form collected. Read-only, legacy rows only. */
   legacy_soil_type: string;
@@ -131,10 +159,10 @@ export async function fetchLatestSoilRecommendation(
 }
 
 /**
- * When the advice instructions last changed (plain words, more crop
- * options). Mirrors ADVICE_REVISED_AT in soil_recommendation_service.py.
+ * When the advice instructions last changed (the soil check: no crops for
+ * unsuitable soil). Mirrors ADVICE_REVISED_AT in soil_recommendation_service.py.
  */
-export const SOIL_ADVICE_REVISED_AT = "2026-10-07T17:35:00Z";
+export const SOIL_ADVICE_REVISED_AT = "2026-11-07T06:00:00Z";
 
 /** A saved result written with older advice instructions. */
 export function isOutdatedAdvice(soil: SoilRecommendation): boolean {

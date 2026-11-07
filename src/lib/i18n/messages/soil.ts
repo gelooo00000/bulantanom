@@ -350,4 +350,87 @@ export const soil = defineMessages({
     fil: "Dapat nasa pagitan ng {min} at {max} {unit} ang {label}.",
     bik: "Dapat nasa tahaw san {min} asin {max} {unit} an {label}.",
   },
+
+  // Soil check warning signs (components/farmer/soil-check-panel). The
+  // grades come from backend/plants/soil_check.py; these only word them.
+  "soilCheck.title": { en: "Soil warning signs", fil: "Mga babala sa lupa", bik: "Mga paabiso sa daga" },
+  "soilCheck.favorable": {
+    en: "Your soil looks good for planting.",
+    fil: "Maayos ang iyong lupa para magtanim.",
+    bik: "Marhay an imo daga para magtanom.",
+  },
+  "soilCheck.needs_care": {
+    en: "You can plant, but some readings need care. Only crops that can handle them are shown.",
+    fil: "Puwede kang magtanim, pero may ilang sukat na kailangang bantayan. Ang ipinapakita lang ay mga pananim na kaya ito.",
+    bik: "Puwede ka magtanom, pero may pira na sukat na kaipuhan bantayan. An ipinapahiling sana iyo an mga tanom na kaya ini.",
+  },
+  "soilCheck.unsuitable": {
+    en: "Your soil is not ready for planting yet. Fix the problems below first, then test the soil again.",
+    fil: "Hindi pa handa ang iyong lupa para magtanim. Ayusin muna ang mga problema sa ibaba, saka subukan muli ang lupa.",
+    bik: "Dili pa andam an imo daga para magtanom. Ayuson muna an mga problema sa ubos, dangan sukaton liwat an daga.",
+  },
+  "soilCheck.noCropsTitle": {
+    en: "No crops recommended for this soil",
+    fil: "Walang inirerekomendang pananim para sa lupang ito",
+    bik: "Waray rekomendado na tanom para sa daga na ini",
+  },
+  "soilCheck.noCropsBody": {
+    en: "Planting now would likely fail. Follow the steps below to fix the soil, then check it again.",
+    fil: "Malamang na hindi tutubo kung magtatanim ngayon. Sundin ang mga hakbang sa ibaba para ayusin ang lupa, saka suriin muli.",
+    bik: "Posible na dili matubo kun magtanom ngunyan. Sunodon an mga hakbang sa ubos para ayuson an daga, dangan susiha liwat.",
+  },
+  "soilCheck.level.good": { en: "Good", fil: "Maayos", bik: "Marhay" },
+  "soilCheck.level.caution": { en: "Needs care", fil: "Bantayan", bik: "Bantayan" },
+  "soilCheck.level.critical": { en: "Fix first", fil: "Ayusin muna", bik: "Ayuson muna" },
+  "soilCheck.ok": { en: "Fine for most crops.", fil: "Ayos para sa karamihan ng pananim.", bik: "Marhay para sa kadaklan na tanom." },
+  "soilCheck.ph_low": {
+    en: "Too sour (pH {value}). Most crops like 5.5 to 7.5. Mix in garden lime or wood ash.",
+    fil: "Masyadong maasim (pH {value}). Gusto ng karamihan ng pananim ang 5.5 hanggang 7.5. Haluan ng apog o abo ng kahoy.",
+    bik: "Sobra na maaslom (pH {value}). Gusto san kadaklan na tanom an 5.5 sagkod 7.5. Halean nin apog o abo san kahoy.",
+  },
+  "soilCheck.ph_high": {
+    en: "pH too high ({value}). Most crops like 5.5 to 7.5. Add compost or rotted manure.",
+    fil: "Masyadong mataas ang pH ({value}). Gusto ng karamihan ng pananim ang 5.5 hanggang 7.5. Lagyan ng compost o bulok na dumi ng hayop.",
+    bik: "Sobra kahalangkaw an pH ({value}). Gusto san kadaklan na tanom an 5.5 sagkod 7.5. Butangan nin compost o lapa na ati san hayop.",
+  },
+  "soilCheck.moisture_low": {
+    en: "Too dry ({value}%). Water the soil well and cover it with mulch.",
+    fil: "Masyadong tuyo ({value}%). Diligan nang mabuti ang lupa at takpan ng mulch.",
+    bik: "Sobra na mamara ({value}%). Bubuan nin marhay an daga asin takopan nin mulch.",
+  },
+  "soilCheck.moisture_high": {
+    en: "Too wet ({value}%). Roots can rot. Dig drainage canals or raise the beds.",
+    fil: "Masyadong basa ({value}%). Puwedeng mabulok ang ugat. Gumawa ng kanal o itaas ang taniman.",
+    bik: "Sobra na basa ({value}%). Puwede malapa an gamot. Magkutkot nin kanal o pahalangkawon an tanuman.",
+  },
+  "soilCheck.temp_low": {
+    en: "Too cold ({value} °C). Wait for warmer days before planting.",
+    fil: "Masyadong malamig ({value} °C). Maghintay ng mas mainit na araw bago magtanim.",
+    bik: "Sobra na malipot ({value} °C). Maghalat nin mas mainit na aldaw bago magtanom.",
+  },
+  "soilCheck.temp_high": {
+    en: "Too hot ({value} °C). Shade the soil, mulch it and water early in the morning.",
+    fil: "Masyadong mainit ({value} °C). Lilimin ang lupa, lagyan ng mulch at diligan nang maaga.",
+    bik: "Sobra na mainit ({value} °C). Lilungan an daga, butangan nin mulch asin bubuan nin aga.",
+  },
+  "soilCheck.salt_high": {
+    en: "Too salty ({value} µS/cm). Flush the soil with plenty of clean water and add compost.",
+    fil: "Masyadong maalat ({value} µS/cm). Buhusan ang lupa ng maraming malinis na tubig at lagyan ng compost.",
+    bik: "Sobra na maparat ({value} µS/cm). Bubuan an daga nin dakol na malinig na tubig asin butangan nin compost.",
+  },
+  "soilCheck.n_low": {
+    en: "Low nitrogen ({value} mg/kg). Add compost, manure or a nitrogen fertilizer.",
+    fil: "Kulang sa nitrogen ({value} mg/kg). Lagyan ng compost, dumi ng hayop o nitrogen fertilizer.",
+    bik: "Kulang sa nitrogen ({value} mg/kg). Butangan nin compost, ati san hayop o nitrogen fertilizer.",
+  },
+  "soilCheck.p_low": {
+    en: "Low phosphorus ({value} mg/kg). Add bone meal or a phosphorus fertilizer.",
+    fil: "Kulang sa phosphorus ({value} mg/kg). Lagyan ng bone meal o phosphorus fertilizer.",
+    bik: "Kulang sa phosphorus ({value} mg/kg). Butangan nin bone meal o phosphorus fertilizer.",
+  },
+  "soilCheck.k_low": {
+    en: "Low potassium ({value} mg/kg). Add wood ash or a potassium fertilizer.",
+    fil: "Kulang sa potassium ({value} mg/kg). Lagyan ng abo ng kahoy o potassium fertilizer.",
+    bik: "Kulang sa potassium ({value} mg/kg). Butangan nin abo san kahoy o potassium fertilizer.",
+  },
 });

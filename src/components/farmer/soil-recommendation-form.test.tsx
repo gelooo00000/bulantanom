@@ -30,6 +30,10 @@ const failed: SoilRecommendation = {
   potassium: 150,
   soil_fertility: 600,
   has_sensor_readings: true,
+  soil_check: {
+    status: "favorable",
+    findings: [{ field: "soil_ph", level: "good", code: "ok", value: 6.5 }],
+  },
   legacy_soil_type: "unknown",
   legacy_soil_texture: "unknown",
   legacy_drainage: "unknown",
@@ -170,6 +174,49 @@ describe("SoilRecommendationForm result view", () => {
     expect(document.getElementById("soil-soil-ph")).toHaveValue(null);
     await userEvent.click(screen.getByRole("button", { name: "See Result" }));
     expect(await screen.findByText("Mango")).toBeInTheDocument();
+  });
+});
+
+describe("SoilRecommendationForm soil warning signs", () => {
+  const unsuitable: SoilRecommendation = {
+    ...analyzed,
+    soil_ph: "9.50",
+    soil_check: {
+      status: "unsuitable",
+      findings: [
+        { field: "soil_moisture", level: "good", code: "ok", value: 65 },
+        { field: "soil_ph", level: "critical", code: "ph_high", value: 9.5 },
+      ],
+    },
+    important_warnings: [{ recommendation: "Do not plant until the pH is lowered." }],
+  };
+
+  it("shows no crops for unsuitable soil, and says how to fix it", async () => {
+    fetchHistory.mockResolvedValue([unsuitable]);
+    await openSavedResult();
+
+    expect(await screen.findByText("No crops recommended for this soil")).toBeInTheDocument();
+    expect(screen.queryByText("Mango")).not.toBeInTheDocument();
+    expect(screen.getByText(/pH too high \(9.5\)/)).toBeInTheDocument();
+    expect(screen.getByText("Fix first")).toBeInTheDocument();
+    // The fixing advice is opened straight away.
+    expect(screen.getByText("Do not plant until the pH is lowered.")).toBeInTheDocument();
+  });
+
+  it("shows the warning signs even when the AI was unavailable", async () => {
+    fetchHistory.mockResolvedValue([{ ...failed, soil_check: unsuitable.soil_check }]);
+    await openSavedResult();
+
+    expect(await screen.findByText("Soil warning signs")).toBeInTheDocument();
+    expect(screen.getByText(/not ready for planting yet/)).toBeInTheDocument();
+  });
+
+  it("lists the crops for favourable soil", async () => {
+    fetchHistory.mockResolvedValue([analyzed]);
+    await openSavedResult();
+
+    expect(await screen.findByText("Mango")).toBeInTheDocument();
+    expect(screen.getByText("Your soil looks good for planting.")).toBeInTheDocument();
   });
 });
 

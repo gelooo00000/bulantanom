@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { SoilCropSuggestion, SoilRecommendation } from "@/lib/api/soil-api";
+import { englishT } from "@/lib/i18n";
 import { SOIL_STRINGS as t } from "@/lib/soil-options";
 import { CARD_OUTLINE } from "@/lib/crop-colors";
 
@@ -113,7 +114,18 @@ export function SoilSummaryCard({ soil }: { soil: SoilRecommendation | null }) {
           )}
         </div>
 
-        {soil.ai_generated ? (
+        {soil.ai_generated && soil.soil_check?.status === "unsuitable" ? (
+          /* The soil check ruled out every crop until the soil is fixed. */
+          <div className="border-border flex gap-3 border-t pt-4">
+            <TriangleAlert className="text-risk-high mt-0.5 size-4 shrink-0" />
+            <div>
+              <p className="font-heading text-sm font-medium">
+                {englishT("soilCheck.noCropsTitle")}
+              </p>
+              <p className="text-muted-foreground text-sm">{englishT("soilCheck.unsuitable")}</p>
+            </div>
+          </div>
+        ) : soil.ai_generated ? (
           <div className="border-border flex flex-col gap-3 border-t pt-4">
             <CropChips title={t.suitableFruits} crops={soil.suitable_fruits} />
             <CropChips title={t.suitableVegetables} crops={soil.suitable_vegetables} />

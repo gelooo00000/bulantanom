@@ -443,6 +443,10 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
 
     ai_available = serializers.SerializerMethodField()
     has_sensor_readings = serializers.BooleanField(read_only=True)
+    # The fixed-rule soil check (plants/soil_check.py): an overall verdict
+    # and one graded finding per reading. Computed, not stored, so it always
+    # reflects the current rules - including for rows saved before them.
+    soil_check = serializers.SerializerMethodField()
 
     # Every reading the detector produces is required on a new assessment.
     # The columns are nullable so the ten pre-detector rows survive, which
@@ -485,6 +489,7 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
             "legacy_potassium",
             "legacy_organic_matter",
             "has_sensor_readings",
+            "soil_check",
             # Gemini result — exactly six sections (read-only)
             "suitable_fruits",
             "suitable_vegetables",
@@ -524,6 +529,11 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def get_soil_check(self, obj) -> dict:
+        from .soil_check import check_soil
+
+        return check_soil(obj).as_dict()
 
     def get_ai_available(self, obj) -> bool:
         return bool(obj.ai_generated)

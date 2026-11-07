@@ -616,3 +616,118 @@ class SoilReanalyzeTests(SoilTestCase):
             notification_type=NotificationType.SOIL_RECOMMENDATION_READY,
         )
         self.assertEqual(ready.count(), 1)
+
+
+class SoilCheckTests(SoilTestCase):
+    """
+    The fixed-rule soil check: unfavourable soil gets no crops, whatever
+    Gemini says, and only crops that tolerate the soil are ever offered.
+    """
+
+    def _soil(self, **overrides):
+        values = {k: v for k, v in VALID_SOIL.items() if k != "notes"}
+        values.update(overrides)
+        return SoilRecommendation(farmer=self.farmer, **values)
+
+    def test_normal_soil_is_favorable(self):
+        from plants.soil_check import FAVORABLE, check_soil
+
+        check = check_soil(self._soil(soil_ph=Decimal("6.5")))
+        self.assertEqual(check.status, FAVORABLE)
+        self.assertIn("tomato", check.fitting_crop_ids)
+        # Mushroom grows on substrate, never in field soil.
+        self.assertNotIn("mushroom", check.fitting_crop_ids)
+
+    def test_each_critical_reading_makes_the_soil_unsuitable(self):
+        from plants.soil_check import UNSUITABLE, check_soil
+
+        for overrides in (
+            {"soil_ph": Decimal("3.8")},
+            {"soil_ph": Decimal("9.2")},
+            {"soil_moisture": Decimal("96")},
+            {"soil_moisture": Decimal("2")},
+            {"soil_conductivity": 6000},
+            {"soil_temperature": Decimal("45")},
+        ):
+            check = check_soil(self._soil(**overrides))
+            self.assertEqual(check.status, UNSUITABLE, overrides)
+            self.assertEqual(check.fitting_crop_ids, [], overrides)
+
+    def test_caution_narrows_the_crops(self):
+        from plants.soil_check import NEEDS_CARE, check_soil
+
+        check = check_soil(self._soil(soil_ph=Decimal("5.0")))
+        self.assertEqual(check.status, NEEDS_CARE)
+        # Pineapple likes sour soil; cantaloupe and cabbage do not.
+        self.assertIn("pineapple", check.fitting_crop_ids)
+        self.assertNotIn("cantaloupe", check.fitting_crop_ids)
+        self.assertNotIn("lettuce-cabbage", check.fitting_crop_ids)
+
+        wet = check_soil(self._soil(soil_moisture=Decimal("84")))
+        self.assertNotIn("tomato", wet.fitting_crop_ids)
+        self.assertIn("banana", wet.fitting_crop_ids)
+
+    def test_low_nutrients_are_only_a_caution(self):
+        from plants.soil_check import NEEDS_CARE, check_soil
+
+        check = check_soil(self._soil(nitrogen=5, phosphorus=3, potassium=10))
+        self.assertEqual(check.status, NEEDS_CARE)
+        self.assertTrue(check.fitting_crop_ids)
+
+    def test_unsuitable_soil_drops_every_crop_gemini_names(self):
+        from plants import soil_recommendation_service as svc
+
+        catalog = {self.fruit.name.casefold(): self.fruit}
+        result = svc._validate(gemini_payload(self.fruit.name), catalog, unsuitable=True)
+        self.assertEqual(result["suitable_fruits"], [])
+        self.assertTrue(result["important_warnings"])
+
+    def test_unsuitable_prompt_offers_no_catalog(self):
+        from plants import soil_recommendation_service as svc
+
+        prompt = svc._build_prompt(self._soil(soil_ph=Decimal("9.5")))
+        self.assertIn("NOT ready for planting", prompt)
+        self.assertNotIn("CROP CATALOG", prompt)
+
+    def test_crop_ruled_out_by_the_check_is_never_saved(self):
+        """Gemini names avocado for sour soil; the check removed it."""
+        avocado = Crop.objects.get(pk="avocado")
+        payload = gemini_payload(avocado.name)
+        payload["suitable_fruits"].append({"name": "Pineapple", "reason": "Likes it."})
+        with override_settings(GEMINI_API_KEY="test-key"), patch(
+            "google.genai.Client"
+        ) as client_cls:
+            client_cls.return_value.models.generate_content.return_value = (
+                _FakeResponse(payload)
+            )
+            response = self.client.post(
+                LIST_URL,
+                {**VALID_SOIL, "soil_ph": 5.0},
+                format="json",
+                **self.auth("farmer@example.com"),
+            )
+        names = [c["name"] for c in response.data["suitable_fruits"]]
+        self.assertEqual(names, ["Pineapple"])
+        self.assertEqual(response.data["soil_check"]["status"], "needs_care")
+
+    def test_unsuitable_soil_is_saved_with_advice_and_no_crops(self):
+        with override_settings(GEMINI_API_KEY="test-key"), patch(
+            "google.genai.Client"
+        ) as client_cls:
+            client_cls.return_value.models.generate_content.return_value = (
+                _FakeResponse(gemini_payload(self.fruit.name))
+            )
+            response = self.client.post(
+                LIST_URL,
+                {**VALID_SOIL, "soil_ph": 9.5},
+                format="json",
+                **self.auth("farmer@example.com"),
+            )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["ai_generated"])
+        self.assertEqual(response.data["suitable_fruits"], [])
+        self.assertEqual(response.data["soil_check"]["status"], "unsuitable")
+        ph = next(
+            f for f in response.data["soil_check"]["findings"] if f["field"] == "soil_ph"
+        )
+        self.assertEqual((ph["level"], ph["code"]), ("critical", "ph_high"))

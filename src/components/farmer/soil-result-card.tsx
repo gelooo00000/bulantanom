@@ -2,6 +2,7 @@
 
 import {
   Apple,
+  Ban,
   ChevronDown,
   Droplets,
   FlaskConical,
@@ -18,6 +19,7 @@ import type {
   SoilCropSuggestion,
   SoilRecommendation,
 } from "@/lib/api/soil-api";
+import { useLanguage } from "@/lib/i18n";
 import { useSoilStrings } from "@/lib/soil-options";
 import { CARD_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
@@ -151,15 +153,19 @@ function WarningList({ items, emptyText }: { items: SoilAdvice[]; emptyText: str
 
 export function SoilResultCard({ result }: { result: SoilRecommendation }) {
   const t = useSoilStrings();
+  const { t: tr } = useLanguage();
+  // Soil the check ruled out gets no crops, even on an older saved result
+  // that still carries some, and its fixing advice is shown straight away.
+  const unsuitable = result.soil_check?.status === "unsuitable";
   // The crops are the answer; the soil advice and warnings sit behind one
   // "See more". The parent keys this card by result, so it resets per result.
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(unsuitable);
 
-  const groups = [
+  const groups = (unsuitable ? [] : [
     { key: "fruits", icon: Apple, title: t.suitableFruits, crops: result.suitable_fruits },
     { key: "vegetables", icon: Leaf, title: t.suitableVegetables, crops: result.suitable_vegetables },
     { key: "crops", icon: Wheat, title: t.suitableCrops, crops: result.suitable_crops },
-  ].filter((group) => group.crops.length > 0);
+  ]).filter((group) => group.crops.length > 0);
 
   return (
     <div className="flex flex-col gap-5">
@@ -167,6 +173,16 @@ export function SoilResultCard({ result }: { result: SoilRecommendation }) {
         <Sprout className="text-primary size-5" />
         <h2 className="text-base font-medium">{t.resultTitle}</h2>
       </div>
+
+      {groups.length === 0 ? (
+        <div className="border-risk-high/40 flex gap-3 rounded-lg border border-dashed px-4 py-4">
+          <Ban className="text-risk-high mt-0.5 size-4 shrink-0" />
+          <div className="flex flex-col gap-1">
+            <p className="font-heading text-sm font-medium">{tr("soilCheck.noCropsTitle")}</p>
+            <p className="text-muted-foreground text-sm">{tr("soilCheck.noCropsBody")}</p>
+          </div>
+        </div>
+      ) : null}
 
       {groups.map((group) => (
         <Section key={group.key} icon={group.icon} title={group.title}>

@@ -988,6 +988,11 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
     dedupe_key = f"soil_recommendation:{soil.pk}:{outcome}"
     farmer = soil.farmer
     soil_type = _soil_descriptor(soil)
+    # Analysed, but the soil check ruled out every crop: the advice is how to
+    # fix the soil, so the notice must not promise crop suggestions.
+    not_ready = analyzed and not (
+        soil.suitable_fruits or soil.suitable_vegetables or soil.suitable_crops
+    )
 
     def run():
         notify_farmer(
@@ -998,10 +1003,17 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
                 else NotificationType.SOIL_ASSESSMENT_SAVED
             ),
             title=(
-                "Crop Recommendation Ready" if analyzed else "Soil Assessment Saved"
+                "Soil Needs Fixing First"
+                if not_ready
+                else "Crop Recommendation Ready"
+                if analyzed
+                else "Soil Assessment Saved"
             ),
             message=(
-                f"Your {soil_type} soil assessment has AI crop suggestions ready."
+                f"Your {soil_type} soil is not ready for planting yet. "
+                "Open it to see the warning signs and how to fix them."
+                if not_ready
+                else f"Your {soil_type} soil assessment has AI crop suggestions ready."
                 if analyzed
                 else (
                     f"Your {soil_type} soil assessment was saved. "
@@ -1009,7 +1021,11 @@ def notify_soil_recommendation(soil, *, analyzed: bool):
                 )
             ),
             severity=(
-                NotificationSeverity.SUCCESS if analyzed else NotificationSeverity.INFO
+                NotificationSeverity.WARNING
+                if not_ready
+                else NotificationSeverity.SUCCESS
+                if analyzed
+                else NotificationSeverity.INFO
             ),
             related_type=RelatedType.NONE,
             related_id=soil.pk,

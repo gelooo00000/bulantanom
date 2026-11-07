@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from django.conf import settings
 
 from .models import Crop, CropCategory
+from .soil_check import check_soil, prompt_lines
 
 logger = logging.getLogger(__name__)
 
@@ -133,20 +134,28 @@ Follow these rules strictly:
   "the soil is soaked with too much water" rather than "waterlogged".
   When you mention a reading, say plainly whether it is too high, too low
   or fine.
+- A SYSTEM SOIL CHECK is supplied with every request. Treat it as fact.
+  When its verdict says the soil is not ready for planting, recommend NO
+  crops at all; a farmer who plants in that soil will lose the crop. Every
+  CRITICAL or CAUTION item must appear in important_warnings with what to
+  do about it.
+- The catalog you are given has already been narrowed to crops that can
+  grow in this soil. If none of them truly fits, return fewer crops rather
+  than forcing one in.
 - Do NOT diagnose plant disease and do NOT claim to replace agricultural
   extension officers or agronomists.
 """.strip()
 
 
-def _catalog_lines() -> tuple[list[str], list[str]]:
+def _catalog_lines(crops) -> tuple[list[str], list[str]]:
     """
-    The active crop catalog, split by category, as prompt lines.
+    The crops Gemini may choose from, split by category, as prompt lines.
 
-    Returns (fruit_names, vegetable_names) so the caller can also validate
-    Gemini's answers against real crops afterwards.
+    Only the crops that passed the soil check are passed in, so a crop that
+    cannot grow in this soil is never even offered.
     """
     fruits, vegetables = [], []
-    for crop in Crop.objects.filter(is_active=True).order_by("name"):
+    for crop in sorted(crops, key=lambda c: c.name):
         if crop.category == CropCategory.FRUIT:
             fruits.append(crop.name)
         else:
@@ -208,8 +217,12 @@ def _legacy_lines(soil) -> list[str]:
     ]
 
 
-def _build_prompt(soil) -> str:
-    fruits, vegetables = _catalog_lines()
+def _build_prompt(soil, check=None, crops=None) -> str:
+    if check is None:
+        check = check_soil(soil)
+    if crops is None:
+        crops = Crop.objects.filter(pk__in=check.fitting_crop_ids)
+    fruits, vegetables = _catalog_lines(crops)
 
     lines = [
         "A Farmer reported the following soil information. Analyse THESE",
@@ -235,6 +248,12 @@ def _build_prompt(soil) -> str:
             "NOTE: Soil pH was not supplied. Do not assume a pH value.",
         ]
 
+    lines += prompt_lines(check)
+
+    if check.unsuitable:
+        # No catalog at all: there is nothing to choose from.
+        return "\n".join(lines)
+
     lines += [
         "",
         "CROP CATALOG — recommend ONLY from this list, copying names exactly.",
@@ -254,7 +273,7 @@ def _build_prompt(soil) -> str:
     return "\n".join(lines)
 
 
-def _validate(payload, catalog: dict[str, Crop]) -> dict | None:
+def _validate(payload, catalog: dict[str, Crop], unsuitable: bool = False) -> dict | None:
     """
     Defensive validation — never trust the model's shape blindly.
 
@@ -262,6 +281,9 @@ def _validate(payload, catalog: dict[str, Crop]) -> dict | None:
     anything unrecognised is dropped, so the UI can always resolve an emoji.
     A crop already used in an earlier section is skipped, enforcing the
     "no duplicates between sections" rule even if Gemini ignores it.
+
+    When the soil check found the soil `unsuitable`, every crop is dropped
+    whatever Gemini said, and a result with only advice is a valid answer.
     """
     if not isinstance(payload, dict):
         return None
@@ -269,6 +291,8 @@ def _validate(payload, catalog: dict[str, Crop]) -> dict | None:
     seen: set[str] = set()
 
     def _crops(key):
+        if unsuitable:
+            return []
         value = payload.get(key)
         if not isinstance(value, list):
             return []
@@ -320,6 +344,16 @@ def _validate(payload, catalog: dict[str, Crop]) -> dict | None:
         "important_warnings": _recommendations("important_warnings"),
     }
 
+    if unsuitable:
+        # The answer is the advice; with none of it there is nothing to show.
+        if not (
+            result["important_warnings"]
+            or result["soil_improvement_watering"]
+            or result["fertilizer_recommendations"]
+        ):
+            return None
+        return result
+
     # A result with no crops at all is not useful to the Farmer; treat it as
     # a failure so the UI shows "unavailable" rather than six empty sections.
     if not (
@@ -332,10 +366,11 @@ def _validate(payload, catalog: dict[str, Crop]) -> dict | None:
     return result
 
 
-# When the advice instructions last changed (plain words, 3 to 5 crops per
-# group). A result written before this is rewritten once, when the farmer
-# opens it. Mirrored as SOIL_ADVICE_REVISED_AT in src/lib/api/soil-api.ts.
-ADVICE_REVISED_AT = datetime(2026, 10, 7, 17, 35, tzinfo=timezone.utc)
+# When the advice instructions last changed (the soil check: no crops for
+# unsuitable soil, only crops that tolerate it otherwise). A result written
+# before this is rewritten once, when the farmer opens it. Mirrored as
+# SOIL_ADVICE_REVISED_AT in src/lib/api/soil-api.ts.
+ADVICE_REVISED_AT = datetime(2026, 11, 7, 6, 0, tzinfo=timezone.utc)
 
 
 def is_outdated(soil) -> bool:
@@ -368,15 +403,19 @@ def generate_soil_recommendation(soil, language: str = "en") -> dict | None:
         logger.exception("google-genai SDK unavailable.")
         return None
 
-    catalog = {
-        crop.name.casefold(): crop for crop in Crop.objects.filter(is_active=True)
-    }
-    if not catalog:
+    active = list(Crop.objects.filter(is_active=True))
+    if not active:
         logger.warning("Soil recommendation skipped: crop catalog is empty.")
         return None
 
+    check = check_soil(soil, active)
+    fitting = [crop for crop in active if crop.id in set(check.fitting_crop_ids)]
+    # Validated against the fitting crops only, so a crop Gemini names that
+    # the soil check ruled out is dropped like an invented one.
+    catalog = {crop.name.casefold(): crop for crop in fitting}
+
     language = language_code(language)
-    prompt = _build_prompt(soil)
+    prompt = _build_prompt(soil, check, fitting)
     if write_in(language):
         prompt += "\n\n" + write_in(language)
     config = types.GenerateContentConfig(
@@ -425,7 +464,7 @@ def generate_soil_recommendation(soil, language: str = "en") -> dict | None:
             logger.warning("Gemini returned non-JSON soil content.")
             return None
 
-    validated = _validate(parsed, catalog)
+    validated = _validate(parsed, catalog, unsuitable=check.unsuitable)
     if validated is None:
         logger.warning("Gemini soil response failed schema validation.")
         return None
