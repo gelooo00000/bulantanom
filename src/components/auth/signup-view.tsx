@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth, type PendingVerification } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
+import { NAME_MAX, cleanText, nameProblem } from "@/lib/text-validation";
 
 export function SignupView() {
   const router = useRouter();
@@ -47,6 +48,18 @@ export function SignupView() {
     // A second Enter before the first request answers must not send another.
     if (submitting) return;
     setError(null);
+
+    // The full name is split into first and last name, and each part must
+    // pass the same name rules Django applies.
+    const [first = "", ...rest] = cleanText(fullName).split(" ");
+    const nameError =
+      nameProblem(fullName, "Full name") ??
+      nameProblem(first, "First name") ??
+      nameProblem(rest.join(" "), "Last name", { required: false });
+    if (nameError) {
+      setError(nameError);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords don't match.");
@@ -133,6 +146,8 @@ export function SignupView() {
                 icon={User}
                 id="fullName"
                 required
+                maxLength={NAME_MAX * 2}
+                autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />

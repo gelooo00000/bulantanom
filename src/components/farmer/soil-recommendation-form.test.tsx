@@ -177,6 +177,20 @@ describe("SoilRecommendationForm result view", () => {
   });
 });
 
+describe("SoilRecommendationForm additional soil information", () => {
+  it("refuses notes that are not words, without sending anything", async () => {
+    fetchHistory.mockResolvedValue([]);
+    render(<SoilRecommendationForm />);
+
+    await fillReadings();
+    await userEvent.type(screen.getByLabelText(/additional soil information/i), "12345 !!!");
+    await userEvent.click(screen.getByRole("button", { name: /get recommendation/i }));
+
+    expect(await screen.findByText(/must describe something in words/)).toBeInTheDocument();
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
 describe("SoilRecommendationForm soil warning signs", () => {
   const unsuitable: SoilRecommendation = {
     ...analyzed,

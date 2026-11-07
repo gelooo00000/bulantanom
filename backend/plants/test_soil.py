@@ -731,3 +731,28 @@ class SoilCheckTests(SoilTestCase):
             f for f in response.data["soil_check"]["findings"] if f["field"] == "soil_ph"
         )
         self.assertEqual((ph["level"], ph["code"]), ("critical", "ph_high"))
+
+
+class SoilNotesValidationTests(SoilTestCase):
+    def test_meaningless_notes_are_refused_before_gemini(self):
+        with patch("plants.views.generate_soil_recommendation") as gen:
+            response = self.client.post(
+                LIST_URL,
+                {**VALID_SOIL, "notes": "asdfghjklqwrtp 12345 !!!!!!"},
+                format="json",
+                **self.auth("farmer@example.com"),
+            )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("notes", response.data)
+        gen.assert_not_called()
+        self.assertFalse(SoilRecommendation.objects.exists())
+
+    def test_notes_are_trimmed(self):
+        with patch("plants.views.generate_soil_recommendation", return_value=None):
+            response = self.client.post(
+                LIST_URL,
+                {**VALID_SOIL, "notes": "   Dries quickly.   "},
+                format="json",
+                **self.auth("farmer@example.com"),
+            )
+        self.assertEqual(response.data["notes"], "Dries quickly.")

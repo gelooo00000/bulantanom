@@ -45,6 +45,7 @@ import { clearDraft, readDraft, saveDraft } from "@/lib/assessment-draft";
 import { useLanguage } from "@/lib/i18n";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { symptomsFor, toObservationText, type Disease, type Pest } from "@/lib/symptoms";
+import { ASSESSMENT_NOTES_MAX, notesProblem } from "@/lib/text-validation";
 
 // The values are what Django stores; only the labels are translated.
 const GROWTH: ChoiceOption[] = [
@@ -243,6 +244,7 @@ function AssessmentFormBody({
     () => new Set(symptoms.diseases.filter((item) => draft?.diseases.includes(item))),
   );
   const [notes, setNotes] = useState(draft?.notes ?? "");
+  const [notesError, setNotesError] = useState<string | null>(null);
   // Symptoms, height and notes sit behind "Add more details": closed, unless
   // a draft brought something back in there.
   const [showDetails, setShowDetails] = useState(
@@ -380,6 +382,19 @@ function AssessmentFormBody({
 
     setError(null);
     setConflicts([]);
+
+    // Checked before the photo check, so a bad note never spends AI quota.
+    const notesMessage = notesProblem(
+      notes,
+      t("text.assessmentNotesLabel"),
+      ASSESSMENT_NOTES_MAX,
+      t,
+    );
+    if (notesMessage) {
+      setNotesError(notesMessage);
+      setShowDetails(true);
+      return;
+    }
 
     // Step 1 — verify the photo actually shows this crop. Nothing is saved
     // and no risk evaluation runs until this passes. Usually already done
@@ -754,8 +769,19 @@ function AssessmentFormBody({
               id="notes"
               placeholder={t("asmt.notesPlaceholder")}
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              maxLength={ASSESSMENT_NOTES_MAX}
+              aria-invalid={notesError ? true : undefined}
+              aria-describedby={notesError ? "notes-error" : undefined}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                setNotesError(null);
+              }}
             />
+            {notesError ? (
+              <p id="notes-error" className="text-destructive text-sm">
+                {notesError}
+              </p>
+            ) : null}
             <p className="text-muted-foreground text-xs">{t("asmt.anyLanguage")}</p>
           </div>
         </div>

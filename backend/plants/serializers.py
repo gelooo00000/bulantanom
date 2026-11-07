@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.conf import settings
 from rest_framework import serializers
 
+from accounts.text_validation import clean_notes, notes_problem
+
 from . import crop_calendar
 from .assessment_questions import FLOWERING, FRUITING, HEIGHT, LEAF, MUSHROOM, not_applicable
 from .models import (
@@ -399,6 +401,12 @@ class AssessmentSerializer(serializers.ModelSerializer):
     def validate_evidence_image(self, image):
         return validate_evidence_file(image)
 
+    def validate_notes(self, value):
+        problem = notes_problem(value, "Notes", 1000)
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean_notes(value)
+
     def validate_plant_height_cm(self, value):
         if value is not None and (value < 0 or value > 5000):
             raise serializers.ValidationError("Please enter a realistic plant height in cm.")
@@ -570,8 +578,7 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_notes(self, value):
-        if value and len(value) > 2000:
-            raise serializers.ValidationError(
-                "Please keep additional soil information under 2000 characters."
-            )
-        return value
+        problem = notes_problem(value, "Additional soil information", 2000)
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean_notes(value)

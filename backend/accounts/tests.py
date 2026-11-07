@@ -4,7 +4,7 @@ from unittest import mock
 from django.conf import settings
 from django.core import mail
 from django.core.cache import caches
-from django.test import override_settings
+from django.test import SimpleTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -839,3 +839,47 @@ class LoginRateLimitTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class TextValidationTests(SimpleTestCase):
+    """Names and free-text notes (accounts/text_validation.py)."""
+
+    def test_real_names_pass(self):
+        from .text_validation import name_problem
+
+        for name in ("Juan", "Ma. Luisa", "Dela Cruz", "O'Neil", "Peña", "Jean-Paul", "Jr."):
+            self.assertIsNone(name_problem(name, "Name"), name)
+
+    def test_bad_names_are_refused(self):
+        from .text_validation import name_problem
+
+        for name in ("", "   ", "J", "Juan2", "123", "!!!", "<b>Juan</b>", "Aaaaaa", "x" * 51):
+            self.assertIsNotNone(name_problem(name, "Name"), name)
+        self.assertIsNone(name_problem("", "Last name", required=False))
+
+    def test_real_notes_pass(self):
+        from .text_validation import notes_problem
+
+        for text in (
+            "",
+            "The soil dries quickly after two sunny days.",
+            "Mabilis matuyo ang lupa, 3 araw lang.",
+            "Madali mamara an daga.",
+            "Yellow leaves on 2 plants",
+        ):
+            self.assertIsNone(notes_problem(text, "Notes", 1000), text)
+
+    def test_meaningless_notes_are_refused(self):
+        from .text_validation import notes_problem
+
+        for text in (
+            "12345",
+            "!!!???",
+            "aaaaaaaaa",
+            "qwrtplkjh",
+            "see https://example.com",
+            "visit www.spam.ph",
+            "<script>alert(1)</script>",
+            "x" * 1001,
+        ):
+            self.assertIsNotNone(notes_problem(text, "Notes", 1000), text)

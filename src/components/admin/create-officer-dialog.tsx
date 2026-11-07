@@ -11,6 +11,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { createLguOfficer } from "@/lib/api/admin-api";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/auth-context";
+import { NAME_MAX, cleanText, nameProblem } from "@/lib/text-validation";
 import { cn } from "@/lib/utils";
 
 /**
@@ -53,12 +54,19 @@ export function CreateOfficerDialog({
     event.preventDefault();
     if (!accessToken || !canSubmit) return;
 
+    const nameError =
+      nameProblem(firstName, "First name") ?? nameProblem(lastName, "Last name");
+    if (nameError) {
+      setError(nameError);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
       const officer = await createLguOfficer(accessToken, {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        first_name: cleanText(firstName),
+        last_name: cleanText(lastName),
         email: email.trim(),
         password,
       });
@@ -121,6 +129,7 @@ export function CreateOfficerDialog({
                 <Input
                   id="officer-first"
                   required
+                  maxLength={NAME_MAX}
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                 />
@@ -130,6 +139,7 @@ export function CreateOfficerDialog({
                 <Input
                   id="officer-last"
                   required
+                  maxLength={NAME_MAX}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                 />

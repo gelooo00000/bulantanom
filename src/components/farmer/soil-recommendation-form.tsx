@@ -31,6 +31,7 @@ import type { MeasuredField } from "@/lib/arduino/soil-sensor";
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { useLanguage } from "@/lib/i18n";
+import { notesProblem, SOIL_NOTES_MAX } from "@/lib/text-validation";
 import { SENSOR_FIELDS, useSoilStrings, validateReading } from "@/lib/soil-options";
 
 type Status = "idle" | "analyzing" | "done";
@@ -139,6 +140,13 @@ export function SoilRecommendationForm() {
       const message = validateReading(field, values[field.key] ?? "", translate);
       if (message) errors[field.key] = message;
     }
+    const notesError = notesProblem(
+      notes,
+      translate("text.soilNotesLabel"),
+      SOIL_NOTES_MAX,
+      translate,
+    );
+    if (notesError) errors.notes = notesError;
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setError(null);
@@ -407,8 +415,25 @@ export function SoilRecommendationForm() {
         id="notes"
         placeholder={t.additionalInfoHint}
         value={notes}
-        onChange={(e) => setNotes(e.target.value)}
+        maxLength={SOIL_NOTES_MAX}
+        aria-invalid={fieldErrors.notes ? true : undefined}
+        aria-describedby={fieldErrors.notes ? "notes-error" : undefined}
+        onChange={(e) => {
+          setNotes(e.target.value);
+          if (fieldErrors.notes) {
+            setFieldErrors((current) => {
+              const next = { ...current };
+              delete next.notes;
+              return next;
+            });
+          }
+        }}
       />
+      {fieldErrors.notes ? (
+        <p id="notes-error" className="text-destructive text-sm">
+          {fieldErrors.notes}
+        </p>
+      ) : null}
     </div>
   );
 

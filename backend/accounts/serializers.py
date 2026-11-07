@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .email_check import email_problem
+from .text_validation import clean, name_problem
 from .models import AccountStatus, User, UserRole
 
 
@@ -46,6 +47,18 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
         # `unique=True`) so duplicate-email always goes through our own
         # validate_email() below, with our own message.
         extra_kwargs = {"email": {"validators": []}}
+
+    def validate_first_name(self, value):
+        problem = name_problem(value, "First name")
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean(value)
+
+    def validate_last_name(self, value):
+        problem = name_problem(value, "Last name", required=False)
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean(value)
 
     def validate_email(self, value):
         normalized = value.strip().lower()
@@ -129,6 +142,18 @@ class LguOfficerCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = ["first_name", "last_name", "email", "password"]
         extra_kwargs = {"email": {"validators": []}}
+
+    def validate_first_name(self, value):
+        problem = name_problem(value, "First name")
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean(value)
+
+    def validate_last_name(self, value):
+        problem = name_problem(value, "Last name", required=True)
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean(value)
 
     def validate_email(self, value):
         normalized = value.strip().lower()

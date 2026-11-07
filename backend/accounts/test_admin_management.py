@@ -263,7 +263,7 @@ class AdminNotificationTests(AdminNotificationTestCase):
     def test_admin_unread_count_and_mark_all_read(self):
         make_user("x1@example.com", status_=AccountStatus.PENDING)
         signup_and_verify(self.client, {
-                "first_name": "A", "last_name": "B", "email": "n2@example.com",
+                "first_name": "Ana", "last_name": "Bautista", "email": "n2@example.com",
                 "password": PW, "password_confirm": PW,
             })
         headers = self.auth("admin@example.com")
@@ -278,7 +278,7 @@ class AdminNotificationTests(AdminNotificationTestCase):
     def test_read_state_persists(self):
         """Marking read is a database write, not frontend state."""
         signup_and_verify(self.client, {
-                "first_name": "A", "last_name": "B", "email": "n3@example.com",
+                "first_name": "Ana", "last_name": "Bautista", "email": "n3@example.com",
                 "password": PW, "password_confirm": PW,
             })
         headers = self.auth("admin@example.com")
