@@ -132,11 +132,18 @@ describe("the harvest card", () => {
     render(<HarvestPlantCard plant={ready} />);
     expect(screen.getByText(/Harvest now, until/)).toBeInTheDocument();
     expect(screen.getByText("Fully grown")).toBeInTheDocument();
-    expect(screen.getByText(/creamy yellow/)).toBeInTheDocument();
+    // The tip stays hidden behind the light bulb until pointed at.
+    expect(screen.queryByText(/creamy yellow/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View plant/ })).toHaveAttribute(
       "href",
       "/farmer/plants/1",
     );
+  });
+
+  it("shows the ripeness tip when the light bulb is pointed at", async () => {
+    render(<HarvestPlantCard plant={ready} />);
+    await userEvent.hover(screen.getByRole("button", { name: "How to tell it is ready" }));
+    expect(await screen.findByText(/creamy yellow/)).toBeInTheDocument();
   });
 
   it("marks a ready plant as harvested", async () => {

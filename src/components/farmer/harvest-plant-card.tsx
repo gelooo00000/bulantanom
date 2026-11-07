@@ -1,5 +1,6 @@
 "use client";
 
+import { Popover } from "@base-ui/react/popover";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -173,6 +174,37 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
   );
 }
 
+/**
+ * "How to tell it is ready", behind a light bulb so it takes no room on
+ * the card: it pops up when pointed at, or when tapped on a phone.
+ */
+function ReadyTip({ tip }: { tip: string }) {
+  const { t } = useLanguage();
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        openOnHover
+        delay={100}
+        aria-label={t("harvestCard.tipTitle")}
+        className="text-risk-medium hover:bg-risk-medium/15 data-[popup-open]:bg-risk-medium/15 flex size-6 shrink-0 items-center justify-center rounded-full transition-colors"
+      >
+        <Lightbulb className="size-4" aria-hidden="true" />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="top" align="end" sideOffset={6} className="z-50">
+          <Popover.Popup className="bg-popover text-popover-foreground border-border max-w-64 rounded-lg border px-3 py-2.5 text-[13px] shadow-lg">
+            <p className="flex items-center gap-1.5 font-medium">
+              <Lightbulb className="text-risk-medium size-3.5" aria-hidden="true" />
+              {t("harvestCard.tipTitle")}
+            </p>
+            <p className="text-muted-foreground mt-1">{tip}</p>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
 export function HarvestPlantCard({
   plant,
   onStatusChange,
@@ -242,15 +274,18 @@ export function HarvestPlantCard({
               </p>
             </div>
           </div>
-          <span
-            className={cn(
-              // May wrap rather than push the card past a phone's edge.
-              "font-heading max-w-[50%] shrink-0 rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
-              style.pill,
-            )}
-          >
-            {phaseLabel(plant, phase, t)}
-          </span>
+          <div className="flex max-w-[55%] shrink-0 items-start gap-1.5">
+            <span
+              className={cn(
+                // May wrap rather than push the card past a phone's edge.
+                "font-heading rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
+                style.pill,
+              )}
+            >
+              {phaseLabel(plant, phase, t)}
+            </span>
+            {hasTip && phase !== "harvested" && <ReadyTip tip={tip} />}
+          </div>
         </div>
 
         {/* The answer first, in one plain sentence. */}
@@ -274,15 +309,6 @@ export function HarvestPlantCard({
 
         {phase !== "harvested" && <Timeline plant={plant} phase={phase} />}
 
-        {hasTip && phase !== "harvested" && (
-          <div className="bg-muted/50 flex gap-2 rounded-lg px-3 py-2.5 text-[13px]">
-            <Lightbulb className="text-risk-medium mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <p>
-              <span className="font-medium">{t("harvestCard.tipTitle")}: </span>
-              <span className="text-muted-foreground">{tip}</span>
-            </p>
-          </div>
-        )}
 
         <div className="border-border mt-auto flex flex-wrap items-center gap-2 border-t pt-3">
           {onStatusChange && canMark && (
