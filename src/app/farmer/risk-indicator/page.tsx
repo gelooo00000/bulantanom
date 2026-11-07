@@ -20,6 +20,7 @@ import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { RiskInfoNote } from "@/components/risk/risk-result-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { SlidePager } from "@/components/shared/slide-pager";
 import { Button } from "@/components/ui/button";
 import type { BackendPlant } from "@/lib/api/plants-api";
 import { fetchFarmerRisk, type BackendAssessment } from "@/lib/api/risk-api";
@@ -29,6 +30,9 @@ import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Entry = { plant: BackendPlant; latest: BackendAssessment | null };
+
+/** Cards per page in each list; Previous / Next slide in the next page. */
+const PAGE_SIZE = { reading: 4, early: 4, none: 6 } as const;
 
 /**
  * The page groups plants the way the overview chart does. A "Too Early"
@@ -115,16 +119,19 @@ export default function RiskIndicatorPage() {
               buried under a long run of plants still waiting for one. */}
           <PlantGroup
             title={t("riskPage.withReading")}
+            pageSize={PAGE_SIZE.reading}
             entries={entries
               .filter((e) => !["early", "none"].includes(groupOf(e.latest)))
               .sort((a, b) => SEVERITY[groupOf(a.latest)] - SEVERITY[groupOf(b.latest)])}
           />
           <PlantGroup
             title={t("early.level")}
+            pageSize={PAGE_SIZE.early}
             entries={entries.filter((e) => groupOf(e.latest) === "early")}
           />
           <PlantGroup
             title={t("riskPage.withoutReading")}
+            pageSize={PAGE_SIZE.none}
             entries={entries.filter((e) => groupOf(e.latest) === "none")}
           />
 
@@ -177,8 +184,19 @@ function RiskBreakdown({ entries }: { entries: Entry[] }) {
   );
 }
 
-/** A titled run of plant cards with its count; nothing at all when empty. */
-function PlantGroup({ title, entries }: { title: string; entries: Entry[] }) {
+/**
+ * A titled run of plant cards with its count, a page at a time; nothing at
+ * all when empty.
+ */
+function PlantGroup({
+  title,
+  entries,
+  pageSize,
+}: {
+  title: string;
+  entries: Entry[];
+  pageSize: number;
+}) {
   if (entries.length === 0) return null;
   return (
     <section aria-label={title} className="flex flex-col gap-2">
@@ -188,11 +206,19 @@ function PlantGroup({ title, entries }: { title: string; entries: Entry[] }) {
           {entries.length}
         </span>
       </h2>
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {entries.map((entry) => (
-          <PlantRiskCard key={entry.plant.id} {...entry} />
-        ))}
-      </ul>
+      {/* Previous / Next slide the next page in from the side asked for,
+          the same pager as the Harvest page. */}
+      <SlidePager
+        items={entries}
+        pageSize={pageSize}
+        getKey={(entry) => entry.plant.id}
+        listLabel={title}
+        listClassName="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+        itemClassName="flex min-w-0 flex-col"
+        // Room for a card's hover lift and outline inside the clipping frame.
+        frameClassName="-m-1 p-1"
+        renderItem={(entry) => <PlantRiskCard {...entry} />}
+      />
     </section>
   );
 }
@@ -229,10 +255,10 @@ function PlantRiskCard({ plant, latest }: Entry) {
     // The level's border is set through a variable, not inline, so the
     // crop-coloured outline (as on My Plants and Harvest) can replace it
     // while the card is pointed at or tapped.
-    <li
+    <div
       tabIndex={0}
       className={cn(
-        "bg-card group relative flex flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
+        "bg-card group relative flex flex-1 flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
         assessed && "border-(--level)",
         CROP_OUTLINE,
       )}
@@ -308,7 +334,7 @@ function PlantRiskCard({ plant, latest }: Entry) {
         </span>
         <WeeklyCheck plant={plant} />
       </div>
-    </li>
+    </div>
   );
 }
 
