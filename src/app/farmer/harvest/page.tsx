@@ -2,6 +2,8 @@
 
 import { Popover } from "@base-ui/react/popover";
 import {
+  Archive,
+  ArrowLeft,
   CalendarClock,
   ChevronDown,
   CircleCheck,
@@ -10,6 +12,8 @@ import {
   Sprout,
   TriangleAlert,
   Wheat,
+  Undo2,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -190,15 +194,23 @@ function TodoButton({ plants }: { plants: BackendPlant[] }) {
             : t("harvestTodo.title")
         }
         className={cn(
-          "bg-primary/10 text-primary hover:bg-primary/20 data-[popup-open]:bg-primary/20",
-          "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+          // Solid when something is waiting, so it is hard to miss.
+          items.length > 0
+            ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+            : "bg-primary/10 text-primary hover:bg-primary/20",
+          "relative flex size-11 shrink-0 items-center justify-center rounded-xl transition-all",
+          "hover:scale-105 data-[popup-open]:scale-105",
           "focus-visible:ring-ring/50 outline-none focus-visible:ring-3",
         )}
       >
-        <ClipboardList className="size-5" aria-hidden="true" />
+        <ClipboardList className="size-6" aria-hidden="true" />
         {items.length > 0 && (
-          <span className="bg-risk-high absolute -top-1.5 -right-1.5 flex min-w-5 items-center justify-center rounded-full px-1 text-[11px] leading-5 font-semibold text-white tabular-nums">
-            {items.length}
+          <span className="absolute -top-2 -right-2 flex size-[22px]">
+            {/* A soft pulse behind the count; none under reduced motion. */}
+            <span className="bg-risk-high absolute inset-0 animate-ping rounded-full opacity-60 motion-reduce:hidden" />
+            <span className="bg-risk-high ring-background relative flex size-[22px] items-center justify-center rounded-full text-xs font-semibold text-white tabular-nums ring-2">
+              {items.length}
+            </span>
           </span>
         )}
       </Popover.Trigger>
@@ -309,6 +321,11 @@ function Section({
   );
 }
 
+/** Harvested plants, most recently harvested first. */
+function archiveOrder(plants: BackendPlant[]): BackendPlant[] {
+  return [...plants].sort((a, b) => (b.harvested_at ?? "").localeCompare(a.harvested_at ?? ""));
+}
+
 export default function HarvestPage() {
   const { data, loading, error, refetch } = useAuthedQuery(fetchPlants);
   const { accessToken } = useAuth();
@@ -316,6 +333,11 @@ export default function HarvestPage() {
   // Saved status changes, laid over the fetched list so marking a plant
   // harvested moves it at once, without reloading the whole page.
   const [updated, setUpdated] = useState<Record<number, BackendPlant>>({});
+  const [view, setView] = useState<"active" | "archive">("active");
+  // The plant just moved, for the "Moved to the Archive · Undo" banner.
+  const [moved, setMoved] = useState<{ plant: BackendPlant; to: "archive" | "active" } | null>(
+    null,
+  );
 
   const plants = (data ?? []).map((plant) => updated[plant.id] ?? plant);
   const sorted = [...plants].sort((a, b) =>
@@ -326,22 +348,88 @@ export default function HarvestPage() {
   const approaching = byPhase("approaching");
   const passed = byPhase("passed");
   const growing = byPhase("growing");
-  const harvested = byPhase("harvested");
+  const archived = archiveOrder(byPhase("harvested"));
 
   async function changeStatus(plant: BackendPlant, status: "GROWING" | "HARVESTED") {
     if (!accessToken) throw new Error("Not signed in.");
     const saved = await setPlantStatus(accessToken, plant.id, status);
     setUpdated((current) => ({ ...current, [plant.id]: saved }));
+    setMoved({ plant: saved, to: status === "HARVESTED" ? "archive" : "active" });
     requestNotificationRefresh();
   }
+
+  async function undoMove() {
+    if (!moved) return;
+    const { plant, to } = moved;
+    try {
+      await changeStatus(plant, to === "archive" ? "GROWING" : "HARVESTED");
+    } catch {
+      // The card's own button is still there to try again.
+    }
+    setMoved(null);
+  }
+
+  function showView(next: "active" | "archive") {
+    setView(next);
+    setMoved(null);
+  }
+
+  const archiveButton = (
+    <Button
+      variant={view === "archive" ? "default" : "outline"}
+      onClick={() => showView(view === "archive" ? "active" : "archive")}
+      aria-pressed={view === "archive"}
+    >
+      <Archive className="size-4" />
+      {t("archive.button")}
+      <span className="bg-muted text-foreground rounded-full px-1.5 text-xs tabular-nums">
+        {archived.length}
+      </span>
+    </Button>
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={t("harvestPage.title")}
-        description={t("harvestPage.description")}
-        titleAside={data && data.length > 0 ? <TodoButton plants={sorted} /> : undefined}
+        title={view === "archive" ? t("archive.title") : t("harvestPage.title")}
+        description={view === "archive" ? t("archive.description") : t("harvestPage.description")}
+        titleAside={
+          view === "active" && data && data.length > 0 ? <TodoButton plants={sorted} /> : undefined
+        }
+        action={data && data.length > 0 ? archiveButton : undefined}
       />
+
+      {/* Says where a plant just went, with a one-tap undo. */}
+      {moved && (
+        <div
+          role="status"
+          className="border-risk-low/40 bg-risk-low/10 animate-in fade-in slide-in-from-top-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-4 py-3 text-sm"
+        >
+          <CircleCheck className="text-risk-low size-5 shrink-0" aria-hidden="true" />
+          <span className="flex-1">
+            {moved.to === "archive"
+              ? t("archive.moved", { name: moved.plant.display_name })
+              : t("archive.restored", { name: moved.plant.display_name })}
+          </span>
+          <Button size="sm" variant="outline" onClick={undoMove}>
+            <Undo2 className="size-3.5" />
+            {t("archive.undo")}
+          </Button>
+          {moved.to === "archive" && view === "active" && (
+            <Button size="sm" variant="ghost" onClick={() => showView("archive")}>
+              {t("archive.view")}
+            </Button>
+          )}
+          <button
+            type="button"
+            aria-label={t("common.close")}
+            onClick={() => setMoved(null)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
@@ -357,6 +445,23 @@ export default function HarvestPage() {
         </div>
       ) : sorted.length === 0 ? (
         <EmptyState icon={Wheat} title={t("riskPage.emptyTitle")} description={t("harvestPage.emptyText")} />
+      ) : view === "archive" ? (
+        <>
+          <Button variant="ghost" className="-ml-2 self-start" onClick={() => showView("active")}>
+            <ArrowLeft className="size-4" />
+            {t("archive.back")}
+          </Button>
+          {archived.length === 0 ? (
+            <EmptyState icon={Archive} title={t("archive.emptyTitle")} description={t("archive.emptyText")} />
+          ) : (
+            <Section
+              phase="harvested"
+              title={t("harvestPage.harvested")}
+              plants={archived}
+              onStatusChange={changeStatus}
+            />
+          )}
+        </>
       ) : (
         <>
           {/* The four numbers a farmer asks first; each jumps to its list. */}
@@ -401,12 +506,7 @@ export default function HarvestPage() {
           {/* Before "Still growing": a missed harvest needs a decision now. */}
           <Section phase="passed" title={t("harvestPage.passed")} plants={passed} onStatusChange={changeStatus} />
           <Section phase="growing" title={t("harvestPage.growing")} plants={growing} onStatusChange={changeStatus} />
-          <Section
-            phase="harvested"
-            title={t("harvestPage.harvested")}
-            plants={harvested}
-            onStatusChange={changeStatus}
-          />
+          {/* Harvested plants live in the Archive (button above), not here. */}
 
           <p className="text-muted-foreground text-xs">{t("harvestPage.note")}</p>
         </>

@@ -157,11 +157,40 @@ export const harvest = defineMessages({
   },
   "harvestCard.markHarvested": { en: "Mark as harvested", fil: "Markahang naani", bik: "Markahan na naani" },
   "harvestCard.saving": { en: "Saving…", fil: "Sine-save…", bik: "Sine-save…" },
-  "harvestCard.undo": { en: "Undo harvest", fil: "Ibalik", bik: "Ibalik" },
   "harvestCard.viewPlant": { en: "View plant", fil: "Tingnan ang tanim", bik: "Hilingon an tanom" },
   "harvestCard.saveFailed": {
     en: "Could not save. Please try again.",
     fil: "Hindi na-save. Pakisubukan muli.",
     bik: "Dai na-save. Probaran tabi giraray.",
   },
+
+  // The Archive: harvested plants, out of the main lists.
+  "archive.button": { en: "Archive", fil: "Archive", bik: "Archive" },
+  "archive.title": { en: "Archive", fil: "Archive", bik: "Archive" },
+  "archive.description": {
+    en: "Plants you have harvested. Restore one if you marked it by mistake.",
+    fil: "Mga tanim na naani mo na. Ibalik ang isa kung namarkahan mo ito nang mali.",
+    bik: "Mga tanom na naani mo na. Ibalik an saro kun namarkahan mo ini nin sala.",
+  },
+  "archive.back": { en: "Back to Harvest", fil: "Bumalik sa Anihan", bik: "Balik sa Pag-ani" },
+  "archive.emptyTitle": { en: "Nothing archived yet", fil: "Wala pang naka-archive", bik: "Waray pa naka-archive" },
+  "archive.emptyText": {
+    en: "Plants you mark as harvested will appear here.",
+    fil: "Dito lalabas ang mga tanim na mamarkahan mong naani.",
+    bik: "Digdi maluwas an mga tanom na markahan mong naani.",
+  },
+  "archive.moved": {
+    en: "{name} was harvested and moved to the Archive.",
+    fil: "Naani ang {name} at inilipat sa Archive.",
+    bik: "Naani an {name} asin binalyo sa Archive.",
+  },
+  "archive.restored": {
+    en: "{name} is back on the Harvest page.",
+    fil: "Nakabalik na ang {name} sa Anihan.",
+    bik: "Nakabalik na an {name} sa Pag-ani.",
+  },
+  "archive.undo": { en: "Undo", fil: "I-undo", bik: "I-undo" },
+  "archive.view": { en: "View archive", fil: "Tingnan ang archive", bik: "Hilingon an archive" },
+  "harvestCard.harvestedOn": { en: "Harvested on {date}", fil: "Naani noong {date}", bik: "Naani kan {date}" },
+  "harvestCard.restore": { en: "Restore", fil: "Ibalik", bik: "Ibalik" },
 });

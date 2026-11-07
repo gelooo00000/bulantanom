@@ -101,7 +101,9 @@ function headline(plant: BackendPlant, phase: HarvestPhase, t: Translate, date: 
     case "passed":
       return t("harvestCard.headlinePassed", { date: date(plant.expected_harvest_end) });
     case "harvested":
-      return t("harvestCard.headlineHarvested");
+      return plant.harvested_at
+        ? t("harvestCard.harvestedOn", { date: date(plant.harvested_at.slice(0, 10)) })
+        : t("harvestCard.headlineHarvested");
     default:
       return t("harvestCard.headlineSoon", { date: date(plant.expected_harvest_start) });
   }
@@ -333,7 +335,7 @@ export function HarvestPlantCard({
               ) : (
                 <Undo2 className="size-3.5" />
               )}
-              {t("harvestCard.undo")}
+              {t("harvestCard.restore")}
             </Button>
           )}
           <Link

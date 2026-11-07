@@ -471,6 +471,7 @@ class MarkHarvestedTests(APITestCase):
         plant.refresh_from_db()
         self.assertEqual(plant.status, "HARVESTED")
         self.assertIsNotNone(plant.harvested_at)
+        self.assertIsNotNone(response.data["harvested_at"])
         self.assertTrue(
             Notification.objects.filter(recipient=farmer, title="Plant Harvested").exists()
         )

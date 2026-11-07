@@ -192,6 +192,8 @@ class PlantSerializer(serializers.ModelSerializer):
             "expected_harvest_end",
             "status",
             "status_label",
+            # When it was marked harvested; drives the Harvest page archive.
+            "harvested_at",
             "age_days",
             "is_planned",
             "assessment_eligibility",
@@ -207,6 +209,7 @@ class PlantSerializer(serializers.ModelSerializer):
             "expected_harvest_start",
             "expected_harvest_end",
             "status_label",
+            "harvested_at",
             "age_days",
             "is_planned",
             "assessment_eligibility",

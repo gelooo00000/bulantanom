@@ -172,7 +172,7 @@ describe("the harvest card", () => {
     const onStatusChange = vi.fn().mockResolvedValue(undefined);
     const done = { ...late, status: "HARVESTED" } as BackendPlant;
     render(<HarvestPlantCard plant={done} onStatusChange={onStatusChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /Undo harvest/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
     expect(onStatusChange).toHaveBeenCalledWith(done, "GROWING");
   });
 

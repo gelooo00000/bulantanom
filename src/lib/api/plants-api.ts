@@ -81,6 +81,8 @@ export type BackendPlant = {
   expected_harvest_end: string;
   status: "GROWING" | "READY_FOR_HARVEST" | "HARVESTED" | "ARCHIVED";
   status_label: string;
+  /** When it was marked harvested (ISO datetime); null otherwise. */
+  harvested_at?: string | null;
   age_days: number;
   /** Planting date still ahead: a planned planting, not in the ground yet. */
   is_planned: boolean;
