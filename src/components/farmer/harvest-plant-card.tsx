@@ -259,7 +259,8 @@ export function HarvestPlantCard({
             <Icon className="size-4 shrink-0" aria-hidden="true" />
             {headline(plant, phase, t, date)}
           </p>
-          {phase !== "harvested" && (
+          {/* Not on a missed harvest: "you can harvest for" is over. */}
+          {phase !== "harvested" && phase !== "passed" && (
             <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
               <Hourglass className="size-3 shrink-0" aria-hidden="true" />
               {/* The dates are on the timeline below; this adds how long. */}
