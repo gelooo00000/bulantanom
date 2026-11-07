@@ -444,3 +444,40 @@ class LguPlantAggregationTests(PlantApiTestCase):
         self.assertEqual(
             self.client.get("/api/lgu/dashboard/", **auth).data["plants"]["total"], 0
         )
+
+
+class MarkHarvestedTests(APITestCase):
+    """The Harvest page's "Mark as harvested" and "Undo harvest"."""
+
+    def test_mark_harvested_and_undo(self):
+        from accounts.models import AccountStatus, User, UserRole
+        from notifications.models import Notification
+
+        farmer = User.objects.create_user(
+            email="harvest@example.com", password="SecurePassword123!",
+            first_name="Ana", last_name="Cruz",
+            role=UserRole.FARMER, account_status=AccountStatus.APPROVED,
+        )
+        self.client.force_authenticate(farmer)
+        plant = Plant.objects.create(
+            farmer=farmer, crop=Crop.objects.get(pk="corn"), planting_date=date(2026, 8, 1)
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.patch(
+                f"/api/farmer/plants/{plant.pk}/", {"status": "HARVESTED"}, format="json"
+            )
+        self.assertEqual(response.status_code, 200)
+        plant.refresh_from_db()
+        self.assertEqual(plant.status, "HARVESTED")
+        self.assertIsNotNone(plant.harvested_at)
+        self.assertTrue(
+            Notification.objects.filter(recipient=farmer, title="Plant Harvested").exists()
+        )
+
+        response = self.client.patch(
+            f"/api/farmer/plants/{plant.pk}/", {"status": "GROWING"}, format="json"
+        )
+        plant.refresh_from_db()
+        self.assertEqual(plant.status, "GROWING")
+        self.assertIsNone(plant.harvested_at)

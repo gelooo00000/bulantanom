@@ -1,253 +1,218 @@
 "use client";
 
-import { LoaderCircle, TriangleAlert, Wheat } from "lucide-react";
+import {
+  CalendarClock,
+  CircleCheck,
+  ClipboardList,
+  LoaderCircle,
+  Sprout,
+  TriangleAlert,
+  Wheat,
+  type LucideIcon,
+} from "lucide-react";
+import { useState } from "react";
 
 import { HarvestCalendar } from "@/components/farmer/harvest-calendar";
+import { HarvestPlantCard } from "@/components/farmer/harvest-plant-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { formatDisplayDate } from "@/components/ui/date-picker";
-import { fetchPlants, type BackendPlant } from "@/lib/api/plants-api";
+import { fetchPlants, setPlantStatus, type BackendPlant } from "@/lib/api/plants-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
-import { CROP_OUTLINE, cropTint, cropVar } from "@/lib/crop-colors";
+import { useAuth } from "@/lib/auth/auth-context";
 import { humanDuration } from "@/lib/duration";
+import {
+  APPROACHING_WINDOW_DAYS,
+  daysUntil,
+  phaseOf,
+  sortByUrgency,
+  type HarvestPhase,
+} from "@/lib/harvest";
 import { useLanguage, type Translate } from "@/lib/i18n";
-import { plantStatusLabel } from "@/lib/plant-summary";
+import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { cn } from "@/lib/utils";
 
-/**
- * Matches APPROACHING_WINDOW_DAYS in
- * notifications/management/commands/notify_harvest_windows.py, so a plant
- * flagged "approaching" here is the same one the system emails about.
- */
-const APPROACHING_WINDOW_DAYS = 7;
+/** Cards shown per section before "Show all". */
+const SECTION_PREVIEW = 6;
+/** Lines in "What to do now" before "+n more below". */
+const TODO_LIMIT = 4;
 
-/** Whole days from today to an ISO date, negative once the date has passed. */
-function daysUntil(iso: string): number {
-  const target = new Date(`${iso}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
-}
-
-type Phase = "harvested" | "open" | "approaching" | "growing" | "passed";
-
-/**
- * Which stage a plant is at, derived only from its stored dates and status.
- * Nothing here is estimated beyond the harvest window Django already
- * calculated from the crop table.
- */
-function phaseOf(plant: BackendPlant): Phase {
-  if (plant.status === "HARVESTED" || plant.status === "ARCHIVED") return "harvested";
-  const toStart = daysUntil(plant.expected_harvest_start);
-  const toEnd = daysUntil(plant.expected_harvest_end);
-  if (toEnd < 0) return "passed";
-  if (toStart <= 0) return "open";
-  if (toStart <= APPROACHING_WINDOW_DAYS) return "approaching";
-  return "growing";
-}
-
-const PHASE_STYLE: Record<Phase, string> = {
-  open: "bg-risk-low/15 text-risk-low border-risk-low/30",
-  approaching: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
-  growing: "border-border text-muted-foreground",
-  passed: "bg-risk-high/15 text-risk-high border-risk-high/30",
-  harvested: "border-border text-muted-foreground",
+const SECTION_ID: Record<HarvestPhase, string> = {
+  open: "harvest-ready",
+  approaching: "harvest-soon",
+  passed: "harvest-missed",
+  growing: "harvest-growing",
+  harvested: "harvest-done",
 };
 
-/** The single most useful sentence about this plant, right now. */
-function phaseLabel(plant: BackendPlant, phase: Phase, t: Translate): string {
-  const toStart = daysUntil(plant.expected_harvest_start);
-  const toEnd = daysUntil(plant.expected_harvest_end);
-  switch (phase) {
-    case "harvested":
-      return plantStatusLabel(plant, t);
-    case "open":
-      return toEnd === 0
-        ? t("phase.lastDay")
-        : t("harvestCard.readyLeft", { time: humanDuration(toEnd, t) });
-    case "approaching":
-      return toStart === 1
-        ? t("phase.startsTomorrow")
-        : t("harvestCard.startsIn", { time: humanDuration(toStart, t) });
-    case "passed":
-      return t("harvestCard.closedAgo", { time: humanDuration(Math.abs(toEnd), t) });
-    default:
-      // A tree crop is years away; "1460 days to go" is not an answer.
-      return t("harvestCard.toGo", { time: humanDuration(toStart, t) });
+function OverviewTile({
+  icon: Icon,
+  label,
+  count,
+  tone,
+  target,
+}: {
+  icon: LucideIcon;
+  label: string;
+  count: number;
+  tone: string;
+  target: string;
+}) {
+  const body = (
+    <>
+      <Icon className={cn("size-5", count > 0 ? tone : "text-muted-foreground")} aria-hidden="true" />
+      <p className={cn("font-heading text-3xl leading-none tabular-nums", count > 0 && tone)}>{count}</p>
+      <p className="text-muted-foreground text-sm">{label}</p>
+    </>
+  );
+  const className =
+    "border-border bg-card flex flex-col gap-2 rounded-xl border px-4 py-3.5 text-left transition-colors";
+  // Jumps to its section when there is one to jump to.
+  return count > 0 ? (
+    <a href={`#${target}`} className={cn(className, "hover:bg-muted/60")}>
+      {body}
+    </a>
+  ) : (
+    <div className={className}>{body}</div>
+  );
+}
+
+/** Plain sentences, most urgent first: what the farmer should do today. */
+function todoLines(plants: BackendPlant[], t: Translate): string[] {
+  const lines: string[] = [];
+  for (const plant of sortByUrgency(plants)) {
+    const phase = phaseOf(plant);
+    const name = plant.display_name;
+    const toStart = daysUntil(plant.expected_harvest_start);
+    const toEnd = daysUntil(plant.expected_harvest_end);
+    if (phase === "open") {
+      lines.push(
+        toEnd === 0
+          ? t("harvestTodo.lastDay", { name })
+          : t("harvestTodo.harvest", { name, time: humanDuration(toEnd, t) }),
+      );
+    } else if (phase === "passed") {
+      lines.push(t("harvestTodo.passed", { name, time: humanDuration(Math.abs(toEnd), t) }));
+    } else if (phase === "approaching") {
+      lines.push(
+        toStart === 1
+          ? t("harvestTodo.tomorrow", { name })
+          : t("harvestTodo.prepare", { name, time: humanDuration(toStart, t) }),
+      );
+    }
   }
+  return lines;
 }
 
-/** Whole days from one ISO date to another. */
-function daysBetween(from: string, to: string): number {
-  return Math.round(
-    (new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86_400_000,
-  );
-}
-
-/**
- * Read from the plant's own saved dates, not `plant.crop`: a variety has its
- * own durations (Oyster Mushroom's harvest window is 21 days, the generic
- * Mushroom's shorter), and those are what Django used for the dates.
- */
-function growingDays(plant: BackendPlant): number {
-  return daysBetween(plant.planting_date, plant.expected_harvest_start);
-}
-
-function harvestWindowDays(plant: BackendPlant): number {
-  return daysBetween(plant.expected_harvest_start, plant.expected_harvest_end);
-}
-
-/** How far through the growing period this plant is, 0–100. */
-function growthPercent(plant: BackendPlant): number {
-  const total = growingDays(plant);
-  if (!total || total <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((plant.age_days / total) * 100)));
-}
-
-function PlantHarvestCard({ plant }: { plant: BackendPlant }) {
-  const { t, dateLocale } = useLanguage();
-  const date = (iso: string) => formatDisplayDate(iso, dateLocale);
-  const phase = phaseOf(plant);
-  const percent = growthPercent(plant);
-  const windowDays = harvestWindowDays(plant);
+function TodoBox({ plants }: { plants: BackendPlant[] }) {
+  const { t } = useLanguage();
+  const lines = todoLines(plants, t);
+  const next = plants
+    .filter((p) => phaseOf(p) === "growing")
+    .sort((a, b) => a.expected_harvest_start.localeCompare(b.expected_harvest_start))[0];
 
   return (
-    // Outlined in the crop's own colour on hover or tap, as on My Plants.
-    <Card
-      tabIndex={0}
-      style={cropVar(plant.crop.name)}
-      className={cn("h-full min-w-0 gap-2 py-4 transition-all", CROP_OUTLINE)}
-    >
-      <CardContent className="flex h-full flex-col gap-3 px-4 sm:px-5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl text-2xl leading-none"
-              style={{ backgroundColor: cropTint(plant.crop.name) }}
-            >
-              {plant.crop.emoji}
-            </span>
-            <div className="min-w-0">
-              <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
-                {plant.display_name}
-              </p>
-              <p className="text-muted-foreground mt-0.5 truncate text-sm">
-                {plant.crop.name} ·{" "}
-                {plant.crop.category === "fruit"
-                  ? t("category.fruit")
-                  : plant.crop.category === "vegetable"
-                    ? t("category.vegetable")
-                    : plant.crop.category_label}
-              </p>
-            </div>
-          </div>
-          <span
-            className={cn(
-              // May wrap rather than push the card past a phone's edge.
-              "font-heading max-w-[55%] rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
-              PHASE_STYLE[phase],
-            )}
-          >
-            {phaseLabel(plant, phase, t)}
-          </span>
-        </div>
-
-        {/* Progress through the growing period, from the plant's own dates. */}
-        {phase !== "harvested" && (
-          <div className="flex flex-col gap-1.5">
-            <div className="text-foreground/75 flex items-baseline justify-between text-[13px]">
-              <span>
-                {t("harvestCard.grown", {
-                  done: humanDuration(plant.age_days, t),
-                  total: humanDuration(growingDays(plant), t),
-                })}
+    <section className="border-border bg-card flex flex-col gap-3 rounded-xl border px-4 py-4 sm:px-5">
+      <h2 className="font-heading flex items-center gap-2 text-base font-medium">
+        <ClipboardList className="text-primary size-5" aria-hidden="true" />
+        {t("harvestTodo.title")}
+      </h2>
+      {lines.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          {next
+            ? t("harvestTodo.nothing", {
+                name: next.display_name,
+                time: humanDuration(daysUntil(next.expected_harvest_start), t),
+              })
+            : t("harvestTodo.nothingAtAll")}
+        </p>
+      ) : (
+        <ol className="flex flex-col gap-2">
+          {lines.slice(0, TODO_LIMIT).map((line, i) => (
+            <li key={line} className="flex gap-2.5 text-sm">
+              <span className="bg-primary/15 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+                {i + 1}
               </span>
-              <span className="font-heading text-foreground text-sm tabular-nums">{percent}%</span>
-            </div>
-            <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  phase === "open" || phase === "passed"
-                    ? "bg-risk-low"
-                    : phase === "approaching"
-                      ? "bg-risk-medium"
-                      : "bg-primary",
-                )}
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Two by two: the cards sit side by side, so four across no longer
-            fits. Pinned to the bottom so the dates line up across a row. */}
-        <div className="border-border mt-auto grid grid-cols-2 gap-x-3 gap-y-2.5 border-t pt-3">
-          <div>
-            <p className="text-muted-foreground text-xs">{t("harvestCard.planted")}</p>
-            <p className="font-heading text-[15px] font-medium">{date(plant.planting_date)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">{t("harvestCard.readyFrom")}</p>
-            <p className="font-heading text-[15px] font-medium">{date(plant.expected_harvest_start)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">{t("harvestCard.readyUntil")}</p>
-            <p className="font-heading text-[15px] font-medium">{date(plant.expected_harvest_end)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">{t("harvestCard.lasts")}</p>
-            <p className="font-heading text-[15px] font-medium">{humanDuration(windowDays, t)}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+              <span>{line}</span>
+            </li>
+          ))}
+          {lines.length > TODO_LIMIT && (
+            <li className="text-muted-foreground pl-7 text-xs">
+              {t("harvestTodo.more", { n: lines.length - TODO_LIMIT })}
+            </li>
+          )}
+        </ol>
+      )}
+    </section>
   );
 }
 
-function Section({ title, plants }: { title: string; plants: BackendPlant[] }) {
+function Section({
+  id,
+  title,
+  plants,
+  onStatusChange,
+}: {
+  id: string;
+  title: string;
+  plants: BackendPlant[];
+  onStatusChange: (plant: BackendPlant, status: "GROWING" | "HARVESTED") => Promise<void>;
+}) {
+  const { t } = useLanguage();
+  const [expanded, setExpanded] = useState(false);
   if (plants.length === 0) return null;
+  const shown = expanded ? plants : plants.slice(0, SECTION_PREVIEW);
+
   return (
-    <div className="flex flex-col gap-3">
+    <section id={id} className="flex scroll-mt-20 flex-col gap-3">
       <h2 className="text-lg">
         {title}{" "}
         <span className="text-muted-foreground font-sans text-sm font-normal">({plants.length})</span>
       </h2>
-      {/* Side by side from tablet width up; one per row on a phone, where
-          half the screen is too narrow for four dates. */}
+      {/* Side by side from tablet width up; one per row on a phone. */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {plants.map((plant) => (
-          <PlantHarvestCard key={plant.id} plant={plant} />
+        {shown.map((plant) => (
+          <HarvestPlantCard key={plant.id} plant={plant} onStatusChange={onStatusChange} />
         ))}
       </div>
-    </div>
+      {plants.length > SECTION_PREVIEW && (
+        <Button variant="outline" size="sm" className="self-center" onClick={() => setExpanded((v) => !v)}>
+          {expanded ? t("harvestPage.showFewer") : t("harvestPage.showAll", { n: plants.length })}
+        </Button>
+      )}
+    </section>
   );
 }
 
 export default function HarvestPage() {
-  const { data: plants, loading, error, refetch } = useAuthedQuery(fetchPlants);
+  const { data, loading, error, refetch } = useAuthedQuery(fetchPlants);
+  const { accessToken } = useAuth();
   const { t } = useLanguage();
+  // Saved status changes, laid over the fetched list so marking a plant
+  // harvested moves it at once, without reloading the whole page.
+  const [updated, setUpdated] = useState<Record<number, BackendPlant>>({});
 
-  const sorted = [...(plants ?? [])].sort((a, b) =>
+  const plants = (data ?? []).map((plant) => updated[plant.id] ?? plant);
+  const sorted = [...plants].sort((a, b) =>
     a.expected_harvest_start.localeCompare(b.expected_harvest_start),
   );
-
-  const byPhase = (phase: Phase) => sorted.filter((p) => phaseOf(p) === phase);
+  const byPhase = (phase: HarvestPhase) => sortByUrgency(sorted.filter((p) => phaseOf(p) === phase));
   const open = byPhase("open");
   const approaching = byPhase("approaching");
-  const growing = byPhase("growing");
   const passed = byPhase("passed");
+  const growing = byPhase("growing");
   const harvested = byPhase("harvested");
+
+  async function changeStatus(plant: BackendPlant, status: "GROWING" | "HARVESTED") {
+    if (!accessToken) throw new Error("Not signed in.");
+    const saved = await setPlantStatus(accessToken, plant.id, status);
+    setUpdated((current) => ({ ...current, [plant.id]: saved }));
+    requestNotificationRefresh();
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title={t("harvestPage.title")}
-        description={t("harvestPage.description")}
-      />
+      <PageHeader title={t("harvestPage.title")} description={t("harvestPage.description")} />
 
       {loading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
@@ -262,27 +227,63 @@ export default function HarvestPage() {
           <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
       ) : sorted.length === 0 ? (
-        <EmptyState
-          icon={Wheat}
-          title={t("riskPage.emptyTitle")}
-          description={t("harvestPage.emptyText")}
-        />
+        <EmptyState icon={Wheat} title={t("riskPage.emptyTitle")} description={t("harvestPage.emptyText")} />
       ) : (
         <>
+          {/* The four numbers a farmer asks first; each jumps to its list. */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <OverviewTile
+              icon={CircleCheck}
+              label={t("harvestOverview.readyNow")}
+              count={open.length}
+              tone="text-risk-low"
+              target={SECTION_ID.open}
+            />
+            <OverviewTile
+              icon={CalendarClock}
+              label={t("harvestOverview.thisWeek")}
+              count={approaching.length}
+              tone="text-risk-medium"
+              target={SECTION_ID.approaching}
+            />
+            <OverviewTile
+              icon={TriangleAlert}
+              label={t("harvestOverview.missed")}
+              count={passed.length}
+              tone="text-risk-high"
+              target={SECTION_ID.passed}
+            />
+            <OverviewTile
+              icon={Sprout}
+              label={t("harvestOverview.growing")}
+              count={growing.length}
+              tone="text-primary"
+              target={SECTION_ID.growing}
+            />
+          </div>
+
+          <TodoBox plants={sorted} />
+
           <HarvestCalendar plants={sorted} />
 
-          <Section title={t("harvestPage.ready")} plants={open} />
+          <Section id={SECTION_ID.open} title={t("harvestPage.ready")} plants={open} onStatusChange={changeStatus} />
           <Section
+            id={SECTION_ID.approaching}
             title={t("harvestPage.approaching", { n: APPROACHING_WINDOW_DAYS })}
             plants={approaching}
+            onStatusChange={changeStatus}
           />
-          <Section title={t("harvestPage.growing")} plants={growing} />
-          <Section title={t("harvestPage.passed")} plants={passed} />
-          <Section title={t("harvestPage.harvested")} plants={harvested} />
+          {/* Before "Still growing": a missed harvest needs a decision now. */}
+          <Section id={SECTION_ID.passed} title={t("harvestPage.passed")} plants={passed} onStatusChange={changeStatus} />
+          <Section id={SECTION_ID.growing} title={t("harvestPage.growing")} plants={growing} onStatusChange={changeStatus} />
+          <Section
+            id={SECTION_ID.harvested}
+            title={t("harvestPage.harvested")}
+            plants={harvested}
+            onStatusChange={changeStatus}
+          />
 
-          <p className="text-muted-foreground text-xs">
-            {t("harvestPage.note")}
-          </p>
+          <p className="text-muted-foreground text-xs">{t("harvestPage.note")}</p>
         </>
       )}
     </div>

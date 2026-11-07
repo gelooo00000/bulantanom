@@ -44,6 +44,7 @@ from .models import (
     Crop,
     CropVariant,
     Plant,
+    PlantStatus,
     RiskStatus,
     SoilRecommendation,
 )
@@ -106,8 +107,13 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
         notify_plant_added(plant)
 
     def perform_update(self, serializer):
+        was_harvested = serializer.instance.status == PlantStatus.HARVESTED
         plant = serializer.save()
-        notify_plant_updated(plant)
+        # Marking a plant harvested from the Harvest page says so, rather
+        # than a generic "plant information updated".
+        notify_plant_updated(
+            plant, harvested=not was_harvested and plant.status == PlantStatus.HARVESTED
+        )
 
 
 @api_view(["GET"])

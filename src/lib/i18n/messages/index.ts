@@ -5,6 +5,7 @@ import { dashboard } from "./dashboard";
 import { duration } from "./duration";
 import { earlyStage } from "./earlyStage";
 import { harvest } from "./harvest";
+import { harvestTips } from "./harvestTips";
 import { pages } from "./pages";
 import { plantDetail } from "./plantDetail";
 import { plants } from "./plants";
@@ -23,6 +24,7 @@ export const MESSAGES = {
   ...duration,
   ...earlyStage,
   ...harvest,
+  ...harvestTips,
   ...pages,
   ...plantDetail,
   ...plants,
@@ -35,4 +37,4 @@ export const MESSAGES = {
 
 export type MessageKey = keyof typeof MESSAGES;
 
-export { addPlant, assessment, common, dashboard, duration, earlyStage, harvest, pages, plantDetail, plants, risk, shell, soil, symptoms, text };
+export { addPlant, assessment, common, dashboard, duration, earlyStage, harvest, harvestTips, pages, plantDetail, plants, risk, shell, soil, symptoms, text };

@@ -458,7 +458,7 @@ def notify_plant_added(plant):
     _on_commit(run)
 
 
-def notify_plant_updated(plant):
+def notify_plant_updated(plant, *, harvested: bool = False):
     """
     Farmer-only: an edit to a plant's own record is not farm-wide news, so
     the LGU is not notified for it.
@@ -470,8 +470,12 @@ def notify_plant_updated(plant):
         notify_farmer(
             farmer,
             notification_type=NotificationType.PLANT_UPDATED,
-            title="Plant Updated",
-            message=f"Your {crop} plant information has been successfully updated.",
+            title="Plant Harvested" if harvested else "Plant Updated",
+            message=(
+                f"Your {crop} plant was marked as harvested. Well done!"
+                if harvested
+                else f"Your {crop} plant information has been successfully updated."
+            ),
             related_type=RelatedType.PLANT,
             related_id=plant.pk,
             metadata={"crop_name": crop, "plant_name": _plant_label(plant)},

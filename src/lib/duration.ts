@@ -12,7 +12,8 @@ import { englishT, type Translate } from "@/lib/i18n";
  */
 export function humanDuration(days: number, t: Translate = englishT): string {
   const whole = Math.max(0, Math.round(days));
-  if (whole <= 1) return t("duration.day", { n: whole });
+  // "1 day", but "0 days" - never "0 day".
+  if (whole === 1) return t("duration.day", { n: whole });
   if (whole < 14) return t("duration.days", { n: whole });
 
   if (whole < 60) {

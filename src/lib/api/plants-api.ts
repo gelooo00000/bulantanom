@@ -168,3 +168,19 @@ export function createPlant(
 export function deletePlant(accessToken: string, plantId: number): Promise<void> {
   return apiFetch(`/farmer/plants/${plantId}/`, { method: "DELETE", accessToken });
 }
+
+/**
+ * Marks a plant harvested, or undoes that. Django records when it was
+ * harvested (`harvested_at`) and clears it again on undo.
+ */
+export function setPlantStatus(
+  accessToken: string,
+  plantId: number,
+  status: "GROWING" | "HARVESTED",
+): Promise<BackendPlant> {
+  return apiFetch(`/farmer/plants/${plantId}/`, {
+    method: "PATCH",
+    body: { status },
+    accessToken,
+  });
+}

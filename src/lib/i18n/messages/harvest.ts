@@ -4,9 +4,9 @@ import { defineMessages } from "../define";
 export const harvest = defineMessages({
   "harvestPage.title": { en: "Harvest", fil: "Anihan", bik: "Pag-ani" },
   "harvestPage.description": {
-    en: "Expected harvest windows for your plants at Layuan Farm.",
-    fil: "Inaasahang panahon ng ani ng iyong mga tanim sa Layuan Farm.",
-    bik: "Inaasahan na panahon san ani san imo mga tanom sa Layuan Farm.",
+    en: "When each plant will be ready, what to do now, and how to tell it is ripe.",
+    fil: "Kailan handa ang bawat tanim, ano ang gagawin ngayon, at paano malalaman kung hinog na.",
+    bik: "Nuarin pwede na an kada tanom, ano an gigibuhon ngunyan, asin paano maaraman kun luto na.",
   },
   "harvestPage.loading": {
     en: "Loading harvest windows…",
@@ -82,4 +82,87 @@ export const harvest = defineMessages({
 
   "category.fruit": { en: "Fruit", fil: "Prutas", bik: "Prutas" },
   "category.vegetable": { en: "Vegetable", fil: "Gulay", bik: "Gulay" },
+
+  // Redesigned page: summary tiles, "What to do now", card actions.
+  "harvestOverview.readyNow": { en: "Ready now", fil: "Handa na", bik: "Pwede na" },
+  "harvestOverview.thisWeek": { en: "This week", fil: "Ngayong linggo", bik: "Ngunyan na semana" },
+  "harvestOverview.missed": { en: "Missed", fil: "Nalampasan", bik: "Nalampasan" },
+  "harvestOverview.growing": { en: "Still growing", fil: "Lumalaki pa", bik: "Nagdadakula pa" },
+  "harvestTodo.title": { en: "What to do now", fil: "Ano ang gagawin ngayon", bik: "Ano an gigibuhon ngunyan" },
+  "harvestTodo.harvest": {
+    en: "Harvest {name} now. You have {time} left.",
+    fil: "Anihin na ang {name}. May {time} ka pa.",
+    bik: "Anihon na an {name}. May {time} ka pa.",
+  },
+  "harvestTodo.lastDay": {
+    en: "Harvest {name} today. It is the last day.",
+    fil: "Anihin ang {name} ngayon. Huling araw na.",
+    bik: "Anihon an {name} ngunyan. Huri na na adlaw.",
+  },
+  "harvestTodo.prepare": {
+    en: "Get ready: {name} can be harvested in {time}.",
+    fil: "Maghanda: puwedeng anihin ang {name} sa loob ng {time}.",
+    bik: "Mag-andam: pwede anihon an {name} sa sulod san {time}.",
+  },
+  "harvestTodo.tomorrow": {
+    en: "Get ready: {name} can be harvested tomorrow.",
+    fil: "Maghanda: puwedeng anihin ang {name} bukas.",
+    bik: "Mag-andam: pwede anihon an {name} buwas.",
+  },
+  "harvestTodo.passed": {
+    en: "Check {name}: its harvest time ended {time} ago. Mark it as harvested if you already picked it.",
+    fil: "Tingnan ang {name}: natapos ang anihan {time} na ang nakalipas. Markahan itong naani kung napitas mo na.",
+    bik: "Hilingon an {name}: natapos an pag-ani {time} na an naagi. Markahan ining naani kun napuwa mo na.",
+  },
+  "harvestTodo.nothing": {
+    en: "Nothing to harvest this week. Next up: {name} in {time}.",
+    fil: "Walang aanihin ngayong linggo. Susunod: {name} sa loob ng {time}.",
+    bik: "Waray aanihon ngunyan na semana. Masunod: {name} sa sulod san {time}.",
+  },
+  "harvestTodo.nothingAtAll": {
+    en: "Nothing to harvest yet. Keep caring for your plants.",
+    fil: "Wala pang aanihin. Ipagpatuloy ang pag-aalaga sa iyong mga tanim.",
+    bik: "Waray pa aanihon. Padagosa an pag-ataman sa imo mga tanom.",
+  },
+  "harvestTodo.more": { en: "+{n} more below", fil: "+{n} pa sa ibaba", bik: "+{n} pa sa ubos" },
+  "harvestCard.headlineOpen": {
+    en: "Harvest now, until {date}",
+    fil: "Anihin na, hanggang {date}",
+    bik: "Anihon na, sagkod {date}",
+  },
+  "harvestCard.headlineSoon": { en: "Ready from {date}", fil: "Handa simula {date}", bik: "Pwede na poon {date}" },
+  "harvestCard.headlinePassed": {
+    en: "Harvest time ended on {date}",
+    fil: "Natapos ang anihan noong {date}",
+    bik: "Natapos an pag-ani kan {date}",
+  },
+  "harvestCard.headlineHarvested": { en: "Harvested", fil: "Naani na", bik: "Naani na" },
+  "harvestCard.window": {
+    en: "Harvest from {start} to {end} ({time})",
+    fil: "Anihan mula {start} hanggang {end} ({time})",
+    bik: "Pag-ani poon {start} sagkod {end} ({time})",
+  },
+  "harvestCard.today": { en: "Today", fil: "Ngayon", bik: "Ngunyan" },
+  "harvestCard.fullyGrown": { en: "Fully grown", fil: "Ganap nang lumaki", bik: "Dakula na" },
+  "harvestCard.tipTitle": {
+    en: "How to tell it is ready",
+    fil: "Paano malalaman kung handa na",
+    bik: "Paano maaraman kun pwede na",
+  },
+  "harvestCard.passedHelp": {
+    en: "Not picked yet? Check it now. It may be over-ripe.",
+    fil: "Hindi pa napipitas? Tingnan ngayon. Baka sobra na sa hinog.",
+    bik: "Dai pa napupuwa? Hilingon ngunyan. Baka sobra na sa luto.",
+  },
+  "harvestCard.markHarvested": { en: "Mark as harvested", fil: "Markahang naani", bik: "Markahan na naani" },
+  "harvestCard.saving": { en: "Saving…", fil: "Sine-save…", bik: "Sine-save…" },
+  "harvestCard.undo": { en: "Undo harvest", fil: "Ibalik", bik: "Ibalik" },
+  "harvestCard.viewPlant": { en: "View plant", fil: "Tingnan ang tanim", bik: "Hilingon an tanom" },
+  "harvestCard.saveFailed": {
+    en: "Could not save. Please try again.",
+    fil: "Hindi na-save. Pakisubukan muli.",
+    bik: "Dai na-save. Probaran tabi giraray.",
+  },
+  "harvestPage.showAll": { en: "Show all {n}", fil: "Ipakita lahat ({n})", bik: "Ipahiling an gabos ({n})" },
+  "harvestPage.showFewer": { en: "Show fewer", fil: "Ipakita nang mas kaunti", bik: "Ipahiling an mas dikit" },
 });
