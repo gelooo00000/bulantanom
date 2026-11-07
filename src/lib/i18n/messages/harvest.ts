@@ -163,6 +163,4 @@ export const harvest = defineMessages({
     fil: "Hindi na-save. Pakisubukan muli.",
     bik: "Dai na-save. Probaran tabi giraray.",
   },
-  "harvestPage.showAll": { en: "Show all {n}", fil: "Ipakita lahat ({n})", bik: "Ipahiling an gabos ({n})" },
-  "harvestPage.showFewer": { en: "Show fewer", fil: "Ipakita nang mas kaunti", bik: "Ipahiling an mas dikit" },
 });

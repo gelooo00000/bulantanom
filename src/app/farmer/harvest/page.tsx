@@ -15,6 +15,7 @@ import { useState } from "react";
 import { HarvestPlantCard } from "@/components/farmer/harvest-plant-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { SlidePager } from "@/components/shared/slide-pager";
 import { Button } from "@/components/ui/button";
 import { fetchPlants, setPlantStatus, type BackendPlant } from "@/lib/api/plants-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
@@ -31,8 +32,17 @@ import { useLanguage, type Translate } from "@/lib/i18n";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { cn } from "@/lib/utils";
 
-/** Cards shown per section before "Show all". */
-const SECTION_PREVIEW = 6;
+/**
+ * Cards per page in each section; the rest slide in with Next. The urgent
+ * lists stay short so they fit on one screen; the long ones show more.
+ */
+const PAGE_SIZE: Record<HarvestPhase, number> = {
+  open: 4,
+  approaching: 4,
+  passed: 4,
+  growing: 6,
+  harvested: 6,
+};
 /** Lines in "What to do now" before "+n more below". */
 const TODO_LIMIT = 4;
 
@@ -163,38 +173,37 @@ function TodoBox({ plants }: { plants: BackendPlant[] }) {
 }
 
 function Section({
-  id,
+  phase,
   title,
   plants,
   onStatusChange,
 }: {
-  id: string;
+  phase: HarvestPhase;
   title: string;
   plants: BackendPlant[];
   onStatusChange: (plant: BackendPlant, status: "GROWING" | "HARVESTED") => Promise<void>;
 }) {
-  const { t } = useLanguage();
-  const [expanded, setExpanded] = useState(false);
   if (plants.length === 0) return null;
-  const shown = expanded ? plants : plants.slice(0, SECTION_PREVIEW);
-
   return (
-    <section id={id} className="flex scroll-mt-20 flex-col gap-3">
+    <section id={SECTION_ID[phase]} className="flex scroll-mt-20 flex-col gap-3">
       <h2 className="text-lg">
         {title}{" "}
         <span className="text-muted-foreground font-sans text-sm font-normal">({plants.length})</span>
       </h2>
-      {/* Side by side from tablet width up; one per row on a phone. */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {shown.map((plant) => (
-          <HarvestPlantCard key={plant.id} plant={plant} onStatusChange={onStatusChange} />
-        ))}
-      </div>
-      {plants.length > SECTION_PREVIEW && (
-        <Button variant="outline" size="sm" className="self-center" onClick={() => setExpanded((v) => !v)}>
-          {expanded ? t("harvestPage.showFewer") : t("harvestPage.showAll", { n: plants.length })}
-        </Button>
-      )}
+      {/* A page at a time; Previous / Next slide the next page in from the
+          side asked for, the same pager as the dashboard lists. Side by side
+          from tablet width up, one per row on a phone. */}
+      <SlidePager
+        items={plants}
+        pageSize={PAGE_SIZE[phase]}
+        getKey={(plant) => plant.id}
+        listLabel={title}
+        listClassName="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+        itemClassName="min-w-0"
+        // Room for a card's hover outline inside the clipping frame.
+        frameClassName="-m-1 p-1"
+        renderItem={(plant) => <HarvestPlantCard plant={plant} onStatusChange={onStatusChange} />}
+      />
     </section>
   );
 }
@@ -279,18 +288,18 @@ export default function HarvestPage() {
 
           <TodoBox plants={sorted} />
 
-          <Section id={SECTION_ID.open} title={t("harvestPage.ready")} plants={open} onStatusChange={changeStatus} />
+          <Section phase="open" title={t("harvestPage.ready")} plants={open} onStatusChange={changeStatus} />
           <Section
-            id={SECTION_ID.approaching}
+            phase="approaching"
             title={t("harvestPage.approaching", { n: APPROACHING_WINDOW_DAYS })}
             plants={approaching}
             onStatusChange={changeStatus}
           />
           {/* Before "Still growing": a missed harvest needs a decision now. */}
-          <Section id={SECTION_ID.passed} title={t("harvestPage.passed")} plants={passed} onStatusChange={changeStatus} />
-          <Section id={SECTION_ID.growing} title={t("harvestPage.growing")} plants={growing} onStatusChange={changeStatus} />
+          <Section phase="passed" title={t("harvestPage.passed")} plants={passed} onStatusChange={changeStatus} />
+          <Section phase="growing" title={t("harvestPage.growing")} plants={growing} onStatusChange={changeStatus} />
           <Section
-            id={SECTION_ID.harvested}
+            phase="harvested"
             title={t("harvestPage.harvested")}
             plants={harvested}
             onStatusChange={changeStatus}
