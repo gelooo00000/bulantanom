@@ -38,16 +38,20 @@ vi.mock("@/lib/api/use-authed-query", () => ({
 }));
 
 describe("What to do now", () => {
-  it("shows the first three tasks and folds the rest behind See more", async () => {
+  it("opens as a popup from the checklist icon beside the title", async () => {
     render(<HarvestPage />);
-    const box = screen.getByRole("region", { name: /What to do now/ });
-    expect(box.querySelectorAll("li")).toHaveLength(3);
+    // Nothing takes room on the page until the icon is used.
+    expect(screen.queryByText(/Corn 1 can be harvested/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "What to do now (5)" }));
+    const popup = await screen.findByRole("dialog");
+    expect(popup.querySelectorAll("li")).toHaveLength(3);
 
     await userEvent.click(screen.getByRole("button", { name: /See 2 more/ }));
-    expect(box.querySelectorAll("li")).toHaveLength(5);
+    expect(popup.querySelectorAll("li")).toHaveLength(5);
     expect(screen.getByText(/Corn 5 can be harvested/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /See less/ }));
-    expect(box.querySelectorAll("li")).toHaveLength(3);
+    expect(popup.querySelectorAll("li")).toHaveLength(3);
   });
 });

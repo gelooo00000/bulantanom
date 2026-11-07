@@ -1,5 +1,6 @@
 "use client";
 
+import { Popover } from "@base-ui/react/popover";
 import {
   CalendarClock,
   ChevronDown,
@@ -161,13 +162,15 @@ function todoItems(plants: BackendPlant[], t: Translate): Todo[] {
 }
 
 /**
- * The most important part of the page, so it is the most prominent: large
- * text, each task coloured by urgency, and a tap on a task jumps to its
- * plants. A long list shows the first few and folds the rest behind
- * "See more".
+ * "What to do now", in a popup so it takes no room on the page: it opens
+ * from the checklist icon beside the title, by pointing at it or tapping
+ * it, like the light-bulb tips. The red count on the icon says how many
+ * tasks are waiting. A long list shows the first few and folds the rest
+ * behind "See more"; tapping a task jumps to its plants.
  */
-function TodoBox({ plants }: { plants: BackendPlant[] }) {
+function TodoButton({ plants }: { plants: BackendPlant[] }) {
   const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const items = todoItems(plants, t);
   const shown = expanded ? items : items.slice(0, TODO_LIMIT);
@@ -177,69 +180,96 @@ function TodoBox({ plants }: { plants: BackendPlant[] }) {
     .sort((a, b) => a.expected_harvest_start.localeCompare(b.expected_harvest_start))[0];
 
   return (
-    <section
-      aria-labelledby="harvest-todo-title"
-      className="border-primary/40 bg-card flex flex-col gap-4 rounded-2xl border-2 px-4 py-5 shadow-sm sm:px-6"
-    >
-      <h2 id="harvest-todo-title" className="font-heading flex items-center gap-2.5 text-xl font-medium sm:text-2xl">
-        <span className="bg-primary/15 text-primary flex size-9 items-center justify-center rounded-xl">
-          <ClipboardList className="size-5" aria-hidden="true" />
-        </span>
-        {t("harvestTodo.title")}
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger
+        openOnHover
+        delay={150}
+        aria-label={
+          items.length > 0
+            ? `${t("harvestTodo.title")} (${items.length})`
+            : t("harvestTodo.title")
+        }
+        className={cn(
+          "bg-primary/10 text-primary hover:bg-primary/20 data-[popup-open]:bg-primary/20",
+          "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+          "focus-visible:ring-ring/50 outline-none focus-visible:ring-3",
+        )}
+      >
+        <ClipboardList className="size-5" aria-hidden="true" />
         {items.length > 0 && (
-          <span className="bg-primary text-primary-foreground rounded-full px-2.5 py-0.5 text-sm tabular-nums">
+          <span className="bg-risk-high absolute -top-1.5 -right-1.5 flex min-w-5 items-center justify-center rounded-full px-1 text-[11px] leading-5 font-semibold text-white tabular-nums">
             {items.length}
           </span>
         )}
-      </h2>
-      {items.length === 0 ? (
-        <p className="text-muted-foreground text-base">
-          {next
-            ? t("harvestTodo.nothing", {
-                name: next.display_name,
-                time: humanDuration(daysUntil(next.expected_harvest_start), t),
-              })
-            : t("harvestTodo.nothingAtAll")}
-        </p>
-      ) : (
-        <>
-          <ol className="flex flex-col gap-2.5">
-            {shown.map((item, i) => {
-              const style = TODO_STYLE[item.kind];
-              const Icon = style.icon;
-              return (
-                <li key={item.text} className="animate-in fade-in slide-in-from-top-1 duration-200">
-                  <a
-                    href={`#${SECTION_ID[style.section]}`}
-                    className={cn(
-                      "flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors",
-                      style.row,
-                    )}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="bottom" align="start" sideOffset={8} className="z-50">
+          <Popover.Popup
+            aria-labelledby="harvest-todo-title"
+            className="bg-popover text-popover-foreground border-primary/40 flex max-h-[70vh] w-[min(26rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-2xl border-2 px-4 py-4 shadow-xl"
+          >
+            <h2 id="harvest-todo-title" className="font-heading flex items-center gap-2 text-lg font-medium">
+              <ClipboardList className="text-primary size-5" aria-hidden="true" />
+              {t("harvestTodo.title")}
+              {items.length > 0 && (
+                <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs tabular-nums">
+                  {items.length}
+                </span>
+              )}
+            </h2>
+            {items.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                {next
+                  ? t("harvestTodo.nothing", {
+                      name: next.display_name,
+                      time: humanDuration(daysUntil(next.expected_harvest_start), t),
+                    })
+                  : t("harvestTodo.nothingAtAll")}
+              </p>
+            ) : (
+              <>
+                <ol className="flex flex-col gap-2">
+                  {shown.map((item, i) => {
+                    const style = TODO_STYLE[item.kind];
+                    const Icon = style.icon;
+                    return (
+                      <li key={item.text} className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <a
+                          href={`#${SECTION_ID[style.section]}`}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "flex items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
+                            style.row,
+                          )}
+                        >
+                          <span className="bg-background/80 text-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums">
+                            {i + 1}
+                          </span>
+                          <Icon className={cn("mt-0.5 size-4 shrink-0", style.tone)} aria-hidden="true" />
+                          <span className="text-sm leading-snug">{item.text}</span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ol>
+                {hidden > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="self-center"
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded((v) => !v)}
                   >
-                    <span className="bg-background/80 text-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums">
-                      {i + 1}
-                    </span>
-                    <Icon className={cn("mt-0.5 size-5 shrink-0", style.tone)} aria-hidden="true" />
-                    <span className="text-base leading-snug">{item.text}</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ol>
-          {hidden > 0 && (
-            <Button
-              variant="outline"
-              className="self-center"
-              aria-expanded={expanded}
-              onClick={() => setExpanded((v) => !v)}
-            >
-              {expanded ? t("harvestTodo.seeLess") : t("harvestTodo.seeMore", { n: hidden })}
-              <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
-            </Button>
-          )}
-        </>
-      )}
-    </section>
+                    {expanded ? t("harvestTodo.seeLess") : t("harvestTodo.seeMore", { n: hidden })}
+                    <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
+                  </Button>
+                )}
+              </>
+            )}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -307,7 +337,11 @@ export default function HarvestPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t("harvestPage.title")} description={t("harvestPage.description")} />
+      <PageHeader
+        title={t("harvestPage.title")}
+        description={t("harvestPage.description")}
+        titleAside={data && data.length > 0 ? <TodoButton plants={sorted} /> : undefined}
+      />
 
       {loading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
@@ -356,8 +390,6 @@ export default function HarvestPage() {
               target={SECTION_ID.growing}
             />
           </div>
-
-          <TodoBox plants={sorted} />
 
           <Section phase="open" title={t("harvestPage.ready")} plants={open} onStatusChange={changeStatus} />
           <Section
