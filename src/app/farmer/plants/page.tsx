@@ -89,6 +89,25 @@ export default function MyPlantsPage() {
   }, [addedId]);
   const addedPlant = plants?.find((p) => p.id === addedId);
 
+  // The plant opened from the Harvest page's "View plant", in `?plant=<id>`:
+  // scrolled to and outlined once the list has loaded. Dropped from the
+  // address like `added`, so a reload does not jump again.
+  const [focusId, setFocusId] = useState<number | null>(null);
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("plant"));
+    if (!id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a one-time read of the address
+    setFocusId(id);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+  const focusReady = focusId !== null && !!plants?.some((p) => p.id === focusId);
+  useEffect(() => {
+    if (!focusReady) return;
+    document
+      .getElementById(`plant-${focusId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusReady, focusId]);
+
   function toggleGuide(show: boolean) {
     setShowGuide(show);
     rememberGuideHidden(!show);
@@ -303,7 +322,7 @@ export default function MyPlantsPage() {
                   key={plant.id}
                   plant={plant}
                   selected={selected.has(plant.id)}
-                  highlighted={plant.id === addedId}
+                  highlighted={plant.id === addedId || plant.id === focusId}
                   onToggle={selecting ? () => toggle(plant.id) : undefined}
                 />
               ))}

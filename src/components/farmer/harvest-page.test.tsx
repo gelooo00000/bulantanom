@@ -134,9 +134,10 @@ describe("the harvest card", () => {
     expect(screen.getByText("Fully grown")).toBeInTheDocument();
     // The tip stays hidden behind the light bulb until pointed at.
     expect(screen.queryByText(/creamy yellow/)).not.toBeInTheDocument();
+    // To this plant's card on My Plants.
     expect(screen.getByRole("link", { name: /View plant/ })).toHaveAttribute(
       "href",
-      "/farmer/plants/1",
+      "/farmer/plants?plant=1",
     );
   });
 

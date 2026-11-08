@@ -341,14 +341,18 @@ export function HarvestPlantCard({
               {t("harvestCard.restore")}
             </Button>
           )}
-          <Link
-            href={`/farmer/plants/${plant.id}`}
-            className="ml-auto flex items-center gap-1 text-sm"
-            style={{ color: "var(--landing-accent)" }}
-          >
-            {t("harvestCard.viewPlant")}
-            <ArrowRight className="size-3.5" />
-          </Link>
+          {/* To this plant's card on My Plants. Harvested plants are no longer
+              listed there (they live in the Archive), so not on those. */}
+          {phase !== "harvested" && (
+            <Link
+              href={`/farmer/plants?plant=${plant.id}`}
+              className="ml-auto flex items-center gap-1 text-sm"
+              style={{ color: "var(--landing-accent)" }}
+            >
+              {t("harvestCard.viewPlant")}
+              <ArrowRight className="size-3.5" />
+            </Link>
+          )}
           {failed && (
             <p className="text-risk-high w-full text-xs" role="alert">
               {t("harvestCard.saveFailed")}

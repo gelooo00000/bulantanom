@@ -24,7 +24,7 @@ export function PlantCard({
 }: {
   plant: BackendPlant;
   selected?: boolean;
-  /** The plant the farmer just added, marked so it is easy to spot. */
+  /** The plant just added, or opened from the Harvest page: marked to stand out. */
   highlighted?: boolean;
   /** Selection mode: tapping the card toggles it instead of opening it. */
   onToggle?: () => void;
@@ -39,9 +39,11 @@ export function PlantCard({
       // while pointed at, pressed, or tapped. Focusable so a tap on a phone,
       // where there is no hover, leaves the outline on the plant touched.
       tabIndex={selecting ? undefined : 0}
+      // The anchor "View plant" on the Harvest page scrolls to.
+      id={`plant-${plant.id}`}
       style={cropVar(plant.crop.name)}
       className={cn(
-        "relative h-full gap-0 py-4 transition-all",
+        "relative h-full scroll-mt-24 gap-0 py-4 transition-all",
         !selecting && CROP_OUTLINE,
         selecting &&
           (selected ? "border-primary ring-primary/30 ring-2" : "hover:border-primary/50"),
