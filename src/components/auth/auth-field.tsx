@@ -11,15 +11,18 @@ import { cn } from "@/lib/utils";
    16px text on phones: iOS Safari zooms the whole page in when a focused
    field's text is any smaller. */
 export const AUTH_INPUT_CLASSES =
-  "border-input bg-card/70 text-base text-foreground md:text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-primary/30";
+  "h-11 rounded-xl border-input bg-card/70 text-base text-foreground md:text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-primary/30";
+
+/** The main button of an auth form: as tall as the fields, full width. */
+export const AUTH_BUTTON_CLASSES = "h-11 w-full rounded-xl text-[15px] font-semibold";
 
 type AuthIconInputProps = ComponentProps<typeof Input> & { icon: ElementType };
 
 export function AuthIconInput({ icon: Icon, className, ...props }: AuthIconInputProps) {
   return (
     <div className="relative">
-      <Icon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input className={cn(AUTH_INPUT_CLASSES, "pl-9 pr-3", className)} {...props} />
+      <Icon className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input className={cn(AUTH_INPUT_CLASSES, "pl-10 pr-3", className)} {...props} />
     </div>
   );
 }
@@ -29,8 +32,8 @@ type AuthPasswordFieldProps = ComponentProps<typeof PasswordInput> & { icon: Ele
 export function AuthPasswordField({ icon: Icon, className, ...props }: AuthPasswordFieldProps) {
   return (
     <div className="relative">
-      <Icon className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-      <PasswordInput className={cn(AUTH_INPUT_CLASSES, "pl-9", className)} {...props} />
+      <Icon className="pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+      <PasswordInput className={cn(AUTH_INPUT_CLASSES, "pl-10", className)} {...props} />
     </div>
   );
 }

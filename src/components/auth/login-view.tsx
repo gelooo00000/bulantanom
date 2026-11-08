@@ -6,7 +6,7 @@ import { ArrowRight, Lock, LoaderCircle, Mail, Shield, ShieldCheck, Sprout } fro
 import { useEffect, useRef, useState, type ElementType, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
-import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
+import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
 import { VerifyEmailStep } from "@/components/auth/verify-email-step";
@@ -232,7 +232,7 @@ export function LoginView() {
                           setError(null);
                         }}
                         className={cn(
-                          "focus-visible:ring-ring/50 font-heading flex h-9 items-center justify-center gap-2 rounded-lg text-sm tracking-wide transition-colors outline-none focus-visible:ring-3",
+                          "focus-visible:ring-ring/50 font-heading flex h-10 items-center justify-center gap-2 rounded-lg text-sm tracking-wide transition-colors outline-none focus-visible:ring-3",
                           active
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground",
@@ -313,7 +313,7 @@ export function LoginView() {
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 
-            <Button type="submit" disabled={submitting} className="mt-1">
+            <Button type="submit" disabled={submitting} className={`${AUTH_BUTTON_CLASSES} mt-1`}>
               {submitting ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />

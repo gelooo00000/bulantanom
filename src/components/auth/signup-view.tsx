@@ -6,7 +6,7 @@ import { ArrowRight, Lock, LoaderCircle, Mail, Sprout, User } from "lucide-react
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
-import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
+import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
 import { VerifyEmailStep } from "@/components/auth/verify-email-step";
@@ -196,7 +196,7 @@ export function SignupView() {
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 
-            <Button type="submit" disabled={submitting} className="mt-1">
+            <Button type="submit" disabled={submitting} className={`${AUTH_BUTTON_CLASSES} mt-1`}>
               {submitting ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />

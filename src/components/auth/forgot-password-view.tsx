@@ -6,7 +6,7 @@ import { ArrowRight, KeyRound, LoaderCircle, Lock, Mail } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
-import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
+import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
@@ -189,7 +189,7 @@ export function ForgotPasswordView() {
                 </p>
               )}
 
-              <Button type="submit" disabled={submitting || code.length !== 6}>
+              <Button type="submit" disabled={submitting || code.length !== 6} className={AUTH_BUTTON_CLASSES}>
                 {submitting ? (
                   <>
                     <LoaderCircle className="size-4 animate-spin" />
@@ -245,7 +245,7 @@ export function ForgotPasswordView() {
                 </p>
               )}
 
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className={AUTH_BUTTON_CLASSES}>
                 {submitting ? (
                   <>
                     <LoaderCircle className="size-4 animate-spin" />

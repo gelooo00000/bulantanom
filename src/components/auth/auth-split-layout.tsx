@@ -89,15 +89,15 @@ export function AuthSplitLayout({
           {/* The pitch, carried over from the landing page. Beside the form on a
             wide screen; above it, and smaller, on a narrow one. */}
           <div className="mx-auto w-full max-w-sm text-white sm:max-w-md lg:mx-0 lg:max-w-none">
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-950/70 px-3.5 py-1.5 text-xs font-medium tracking-wide backdrop-blur-sm sm:text-sm">
+            <span className="hidden items-center gap-2 rounded-full sm:inline-flex border border-emerald-400/25 bg-emerald-950/70 px-3.5 py-1.5 text-xs font-medium tracking-wide backdrop-blur-sm sm:text-sm">
               <Leaf className={`size-3.5 fill-current ${LEAF}`} />
               Smarter farming. A greener Bulan.
             </span>
-            <p className="font-heading mt-3 text-3xl leading-[1.1] tracking-[0.01em] sm:mt-4 sm:text-5xl lg:mt-7 xl:text-6xl 2xl:text-7xl">
+            <p className="font-heading text-3xl leading-[1.1] tracking-[0.01em] sm:mt-4 sm:text-5xl lg:mt-7 xl:text-6xl 2xl:text-7xl">
               One farm.
               <span className={`block ${LEAF}`}>Smarter decisions.</span>
             </p>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-white/90 sm:mt-3 sm:text-base lg:mt-6 lg:text-lg">
+            <p className="mt-2 hidden max-w-md text-sm leading-relaxed text-white/90 sm:block sm:mt-3 sm:text-base lg:mt-6 lg:text-lg">
               AI-powered plant risk monitoring built for Layuan Farm.
             </p>
           </div>

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, LoaderCircle, MailCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
+import { AUTH_BUTTON_CLASSES } from "@/components/auth/auth-field";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -154,7 +155,7 @@ export function VerifyEmailStep({
             </p>
           )}
 
-          <Button type="submit" disabled={verifying || code.length !== 6}>
+          <Button type="submit" disabled={verifying || code.length !== 6} className={AUTH_BUTTON_CLASSES}>
             {verifying ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />
