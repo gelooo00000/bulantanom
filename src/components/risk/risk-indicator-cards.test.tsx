@@ -158,7 +158,12 @@ describe("What to do now", () => {
   it("lists one task per plant from the risk readings, most urgent first", async () => {
     plants = [
       {
-        plant: plant(10, "Due Row", { can_assess: true, days_remaining: 0 }),
+        plant: plant(10, "Due Row", {
+          can_assess: true,
+          days_remaining: 0,
+          last_assessment_date: isoDaysAgo(7),
+          next_assessment_date: isoDaysAgo(0),
+        }),
         latest_assessment: null,
       },
       {
@@ -202,5 +207,19 @@ describe("What to do now", () => {
       "href",
       "/farmer/plants/12/assessment",
     );
+  });
+
+  it("counts a never-checked plant as late from a week after planting", () => {
+    plants = [
+      {
+        plant: {
+          ...plant(14, "Never Row", { can_assess: true, days_remaining: 0, next_assessment_date: null, last_assessment_date: null }),
+          age_days: 34,
+        },
+        latest_assessment: null,
+      },
+    ];
+    render(<RiskIndicatorPage />);
+    expect(screen.getByText("Overdue 27 days")).toBeInTheDocument();
   });
 });

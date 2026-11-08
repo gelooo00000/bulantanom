@@ -291,12 +291,17 @@ function PlantGroup({
   );
 }
 
+/** The first weekly check opens when a plant is this many days old. */
+const FIRST_CHECK_AGE_DAYS = 7;
+
 /** Days a due weekly check has been waiting (0 when not late, or an early re-check). */
 function overdueDays(plant: BackendPlant): number {
   const e = plant.assessment_eligibility;
-  return e.can_assess && !e.early_recheck && e.next_assessment_date
-    ? Math.max(0, daysSince(e.next_assessment_date))
-    : 0;
+  if (!e.can_assess || e.early_recheck) return 0;
+  if (e.next_assessment_date) return Math.max(0, daysSince(e.next_assessment_date));
+  // Never checked: the first check was due a week after planting.
+  if (!e.last_assessment_date) return Math.max(0, plant.age_days - FIRST_CHECK_AGE_DAYS);
+  return 0;
 }
 
 type RiskTodoKind = "urgent" | "warn" | "due";
