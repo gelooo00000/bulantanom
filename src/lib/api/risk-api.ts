@@ -1,8 +1,7 @@
-import { apiFetch, refreshAccessToken } from "@/lib/api/client";
+import { API_BASE_URL, apiFetch, refreshAccessToken } from "@/lib/api/client";
 import type { BackendPlant } from "@/lib/api/plants-api";
 import { currentLanguage } from "@/lib/i18n";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 /**
  * INCONCLUSIVE is a real answer, not a missing one: a plant in its first

@@ -128,6 +128,15 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
 
 
+class LoginCodeResendSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    challenge = serializers.CharField(max_length=500)
+
+
+class LoginCodeSerializer(LoginCodeResendSerializer):
+    code = serializers.CharField(max_length=12)
+
+
 class LguOfficerCreateSerializer(serializers.ModelSerializer):
     """
     Admin-only creation of LGU Officer accounts. There is no public

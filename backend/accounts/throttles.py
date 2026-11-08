@@ -15,6 +15,8 @@ Counts live in the "throttle" cache (settings.CACHES), a database table
 shared by every gunicorn worker so each attempt is counted once.
 """
 
+import hmac
+
 from django.conf import settings
 from django.core.cache import caches
 from rest_framework.throttling import SimpleRateThrottle
@@ -26,11 +28,26 @@ class _LoginThrottle(SimpleRateThrottle):
         return caches["throttle"]
 
     def get_ident(self, request):
-        if settings.CLIENT_IP_HEADER:
-            address = request.headers.get(settings.CLIENT_IP_HEADER, "").strip()
-            if address:
-                return address
-        return super().get_ident(request)
+        return client_ip(request) or super().get_ident(request)
+
+
+def client_ip(request) -> str:
+    """
+    The visitor's address, or "" to let DRF decide.
+
+    Requests forwarded by the frontend (src/proxy.ts) carry the visitor's
+    address in X-BulanTanom-Client-IP. It is believed only with the shared
+    secret, because anyone can send that header straight to the API.
+    """
+    secret = settings.API_PROXY_SECRET
+    if secret:
+        sent = request.headers.get("X-BulanTanom-Proxy-Secret", "")
+        address = request.headers.get("X-BulanTanom-Client-IP", "").strip()
+        if address and hmac.compare_digest(sent.encode(), secret.encode()):
+            return address
+    if settings.CLIENT_IP_HEADER:
+        return request.headers.get(settings.CLIENT_IP_HEADER, "").strip()
+    return ""
 
 
 class LoginEmailThrottle(_LoginThrottle):

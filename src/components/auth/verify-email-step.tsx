@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, LoaderCircle, MailCheck } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { FadeIn } from "@/components/motion/fade-in";
@@ -11,9 +11,10 @@ import { useAuth } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
 
 /**
- * "Enter the code we emailed you." Shown after a Farmer signs up, and when
- * a Farmer whose email was never verified signs in. The code works once;
- * typing it signs the Farmer in, which proves the address is real.
+ * "Enter the code we emailed you." Shown after a Farmer signs up, when a
+ * Farmer whose email was never verified signs in, and - with `verify`,
+ * `resend`, `heading` and `intro` - when anyone signs in on a new device.
+ * The code works once; typing it signs the user in.
  */
 export function VerifyEmailStep({
   email,
@@ -21,6 +22,10 @@ export function VerifyEmailStep({
   onVerified,
   onBack,
   backLabel,
+  verify,
+  resend,
+  heading = "Check your email.",
+  intro,
 }: {
   email: string;
   /** Seconds before "Resend code" unlocks, as the backend said. */
@@ -28,8 +33,17 @@ export function VerifyEmailStep({
   onVerified: (user: AuthUser) => void;
   onBack: () => void;
   backLabel: string;
+  /** Checks the code; defaults to finishing a Farmer sign-up. */
+  verify?: (code: string) => Promise<AuthUser>;
+  /** Sends a new code; defaults to the Farmer sign-up resend. */
+  resend?: () => Promise<number>;
+  heading?: string;
+  /** Replaces the sentence under the heading. */
+  intro?: ReactNode;
 }) {
   const { verifyEmail, resendCode } = useAuth();
+  const checkCode = verify ?? ((value: string) => verifyEmail(email, value));
+  const sendAgain = resend ?? (() => resendCode(email));
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +64,7 @@ export function VerifyEmailStep({
     setError(null);
     setNotice(null);
     try {
-      onVerified(await verifyEmail(email, code));
+      onVerified(await checkCode(code));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setVerifying(false);
@@ -63,7 +77,7 @@ export function VerifyEmailStep({
     setError(null);
     setNotice(null);
     try {
-      setWait(await resendCode(email));
+      setWait(await sendAgain());
       setCode("");
       setNotice(`We sent a new code to ${email}.`);
     } catch (err) {
@@ -94,13 +108,17 @@ export function VerifyEmailStep({
               <MailCheck className="size-4" />
             </span>
             <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-              Check your email.
+              {heading}
             </h1>
           </div>
           <p className="mt-1.5 text-sm text-muted-foreground sm:mt-2">
-            We sent a 6-digit code to{" "}
-            <strong className="font-medium text-foreground break-all">{email}</strong>. Enter it
-            below to finish. The code works once and expires in 10 minutes.
+            {intro ?? (
+              <>
+                We sent a 6-digit code to{" "}
+                <strong className="font-medium text-foreground break-all">{email}</strong>. Enter
+                it below to finish. The code works once and expires in 10 minutes.
+              </>
+            )}
           </p>
         </div>
 

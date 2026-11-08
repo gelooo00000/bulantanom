@@ -1,8 +1,12 @@
 import { setAccessToken } from "@/lib/auth/token-storage";
 import { currentLanguage } from "@/lib/i18n";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+/**
+ * The API is served from this site's own address and forwarded to Django by
+ * src/proxy.ts, so its cookies are first-party (iPhone Safari blocks
+ * third-party ones). NEXT_PUBLIC_API_URL now only says where proxy.ts sends it.
+ */
+export const API_BASE_URL = "/api";
 
 export class ApiError extends Error {
   status: number;

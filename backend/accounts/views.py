@@ -14,15 +14,28 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from notifications.emails import email_account_deleted, email_farmer_welcome
+from notifications.emails import (
+    email_account_deleted,
+    email_farmer_welcome,
+    email_password_changed,
+)
 from notifications.services import notify_account_deleted, notify_farmer_registered
 
+from .devices import (
+    forget_devices,
+    is_trusted,
+    make_challenge,
+    read_challenge,
+    trust_device,
+)
 from .lifecycle import announce_officer_created, announce_status_change
 from .models import AccountStatus, RegistrationNotification, User, UserRole
 from .permissions import IsAdmin, IsApproved
 from .serializers import (
     FarmerSignupSerializer,
     LguOfficerCreateSerializer,
+    LoginCodeResendSerializer,
+    LoginCodeSerializer,
     LoginSerializer,
     ResendCodeSerializer,
     ResetPasswordSerializer,
@@ -232,7 +245,11 @@ class FarmerVerifyView(APIView):
             # Both are queued until this transaction commits.
             notify_farmer_registered(user)
             email_farmer_welcome(user)
-        return _tokens_response(user)
+        # The code just proved this browser reads the inbox, so the next
+        # sign-in here does not ask for another one.
+        response = _tokens_response(user)
+        trust_device(request, response, user)
+        return response
 
 
 def _send_code_or_error(user, *, purpose="signup"):
@@ -350,7 +367,7 @@ class FarmerResetPasswordView(APIView):
             return Response({"password": list(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            result = check_code(user, data["code"])
+            result = check_code(user, data["code"], purpose="reset")
             if result != "ok":
                 return Response(
                     {"detail": CODE_MESSAGES[result]}, status=status.HTTP_400_BAD_REQUEST
@@ -359,7 +376,110 @@ class FarmerResetPasswordView(APIView):
             user.save(update_fields=["password", "updated_at"])
             for token in OutstandingToken.objects.filter(user=user):
                 BlacklistedToken.objects.get_or_create(token=token)
+            # Whoever knew the old password may have trusted a device with
+            # it; every device proves itself again with a new code.
+            forget_devices(user)
+            # So the owner hears about a reset they did not ask for.
+            email_password_changed(user)
         return Response({"detail": "Your password has been changed. Please sign in."})
+
+
+NEW_DEVICE_MESSAGE = (
+    "You are signing in on a new device. To make sure it is you, we sent a "
+    "6-digit code to {email}."
+)
+CHALLENGE_EXPIRED = "This sign-in has expired. Please sign in again."
+
+
+def _finish_login(request, user):
+    """
+    Signs in a user whose password, role and status all checked out - unless
+    this browser is new to the account, in which case a code is emailed and
+    the answer is a challenge for LoginCodeVerifyView (see accounts.devices).
+    """
+    if not settings.NEW_DEVICE_CHECK or is_trusted(request, user):
+        return _tokens_response(user)
+    try:
+        send_code(user, purpose="login")
+    except ResendTooSoon:
+        pass  # One went less than a minute ago; that code still works.
+    except CodeSendFailed:
+        return Response({"detail": CODE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response(
+        {
+            "detail": NEW_DEVICE_MESSAGE.format(email=user.email),
+            "code": "new_device",
+            "email": user.email,
+            "challenge": make_challenge(user),
+            "resend_after": int(RESEND_COOLDOWN.total_seconds()),
+        },
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
+def _challenged_user(data):
+    """The user behind a challenge, if it is valid and matches the email sent."""
+    user = read_challenge(data["challenge"])
+    if user is None or user.email.lower() != data["email"].strip().lower():
+        return None
+    return user
+
+
+class LoginCodeVerifyView(APIView):
+    """
+    POST /api/auth/login/verify/ {email, challenge, code}
+
+    Second step of a sign-in on a new device, for every role: the challenge
+    proves the password was right, the code proves the inbox is theirs. On
+    success the browser is trusted and signed in.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = VERIFY_THROTTLES
+
+    def post(self, request):
+        serializer = LoginCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = _challenged_user(serializer.validated_data)
+        if user is None:
+            return Response({"detail": CHALLENGE_EXPIRED}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Suspended while the code was on its way: refused like a login.
+        if not user.can_sign_in:
+            raise AuthenticationFailed(
+                STATUS_MESSAGES.get(user.account_status, "Your account cannot sign in right now.")
+            )
+
+        result = check_code(user, serializer.validated_data["code"], purpose="login")
+        if result != "ok":
+            return Response({"detail": CODE_MESSAGES[result]}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = _tokens_response(user)
+        trust_device(request, response, user)
+        return response
+
+
+class LoginCodeResendView(APIView):
+    """POST /api/auth/login/resend-code/ {email, challenge} - a fresh new-device code."""
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = RESEND_THROTTLES
+
+    def post(self, request):
+        serializer = LoginCodeResendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = _challenged_user(serializer.validated_data)
+        if user is None:
+            return Response({"detail": CHALLENGE_EXPIRED}, status=status.HTTP_400_BAD_REQUEST)
+        error = _send_code_or_error(user, purpose="login")
+        if error is not None:
+            return error
+        return Response(
+            {
+                "detail": f"We sent a new code to {user.email}.",
+                "resend_after": int(RESEND_COOLDOWN.total_seconds()),
+            }
+        )
 
 
 class _LoginThrottleMixin:
@@ -411,7 +531,7 @@ class FarmerLoginView(_LoginThrottleMixin, APIView):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Please verify your email first. We sent a 6-digit code to {user.email}.",
             )
-        return _tokens_response(user)
+        return _finish_login(request, user)
 
 
 class LguLoginView(_LoginThrottleMixin, APIView):
@@ -431,7 +551,7 @@ class LguLoginView(_LoginThrottleMixin, APIView):
             serializer.validated_data["password"],
             UserRole.LGU_OFFICER,
         )
-        return _tokens_response(user)
+        return _finish_login(request, user)
 
 
 class AdminLoginView(_LoginThrottleMixin, APIView):
@@ -447,7 +567,7 @@ class AdminLoginView(_LoginThrottleMixin, APIView):
             serializer.validated_data["password"],
             UserRole.ADMIN,
         )
-        return _tokens_response(user)
+        return _finish_login(request, user)
 
 
 class RefreshView(APIView):

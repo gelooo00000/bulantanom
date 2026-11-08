@@ -1,0 +1,19 @@
+{% extends "emails/_base.html" %}
+{% block preheader %}Your BulanTanom sign-in code is {{ code }}. It expires in {{ minutes }} minutes.{% endblock %}
+{% block content %}
+{% include "emails/_status.html" with tone="good" label="New device" icon="📱" headline="Your sign-in code" %}
+<p style="margin:10px 0 0;font-size:15px;line-height:1.7;color:#3a4a3c;">
+  Someone is signing in to your BulanTanom account on a new device.
+  Enter this code to finish. It works once and expires in {{ minutes }} minutes.
+</p>
+<p style="margin:22px 0 0;text-align:center;">
+  <span style="display:inline-block;background:#f2f8f0;border:1px solid #bfe3c2;border-radius:14px;padding:14px 26px;font-family:'Courier New',Courier,monospace;font-size:34px;font-weight:700;letter-spacing:0.3em;color:#14301b;">{{ code }}</span>
+</p>
+<p style="margin:18px 0 0;font-size:14px;line-height:1.6;color:#3a4a3c;">
+  After that, this device will not ask for a code again for 30 days.
+</p>
+<p style="margin:24px 0 0;padding-top:18px;border-top:1px solid #e3ebdf;font-size:13px;line-height:1.6;color:#6b7a68;">
+  <strong style="color:#b42318;">Not you?</strong> Do not share this code. Someone knows your
+  password &mdash; <a href="{{ frontend_url }}/forgot-password" style="color:#2f8a45;font-weight:700;">change it now</a>.
+</p>
+{% endblock %}

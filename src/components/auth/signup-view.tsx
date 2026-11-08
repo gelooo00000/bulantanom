@@ -135,9 +135,9 @@ export function SignupView() {
             </p>
           </div>
 
-          {/* Fields start empty: the browser does not fill in a saved email
-              or password from another account. */}
-          <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
+          {/* "new-password" lets the phone suggest a strong password and save
+              it with this email, ready to fill in on the sign-in page. */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="fullName" className="text-foreground">
                 Full Name
@@ -160,7 +160,7 @@ export function SignupView() {
                 icon={Mail}
                 id="email"
                 type="email"
-                autoComplete="off"
+                autoComplete="username"
                 required
                 placeholder="farmer@layuan.ph"
                 value={email}

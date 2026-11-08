@@ -14,7 +14,7 @@ import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
-import { EmailNotVerifiedError, useAuth } from "@/lib/auth/auth-context";
+import { EmailNotVerifiedError, NewDeviceError, useAuth } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,7 @@ const ROLE_CARDS: {
 export function LoginView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentUser, login } = useAuth();
+  const { currentUser, login, verifyLogin, resendLoginCode } = useAuth();
 
   const initialRole = searchParams.get("role");
   const [selectedRole, setSelectedRole] = useState<SelectableRole>(
@@ -84,7 +84,6 @@ export function LoginView() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const justSignedUp = searchParams.get("signedUp") === "1";
   const justReset = searchParams.get("reset") === "1";
   // Set once a Farmer or LGU Officer signs in: the form gives way to the
   // "Preparing your dashboard..." screen, which opens the dashboard itself.
@@ -92,6 +91,9 @@ export function LoginView() {
   // A Farmer who never typed their sign-up code: the right password got a
   // fresh code emailed, and the form gives way to "Enter the code".
   const [unverified, setUnverified] = useState<EmailNotVerifiedError | null>(null);
+  // A correct password on a device this account has not used: a code went
+  // to the account's email and the form gives way to "Is this you?".
+  const [newDevice, setNewDevice] = useState<NewDeviceError | null>(null);
   // True while this form is signing someone in, so the effect below does not
   // race the loading screen to the dashboard the moment the user is set.
   const signingIn = useRef(false);
@@ -111,13 +113,7 @@ export function LoginView() {
     setError(null);
     signingIn.current = true;
     try {
-      const user = await login(email, password, selectedRole);
-      if (user.role === "admin") {
-        // Admin goes straight in; the loading screen is for Farmers and Officers.
-        router.push(DASHBOARD_BY_ROLE[user.role]);
-      } else {
-        setPreparingFor(user);
-      }
+      enterDashboard(await login(email, password, selectedRole));
     } catch (err) {
       // A failed sign-in never shows the loading screen.
       signingIn.current = false;
@@ -126,10 +122,22 @@ export function LoginView() {
         // ahead of the redirect once the code is accepted.
         signingIn.current = true;
         setUnverified(err);
+      } else if (err instanceof NewDeviceError) {
+        signingIn.current = true;
+        setNewDevice(err);
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
       setSubmitting(false);
+    }
+  }
+
+  function enterDashboard(user: AuthUser) {
+    if (user.role === "admin") {
+      // Admin goes straight in; the loading screen is for Farmers and Officers.
+      router.push(DASHBOARD_BY_ROLE[user.role]);
+    } else {
+      setPreparingFor(user);
     }
   }
 
@@ -154,6 +162,34 @@ export function LoginView() {
           onBack={() => {
             signingIn.current = false;
             setUnverified(null);
+          }}
+          backLabel="Back to sign in"
+        />
+      </AuthSplitLayout>
+    );
+  }
+
+  if (newDevice) {
+    return (
+      <AuthSplitLayout>
+        <VerifyEmailStep
+          email={newDevice.email}
+          resendAfter={newDevice.resendAfter}
+          heading="Is this you?"
+          intro={
+            <>
+              This is the first time you are signing in on this device, so we sent a 6-digit
+              code to <strong className="font-medium text-foreground break-all">{newDevice.email}</strong>.
+              Enter it below. This device will not ask again for 30 days.
+            </>
+          }
+          verify={(code) => verifyLogin(newDevice.email, newDevice.challenge, code)}
+          resend={() => resendLoginCode(newDevice.email, newDevice.challenge)}
+          onVerified={enterDashboard}
+          onBack={() => {
+            signingIn.current = false;
+            setNewDevice(null);
+            setPassword("");
           }}
           backLabel="Back to sign in"
         />
@@ -225,22 +261,16 @@ export function LoginView() {
             <p className="mt-1.5 text-sm text-muted-foreground sm:mt-2">{roleCard.loginSupporting}</p>
           </div>
 
-          {justSignedUp && selectedRole === "farmer" && (
-            <p className="text-risk-medium bg-risk-medium/10 rounded-lg px-3 py-2 text-sm">
-              Registration submitted. You can sign in once an administrator
-              approves your account.
-            </p>
-          )}
-
           {justReset && (
             <p className="text-risk-low bg-risk-low/10 rounded-lg px-3 py-2 text-sm" role="status">
               Your password has been changed. Please sign in.
             </p>
           )}
 
-          {/* Fields start empty on every visit, for every role: the browser
-              does not fill in a saved email or password. */}
-          <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
+          {/* The phone's password manager may save and fill these: farmers
+              type less, and can keep a stronger password than they would
+              type by hand every time. */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="email" className="text-foreground">
                 Email
@@ -249,7 +279,7 @@ export function LoginView() {
                 icon={Mail}
                 id="email"
                 type="email"
-                autoComplete="off"
+                autoComplete="username"
                 required
                 placeholder="you@example.com"
                 value={email}
@@ -274,7 +304,7 @@ export function LoginView() {
               <AuthPasswordField
                 icon={Lock}
                 id="password"
-                autoComplete="new-password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

@@ -1,0 +1,12 @@
+Hello {{ name }},
+
+Someone is signing in to your BulanTanom account on a new device. Your sign-in code is:
+
+    {{ code }}
+
+Enter it on BulanTanom to finish signing in. It works once and expires in {{ minutes }} minutes. After that, this device will not ask for a code again for 30 days.
+
+Not you? Do not share this code. Someone knows your password: change it now at {{ frontend_url }}/forgot-password
+
+--
+BulanTanom will never ask you for your password by email.

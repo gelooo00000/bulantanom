@@ -47,8 +47,9 @@ services:
       - key: DB_SSLMODE
         value: require
 
-      # *.onrender.com is a public suffix, so the frontend and API are
-      # cross-site: the refresh cookie must be SameSite=None + Secure.
+      # The browser reaches the API through the frontend's own /api/ (see
+      # src/proxy.ts), so its cookies are first-party. SameSite=None stays so
+      # a direct call to this host keeps working too.
       - key: CORS_ALLOWED_ORIGINS
         value: https://bulantanom.onrender.com
       - key: FRONTEND_URL
@@ -90,6 +91,10 @@ services:
       # Must equal the GitHub secret used by .github/workflows/daily-jobs.yml.
       - key: DAILY_JOBS_SECRET
         sync: false
+      # Shared with the frontend, which sends it with the visitor's address
+      # for the sign-in rate limits (accounts.throttles.client_ip).
+      - key: API_PROXY_SECRET
+        generateValue: true
 
   - type: web
     name: bulantanom
@@ -103,3 +108,9 @@ services:
         value: "24"
       - key: NEXT_PUBLIC_API_URL
         value: https://bulantanom-api.onrender.com/api
+      # Same value as on bulantanom-api: proves forwarded requests came from here.
+      - key: API_PROXY_SECRET
+        fromService:
+          type: web
+          name: bulantanom-api
+          envVarKey: API_PROXY_SECRET

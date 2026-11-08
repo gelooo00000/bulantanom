@@ -7,9 +7,12 @@ import {
   loginFarmer,
   loginLgu,
   logoutSession,
+  isNewDevicePending,
   isVerificationPending,
   refreshSession,
   resendFarmerCode,
+  resendLoginCode as resendLoginCodeApi,
+  verifyLoginCode,
   signupFarmer,
   verifyFarmerEmail,
   type BackendRole,
@@ -43,6 +46,25 @@ export class EmailNotVerifiedError extends Error {
   }
 }
 
+/**
+ * Thrown by `login` on a device the account has not used before: the
+ * password was right, a code has been emailed, and the page should ask for
+ * it. `challenge` goes back with the code.
+ */
+export class NewDeviceError extends Error {
+  email: string;
+  challenge: string;
+  resendAfter: number;
+
+  constructor(message: string, email: string, challenge: string, resendAfter: number) {
+    super(message);
+    this.name = "NewDeviceError";
+    this.email = email;
+    this.challenge = challenge;
+    this.resendAfter = resendAfter;
+  }
+}
+
 /** A sign-up waiting for its emailed code. */
 export type PendingVerification = { email: string; resendAfter: number; message: string };
 
@@ -62,6 +84,10 @@ type AuthContextValue = {
   verifyEmail: (email: string, code: string) => Promise<AuthUser>;
   /** Emails a new code; resolves to the seconds until another may be asked. */
   resendCode: (email: string) => Promise<number>;
+  /** Finishes a new-device sign-in with the emailed code. */
+  verifyLogin: (email: string, challenge: string, code: string) => Promise<AuthUser>;
+  /** Emails a new new-device code; resolves to the seconds until another may be asked. */
+  resendLoginCode: (email: string, challenge: string) => Promise<number>;
   /**
    * Signs out. `redirectTo` is where the page goes afterwards; without it a
    * protected page falls back to /login, as it does when a session expires.
@@ -180,6 +206,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (err instanceof ApiError && isVerificationPending(err.body)) {
         throw new EmailNotVerifiedError(err.message, err.body.email, err.body.resend_after);
       }
+      if (err instanceof ApiError && isNewDevicePending(err.body)) {
+        throw new NewDeviceError(
+          err.message,
+          err.body.email,
+          err.body.challenge,
+          err.body.resend_after,
+        );
+      }
+      throw new Error(messageFrom(err));
+    }
+  }
+
+  async function verifyLogin(email: string, challenge: string, code: string): Promise<AuthUser> {
+    try {
+      const { access, user } = await verifyLoginCode(email, challenge, code);
+      return startSession(access, user);
+    } catch (err) {
+      throw new Error(messageFrom(err));
+    }
+  }
+
+  async function resendLoginCode(email: string, challenge: string): Promise<number> {
+    try {
+      return (await resendLoginCodeApi(email, challenge)).resend_after;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 429) {
+        const wait = (err.body as { resend_after?: unknown } | undefined)?.resend_after;
+        if (typeof wait === "number") return wait;
+      }
       throw new Error(messageFrom(err));
     }
   }
@@ -259,6 +314,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         verifyEmail,
         resendCode,
+        verifyLogin,
+        resendLoginCode,
         logout,
         signedOutTo,
       }}

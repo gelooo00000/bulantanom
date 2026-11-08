@@ -1,6 +1,5 @@
-import { apiFetch, refreshAccessToken } from "@/lib/api/client";
+import { API_BASE_URL, apiFetch, refreshAccessToken } from "@/lib/api/client";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 export type ReportPeriodKey =
   | "this_week"

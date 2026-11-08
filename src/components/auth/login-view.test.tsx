@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DASHBOARD_LOADING_MS } from "@/components/auth/dashboard-loading-screen";
 import { LoginView } from "@/components/auth/login-view";
-import { EmailNotVerifiedError } from "@/lib/auth/auth-context";
+import { EmailNotVerifiedError, NewDeviceError } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
 
 const router = { push: vi.fn(), replace: vi.fn() };
@@ -15,12 +15,31 @@ vi.mock("next/navigation", () => ({
 
 const login = vi.fn();
 const verifyEmail = vi.fn();
+const verifyLogin = vi.fn();
+const resendLoginCode = vi.fn();
 vi.mock("@/lib/auth/auth-context", () => ({
-  useAuth: () => ({ currentUser: null, login, verifyEmail, resendCode: vi.fn() }),
+  useAuth: () => ({
+    currentUser: null,
+    login,
+    verifyEmail,
+    resendCode: vi.fn(),
+    verifyLogin,
+    resendLoginCode,
+  }),
   EmailNotVerifiedError: class extends Error {
     constructor(
       message: string,
       public email: string,
+      public resendAfter: number,
+    ) {
+      super(message);
+    }
+  },
+  NewDeviceError: class extends Error {
+    constructor(
+      message: string,
+      public email: string,
+      public challenge: string,
       public resendAfter: number,
     ) {
       super(message);
@@ -54,6 +73,8 @@ beforeEach(() => {
   router.replace.mockClear();
   login.mockReset();
   verifyEmail.mockReset();
+  verifyLogin.mockReset();
+  resendLoginCode.mockReset();
   roleParam = null;
 });
 
@@ -143,6 +164,62 @@ describe("signing in", () => {
     });
     expect(verifyEmail).toHaveBeenCalledWith("juan@example.com", "123456");
     expect(screen.getByText("Preparing your dashboard...")).toBeInTheDocument();
+  });
+});
+
+describe("signing in on a new device", () => {
+  it("asks for the emailed code, then signs in", async () => {
+    login.mockRejectedValue(
+      new NewDeviceError("New device.", "juan@example.com", "signed-challenge", 60),
+    );
+    verifyLogin.mockResolvedValue(user("farmer"));
+    render(<LoginView />);
+    await signIn();
+
+    expect(screen.getByText("Is this you?")).toBeInTheDocument();
+    expect(screen.getByText(/will not ask again for 30 days/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/verification code/i), { target: { value: "654321" } });
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText(/verification code/i).closest("form")!);
+    });
+    expect(verifyLogin).toHaveBeenCalledWith("juan@example.com", "signed-challenge", "654321");
+    expect(screen.getByText("Preparing your dashboard...")).toBeInTheDocument();
+  });
+
+  it("sends Admin straight to the dashboard after the code", async () => {
+    roleParam = "admin";
+    login.mockRejectedValue(new NewDeviceError("New device.", "a@example.com", "c", 60));
+    verifyLogin.mockResolvedValue(user("admin"));
+    render(<LoginView />);
+    await signIn();
+
+    fireEvent.change(screen.getByLabelText(/verification code/i), { target: { value: "111111" } });
+    await act(async () => {
+      fireEvent.submit(screen.getByLabelText(/verification code/i).closest("form")!);
+    });
+    expect(router.push).toHaveBeenCalledWith("/admin");
+  });
+
+  it("goes back to an empty password field", async () => {
+    login.mockRejectedValue(new NewDeviceError("New device.", "juan@example.com", "c", 60));
+    render(<LoginView />);
+    await signIn();
+
+    fireEvent.click(screen.getByRole("button", { name: /back to sign in/i }));
+    expect(screen.getByLabelText(/^password/i)).toHaveValue("");
+  });
+});
+
+describe("LoginView password managers", () => {
+  it("lets the phone save and fill the email and password", () => {
+    render(<LoginView />);
+    expect(screen.getByLabelText(/email/i)).toHaveAttribute("autocomplete", "username");
+    expect(screen.getByLabelText(/^password/i)).toHaveAttribute(
+      "autocomplete",
+      "current-password",
+    );
+    expect(screen.getByLabelText(/email/i).closest("form")).not.toHaveAttribute("autocomplete");
   });
 });
 

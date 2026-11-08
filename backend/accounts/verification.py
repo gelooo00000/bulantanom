@@ -44,6 +44,7 @@ RESEND_COOLDOWN = timedelta(seconds=60)
 PURPOSES = {
     "signup": ("{code} is your BulanTanom verification code", "verification_code"),
     "reset": ("{code} is your BulanTanom password reset code", "password_reset_code"),
+    "login": ("{code} is your BulanTanom sign-in code", "login_code"),
 }
 
 
@@ -111,6 +112,7 @@ def send_code(user, *, enforce_cooldown: bool = True, purpose: str = "signup") -
             "sent_at": now,
             "expires_at": now + CODE_TTL,
             "attempts": 0,
+            "purpose": purpose,
         },
     )
 
@@ -140,13 +142,16 @@ def send_code(user, *, enforce_cooldown: bool = True, purpose: str = "signup") -
         raise CodeSendFailed from exc
 
 
-def check_code(user, code: str) -> str:
+def check_code(user, code: str, purpose: str = "signup") -> str:
     """
     "ok" (and the account is now verified), "invalid", "expired" or
     "locked" (too many wrong guesses; a new code is needed).
+
+    A code only works for the purpose it was sent for: a password reset code
+    typed into the new-device step is treated as no code at all.
     """
     row = EmailVerification.objects.filter(user=user).first()
-    if row is None:
+    if row is None or row.purpose != purpose:
         return "expired"
     if row.attempts >= MAX_ATTEMPTS:
         return "locked"

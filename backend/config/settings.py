@@ -549,3 +549,18 @@ REFRESH_COOKIE_PATH = "/api/auth/"
 # "None", which browsers only honour together with REFRESH_COOKIE_SECURE=True.
 REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "Lax").strip() or "Lax"
 REFRESH_COOKIE_SECURE = _env_bool("REFRESH_COOKIE_SECURE", False)
+
+# New-device sign-in check (accounts.devices): a correct password on a browser
+# the account has not used before also needs a code emailed to the account.
+# The proven browser keeps an HttpOnly cookie for 30 days. Off under
+# `manage.py test` so the many tests that sign in do not each need a code;
+# the tests of the check itself turn it on.
+NEW_DEVICE_CHECK = _env_bool("NEW_DEVICE_CHECK", not TESTING)
+DEVICE_COOKIE_NAME = "bulantanom_device"
+
+# The Next.js frontend forwards /api/* here from its own address (src/proxy.ts),
+# so the browser only ever talks to one site. That forwarding hides the
+# visitor's address behind the frontend's, so the frontend passes it on in
+# X-BulanTanom-Client-IP, trusted only alongside this shared secret. Without
+# the secret every request falls back to CLIENT_IP_HEADER as before.
+API_PROXY_SECRET = os.environ.get("API_PROXY_SECRET", "").strip()

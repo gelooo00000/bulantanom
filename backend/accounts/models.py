@@ -182,10 +182,16 @@ class RegistrationNotification(models.Model):
 
 class EmailVerification(models.Model):
     """
-    The one-time sign-up code currently outstanding for an account. One row
+    The one-time emailed code currently outstanding for an account. One row
     per user: sending a new code replaces the old one, so only the latest
     code works. The code itself is never stored, only its keyed hash.
     """
+
+    PURPOSE_CHOICES = [
+        ("signup", "Sign-up"),
+        ("reset", "Password reset"),
+        ("login", "New device sign-in"),
+    ]
 
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="email_verification"
@@ -195,6 +201,29 @@ class EmailVerification(models.Model):
     expires_at = models.DateTimeField()
     # Wrong guesses against this code; at the limit it stops working.
     attempts = models.PositiveSmallIntegerField(default=0)
+    # What the code was sent for. A code only works for that purpose, so a
+    # password-reset code cannot finish a new-device sign-in, or the reverse.
+    purpose = models.CharField(max_length=10, choices=PURPOSE_CHOICES, default="signup")
 
     def __str__(self):
         return f"Email code for {self.user.email}"
+
+
+class TrustedDevice(models.Model):
+    """
+    A browser that proved, with an emailed code, that its user reads the
+    account's inbox. Signing in from it skips the code until `expires_at`.
+    The browser holds a random token in an HttpOnly cookie; only its SHA-256
+    is stored, so a database dump cannot be replayed as a trusted device.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="trusted_devices")
+    token_hash = models.CharField(max_length=64, unique=True)
+    # A short description of the browser, e.g. "Safari on iPhone".
+    label = models.CharField(max_length=120, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_used_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Trusted device for {self.user.email}"

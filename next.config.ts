@@ -22,6 +22,14 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // /api/* is forwarded to Django (src/proxy.ts), whose URLs all end in "/".
+  // The default redirect would strip that slash and break every API call.
+  skipTrailingSlashRedirect: true,
+  experimental: {
+    // Forwarded API calls may wait out a sleeping free-tier API (~75s to
+    // wake) and Gemini (gunicorn allows 180s). The default gives up at 30s.
+    proxyTimeout: 200_000,
+  },
   images: {
     // 75 is Next's default for every image. 90 is allowed for the full-screen
     // farm photographs only, where a second lossy pass at 75 on an already

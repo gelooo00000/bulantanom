@@ -24,6 +24,9 @@ auth_urlpatterns = [
         views.FarmerResetPasswordView.as_view(),
         name="farmer-reset-password",
     ),
+    # Second step of a sign-in on a new device, for every role.
+    path("login/verify/", views.LoginCodeVerifyView.as_view(), name="login-verify"),
+    path("login/resend-code/", views.LoginCodeResendView.as_view(), name="login-resend-code"),
     path("lgu/login/", views.LguLoginView.as_view(), name="lgu-login"),
     path("admin/login/", views.AdminLoginView.as_view(), name="admin-login"),
     path("refresh/", views.RefreshView.as_view(), name="auth-refresh"),

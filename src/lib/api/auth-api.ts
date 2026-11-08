@@ -39,6 +39,47 @@ export function isVerificationPending(body: unknown): body is VerificationPendin
 }
 
 /**
+ * A correct password on a device this account has not used before (every
+ * role). A code went to the account's email; `verifyLoginCode` with this
+ * challenge finishes the sign-in and trusts the device for 30 days.
+ */
+export type NewDevicePending = {
+  detail: string;
+  code: "new_device";
+  email: string;
+  /** Proof the password was right; only valid together with the emailed code. */
+  challenge: string;
+  /** Seconds until "Resend code" may be used. */
+  resend_after: number;
+};
+
+export function isNewDevicePending(body: unknown): body is NewDevicePending {
+  if (!body || typeof body !== "object") return false;
+  const record = body as Record<string, unknown>;
+  return (
+    record.code === "new_device" &&
+    typeof record.email === "string" &&
+    typeof record.challenge === "string"
+  );
+}
+
+/** Second step of a new-device sign-in: signs in exactly as a login does. */
+export function verifyLoginCode(
+  email: string,
+  challenge: string,
+  code: string,
+): Promise<AuthResponse> {
+  return apiFetch("/auth/login/verify/", { method: "POST", body: { email, challenge, code } });
+}
+
+export function resendLoginCode(
+  email: string,
+  challenge: string,
+): Promise<{ detail: string; resend_after: number }> {
+  return apiFetch("/auth/login/resend-code/", { method: "POST", body: { email, challenge } });
+}
+
+/**
  * Creates the Farmer account and emails it a one-time code. Nobody is
  * signed in yet: that happens in `verifyFarmerEmail` once the code is typed
  * back, which proves the email address is real.

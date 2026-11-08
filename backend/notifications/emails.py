@@ -308,3 +308,28 @@ def email_officer_welcome(officer):
             context={"role_label": "LGU Officer", "features": OFFICER_FEATURES},
         )
     )
+
+
+# ---------------------------------------------------------------------------
+# Account security
+# ---------------------------------------------------------------------------
+
+
+def email_password_changed(user):
+    """
+    Tells the owner their password was just changed, so a reset they did not
+    ask for is noticed at once. One per change: the event key carries the time.
+    """
+    changed_at = timezone.localtime()
+    _queue(
+        lambda: _send(
+            recipient=user,
+            event_key=f"password_changed:{changed_at:%Y%m%d%H%M%S%f}",
+            subject="Your BulanTanom password was changed",
+            template="password_changed",
+            context={
+                "changed_at": changed_at,
+                "reset_url": f"{settings.FRONTEND_URL}/forgot-password",
+            },
+        )
+    )
