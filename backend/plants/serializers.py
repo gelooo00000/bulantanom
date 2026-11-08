@@ -15,6 +15,7 @@ from .models import (
     Plant,
     RiskAssessment,
     SoilRecommendation,
+    HarvestReport,
 )
 
 
@@ -175,6 +176,9 @@ class PlantSerializer(serializers.ModelSerializer):
     is_planned = serializers.BooleanField(read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     assessment_eligibility = serializers.SerializerMethodField()
+    # The final assessment, once the plant is harvested (None before, and
+    # for plants harvested before reports existed).
+    harvest_report = serializers.SerializerMethodField()
 
     class Meta:
         model = Plant
@@ -197,6 +201,7 @@ class PlantSerializer(serializers.ModelSerializer):
             "age_days",
             "is_planned",
             "assessment_eligibility",
+            "harvest_report",
             "created_at",
             "updated_at",
         ]
@@ -216,6 +221,31 @@ class PlantSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def get_harvest_report(self, obj):
+        report = getattr(obj, "harvest_report", None)
+        if report is None:
+            return None
+        return HarvestReportSerializer(report, context=self.context).data
+
+    def validate_status(self, value):
+        """
+        Harvesting goes through the harvest report (POST .../harvest/), so a
+        plant is never harvested without one. Undoing a reported harvest is
+        allowed for 24 hours (see harvest_report.restore_problem).
+        """
+        current = getattr(self.instance, "status", None)
+        if value == "HARVESTED" and current != "HARVESTED":
+            raise serializers.ValidationError(
+                "Please fill in the harvest report to mark this plant harvested."
+            )
+        if current == "HARVESTED" and value != "HARVESTED":
+            from .harvest_report import restore_problem
+
+            problem = restore_problem(self.instance)
+            if problem:
+                raise serializers.ValidationError(problem)
+        return value
 
     def get_assessment_eligibility(self, obj):
         """
@@ -585,3 +615,122 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
         if problem:
             raise serializers.ValidationError(problem)
         return clean_notes(value)
+
+
+class HarvestReportSerializer(serializers.ModelSerializer):
+    """
+    The Farmer's harvest report. Only the answers are writable; the system
+    facts (timing, assessments, risk history) are filled in by the server.
+    """
+
+    quality_label = serializers.CharField(source="get_quality_display", read_only=True)
+    final_health_label = serializers.CharField(source="get_final_health_display", read_only=True)
+    advice_helped_label = serializers.CharField(
+        source="get_advice_helped_display", read_only=True
+    )
+    yield_unit_label = serializers.CharField(source="get_yield_unit_display", read_only=True)
+    timing_label = serializers.CharField(source="get_timing_display", read_only=True)
+    photo = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    photo_url = serializers.SerializerMethodField()
+    yield_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        min_value=Decimal("0.01"),
+        max_value=Decimal("99999999"),
+    )
+
+    class Meta:
+        model = HarvestReport
+        fields = [
+            "id",
+            "quality",
+            "quality_label",
+            "final_health",
+            "final_health_label",
+            "advice_helped",
+            "advice_helped_label",
+            "yield_amount",
+            "yield_unit",
+            "yield_unit_label",
+            "photo",
+            "photo_url",
+            "notes",
+            "harvested_on",
+            "days_to_harvest",
+            "expected_days",
+            "timing",
+            "timing_label",
+            "assessments_count",
+            "highest_risk",
+            "high_risk_count",
+            "recovered_from_high",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "harvested_on",
+            "days_to_harvest",
+            "expected_days",
+            "timing",
+            "assessments_count",
+            "highest_risk",
+            "high_risk_count",
+            "recovered_from_high",
+            "created_at",
+        ]
+        extra_kwargs = {
+            "quality": {"error_messages": {"required": "Please choose the quality of the harvest."}},
+            "final_health": {
+                "error_messages": {"required": "Please choose how healthy the plant was."}
+            },
+            "advice_helped": {
+                "error_messages": {"required": "Please say whether the advice helped."}
+            },
+        }
+
+    def get_photo_url(self, obj):
+        """The authorized photo endpoint, never the raw media path."""
+        if not obj.photo:
+            return None
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        prefix = "lgu" if getattr(user, "role", None) in ("LGU_OFFICER", "ADMIN") else "farmer"
+        path = f"/api/{prefix}/harvest-reports/{obj.pk}/photo/"
+        return request.build_absolute_uri(path) if request else path
+
+    def validate_photo(self, image):
+        return validate_evidence_file(image)
+
+    def validate_notes(self, value):
+        problem = notes_problem(value, "Notes", 1000)
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean_notes(value)
+
+    def validate(self, attrs):
+        amount = attrs.get("yield_amount")
+        unit = attrs.get("yield_unit", "")
+        if amount is not None and not unit:
+            raise serializers.ValidationError({"yield_unit": "Please choose kg, pieces or sacks."})
+        if amount is None:
+            attrs["yield_unit"] = ""
+        return attrs
+
+
+class HarvestOutcomeReportSerializer(HarvestReportSerializer):
+    """A report as LGU and Admin see it: with whose plant it was."""
+
+    farmer_name = serializers.CharField(source="plant.farmer.get_full_name", read_only=True)
+    plant_name = serializers.CharField(source="plant.display_name", read_only=True)
+    crop_name = serializers.CharField(source="plant.crop.name", read_only=True)
+    crop_emoji = serializers.CharField(source="plant.crop.emoji", read_only=True)
+
+    class Meta(HarvestReportSerializer.Meta):
+        fields = HarvestReportSerializer.Meta.fields + [
+            "farmer_name",
+            "plant_name",
+            "crop_name",
+            "crop_emoji",
+        ]

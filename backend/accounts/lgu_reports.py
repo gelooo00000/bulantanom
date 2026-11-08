@@ -604,6 +604,86 @@ def _build_harvest(period: Period, filters: dict) -> dict:
     }
 
 
+def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
+    """
+    How harvested plants turned out, from each Farmer's harvest report (the
+    final assessment). Plants harvested before reports existed are not in it.
+    """
+    from plants.harvest_report import outcomes, reports_in_scope
+
+    queryset = _apply_period(reports_in_scope(), "harvested_on", period)
+    if filters.get("farmer_id"):
+        queryset = queryset.filter(plant__farmer_id=filters["farmer_id"])
+    if filters.get("crop_id"):
+        queryset = queryset.filter(plant__crop_id=filters["crop_id"])
+    data = outcomes(queryset[:500], recent=500)
+
+    def pct(value):
+        return f"{value}%" if value is not None else "-"
+
+    def amount(report):
+        if report.yield_amount is None:
+            return "Not given"
+        return f"{report.yield_amount.normalize():f} {report.get_yield_unit_display()}"
+
+    return {
+        "stats": [
+            {"label": "Harvest reports", "value": data["total"], "tone": "low"},
+            {"label": "Healthy at harvest (%)", "value": data["healthy_rate"] or 0, "tone": "low"},
+            {"label": "Advice helped (%)", "value": data["advice_helped_rate"] or 0},
+            {"label": "Harvested on time (%)", "value": data["on_time_rate"] or 0},
+            {
+                "label": "Recovered from High risk",
+                "value": f"{data['recovered_healthy']} of {data['reached_high_risk']}",
+                "tone": "medium",
+            },
+        ],
+        "tables": [
+            {
+                "title": "Outcomes by crop",
+                "columns": ["Crop", "Harvests", "Healthy", "Good quality", "On time", "Avg. days", "Avg. yield"],
+                "keys": ["crop", "harvests", "healthy", "good", "on_time", "days", "yield"],
+                "widths": [1.6, 1, 1, 1.1, 1, 1, 1.8],
+                "rows": [
+                    {
+                        "crop": c["crop"],
+                        "harvests": c["harvests"],
+                        "healthy": pct(c["healthy_rate"]),
+                        "good": pct(c["good_quality_rate"]),
+                        "on_time": pct(c["on_time_rate"]),
+                        "days": c["average_days"],
+                        "yield": "; ".join(
+                            f"{y['average']:g} {y['unit_label']}" for y in c["average_yield"]
+                        )
+                        or "Not given",
+                    }
+                    for c in data["by_crop"]
+                ],
+            },
+            {
+                "title": "Harvest reports",
+                "columns": ["Harvested", "Farmer", "Plant", "Amount", "Quality", "Health", "Advice helped", "Timing", "Highest risk"],
+                "keys": ["date", "farmer", "plant", "amount", "quality", "health", "advice", "timing", "risk"],
+                "widths": [1.1, 1.5, 1.5, 1.1, 0.9, 1.2, 1, 0.9, 1],
+                "rows": [
+                    {
+                        "date": r.harvested_on.isoformat(),
+                        "farmer": _display_name(r.plant.farmer),
+                        "plant": r.plant.display_name,
+                        "amount": amount(r),
+                        "quality": r.get_quality_display(),
+                        "health": r.get_final_health_display(),
+                        "advice": r.get_advice_helped_display(),
+                        "timing": r.get_timing_display(),
+                        "risk": (r.highest_risk.title() if r.highest_risk else "No reading"),
+                    }
+                    for r in data["recent"]
+                ],
+            },
+        ],
+    }
+
+
 # --------------------------------------------------------------------------
 # Catalog
 # --------------------------------------------------------------------------
@@ -665,6 +745,14 @@ REPORTS = {
         "builder": _build_harvest,
         "supports": ["period", "area", "farmer", "crop"],
     },
+    "harvest-outcomes": {
+        "title": "Harvest Outcomes Report",
+        "category": "System Effectiveness",
+        "description": "How monitored plants turned out at harvest, from each farmer's harvest report: health, quality, timing, recovery from High risk and whether the advice helped.",
+        "icon": "sprout",
+        "builder": _build_harvest_outcomes,
+        "supports": ["period", "farmer", "crop"],
+    },
 }
 
 
@@ -696,6 +784,10 @@ def _latest_activity(slug: str):
             .first()
         )
         return timezone.localtime(row).date() if row else None
+    if slug == "harvest-outcomes":
+        from plants.harvest_report import reports_in_scope
+
+        return reports_in_scope().order_by("-harvested_on").values_list("harvested_on", flat=True).first()
     if slug == "plant-crop":
         return (
             Plant.objects.filter(farmer__account_status=AccountStatus.APPROVED)

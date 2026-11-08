@@ -56,7 +56,10 @@ function rememberGuideHidden(hidden: boolean) {
 export default function MyPlantsPage() {
   const { accessToken } = useAuth();
   const { t } = useLanguage();
-  const { data: plants, loading, error, refetch } = useAuthedQuery(fetchPlants);
+  const { data: allPlants, loading, error, refetch } = useAuthedQuery(fetchPlants);
+  // Harvested plants are finished: they live in the Harvest page's Archive
+  // with their harvest report, not here.
+  const plants = allPlants?.filter((p) => p.status !== "HARVESTED" && p.status !== "ARCHIVED");
 
   // Open on a farmer's first visit, until they hide it. Read after mount,
   // because the server cannot see localStorage; null renders nothing, so a

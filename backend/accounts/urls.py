@@ -50,6 +50,11 @@ admin_urlpatterns = [
     ),
     path("accounts/<int:user_id>/", views.delete_account, name="admin-delete-account"),
     path("dashboard/", views.admin_dashboard, name="admin-dashboard"),
+    path(
+        "harvest-outcomes/",
+        plant_views.admin_harvest_outcomes,
+        name="admin-harvest-outcomes",
+    ),
     # The legacy pending-registration feed moved aside so /notifications/ can
     # serve the real Notification model, the same as the other two roles.
     path("registrations/", views.pending_registrations, name="admin-registrations"),
@@ -75,6 +80,16 @@ lgu_urlpatterns = [
         "assessments/<int:pk>/evidence/",
         plant_views.AssessmentEvidenceView.as_view(),
         name="lgu-assessment-evidence",
+    ),
+    path(
+        "harvest-reports/<int:pk>/photo/",
+        plant_views.HarvestPhotoView.as_view(),
+        name="lgu-harvest-photo",
+    ),
+    path(
+        "harvest-outcomes/",
+        plant_views.lgu_harvest_outcomes,
+        name="lgu-harvest-outcomes",
     ),
     # Same views as the Farmer mount; the recipient is always request.user.
     path("reports/", lgu_views.lgu_report_catalog, name="lgu-reports"),

@@ -17,6 +17,16 @@ export const plantDetail = defineMessages({
   "lock.today": { en: "today", fil: "ngayon", bik: "yana" },
   "lock.inOne": { en: "in 1 day", fil: "bukas", bik: "buwas" },
   "lock.inDays": { en: "in {n} days", fil: "sa loob ng {n} araw", bik: "sa sulod san {n} adlaw" },
+  "lock.harvestedTitle": {
+    en: "Harvested",
+    fil: "Naani na",
+    bik: "Naani na",
+  },
+  "lock.harvestedText": {
+    en: "{name} has been harvested, so there are no more weekly assessments. Its harvest report is in the Harvest Archive.",
+    fil: "Naani na ang {name}, kaya wala nang lingguhang pagsusuri. Nasa Archive ng Anihan ang ulat ng ani nito.",
+    bik: "Naani na an {name}, kaya mayo na nin semanal na pagsusi. Nasa Archive kan Pag-ani an report san ani kaini.",
+  },
   "lock.notPlanted": { en: "Not planted yet", fil: "Hindi pa naitatanim", bik: "Dili pa natatanom" },
   "lock.plannedText": {
     en: "{name} is planned for {date}. You can assess it from that day — {when}.",

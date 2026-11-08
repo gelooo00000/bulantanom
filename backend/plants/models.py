@@ -701,3 +701,89 @@ class SoilRecommendation(models.Model):
         # masquerade as a sensor reading. Temperature is both detector-only
         # and required on every new submission.
         return self.soil_temperature is not None
+
+
+def harvest_photo_upload_path(instance, filename):
+    """Same rules as evidence photos: random name, JPEG or PNG only."""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png"):
+        ext = ".jpg"
+    return (
+        f"harvests/farmer_{instance.plant.farmer_id}/plant_{instance.plant_id}/"
+        f"{uuid.uuid4().hex}{ext}"
+    )
+
+
+class HarvestReport(models.Model):
+    """
+    The final assessment of a plant, written when the Farmer marks it
+    harvested. The Farmer answers a few taps; the system adds what it already
+    knows (growing time, weekly assessments, risk history), so LGU and Admin
+    can see how plants monitored with BulanTanom actually turned out.
+
+    Plants harvested before reports existed have none.
+    """
+
+    class YieldUnit(models.TextChoices):
+        KG = "KG", "kg"
+        PIECES = "PIECES", "pieces"
+        SACKS = "SACKS", "sacks"
+
+    class Quality(models.TextChoices):
+        GOOD = "GOOD", "Good"
+        FAIR = "FAIR", "Fair"
+        POOR = "POOR", "Poor"
+
+    class FinalHealth(models.TextChoices):
+        HEALTHY = "HEALTHY", "Healthy"
+        MINOR_PROBLEMS = "MINOR_PROBLEMS", "Minor problems"
+        DAMAGED = "DAMAGED", "Badly damaged"
+
+    class AdviceHelped(models.TextChoices):
+        YES = "YES", "Yes"
+        A_LITTLE = "A_LITTLE", "A little"
+        NO = "NO", "No"
+
+    class Timing(models.TextChoices):
+        EARLY = "EARLY", "Early"
+        ON_TIME = "ON_TIME", "On time"
+        LATE = "LATE", "Late"
+
+    plant = models.OneToOneField(Plant, on_delete=models.CASCADE, related_name="harvest_report")
+
+    # What the Farmer tells us. Quality, health and advice are required;
+    # the amount is optional because not every farmer weighs a harvest.
+    quality = models.CharField(max_length=16, choices=Quality.choices)
+    final_health = models.CharField(max_length=16, choices=FinalHealth.choices)
+    advice_helped = models.CharField(max_length=16, choices=AdviceHelped.choices)
+    yield_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    yield_unit = models.CharField(max_length=8, choices=YieldUnit.choices, blank=True)
+    photo = models.ImageField(upload_to=harvest_photo_upload_path, blank=True, null=True)
+    notes = models.TextField(blank=True)
+
+    # What the system adds, frozen at harvest time.
+    harvested_on = models.DateField()
+    days_to_harvest = models.PositiveIntegerField()
+    expected_days = models.PositiveIntegerField()
+    timing = models.CharField(max_length=8, choices=Timing.choices)
+    assessments_count = models.PositiveIntegerField(default=0)
+    # Highest completed risk reading over the plant's life ("" when none).
+    highest_risk = models.CharField(max_length=16, blank=True)
+    high_risk_count = models.PositiveIntegerField(default=0)
+    # Reached High at some point, and its last reading was no longer High.
+    recovered_from_high = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-harvested_on", "-created_at"]
+
+    def __str__(self):
+        return f"Harvest report for {self.plant}"
+
+
+@receiver(post_delete, sender=HarvestReport)
+def delete_harvest_photo(sender, instance, **kwargs):
+    """Remove the harvest photo with its report (a restore, or a cascade)."""
+    if instance.photo:
+        instance.photo.delete(save=False)

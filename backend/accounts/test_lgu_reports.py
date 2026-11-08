@@ -161,7 +161,8 @@ class ReportPermissionTests(LguReportsTestBase):
         self.assertIn("risk-assessment", slugs)
         self.assertIn("crop-recommendation", slugs)
         self.assertIn("harvest", slugs)
-        self.assertEqual(len(slugs), 7)
+        self.assertIn("harvest-outcomes", slugs)
+        self.assertEqual(len(slugs), 8)
         self.assertNotIn("soil-assessment", slugs)
 
 

@@ -24,7 +24,14 @@ import { PageHeader } from "@/components/shared/page-header";
 import { HarvestCelebration } from "@/components/farmer/harvest-celebration";
 import { SlidePager } from "@/components/shared/slide-pager";
 import { Button } from "@/components/ui/button";
-import { fetchPlants, setPlantStatus, type BackendPlant } from "@/lib/api/plants-api";
+import {
+  fetchPlants,
+  harvestPlant,
+  setPlantStatus,
+  type BackendPlant,
+  type HarvestAnswers,
+} from "@/lib/api/plants-api";
+import { HarvestReportDialog } from "@/components/farmer/harvest-report-dialog";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { humanDuration } from "@/lib/duration";
@@ -342,6 +349,8 @@ export default function HarvestPage() {
   // The plant just harvested, for the confetti-and-balloons moment.
   const [celebrating, setCelebrating] = useState<BackendPlant | null>(null);
   const closeCelebration = useCallback(() => setCelebrating(null), []);
+  // The plant whose harvest report (final assessment) is being filled in.
+  const [reporting, setReporting] = useState<BackendPlant | null>(null);
 
   const plants = (data ?? []).map((plant) => updated[plant.id] ?? plant);
   const sorted = [...plants].sort((a, b) =>
@@ -354,28 +363,43 @@ export default function HarvestPage() {
   const growing = byPhase("growing");
   const archived = archiveOrder(byPhase("harvested"));
 
-  async function changeStatus(
-    plant: BackendPlant,
-    status: "GROWING" | "HARVESTED",
-    { celebrate = true } = {},
-  ) {
+  async function changeStatus(plant: BackendPlant, status: "GROWING" | "HARVESTED") {
+    // Harvesting asks for the harvest report first; it is saved from there.
+    if (status === "HARVESTED") {
+      setReporting(plant);
+      return;
+    }
     if (!accessToken) throw new Error("Not signed in.");
     const saved = await setPlantStatus(accessToken, plant.id, status);
     setUpdated((current) => ({ ...current, [plant.id]: saved }));
-    setMoved({ plant: saved, to: status === "HARVESTED" ? "archive" : "active" });
-    if (status === "HARVESTED" && celebrate) setCelebrating(saved);
+    setMoved({ plant: saved, to: "active" });
+    requestNotificationRefresh();
+  }
+
+  async function submitReport(answers: HarvestAnswers) {
+    if (!reporting || !accessToken) throw new Error("Not signed in.");
+    const saved = await harvestPlant(accessToken, reporting.id, answers);
+    setUpdated((current) => ({ ...current, [saved.id]: saved }));
+    setReporting(null);
+    setMoved({ plant: saved, to: "archive" });
+    setCelebrating(saved);
     requestNotificationRefresh();
   }
 
   async function undoMove() {
     if (!moved) return;
     const { plant, to } = moved;
-    try {
-      await changeStatus(plant, to === "archive" ? "GROWING" : "HARVESTED", { celebrate: false });
-    } catch {
-      // The card's own button is still there to try again.
-    }
     setMoved(null);
+    if (to === "active") {
+      // Harvesting again means a new harvest report.
+      setReporting(plant);
+      return;
+    }
+    try {
+      await changeStatus(plant, "GROWING");
+    } catch {
+      // The card's own Restore button is still there to try again.
+    }
   }
 
   function showView(next: "active" | "archive") {
@@ -401,6 +425,13 @@ export default function HarvestPage() {
   return (
     <div className="flex flex-col gap-6">
       {celebrating && <HarvestCelebration plant={celebrating} onClose={closeCelebration} />}
+      {reporting && (
+        <HarvestReportDialog
+          plant={reporting}
+          onCancel={() => setReporting(null)}
+          onSubmit={submitReport}
+        />
+      )}
       <PageHeader
         title={view === "archive" ? t("archive.title") : t("harvestPage.title")}
         description={view === "archive" ? t("archive.description") : t("harvestPage.description")}

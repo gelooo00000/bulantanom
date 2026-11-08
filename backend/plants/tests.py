@@ -464,10 +464,12 @@ class MarkHarvestedTests(APITestCase):
         )
 
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.patch(
-                f"/api/farmer/plants/{plant.pk}/", {"status": "HARVESTED"}, format="json"
+            response = self.client.post(
+                f"/api/farmer/plants/{plant.pk}/harvest/",
+                {"quality": "GOOD", "final_health": "HEALTHY", "advice_helped": "YES"},
+                format="json",
             )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         plant.refresh_from_db()
         self.assertEqual(plant.status, "HARVESTED")
         self.assertIsNotNone(plant.harvested_at)

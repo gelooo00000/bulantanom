@@ -8,7 +8,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import AccountStatus, UserRole
-from accounts.permissions import IsApproved, IsFarmer
+from accounts.permissions import IsAdmin, IsApproved, IsFarmer, IsLguOfficer
 from notifications.services import (
     notify_assessment_evaluated,
     notify_assessment_submitted,
@@ -28,7 +28,7 @@ from notifications.services import (
     notify_soil_warning,
 )
 
-from . import dashboard_service, evidence_token
+from . import dashboard_service, evidence_token, harvest_report
 from .ai_language import from_request
 from .assessment_questions import not_applicable
 from .growth_stage import growing_days
@@ -43,6 +43,7 @@ from .models import (
     Assessment,
     Crop,
     CropVariant,
+    HarvestReport,
     Plant,
     PlantStatus,
     RiskStatus,
@@ -53,6 +54,8 @@ from .serializers import (
     CropIntelligenceSerializer,
     CropSerializer,
     CropVariantSerializer,
+    HarvestOutcomeReportSerializer,
+    HarvestReportSerializer,
     PlantSerializer,
     SoilRecommendationSerializer,
     validate_evidence_file,
@@ -97,7 +100,7 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
         # without a per-row query when listing.
         return with_last_assessment_date(
             Plant.objects.filter(farmer=self.request.user)
-            .select_related("crop", "variant")
+            .select_related("crop", "variant", "harvest_report")
             .prefetch_related("crop__variants")
         ).order_by("-created_at")
 
@@ -108,11 +111,52 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         was_harvested = serializer.instance.status == PlantStatus.HARVESTED
-        plant = serializer.save()
+        with transaction.atomic():
+            plant = serializer.save()
+            if was_harvested and plant.status != PlantStatus.HARVESTED:
+                # Undone within the 24 hours: the report goes with it, and a
+                # new one is written if the plant is harvested again.
+                HarvestReport.objects.filter(plant=plant).delete()
+                plant._state.fields_cache.pop("harvest_report", None)
         # Marking a plant harvested from the Harvest page says so, rather
         # than a generic "plant information updated".
         notify_plant_updated(
             plant, harvested=not was_harvested and plant.status == PlantStatus.HARVESTED
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        parser_classes=[MultiPartParser, FormParser, JSONParser],
+    )
+    def harvest(self, request, pk=None):
+        """
+        POST /api/farmer/plants/{id}/harvest/
+
+        Marks the plant harvested together with its harvest report (the final
+        assessment). Quality, health and "did the advice help" are required;
+        amount, photo and notes are optional.
+        """
+        plant = self.get_object()
+        if plant.status in (PlantStatus.HARVESTED, PlantStatus.ARCHIVED):
+            return Response(
+                {"detail": "This plant is already harvested."}, status=status.HTTP_409_CONFLICT
+            )
+        if plant.is_planned:
+            return Response(
+                {"detail": "This plant is not in the ground yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = HarvestReportSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        answers = dict(serializer.validated_data)
+        if answers.get("photo") is None:
+            answers.pop("photo", None)
+        harvest_report.record_harvest(plant, answers)
+        notify_plant_updated(plant, harvested=True)
+        plant = self.get_queryset().get(pk=plant.pk)
+        return Response(
+            self.get_serializer(plant).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -742,7 +786,12 @@ def farmer_risk_overview(request):
     GET /api/farmer/risk/
     Latest risk per plant for the authenticated Farmer, plus real counts.
     """
-    plants = Plant.objects.filter(farmer=request.user).select_related("crop")
+    # Harvested plants are finished: they live in the Harvest Archive, not here.
+    plants = (
+        Plant.objects.filter(farmer=request.user)
+        .exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED])
+        .select_related("crop")
+    )
     counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "unassessed": 0}
     items = []
 
@@ -1084,3 +1133,61 @@ def farm_weather(request):
 
     return Response(current_weather())
 
+
+
+
+class HarvestPhotoView(APIView):
+    """
+    GET /api/farmer/harvest-reports/{pk}/photo/
+    GET /api/lgu/harvest-reports/{pk}/photo/
+
+    The harvest photo, served only to its Farmer and to LGU Officers and
+    Admins - the same rule as assessment evidence (AssessmentEvidenceView).
+    """
+
+    permission_classes = [IsApproved]
+
+    def get(self, request, pk):
+        report = (
+            HarvestReport.objects.select_related("plant", "plant__farmer").filter(pk=pk).first()
+        )
+        allowed = report is not None and report.photo and (
+            AssessmentEvidenceView()._may_view(request.user, report)
+        )
+        if not allowed:
+            return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        extension = os.path.splitext(report.photo.name)[1].lower()
+        content_type = AssessmentEvidenceView.CONTENT_TYPES.get(
+            extension, "application/octet-stream"
+        )
+        try:
+            handle = report.photo.open("rb")
+        except (FileNotFoundError, OSError):
+            logger.warning("Harvest photo missing for report %s.", report.pk)
+            return Response({"detail": "Photo not found."}, status=status.HTTP_404_NOT_FOUND)
+        response = FileResponse(handle, content_type=content_type)
+        response["Cache-Control"] = "private, max-age=0, no-store"
+        return response
+
+
+def _outcomes_response(request):
+    data = harvest_report.outcomes()
+    data["recent"] = HarvestOutcomeReportSerializer(
+        data["recent"], many=True, context={"request": request}
+    ).data
+    return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsLguOfficer])
+def lgu_harvest_outcomes(request):
+    """GET /api/lgu/harvest-outcomes/ - how harvested plants turned out."""
+    return _outcomes_response(request)
+
+
+@api_view(["GET"])
+@permission_classes([IsAdmin])
+def admin_harvest_outcomes(request):
+    """GET /api/admin/harvest-outcomes/ - the same figures for the Admin."""
+    return _outcomes_response(request)

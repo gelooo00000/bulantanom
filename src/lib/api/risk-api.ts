@@ -49,6 +49,8 @@ export type AssessmentEligibility = {
    * yet, so the first assessment has not opened.
    */
   too_young?: boolean;
+  /** Harvested: the plant is finished, with no more weekly assessments. */
+  harvested?: boolean;
   last_assessment_date: string | null;
   next_assessment_date: string | null;
   days_remaining: number;
@@ -149,7 +151,7 @@ export class AssessmentApiError extends Error {
  * directly — but the auth header and error normalisation follow the same
  * contract, and the raw body is preserved on the error.
  */
-async function postMultipart<T>(
+export async function postMultipart<T>(
   path: string,
   accessToken: string,
   body: FormData,

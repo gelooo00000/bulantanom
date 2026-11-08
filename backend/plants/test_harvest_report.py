@@ -1,0 +1,230 @@
+"""
+Harvest reports: the final assessment when a plant is marked harvested, what
+happens to the plant afterwards, and the outcomes LGU and Admin see.
+"""
+
+from datetime import timedelta
+from unittest.mock import patch
+
+from django.utils import timezone
+
+from accounts.models import UserRole
+
+from .models import Assessment, HarvestReport, Plant, RiskAssessment, RiskStatus
+from .test_risk import LGU_LOGIN_URL, RiskTestCase, make_image, make_user
+
+ANSWERS = {"quality": "GOOD", "final_health": "HEALTHY", "advice_helped": "YES"}
+
+
+class HarvestReportTests(RiskTestCase):
+    def setUp(self):
+        super().setUp()
+        self.farmer = make_user("farmer@example.com")
+        self.auth = self.login("farmer@example.com")
+        # Guava planted long enough ago to be in its harvest window or past it.
+        self.plant = self.make_plant(self.farmer, days_ago=400)
+
+    def harvest(self, plant=None, **data):
+        plant = plant or self.plant
+        return self.client.post(
+            f"/api/farmer/plants/{plant.pk}/harvest/",
+            {**ANSWERS, **data},
+            format="multipart" if "photo" in data else "json",
+            **self.auth,
+        )
+
+    def add_reading(self, level, days_ago):
+        assessment = Assessment.objects.create(
+            plant=self.plant,
+            assessment_date=timezone.localdate() - timedelta(days=days_ago),
+            plant_age_days=400 - days_ago,
+            growth_condition="as_expected",
+            health_condition="healthy",
+            watering_frequency="daily",
+        )
+        RiskAssessment.objects.create(
+            assessment=assessment, risk_level=level, status=RiskStatus.COMPLETED
+        )
+
+    def test_the_three_answers_are_required(self):
+        response = self.client.post(
+            f"/api/farmer/plants/{self.plant.pk}/harvest/", {}, format="json", **self.auth
+        )
+        self.assertEqual(response.status_code, 400)
+        for field in ("quality", "final_health", "advice_helped"):
+            self.assertIn(field, response.data)
+        self.plant.refresh_from_db()
+        self.assertEqual(self.plant.status, "GROWING")
+
+    def test_harvest_files_the_report_and_the_system_facts(self):
+        self.add_reading("HIGH", 30)
+        self.add_reading("MEDIUM", 20)
+        self.add_reading("LOW", 10)
+        response = self.harvest(yield_amount="12.5", yield_unit="KG", notes="Sweet and big.")
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.data["status"], "HARVESTED")
+
+        report = HarvestReport.objects.get(plant=self.plant)
+        self.assertEqual(report.quality, "GOOD")
+        self.assertEqual(str(report.yield_amount), "12.50")
+        self.assertEqual(report.assessments_count, 3)
+        self.assertEqual(report.highest_risk, "HIGH")
+        self.assertEqual(report.high_risk_count, 1)
+        self.assertTrue(report.recovered_from_high)
+        self.assertEqual(report.days_to_harvest, 400)
+        # Guava first fruits after about two years, so 400 days is early.
+        self.assertEqual(report.timing, "EARLY")
+        self.assertEqual(response.data["harvest_report"]["quality_label"], "Good")
+
+    def test_an_amount_needs_a_unit(self):
+        response = self.harvest(yield_amount="3")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("yield_unit", response.data)
+
+    def test_a_photo_is_optional_and_served_only_to_allowed_roles(self):
+        response = self.harvest(photo=make_image())
+        self.assertEqual(response.status_code, 201, response.data)
+        url = response.data["harvest_report"]["photo_url"]
+        self.assertIn("/api/farmer/harvest-reports/", url)
+        path = url.split("testserver", 1)[-1]
+        self.assertEqual(self.client.get(path, **self.auth).status_code, 200)
+
+        make_user("other@example.com")
+        other = self.login("other@example.com")
+        self.assertEqual(self.client.get(path, **other).status_code, 404)
+
+        make_user("officer@example.com", role=UserRole.LGU_OFFICER)
+        officer = self.login("officer@example.com", LGU_LOGIN_URL)
+        lgu_path = path.replace("/api/farmer/", "/api/lgu/")
+        self.assertEqual(self.client.get(lgu_path, **officer).status_code, 200)
+
+    def test_marking_harvested_without_a_report_is_refused(self):
+        response = self.client.patch(
+            f"/api/farmer/plants/{self.plant.pk}/",
+            {"status": "HARVESTED"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("harvest report", str(response.data["status"]))
+
+    def test_a_harvested_plant_leaves_risk_and_weekly_assessments(self):
+        self.add_reading("LOW", 10)
+        self.harvest()
+        risk = self.client.get("/api/farmer/risk/", **self.auth).data
+        self.assertEqual(risk["plants"], [])
+        plant = self.client.get(f"/api/farmer/plants/{self.plant.pk}/", **self.auth).data
+        self.assertFalse(plant["assessment_eligibility"]["can_assess"])
+        self.assertTrue(plant["assessment_eligibility"]["harvested"])
+
+    def test_undo_within_24_hours_removes_the_report(self):
+        self.harvest()
+        response = self.client.patch(
+            f"/api/farmer/plants/{self.plant.pk}/", {"status": "GROWING"}, format="json", **self.auth
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data["harvest_report"])
+        self.assertFalse(HarvestReport.objects.filter(plant=self.plant).exists())
+        # Harvesting again writes a fresh report.
+        self.assertEqual(self.harvest(quality="FAIR").status_code, 201)
+
+    def test_no_undo_after_24_hours(self):
+        self.harvest()
+        Plant.objects.filter(pk=self.plant.pk).update(
+            harvested_at=timezone.now() - timedelta(hours=25)
+        )
+        response = self.client.patch(
+            f"/api/farmer/plants/{self.plant.pk}/", {"status": "GROWING"}, format="json", **self.auth
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("24 hours", str(response.data["status"]))
+
+    def test_old_harvests_without_a_report_can_still_be_restored(self):
+        Plant.objects.filter(pk=self.plant.pk).update(
+            status="HARVESTED", harvested_at=timezone.now() - timedelta(days=30)
+        )
+        response = self.client.patch(
+            f"/api/farmer/plants/{self.plant.pk}/", {"status": "GROWING"}, format="json", **self.auth
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_cannot_harvest_twice(self):
+        self.harvest()
+        self.assertEqual(self.harvest().status_code, 409)
+
+    def test_another_farmers_plant_is_not_found(self):
+        make_user("other@example.com")
+        other = self.login("other@example.com")
+        response = self.client.post(
+            f"/api/farmer/plants/{self.plant.pk}/harvest/", ANSWERS, format="json", **other
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+class HarvestOutcomesTests(RiskTestCase):
+    def setUp(self):
+        super().setUp()
+        self.farmer = make_user("farmer@example.com")
+        self.auth = self.login("farmer@example.com")
+
+    def harvest(self, plant, **answers):
+        return self.client.post(
+            f"/api/farmer/plants/{plant.pk}/harvest/",
+            {**ANSWERS, **answers},
+            format="json",
+            **self.auth,
+        )
+
+    def test_lgu_and_admin_see_the_outcomes(self):
+        healthy = self.make_plant(self.farmer, days_ago=400)
+        damaged = self.make_plant(self.farmer, crop_id="corn", days_ago=90)
+        self.harvest(healthy, yield_amount="10", yield_unit="KG")
+        self.harvest(damaged, quality="POOR", final_health="DAMAGED", advice_helped="NO")
+
+        make_user("officer@example.com", role=UserRole.LGU_OFFICER)
+        officer = self.login("officer@example.com", LGU_LOGIN_URL)
+        data = self.client.get("/api/lgu/harvest-outcomes/", **officer).data
+        self.assertEqual(data["total"], 2)
+        self.assertEqual(data["healthy_rate"], 50)
+        self.assertEqual(data["advice_helped_rate"], 50)
+        self.assertEqual(len(data["by_crop"]), 2)
+        guava = next(c for c in data["by_crop"] if c["crop"] == "Guava")
+        self.assertEqual(guava["average_yield"][0]["average"], 10.0)
+        self.assertEqual(data["recent"][0]["farmer_name"], "Test User")
+
+        make_user("admin@example.com", role=UserRole.ADMIN)
+        admin = self.login("admin@example.com", "/api/auth/admin/login/")
+        self.assertEqual(self.client.get("/api/admin/harvest-outcomes/", **admin).data["total"], 2)
+
+    def test_farmers_cannot_read_the_outcomes(self):
+        self.assertEqual(self.client.get("/api/lgu/harvest-outcomes/", **self.auth).status_code, 403)
+
+    def test_empty_outcomes(self):
+        make_user("officer@example.com", role=UserRole.LGU_OFFICER)
+        officer = self.login("officer@example.com", LGU_LOGIN_URL)
+        data = self.client.get("/api/lgu/harvest-outcomes/", **officer).data
+        self.assertEqual(data["total"], 0)
+        self.assertIsNone(data["healthy_rate"])
+
+
+class HarvestOutcomesReportTests(RiskTestCase):
+    def test_the_report_downloads(self):
+        farmer = make_user("farmer@example.com")
+        auth = self.login("farmer@example.com")
+        plant = self.make_plant(farmer, days_ago=400)
+        self.client.post(
+            f"/api/farmer/plants/{plant.pk}/harvest/",
+            {**ANSWERS, "yield_amount": "4", "yield_unit": "SACKS"},
+            format="json",
+            **auth,
+        )
+        make_user("officer@example.com", role=UserRole.LGU_OFFICER)
+        officer = self.login("officer@example.com", LGU_LOGIN_URL)
+        detail = self.client.get("/api/lgu/reports/harvest-outcomes/", **officer)
+        self.assertEqual(detail.status_code, 200, detail.data)
+        self.assertEqual(detail.data["stats"][0]["value"], 1)
+        csv = self.client.get("/api/lgu/reports/harvest-outcomes/csv/", **officer)
+        self.assertEqual(csv.status_code, 200)
+        self.assertIn(b"4 sacks", b"".join(csv.streaming_content) if csv.streaming else csv.content)
+        pdf = self.client.get("/api/lgu/reports/harvest-outcomes/pdf/", **officer)
+        self.assertEqual(pdf.status_code, 200)

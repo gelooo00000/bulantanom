@@ -46,6 +46,17 @@ def eligibility(plant, today=None) -> dict:
     """
     today = today or timezone.localdate()
 
+    # A harvested plant is finished: no more weekly assessments.
+    if plant.status in ("HARVESTED", "ARCHIVED"):
+        return {
+            "can_assess": False,
+            "harvested": True,
+            "last_assessment_date": None,
+            "next_assessment_date": None,
+            "days_remaining": 0,
+            "interval_days": ASSESSMENT_INTERVAL_DAYS,
+        }
+
     # A planned planting is not in the ground yet, so there is nothing to
     # assess: the first assessment opens on the planting date itself.
     if plant.planting_date > today:

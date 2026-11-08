@@ -1,5 +1,6 @@
 import type { BackendAccountStatus, BackendUser } from "@/lib/api/auth-api";
 import { apiFetch } from "@/lib/api/client";
+import type { HarvestReport } from "@/lib/api/plants-api";
 
 /**
  * Metrics the LGU dashboard is designed around but which have no backing
@@ -130,4 +131,49 @@ export function fetchLguFarmOverview(accessToken: string): Promise<{
   unavailable_metrics: UnavailableMetric[];
 }> {
   return apiFetch("/lgu/farm/", { accessToken });
+}
+
+/** One harvest report, as LGU Officers and Admins see it. */
+export type HarvestOutcomeReport = HarvestReport & {
+  farmer_name: string;
+  plant_name: string;
+  crop_name: string;
+  crop_emoji: string;
+};
+
+type Breakdown = { value: string; label: string; count: number }[];
+
+/** How harvested plants turned out, from the Farmers' harvest reports. */
+export type HarvestOutcomes = {
+  total: number;
+  /** Percentages; null while there are no reports. */
+  healthy_rate: number | null;
+  advice_helped_rate: number | null;
+  on_time_rate: number | null;
+  monitored_rate: number | null;
+  reached_high_risk: number;
+  recovered_healthy: number;
+  quality: Breakdown;
+  final_health: Breakdown;
+  advice_helped: Breakdown;
+  timing: Breakdown;
+  by_crop: {
+    crop: string;
+    emoji: string;
+    harvests: number;
+    healthy_rate: number | null;
+    good_quality_rate: number | null;
+    on_time_rate: number | null;
+    average_yield: { unit: string; unit_label: string; average: number; reports: number }[];
+    average_days: number;
+  }[];
+  recent: HarvestOutcomeReport[];
+};
+
+export function fetchLguHarvestOutcomes(accessToken: string): Promise<HarvestOutcomes> {
+  return apiFetch("/lgu/harvest-outcomes/", { accessToken });
+}
+
+export function fetchAdminHarvestOutcomes(accessToken: string): Promise<HarvestOutcomes> {
+  return apiFetch("/admin/harvest-outcomes/", { accessToken });
 }

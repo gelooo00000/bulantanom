@@ -47,7 +47,14 @@ export function AssessmentLockCard({
             <Sprout className="size-5" />
           </span>
           <div>
-            {eligibility.too_young ? (
+            {eligibility.harvested ? (
+              <>
+                <h2 className="font-medium">{t("lock.harvestedTitle")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t("lock.harvestedText", { name: plantLabel })}
+                </p>
+              </>
+            ) : eligibility.too_young ? (
               // In the ground, but only just: nothing has visibly happened
               // yet, so a risk reading would have nothing behind it.
               <>
@@ -55,14 +62,18 @@ export function AssessmentLockCard({
                 <p className="text-muted-foreground mt-1 text-sm">
                   {t("young.text", {
                     name: plantLabel,
-                    date: plantingDate ? date(plantingDate) : t("lock.laterDate"),
+                    date: plantingDate
+                      ? date(plantingDate)
+                      : t("lock.laterDate"),
                     first: eligibility.next_assessment_date
                       ? date(eligibility.next_assessment_date)
                       : t("lock.laterDate"),
                     when: daysLabel(eligibility.days_remaining, t),
                   })}
                 </p>
-                <p className="text-muted-foreground/70 mt-2 text-xs">{t("young.why")}</p>
+                <p className="text-muted-foreground/70 mt-2 text-xs">
+                  {t("young.why")}
+                </p>
               </>
             ) : eligibility.planned ? (
               // A planned planting: not assessed yet, and not assessable
@@ -93,20 +104,24 @@ export function AssessmentLockCard({
           </div>
         </div>
 
-        <div className="border-border flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
-          <span className="flex items-center gap-2 text-sm">
-            <CalendarCheck
-              className="size-4"
-              style={{ color: "var(--landing-accent)" }}
-            />
-            {eligibility.planned || eligibility.too_young ? t("lock.first") : t("lock.next")}
-          </span>
-          <span className="font-heading text-sm font-medium tabular-nums">
-            {eligibility.next_assessment_date
-              ? date(eligibility.next_assessment_date)
-              : t("lock.availableNow")}
-          </span>
-        </div>
+        {!eligibility.harvested && (
+          <div className="border-border flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+            <span className="flex items-center gap-2 text-sm">
+              <CalendarCheck
+                className="size-4"
+                style={{ color: "var(--landing-accent)" }}
+              />
+              {eligibility.planned || eligibility.too_young
+                ? t("lock.first")
+                : t("lock.next")}
+            </span>
+            <span className="font-heading text-sm font-medium tabular-nums">
+              {eligibility.next_assessment_date
+                ? date(eligibility.next_assessment_date)
+                : t("lock.availableNow")}
+            </span>
+          </div>
+        )}
 
         {eligibility.last_assessment_date && (
           <p className="text-muted-foreground/70 text-xs">
@@ -118,7 +133,10 @@ export function AssessmentLockCard({
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button nativeButton={false} render={<Link href="/farmer/risk-indicator" />}>
+          <Button
+            nativeButton={false}
+            render={<Link href="/farmer/risk-indicator" />}
+          >
             {t("asmt.backToRisk")}
             <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
           </Button>

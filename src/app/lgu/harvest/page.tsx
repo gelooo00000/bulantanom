@@ -8,7 +8,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import { fetchLguPlants, type LguPlant } from "@/lib/api/lgu-api";
+import { fetchLguHarvestOutcomes, fetchLguPlants, type LguPlant } from "@/lib/api/lgu-api";
+import { HarvestOutcomes } from "@/components/shared/harvest-outcomes";
 import { useLguQuery } from "@/lib/api/use-authed-query";
 import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
@@ -201,6 +202,8 @@ export default function LguHarvestPage() {
         title="Harvest & Monitoring"
         description="Expected harvest dates and the latest risk readings across all farmers at Layuan Farm, read live from the database."
       />
+
+      <HarvestOutcomes fetcher={fetchLguHarvestOutcomes} />
 
       {loading ? (
         <LguLoading label="Loading harvest dates…" />

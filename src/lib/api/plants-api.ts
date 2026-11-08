@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
-import type { AssessmentEligibility } from "@/lib/api/risk-api";
+import { postMultipart, type AssessmentEligibility } from "@/lib/api/risk-api";
 
 /** A named variety within a crop, e.g. Sweet Corn under Corn. */
 export type CropVariant = {
@@ -88,8 +88,55 @@ export type BackendPlant = {
   is_planned: boolean;
   /** Weekly-assessment lock state, decided by Django from stored assessments. */
   assessment_eligibility: AssessmentEligibility;
+  /**
+   * The final assessment written when it was marked harvested. Null before
+   * harvest, and for plants harvested before reports existed.
+   */
+  harvest_report?: HarvestReport | null;
   created_at: string;
   updated_at: string;
+};
+
+export type HarvestQuality = "GOOD" | "FAIR" | "POOR";
+export type HarvestHealth = "HEALTHY" | "MINOR_PROBLEMS" | "DAMAGED";
+export type AdviceHelped = "YES" | "A_LITTLE" | "NO";
+export type YieldUnit = "KG" | "PIECES" | "SACKS";
+
+/** A plant's harvest report: the Farmer's answers plus what the system recorded. */
+export type HarvestReport = {
+  id: number;
+  quality: HarvestQuality;
+  quality_label: string;
+  final_health: HarvestHealth;
+  final_health_label: string;
+  advice_helped: AdviceHelped;
+  advice_helped_label: string;
+  yield_amount: string | null;
+  yield_unit: YieldUnit | "";
+  yield_unit_label: string;
+  /** The authorized photo endpoint; fetch it with the access token. */
+  photo_url: string | null;
+  notes: string;
+  harvested_on: string;
+  days_to_harvest: number;
+  expected_days: number;
+  timing: "EARLY" | "ON_TIME" | "LATE";
+  timing_label: string;
+  assessments_count: number;
+  highest_risk: "" | "LOW" | "MEDIUM" | "HIGH";
+  high_risk_count: number;
+  recovered_from_high: boolean;
+  created_at: string;
+};
+
+export type HarvestAnswers = {
+  quality: HarvestQuality;
+  final_health: HarvestHealth;
+  advice_helped: AdviceHelped;
+  yield_amount?: string;
+  yield_unit?: YieldUnit;
+  notes?: string;
+  photo?: File | null;
 };
 
 /** AI-generated educational content. Never the source of harvest dates. */
@@ -172,13 +219,42 @@ export function deletePlant(accessToken: string, plantId: number): Promise<void>
 }
 
 /**
- * Marks a plant harvested, or undoes that. Django records when it was
- * harvested (`harvested_at`) and clears it again on undo.
+ * Marks a plant harvested together with its harvest report (the final
+ * assessment). Multipart, because the report may carry a photo.
+ */
+export function harvestPlant(
+  accessToken: string,
+  plantId: number,
+  answers: HarvestAnswers,
+): Promise<BackendPlant> {
+  const body = new FormData();
+  body.append("quality", answers.quality);
+  body.append("final_health", answers.final_health);
+  body.append("advice_helped", answers.advice_helped);
+  if (answers.yield_amount) {
+    body.append("yield_amount", answers.yield_amount);
+    if (answers.yield_unit) body.append("yield_unit", answers.yield_unit);
+  }
+  if (answers.notes?.trim()) body.append("notes", answers.notes.trim());
+  if (answers.photo) body.append("photo", answers.photo);
+  return postMultipart(`/farmer/plants/${plantId}/harvest/`, accessToken, body);
+}
+
+/** Whether a harvested plant may still go back to growing (24 hours, if reported). */
+export function canRestoreHarvest(plant: BackendPlant, now = Date.now()): boolean {
+  if (plant.status !== "HARVESTED") return false;
+  if (!plant.harvest_report || !plant.harvested_at) return true;
+  return now - new Date(plant.harvested_at).getTime() < 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Undoes a harvest (back to growing); allowed for 24 hours after a reported
+ * harvest. Marking harvested goes through `harvestPlant`, never here.
  */
 export function setPlantStatus(
   accessToken: string,
   plantId: number,
-  status: "GROWING" | "HARVESTED",
+  status: "GROWING",
 ): Promise<BackendPlant> {
   return apiFetch(`/farmer/plants/${plantId}/`, {
     method: "PATCH",

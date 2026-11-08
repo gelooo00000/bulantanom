@@ -19,7 +19,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import type { BackendPlant } from "@/lib/api/plants-api";
+import { canRestoreHarvest, type BackendPlant, type HarvestReport } from "@/lib/api/plants-api";
 import { CROP_OUTLINE, cropTint, cropVar } from "@/lib/crop-colors";
 import { humanDuration } from "@/lib/duration";
 import {
@@ -310,6 +310,9 @@ export function HarvestPlantCard({
         </div>
 
         {phase !== "harvested" && <Timeline plant={plant} phase={phase} />}
+        {phase === "harvested" && plant.harvest_report && (
+          <ReportSummary report={plant.harvest_report} t={t} />
+        )}
 
 
         <div className="border-border mt-auto flex flex-wrap items-center gap-2 border-t pt-3">
@@ -328,7 +331,7 @@ export function HarvestPlantCard({
               )}
             </Button>
           )}
-          {onStatusChange && plant.status === "HARVESTED" && (
+          {onStatusChange && canRestoreHarvest(plant) && (
             <Button size="sm" variant="outline" onClick={() => change("GROWING")} disabled={saving}>
               {saving ? (
                 <LoaderCircle className="size-3.5 animate-spin" />
@@ -354,5 +357,45 @@ export function HarvestPlantCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** What the harvest report said, on an archived card. */
+function ReportSummary({ report, t }: { report: HarvestReport; t: Translate }) {
+  const good = "border-risk-low/40 bg-risk-low/10 text-risk-low";
+  const mid = "border-risk-medium/40 bg-risk-medium/10 text-risk-medium";
+  const bad = "border-risk-high/40 bg-risk-high/10 text-risk-high";
+  const tone = (value: string, ok: string, middling: string) =>
+    value === ok ? good : value === middling ? mid : bad;
+  const amount =
+    report.yield_amount !== null
+      ? `${Number(report.yield_amount)} ${t(`report.unit.${report.yield_unit}` as MessageKey)}`
+      : t("report.summary.notGiven");
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      <p>
+        <span className="text-muted-foreground">{t("report.summary.amount")}: </span>
+        <span className="font-medium">{amount}</span>
+      </p>
+      <div className="flex flex-wrap gap-1.5 text-xs font-medium">
+        <span className={cn("rounded-full border px-2 py-0.5", tone(report.quality, "GOOD", "FAIR"))}>
+          {t(`report.quality.${report.quality}` as MessageKey)}
+        </span>
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5",
+            tone(report.final_health, "HEALTHY", "MINOR_PROBLEMS"),
+          )}
+        >
+          {t(`report.health.${report.final_health}` as MessageKey)}
+        </span>
+        {report.recovered_from_high && (
+          <span className={cn("rounded-full border px-2 py-0.5", good)}>
+            {t("report.summary.recovered")}
+          </span>
+        )}
+      </div>
+      {report.notes && <p className="text-muted-foreground line-clamp-2 text-xs">{report.notes}</p>}
+    </div>
   );
 }
