@@ -54,6 +54,16 @@ export const pages = defineMessages({
     fil: "Masyado pang maaga para malaman",
     bik: "Temprano pa tanganing maaraman",
   },
+  "riskCard.headline.earlyNext": {
+    en: "Nothing to judge yet – check again next week",
+    fil: "Wala pang masusuri – suriin ulit sa susunod na linggo",
+    bik: "Mayo pang masusiha – susiha giraray sa masunod na semana",
+  },
+  "riskCard.headline.noneNext": {
+    en: "Do its first weekly check",
+    fil: "Gawin ang unang lingguhang pagsusuri",
+    bik: "Gibuhon an enot na semanal na pagsusi",
+  },
   "riskCard.headline.none": {
     en: "Not checked yet",
     fil: "Hindi pa nasusuri",

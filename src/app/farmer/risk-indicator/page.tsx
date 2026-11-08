@@ -268,9 +268,9 @@ function PlantGroup({
   if (entries.length === 0) return null;
   return (
     <section aria-label={title} className="flex flex-col gap-2">
-      <h2 className="flex items-center gap-2 text-sm font-medium">
+      <h2 className="font-heading flex items-center gap-2 text-lg sm:text-xl">
         {title}
-        <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-xs tabular-nums">
+        <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 font-sans text-sm tabular-nums">
           {entries.length}
         </span>
       </h2>
@@ -489,12 +489,12 @@ const GROUP_STYLE: Record<Group, { pill: string; text: string; headline: Message
   early: {
     pill: "border-border text-muted-foreground",
     text: "text-foreground",
-    headline: "riskCard.headline.early",
+    headline: "riskCard.headline.earlyNext",
   },
   none: {
     pill: "border-dashed border-border text-muted-foreground",
     text: "text-muted-foreground",
-    headline: "riskCard.headline.none",
+    headline: "riskCard.headline.noneNext",
   },
 };
 
@@ -553,20 +553,18 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
             </div>
           </div>
           <div className="flex max-w-[55%] shrink-0 items-start gap-1.5">
-            <span
-              className={cn(
-                "font-heading rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
-                failed ? "bg-risk-high/15 text-risk-high border-risk-high/30" : style.pill,
-              )}
-            >
-              {failed
-                ? t("riskCard.failed")
-                : level && level !== "inconclusive"
-                  ? t(`riskBadge.${level}` as MessageKey)
-                  : group === "early"
-                    ? t("early.level")
-                    : t("riskCounts.noReading")}
-            </span>
+            {/* Only a real level (or a failed check) gets a pill: "Too early"
+                and "No reading" cards sit under a section that already says so. */}
+            {(failed || (level && level !== "inconclusive")) && (
+              <span
+                className={cn(
+                  "font-heading rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
+                  failed ? "bg-risk-high/15 text-risk-high border-risk-high/30" : style.pill,
+                )}
+              >
+                {failed ? t("riskCard.failed") : t(`riskBadge.${level}` as MessageKey)}
+              </span>
+            )}
             {latest && (
               <Link
                 href={`/farmer/assessments/${latest.id}`}
@@ -660,24 +658,21 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
                   })
                 : t("riskPage.notChecked")}
             </span>
-            <WeeklyCheck plant={plant} />
           </div>
-          {/* Instead of deleting a plant that died: kept, with its history. */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => actions.onLost(plant)}
-            className={cn(
-              "h-9 w-full",
-              atRisk
-                ? "border-risk-high/50 text-risk-high hover:bg-risk-high/10 hover:text-risk-high"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <HeartCrack className="size-4" />
-            {t("lost.open")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <WeeklyCheck plant={plant} />
+            {/* Instead of deleting a plant that died: kept, with its history.
+                Shaped like Assess now, in red; a deeper red when pointed at. */}
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => actions.onLost(plant)}
+              className="bg-risk-high hover:bg-risk-high/85 focus-visible:ring-risk-high/40 h-7 px-2.5 text-xs text-white hover:shadow-md hover:brightness-90"
+            >
+              <HeartCrack className="size-3.5" />
+              {t("lost.open")}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
