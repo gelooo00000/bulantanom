@@ -75,10 +75,10 @@ describe("a risky plant's card", () => {
     expect(screen.getByText("Remove the yellow leaves.")).toBeInTheDocument();
     expect(screen.getByText("Spray neem oil.")).toBeInTheDocument();
     expect(screen.queryByText("Water less.")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /See what to do/ })).toHaveAttribute(
-      "href",
-      "/farmer/assessments/9",
-    );
+    // The arrow opens the full reading; no second "See what to do" link.
+    expect(screen.queryByText("See what to do")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Back Row/ })).toHaveAttribute("href", "/farmer/assessments/9");
+    expect(screen.getByText("High risk – act now")).toBeInTheDocument();
     expect(screen.getByText("Was Low Risk")).toBeInTheDocument();
     expect(screen.getByText("Check again early")).toBeInTheDocument();
   });
@@ -145,5 +145,62 @@ describe("a risky plant's card", () => {
     );
     expect(await screen.findByText(/Typhoon Row was recorded as lost/)).toBeInTheDocument();
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it("makes Plant died? a clear button", () => {
+    plants = [{ plant: plant(6, "Any Row", {}), latest_assessment: null }];
+    render(<RiskIndicatorPage />);
+    expect(screen.getByRole("button", { name: "Plant died?" })).toBeInTheDocument();
+  });
+});
+
+describe("What to do now", () => {
+  it("lists one task per plant from the risk readings, most urgent first", async () => {
+    plants = [
+      {
+        plant: plant(10, "Due Row", { can_assess: true, days_remaining: 0 }),
+        latest_assessment: null,
+      },
+      {
+        plant: plant(11, "Sick Row", { can_assess: false, days_remaining: 2 }),
+        latest_assessment: {
+          id: 21,
+          assessment_date: isoDaysAgo(2),
+          risk: { status: "completed", risk_level: "HIGH", recommended_actions: [] },
+        },
+      },
+      {
+        plant: plant(12, "Late Row", {
+          can_assess: true,
+          days_remaining: 0,
+          next_assessment_date: isoDaysAgo(5),
+        }),
+        latest_assessment: {
+          id: 22,
+          assessment_date: isoDaysAgo(12),
+          risk: { status: "completed", risk_level: "LOW", recommended_actions: [] },
+        },
+      },
+      {
+        plant: plant(13, "Fine Row", { can_assess: false, days_remaining: 4 }),
+        latest_assessment: {
+          id: 23,
+          assessment_date: isoDaysAgo(3),
+          risk: { status: "completed", risk_level: "LOW", recommended_actions: [] },
+        },
+      },
+    ];
+    render(<RiskIndicatorPage />);
+    const trigger = screen.getByRole("button", { name: "What to do now (3)" });
+    await userEvent.click(trigger);
+    const popup = await screen.findByRole("dialog");
+    const tasks = within(popup).getAllByRole("listitem").map((li) => li.textContent);
+    expect(tasks[0]).toMatch(/Late Row: the weekly check is 5 days late/);
+    expect(tasks[1]).toMatch(/Sick Row is at High risk/);
+    expect(tasks[2]).toMatch(/weekly check for Due Row is due/);
+    expect(within(popup).getByRole("link", { name: /Late Row/ })).toHaveAttribute(
+      "href",
+      "/farmer/plants/12/assessment",
+    );
   });
 });

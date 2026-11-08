@@ -1,13 +1,17 @@
 "use client";
 
+import { Popover } from "@base-ui/react/popover";
 import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
   CalendarCheck,
   CalendarClock,
+  ChevronDown,
+  ClipboardList,
   CircleHelp,
   Clock,
+  HeartCrack,
   Leaf,
   LoaderCircle,
   OctagonAlert,
@@ -21,12 +25,13 @@ import { useState } from "react";
 import { LostPlantDialog } from "@/components/farmer/lost-plant-dialog";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { DonutChart } from "@/components/lgu/risk-pie";
-import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
+import type { BadgeLevel } from "@/components/risk/risk-badge";
 import { RiskInfoNote } from "@/components/risk/risk-result-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { SlidePager } from "@/components/shared/slide-pager";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { reportPlantLost, type BackendPlant, type LossAnswers } from "@/lib/api/plants-api";
 import {
   fetchFarmerRisk,
@@ -36,8 +41,8 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
-import { CARD_OUTLINE, CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
-import { useLanguage, type MessageKey } from "@/lib/i18n";
+import { CARD_OUTLINE, CROP_OUTLINE, cropTint, cropVar } from "@/lib/crop-colors";
+import { useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Level = "LOW" | "MEDIUM" | "HIGH";
@@ -76,12 +81,9 @@ const GROUPS: { key: Group; label: MessageKey; color: string; icon: typeof Leaf 
   { key: "early", label: "early.level", color: "var(--risk-early)", icon: Clock },
   { key: "none", label: "riskCounts.noReading", color: "var(--muted-foreground)", icon: CircleHelp },
 ];
-const COLOR = Object.fromEntries(GROUPS.map((g) => [g.key, g.color])) as Record<Group, string>;
 /** GROUPS is already worst first, so its order is the sort key. */
 const SEVERITY = Object.fromEntries(GROUPS.map((g, i) => [g.key, i])) as Record<Group, number>;
 
-/** A colour at low strength, for icon and chip backgrounds (as on the Admin cards). */
-const tint = (color: string, percent = 12) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
 
 function levelOf(latest: BackendAssessment | null): BadgeLevel | undefined {
   return latest?.risk?.risk_level?.toLowerCase() as BadgeLevel | undefined;
@@ -130,7 +132,11 @@ export default function RiskIndicatorPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={t("riskPage.title")} description={t("riskPage.description")} />
+      <PageHeader
+        title={t("riskPage.title")}
+        description={t("riskPage.description")}
+        titleAside={entries.length > 0 ? <RiskTodoButton entries={entries} /> : undefined}
+      />
 
       {losing && (
         <LostPlantDialog plant={losing} onCancel={() => setLosing(null)} onSubmit={submitLoss} />
@@ -285,40 +291,225 @@ function PlantGroup({
   );
 }
 
-/** The crop's emoji in a round chip tinted with the plant's level, like the Admin avatars. */
-function CropIcon({ entry }: { entry: Entry }) {
-  const color = COLOR[groupOf(entry.latest)];
-  return (
-    <span
-      aria-hidden="true"
-      className="flex size-12 shrink-0 items-center justify-center rounded-full text-xl"
-      style={{ backgroundColor: tint(color, 16) }}
-    >
-      {entry.plant.crop.emoji}
-    </span>
-  );
+/** Days a due weekly check has been waiting (0 when not late, or an early re-check). */
+function overdueDays(plant: BackendPlant): number {
+  const e = plant.assessment_eligibility;
+  return e.can_assess && !e.early_recheck && e.next_assessment_date
+    ? Math.max(0, daysSince(e.next_assessment_date))
+    : 0;
+}
+
+type RiskTodoKind = "urgent" | "warn" | "due";
+type RiskTodo = { kind: RiskTodoKind; text: string; href: string; rank: number };
+
+const RISK_TODO_STYLE: Record<RiskTodoKind, { icon: typeof Leaf; tone: string; row: string }> = {
+  urgent: {
+    icon: OctagonAlert,
+    tone: "text-risk-high",
+    row: "border-risk-high/40 bg-risk-high/10 hover:bg-risk-high/15",
+  },
+  warn: {
+    icon: TriangleAlert,
+    tone: "text-risk-medium",
+    row: "border-risk-medium/40 bg-risk-medium/10 hover:bg-risk-medium/15",
+  },
+  due: {
+    icon: CalendarClock,
+    tone: "text-risk-low",
+    row: "border-risk-low/40 bg-risk-low/10 hover:bg-risk-low/15",
+  },
+};
+
+/** At most this many tasks show before "See more". */
+const RISK_TODO_LIMIT = 3;
+
+/**
+ * One task per plant, from its risk reading and weekly-check state - the
+ * most urgent reason only - with the most urgent plants first.
+ */
+function riskTodos(entries: Entry[], t: Translate): RiskTodo[] {
+  const items: RiskTodo[] = [];
+  for (const { plant, latest } of entries) {
+    const group = groupOf(latest);
+    const e = plant.assessment_eligibility;
+    const name = plant.display_name;
+    const check = `/farmer/plants/${plant.id}/assessment`;
+    const details = latest ? `/farmer/assessments/${latest.id}` : check;
+    const overdue = overdueDays(plant);
+
+    if (latest?.risk?.status === "failed") {
+      items.push({ kind: "urgent", rank: 0, text: t("riskTodo.failed", { name }), href: details });
+    } else if (group === "high" && e.can_assess) {
+      items.push({ kind: "urgent", rank: 1, text: t("riskTodo.highCheck", { name }), href: check });
+    } else if (overdue > 0) {
+      items.push({
+        kind: "urgent",
+        rank: 2,
+        text: t("riskTodo.overdue", { name, n: overdue }),
+        href: check,
+      });
+    } else if (group === "high") {
+      items.push({ kind: "urgent", rank: 3, text: t("riskTodo.highFollow", { name }), href: details });
+    } else if (e.early_recheck) {
+      items.push({ kind: "warn", rank: 4, text: t("riskTodo.early", { name }), href: check });
+    } else if (group === "medium") {
+      items.push({ kind: "warn", rank: 5, text: t("riskTodo.medium", { name }), href: details });
+    } else if (e.can_assess) {
+      items.push({ kind: "due", rank: 6, text: t("riskTodo.due", { name }), href: check });
+    }
+  }
+  return items.sort((a, b) => a.rank - b.rank);
 }
 
 /**
- * One plant: its latest level, when it was last checked, and this week's
- * check. The explanation and photo stay in Assessment History, behind the
- * arrow.
+ * "What to do now" beside the page title, as on the Harvest page: a list
+ * icon with a pulsing count, opening on hover or tap. Each task is one plain
+ * sentence from the risk readings and weekly checks; tapping it goes to the
+ * check or the reading.
+ */
+function RiskTodoButton({ entries }: { entries: Entry[] }) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const items = riskTodos(entries, t);
+  const shown = expanded ? items : items.slice(0, RISK_TODO_LIMIT);
+  const hidden = items.length - RISK_TODO_LIMIT;
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger
+        openOnHover
+        delay={150}
+        aria-label={items.length > 0 ? `${t("riskTodo.title")} (${items.length})` : t("riskTodo.title")}
+        className={cn(
+          items.length > 0
+            ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+            : "bg-primary/10 text-primary hover:bg-primary/20",
+          "relative flex size-11 shrink-0 items-center justify-center rounded-xl transition-all",
+          "hover:scale-105 data-[popup-open]:scale-105",
+          "focus-visible:ring-ring/50 outline-none focus-visible:ring-3",
+        )}
+      >
+        <ClipboardList className="size-6" aria-hidden="true" />
+        {items.length > 0 && (
+          <span className="absolute -top-2 -right-2 flex size-[22px]">
+            <span className="bg-risk-high absolute inset-0 animate-ping rounded-full opacity-60 motion-reduce:hidden" />
+            <span className="bg-risk-high ring-background relative flex size-[22px] items-center justify-center rounded-full text-xs font-semibold text-white tabular-nums ring-2">
+              {items.length}
+            </span>
+          </span>
+        )}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="bottom" align="start" sideOffset={8} className="z-50">
+          <Popover.Popup
+            aria-labelledby="risk-todo-title"
+            className="bg-popover text-popover-foreground border-primary/40 flex max-h-[70vh] w-[min(26rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-2xl border-2 px-4 py-4 shadow-xl"
+          >
+            <h2 id="risk-todo-title" className="font-heading flex items-center gap-2 text-lg font-medium">
+              <ClipboardList className="text-primary size-5" aria-hidden="true" />
+              {t("riskTodo.title")}
+              {items.length > 0 && (
+                <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs tabular-nums">
+                  {items.length}
+                </span>
+              )}
+            </h2>
+            {items.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{t("riskTodo.nothing")}</p>
+            ) : (
+              <>
+                <ol className="flex flex-col gap-2">
+                  {shown.map((item, i) => {
+                    const style = RISK_TODO_STYLE[item.kind];
+                    const ItemIcon = style.icon;
+                    return (
+                      <li key={item.text} className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <Link
+                          href={item.href}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "flex items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
+                            style.row,
+                          )}
+                        >
+                          <span className="bg-background/80 text-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums">
+                            {i + 1}
+                          </span>
+                          <ItemIcon className={cn("mt-0.5 size-4 shrink-0", style.tone)} aria-hidden="true" />
+                          <span className="text-sm leading-snug">{item.text}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+                {hidden > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="self-center"
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded((v) => !v)}
+                  >
+                    {expanded ? t("harvestTodo.seeLess") : t("harvestTodo.seeMore", { n: hidden })}
+                    <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
+                  </Button>
+                )}
+              </>
+            )}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/** Per group: the pill, the headline colour and icon, as on the Harvest cards. */
+const GROUP_STYLE: Record<Group, { pill: string; text: string; headline: MessageKey }> = {
+  high: {
+    pill: "bg-risk-high/15 text-risk-high border-risk-high/30",
+    text: "text-risk-high",
+    headline: "riskCard.headline.high",
+  },
+  medium: {
+    pill: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
+    text: "text-risk-medium",
+    headline: "riskCard.headline.medium",
+  },
+  low: {
+    pill: "bg-risk-low/15 text-risk-low border-risk-low/30",
+    text: "text-risk-low",
+    headline: "riskCard.headline.low",
+  },
+  early: {
+    pill: "border-border text-muted-foreground",
+    text: "text-foreground",
+    headline: "riskCard.headline.early",
+  },
+  none: {
+    pill: "border-dashed border-border text-muted-foreground",
+    text: "text-muted-foreground",
+    headline: "riskCard.headline.none",
+  },
+};
+
+/**
+ * One plant, laid out like a Harvest card: the crop and name, its level as a
+ * pill, one plain sentence, what to do, and the actions along the bottom.
+ * The full explanation and photo stay behind the arrow.
  */
 function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions }) {
   const { plant, latest, previous } = entry;
   const { t, dateLocale } = useLanguage();
   const level = levelOf(latest);
   const group = groupOf(latest);
-  const color = COLOR[group];
-  // A plant with a verdict wears its level's colour on the whole card, so
-  // it can be picked out at a glance; one still waiting stays plain.
-  const assessed = group !== "none";
+  const style = GROUP_STYLE[group];
+  const Icon = GROUPS.find((g) => g.key === group)!.icon;
   const eligibility = plant.assessment_eligibility;
   const failed = latest?.risk?.status === "failed";
   const atRisk = group === "high" || group === "medium";
-  // The first two things to do, on the card itself rather than behind the arrow.
+  // The first two things to do, on the card itself.
   const todo = atRisk ? (latest?.risk?.recommended_actions ?? []).slice(0, 2) : [];
-  // Getting worse or better since the reading before.
   const current = latest?.risk?.risk_level;
   const trend =
     previous && current && current in LEVEL_RANK && current !== previous
@@ -326,171 +517,165 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
         ? "up"
         : "down"
       : null;
-  // How late this week's check is, once it opened.
-  const overdue =
-    eligibility.can_assess && !eligibility.early_recheck && eligibility.next_assessment_date
-      ? daysSince(eligibility.next_assessment_date)
-      : 0;
+  const overdue = overdueDays(plant);
   const old = !!latest && daysSince(latest.assessment_date) > OLD_READING_DAYS;
 
   return (
-    // The level's border is set through a variable, not inline, so the
-    // crop-coloured outline (as on My Plants and Harvest) can replace it
-    // while the card is pointed at or tapped.
-    <div
-      tabIndex={0}
-      className={cn(
-        "bg-card group relative flex flex-1 flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
-        assessed && "border-(--level)",
-        CROP_OUTLINE,
-      )}
-      style={{
-        ...cropVar(plant.crop.name),
-        ...(assessed && {
-          "--level": tint(color, 45),
-          backgroundImage: `linear-gradient(${tint(color, 8)}, ${tint(color, 8)})`,
-        }),
-      } as React.CSSProperties}
+    <Card
+      id={`risk-plant-${plant.id}`}
+      style={cropVar(plant.crop.name)}
+      className={cn("h-full min-w-0 scroll-mt-24 gap-2 py-4 transition-all", CROP_OUTLINE)}
     >
-      <span
-        aria-hidden="true"
-        className={`absolute inset-x-0 top-0 ${assessed ? "h-1.5" : "h-1 opacity-40"}`}
-        style={{ backgroundColor: color }}
-      />
-
-      <div className="flex items-start gap-3">
-        <CropIcon entry={entry} />
-        <div className="min-w-0 flex-1 pt-0.5">
-          <p className="font-heading truncate text-base leading-tight font-medium">
-            {plant.display_name}
-          </p>
-          <p className="text-muted-foreground truncate text-xs">
-            {/* The crop, unless the name already is the crop (no variety). */}
-            {plant.display_name !== plant.crop.name && `${plant.crop.name} · `}
-            {t("row.day", { n: plant.age_days })}
-          </p>
-        </div>
-        {latest && (
-          <Link
-            href={`/farmer/assessments/${latest.id}`}
-            aria-label={`${t("riskPage.details")}: ${plant.display_name}`}
-            title={t("riskPage.details")}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted -m-1 rounded-lg p-1.5 transition-colors"
-          >
-            <ArrowUpRight className="size-4" />
-          </Link>
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {failed ? (
-          <span className="border-risk-high/40 text-risk-high inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium">
-            <TriangleAlert className="size-3" />
-            {t("riskCard.failed")}
-          </span>
-        ) : level ? (
-          <RiskBadge size="sm" level={level} />
-        ) : (
-          <span className="border-border text-muted-foreground inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-[11px] font-medium">
-            <CircleHelp className="size-3" />
-            {t("riskCounts.noReading")}
-          </span>
-        )}
-        {trend && previous && (
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-              trend === "up" ? "text-risk-high" : "text-risk-low",
-            )}
-            style={{ backgroundColor: tint(trend === "up" ? "var(--risk-high)" : "var(--risk-low)") }}
-          >
-            {trend === "up" ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
-            {t("riskCard.was", { level: t(`riskBadge.${previous.toLowerCase()}` as MessageKey) })}
-          </span>
-        )}
-        {overdue > 0 ? (
-          <span
-            className="text-risk-high inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-            style={{ backgroundColor: tint("var(--risk-high)") }}
-          >
-            <CalendarClock className="size-3" />
-            {overdue === 1 ? t("riskCard.overdueOne") : t("riskCard.overdue", { n: overdue })}
-          </span>
-        ) : (
-          eligibility.can_assess &&
-          !eligibility.early_recheck && (
+      <CardContent className="flex h-full flex-col gap-3.5 px-4 sm:px-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-3">
             <span
-              className="text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-              style={{ backgroundColor: tint("var(--primary)") }}
+              aria-hidden="true"
+              className="flex size-11 shrink-0 items-center justify-center rounded-xl text-2xl leading-none"
+              style={{ backgroundColor: cropTint(plant.crop.name) }}
             >
-              <CalendarClock className="size-3" />
-              {t("riskPage.dueNow")}
+              {plant.crop.emoji}
             </span>
-          )
-        )}
-        {old && (
-          <span
-            className="text-risk-medium inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-            style={{ backgroundColor: tint("var(--risk-medium)") }}
-          >
-            <Clock className="size-3" />
-            {t("riskCard.old")}
-          </span>
-        )}
-      </div>
-
-      {todo.length > 0 && latest && (
-        <div className="mt-3 rounded-xl border border-dashed p-3 text-xs" style={{ borderColor: tint(color, 50) }}>
-          <p className="font-medium">{t("riskCard.whatToDo")}</p>
-          <ul className="text-muted-foreground mt-1 list-disc space-y-0.5 pl-4">
-            {todo.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ul>
-          <Link
-            href={`/farmer/assessments/${latest.id}`}
-            className="mt-2 inline-flex items-center gap-1 font-medium"
-            style={{ color: "var(--landing-accent)" }}
-          >
-            {t("riskCard.seeAll")}
-            <ArrowRight className="size-3" />
-          </Link>
+            <div className="min-w-0">
+              <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
+                {plant.display_name}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-sm">
+                {/* The crop, unless the name already is the crop (no variety). */}
+                {plant.display_name !== plant.crop.name && `${plant.crop.name} · `}
+                {t("row.day", { n: plant.age_days })}
+              </p>
+            </div>
+          </div>
+          <div className="flex max-w-[55%] shrink-0 items-start gap-1.5">
+            <span
+              className={cn(
+                "font-heading rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
+                failed ? "bg-risk-high/15 text-risk-high border-risk-high/30" : style.pill,
+              )}
+            >
+              {failed
+                ? t("riskCard.failed")
+                : level && level !== "inconclusive"
+                  ? t(`riskBadge.${level}` as MessageKey)
+                  : group === "early"
+                    ? t("early.level")
+                    : t("riskCounts.noReading")}
+            </span>
+            {latest && (
+              <Link
+                href={`/farmer/assessments/${latest.id}`}
+                aria-label={`${t("riskPage.details")}: ${plant.display_name}`}
+                title={t("riskPage.details")}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted -m-0.5 rounded-lg p-1 transition-colors"
+              >
+                <ArrowUpRight className="size-4" />
+              </Link>
+            )}
+          </div>
         </div>
-      )}
 
-      {failed && latest && <RetryCheck assessmentId={latest.id} onDone={actions.onChanged} />}
+        {/* The answer first, in one plain sentence; then what changed. */}
+        <div className="flex flex-col gap-1">
+          <p
+            className={cn(
+              "font-heading flex items-center gap-1.5 text-[15px] font-medium",
+              failed ? "text-risk-high" : style.text,
+            )}
+          >
+            {failed ? (
+              <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+            )}
+            {t(failed ? "riskCard.headline.failed" : style.headline)}
+          </p>
+          {trend && previous && (
+            <p
+              className={cn(
+                "flex items-center gap-1.5 text-xs",
+                trend === "up" ? "text-risk-high" : "text-risk-low",
+              )}
+            >
+              {trend === "up" ? (
+                <TrendingUp className="size-3.5 shrink-0" />
+              ) : (
+                <TrendingDown className="size-3.5 shrink-0" />
+              )}
+              {t("riskCard.was", { level: t(`riskBadge.${previous.toLowerCase()}` as MessageKey) })}
+            </p>
+          )}
+          {overdue > 0 && (
+            <p className="text-risk-high flex items-center gap-1.5 text-xs font-medium">
+              <CalendarClock className="size-3.5 shrink-0" />
+              {overdue === 1 ? t("riskCard.overdueOne") : t("riskCard.overdue", { n: overdue })}
+            </p>
+          )}
+          {old && (
+            <p className="text-risk-medium flex items-center gap-1.5 text-xs">
+              <Clock className="size-3.5 shrink-0" />
+              {t("riskCard.old")}
+            </p>
+          )}
+          {eligibility.early_recheck && (
+            <p className="text-muted-foreground text-xs">{t("riskCard.earlyWhy")}</p>
+          )}
+        </div>
 
-      {eligibility.early_recheck && (
-        <p className="text-muted-foreground mt-3 text-xs">{t("riskCard.earlyWhy")}</p>
-      )}
-
-      <div className="border-border text-muted-foreground mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-dashed pt-3 text-xs">
-        <span className="flex items-center gap-1.5">
-          <CalendarCheck className="size-3.5" />
-          {latest
-            ? t("riskPage.checked", {
-                date: new Date(`${latest.assessment_date}T00:00:00`).toLocaleDateString(dateLocale, {
-                  month: "short",
-                  day: "numeric",
-                }),
-              })
-            : t("riskPage.notChecked")}
-        </span>
-        <WeeklyCheck plant={plant} />
-      </div>
-
-      {/* Instead of deleting a plant that died: kept, with its history. */}
-      <button
-        type="button"
-        onClick={() => actions.onLost(plant)}
-        className={cn(
-          "mt-2 self-start text-xs underline-offset-2 hover:underline",
-          atRisk ? "text-risk-high font-medium" : "text-muted-foreground",
+        {todo.length > 0 && (
+          <div
+            className={cn(
+              "rounded-xl border p-3 text-sm",
+              group === "high"
+                ? "border-risk-high/30 bg-risk-high/5"
+                : "border-risk-medium/30 bg-risk-medium/5",
+            )}
+          >
+            <p className="font-medium">{t("riskCard.whatToDo")}</p>
+            <ul className="text-muted-foreground mt-1 list-disc space-y-1 pl-4 text-[13px]">
+              {todo.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+          </div>
         )}
-      >
-        {t("lost.open")}
-      </button>
-    </div>
+
+        {failed && latest && <RetryCheck assessmentId={latest.id} onDone={actions.onChanged} />}
+
+        <div className="border-border mt-auto flex flex-col gap-3 border-t pt-3">
+          <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs">
+            <span className="flex items-center gap-1.5">
+              <CalendarCheck className="size-3.5" />
+              {latest
+                ? t("riskPage.checked", {
+                    date: new Date(`${latest.assessment_date}T00:00:00`).toLocaleDateString(
+                      dateLocale,
+                      { month: "short", day: "numeric" },
+                    ),
+                  })
+                : t("riskPage.notChecked")}
+            </span>
+            <WeeklyCheck plant={plant} />
+          </div>
+          {/* Instead of deleting a plant that died: kept, with its history. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => actions.onLost(plant)}
+            className={cn(
+              "h-9 w-full",
+              atRisk
+                ? "border-risk-high/50 text-risk-high hover:bg-risk-high/10 hover:text-risk-high"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <HeartCrack className="size-4" />
+            {t("lost.open")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

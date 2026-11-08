@@ -34,6 +34,78 @@ export const pages = defineMessages({
   },
   "riskCard.retry": { en: "Try again", fil: "Subukan ulit", bik: "Probaran giraray" },
   "riskCard.retrying": { en: "Checking…", fil: "Sinusuri…", bik: "Sinusiha…" },
+  "riskCard.headline.high": {
+    en: "High risk – act now",
+    fil: "Mataas na panganib – kumilos na",
+    bik: "Hataas na peligro – maghiro na",
+  },
+  "riskCard.headline.medium": {
+    en: "Medium risk – keep a close eye",
+    fil: "Katamtamang panganib – bantayang mabuti",
+    bik: "Tama-tamang peligro – bantayan na marhay",
+  },
+  "riskCard.headline.low": {
+    en: "Low risk – looking healthy",
+    fil: "Mababang panganib – mukhang malusog",
+    bik: "Hababa na peligro – mukhang marhay an salud",
+  },
+  "riskCard.headline.early": {
+    en: "Too early to tell",
+    fil: "Masyado pang maaga para malaman",
+    bik: "Temprano pa tanganing maaraman",
+  },
+  "riskCard.headline.none": {
+    en: "Not checked yet",
+    fil: "Hindi pa nasusuri",
+    bik: "Dai pa nasusiha",
+  },
+  "riskCard.headline.failed": {
+    en: "The check could not finish",
+    fil: "Hindi natapos ang pagsusuri",
+    bik: "Dai natapos an pagsusi",
+  },
+  // "What to do now" on the Risk Indicator, from the risk readings.
+  "riskTodo.title": { en: "What to do now", fil: "Ano ang gagawin ngayon", bik: "Ano an gigibuhon ngunyan" },
+  "riskTodo.failed": {
+    en: "Try the check for {name} again: it could not finish.",
+    fil: "Subukan ulit ang pagsusuri sa {name}: hindi ito natapos.",
+    bik: "Probaran giraray an pagsusi sa {name}: dai ini natapos.",
+  },
+  "riskTodo.highCheck": {
+    en: "Check {name} now: it is at High risk.",
+    fil: "Suriin ang {name} ngayon: Mataas ang panganib nito.",
+    bik: "Susiha an {name} ngunyan: Hataas an peligro kaini.",
+  },
+  "riskTodo.overdue": {
+    en: "Check {name}: the weekly check is {n} days late.",
+    fil: "Suriin ang {name}: {n} araw nang huli ang lingguhang pagsusuri.",
+    bik: "Susiha an {name}: {n} adlaw nang huri an semanal na pagsusi.",
+  },
+  "riskTodo.highFollow": {
+    en: "{name} is at High risk: follow what to do.",
+    fil: "Mataas ang panganib ng {name}: sundin ang gagawin.",
+    bik: "Hataas an peligro kan {name}: sunodon an gigibuhon.",
+  },
+  "riskTodo.early": {
+    en: "Check {name} again early to see if it is getting better.",
+    fil: "Suriin ulit ang {name} nang maaga para makita kung gumagaling.",
+    bik: "Susiha giraray an {name} nin temprano tanganing mahiling kun nagmamarhay.",
+  },
+  "riskTodo.medium": {
+    en: "Keep an eye on {name}: Medium risk.",
+    fil: "Bantayan ang {name}: Katamtamang panganib.",
+    bik: "Bantayan an {name}: Tama-tamang peligro.",
+  },
+  "riskTodo.due": {
+    en: "The weekly check for {name} is due.",
+    fil: "Oras na ng lingguhang pagsusuri sa {name}.",
+    bik: "Oras na kan semanal na pagsusi sa {name}.",
+  },
+  "riskTodo.nothing": {
+    en: "Nothing to do right now. Every plant is checked and none is at risk.",
+    fil: "Walang gagawin ngayon. Nasuri na ang lahat ng tanim at walang nanganganib.",
+    bik: "Mayong gigibuhon ngunyan. Nasusi na an gabos na tanom asin mayong nasa peligro.",
+  },
   "riskPage.title": {
     en: "Plant Risk Indicator",
     fil: "Antas ng Panganib ng Tanim",
