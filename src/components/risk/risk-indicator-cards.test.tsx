@@ -73,8 +73,8 @@ describe("a risky plant's card", () => {
     render(<RiskIndicatorPage />);
     expect(screen.getByText("What to do")).toBeInTheDocument();
     expect(screen.getByText("Remove the yellow leaves.")).toBeInTheDocument();
-    expect(screen.getByText("Spray neem oil.")).toBeInTheDocument();
-    expect(screen.queryByText("Water less.")).not.toBeInTheDocument();
+    // Only the first step on the card; the arrow opens the rest.
+    expect(screen.queryByText("Spray neem oil.")).not.toBeInTheDocument();
     // The arrow opens the full reading; no second "See what to do" link.
     expect(screen.queryByText("See what to do")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back Row/ })).toHaveAttribute("href", "/farmer/assessments/9");
@@ -101,7 +101,8 @@ describe("a risky plant's card", () => {
     ];
     render(<RiskIndicatorPage />);
     expect(screen.getByText("Overdue 9 days")).toBeInTheDocument();
-    expect(screen.getByText("Old reading – check again")).toBeInTheDocument();
+    // "Overdue" already says to check it again.
+    expect(screen.queryByText("Old reading – check again")).not.toBeInTheDocument();
     expect(screen.queryByText("What to do")).not.toBeInTheDocument();
   });
 
@@ -221,5 +222,20 @@ describe("What to do now", () => {
     ];
     render(<RiskIndicatorPage />);
     expect(screen.getByText("Overdue 27 days")).toBeInTheDocument();
+  });
+
+  it("marks an old reading when the check is not yet late", () => {
+    plants = [
+      {
+        plant: plant(15, "Quiet Row", { can_assess: false, days_remaining: 2 }),
+        latest_assessment: {
+          id: 30,
+          assessment_date: isoDaysAgo(20),
+          risk: { status: "completed", risk_level: "LOW", recommended_actions: [] },
+        },
+      },
+    ];
+    render(<RiskIndicatorPage />);
+    expect(screen.getByText("Old reading – check again")).toBeInTheDocument();
   });
 });

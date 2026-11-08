@@ -510,11 +510,11 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
   const group = groupOf(latest);
   const style = GROUP_STYLE[group];
   const Icon = GROUPS.find((g) => g.key === group)!.icon;
-  const eligibility = plant.assessment_eligibility;
   const failed = latest?.risk?.status === "failed";
   const atRisk = group === "high" || group === "medium";
   // The first two things to do, on the card itself.
-  const todo = atRisk ? (latest?.risk?.recommended_actions ?? []).slice(0, 2) : [];
+  // Just the first thing to do; the arrow opens the rest.
+  const todo = atRisk ? (latest?.risk?.recommended_actions ?? []).slice(0, 1) : [];
   const current = latest?.risk?.risk_level;
   const trend =
     previous && current && current in LEVEL_RANK && current !== previous
@@ -614,14 +614,12 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
               {overdue === 1 ? t("riskCard.overdueOne") : t("riskCard.overdue", { n: overdue })}
             </p>
           )}
-          {old && (
+          {/* "Overdue" already says to check it; "old reading" only otherwise. */}
+          {old && overdue === 0 && (
             <p className="text-risk-medium flex items-center gap-1.5 text-xs">
               <Clock className="size-3.5 shrink-0" />
               {t("riskCard.old")}
             </p>
-          )}
-          {eligibility.early_recheck && (
-            <p className="text-muted-foreground text-xs">{t("riskCard.earlyWhy")}</p>
           )}
         </div>
 
@@ -635,11 +633,7 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
             )}
           >
             <p className="font-medium">{t("riskCard.whatToDo")}</p>
-            <ul className="text-muted-foreground mt-1 list-disc space-y-1 pl-4 text-[13px]">
-              {todo.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ul>
+            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[13px]">{todo[0]}</p>
           </div>
         )}
 
@@ -659,7 +653,7 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
                 : t("riskPage.notChecked")}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <WeeklyCheck plant={plant} />
             {/* Instead of deleting a plant that died: kept, with its history.
                 Shaped like Assess now, in red; a deeper red when pointed at. */}
@@ -667,7 +661,9 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
               type="button"
               size="sm"
               onClick={() => actions.onLost(plant)}
-              className="bg-risk-high hover:bg-risk-high/85 focus-visible:ring-risk-high/40 h-7 px-2.5 text-xs text-white hover:shadow-md hover:brightness-90"
+              // The default button paints a green gradient; this one is red,
+              // turning a deeper red when pointed at.
+              className="border-risk-high focus-visible:ring-risk-high/40 h-7 bg-[linear-gradient(135deg,var(--risk-high)_0%,color-mix(in_oklch,var(--risk-high),black_30%)_140%)] px-2.5 text-xs text-white shadow-[0_6px_18px_-6px_color-mix(in_oklch,var(--risk-high),transparent_40%)] hover:shadow-[0_10px_24px_-6px_color-mix(in_oklch,var(--risk-high),transparent_25%)] hover:brightness-90"
             >
               <HeartCrack className="size-3.5" />
               {t("lost.open")}
