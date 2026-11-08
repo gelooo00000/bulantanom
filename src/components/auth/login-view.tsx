@@ -6,7 +6,7 @@ import { ArrowRight, Lock, LoaderCircle, Mail, Shield, ShieldCheck, Sprout } fro
 import { useEffect, useRef, useState, type ElementType, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
-import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
+import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
 import { VerifyEmailStep } from "@/components/auth/verify-email-step";
@@ -217,7 +217,7 @@ export function LoginView() {
               <div
                 role="group"
                 aria-label="Sign in as"
-                className="mt-3 grid grid-cols-2 gap-1 rounded-xl sm:mt-4 border border-[var(--glass-divider)] bg-[var(--glass-tile)] p-1"
+                className="bg-muted/60 mt-4 grid grid-cols-2 gap-1 rounded-xl border p-1"
               >
                 {ROLE_CARDS.filter((card) => PUBLIC_ROLES.includes(card.role)).map(
                   ({ role, title, icon: Icon }) => {
@@ -232,7 +232,7 @@ export function LoginView() {
                           setError(null);
                         }}
                         className={cn(
-                          "focus-visible:ring-ring/50 font-heading flex h-9 items-center justify-center gap-2 rounded-lg text-sm tracking-wide transition-colors outline-none focus-visible:ring-3",
+                          "focus-visible:ring-ring/50 font-heading flex h-11 items-center justify-center gap-2 rounded-lg text-sm tracking-wide transition-colors outline-none focus-visible:ring-3",
                           active
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground",
@@ -249,12 +249,12 @@ export function LoginView() {
 
             <div className="mt-4 flex items-center gap-2.5 sm:mt-5">
               <span
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl border-2"
                 style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
               >
                 <roleCard.icon className="size-4" />
               </span>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              <h1 className="font-heading text-2xl leading-tight tracking-[0.01em] text-foreground sm:text-[1.75rem]">
                 {roleCard.loginHeading}
               </h1>
             </div>
@@ -313,7 +313,7 @@ export function LoginView() {
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 
-            <Button type="submit" disabled={submitting} className="mt-1">
+            <Button type="submit" disabled={submitting} className={cn(AUTH_BUTTON_CLASSES, "mt-1")}>
               {submitting ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />

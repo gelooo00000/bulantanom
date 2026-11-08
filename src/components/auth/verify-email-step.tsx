@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, LoaderCircle, MailCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
+import { AUTH_BUTTON_CLASSES, AuthCodeInput } from "@/components/auth/auth-field";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -102,12 +103,12 @@ export function VerifyEmailStep({
           </button>
           <div className="mt-3 flex items-center gap-2.5 sm:mt-4">
             <span
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl border-2"
               style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
             >
               <MailCheck className="size-4" />
             </span>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            <h1 className="font-heading text-2xl leading-tight tracking-[0.01em] text-foreground sm:text-[1.75rem]">
               {heading}
             </h1>
           </div>
@@ -127,19 +128,14 @@ export function VerifyEmailStep({
             <Label htmlFor="code" className="text-foreground">
               Verification code
             </Label>
-            <input
+            <AuthCodeInput
               id="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
               autoFocus
-              maxLength={6}
-              placeholder="000000"
               value={code}
-              onChange={(e) => {
-                setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+              onChange={(value) => {
+                setCode(value);
                 setError(null);
               }}
-              className="border-input bg-background/70 focus-visible:border-ring focus-visible:ring-ring/50 h-14 w-full rounded-xl border px-4 text-center font-mono text-2xl tracking-[0.5em] outline-none focus-visible:ring-3"
             />
           </div>
 
@@ -154,7 +150,7 @@ export function VerifyEmailStep({
             </p>
           )}
 
-          <Button type="submit" disabled={verifying || code.length !== 6}>
+          <Button type="submit" disabled={verifying || code.length !== 6} className={AUTH_BUTTON_CLASSES}>
             {verifying ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />
