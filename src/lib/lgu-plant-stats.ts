@@ -66,7 +66,8 @@ function startOfDay(date: Date): Date {
 
 /** Still to be harvested: not harvested, and its window has not closed. */
 export function isUpcomingHarvest(plant: LguPlant, today = new Date()): boolean {
-  if (plant.status === "HARVESTED" || plant.status === "ARCHIVED") return false;
+  if (plant.status === "HARVESTED" || plant.status === "ARCHIVED" || plant.status === "LOST")
+    return false;
   return parseDate(plant.expected_harvest_end) >= startOfDay(today);
 }
 

@@ -47,7 +47,14 @@ export function AssessmentLockCard({
             <Sprout className="size-5" />
           </span>
           <div>
-            {eligibility.harvested ? (
+            {eligibility.lost ? (
+              <>
+                <h2 className="font-medium">{t("lock.lostTitle")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t("lock.lostText", { name: plantLabel })}
+                </p>
+              </>
+            ) : eligibility.harvested ? (
               <>
                 <h2 className="font-medium">{t("lock.harvestedTitle")}</h2>
                 <p className="text-muted-foreground mt-1 text-sm">
@@ -104,7 +111,7 @@ export function AssessmentLockCard({
           </div>
         </div>
 
-        {!eligibility.harvested && (
+        {!eligibility.harvested && !eligibility.lost && (
           <div className="border-border flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
             <span className="flex items-center gap-2 text-sm">
               <CalendarCheck

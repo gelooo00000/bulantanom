@@ -63,6 +63,7 @@ def _plant_counts():
         "growing": queryset.filter(status="GROWING").count(),
         "ready_for_harvest": queryset.filter(status="READY_FOR_HARVEST").count(),
         "harvested": queryset.filter(status="HARVESTED").count(),
+        "lost": queryset.filter(status="LOST").count(),
     }
 
 
@@ -91,7 +92,7 @@ def _upcoming_harvest_count(farmer=None):
         farmer__account_status=AccountStatus.APPROVED,
         expected_harvest_end__gte=today,
         expected_harvest_start__lte=today + timedelta(days=HARVEST_APPROACHING_DAYS),
-    ).exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED])
+    ).exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED, PlantStatus.LOST])
 
     if farmer is not None:
         queryset = queryset.filter(farmer=farmer)

@@ -79,7 +79,7 @@ export type BackendPlant = {
   planting_date: string;
   expected_harvest_start: string;
   expected_harvest_end: string;
-  status: "GROWING" | "READY_FOR_HARVEST" | "HARVESTED" | "ARCHIVED";
+  status: "GROWING" | "READY_FOR_HARVEST" | "HARVESTED" | "ARCHIVED" | "LOST";
   status_label: string;
   /** When it was marked harvested (ISO datetime); null otherwise. */
   harvested_at?: string | null;
@@ -93,6 +93,8 @@ export type BackendPlant = {
    * harvest, and for plants harvested before reports existed.
    */
   harvest_report?: HarvestReport | null;
+  /** The loss report, once the plant was reported dead (status LOST). */
+  loss_report?: LossReport | null;
   created_at: string;
   updated_at: string;
 };
@@ -127,6 +129,41 @@ export type HarvestReport = {
   high_risk_count: number;
   recovered_from_high: boolean;
   created_at: string;
+};
+
+export type LossCause =
+  | "PEST"
+  | "DISEASE"
+  | "FLOOD_TYPHOON"
+  | "DROUGHT_HEAT"
+  | "ANIMALS"
+  | "OTHER";
+export type LossNoticed = "TODAY" | "THIS_WEEK" | "EARLIER";
+
+/** A plant reported dead: the Farmer's answers plus what the system recorded. */
+export type LossReport = {
+  id: number;
+  cause: LossCause;
+  cause_label: string;
+  noticed: LossNoticed;
+  noticed_label: string;
+  photo_url: string | null;
+  notes: string;
+  lost_at: string;
+  age_days: number;
+  assessments_count: number;
+  last_risk: "" | "LOW" | "MEDIUM" | "HIGH";
+  highest_risk: "" | "LOW" | "MEDIUM" | "HIGH";
+  high_risk_count: number;
+  /** BulanTanom had read Medium or High risk before the loss. */
+  warned_before: boolean;
+};
+
+export type LossAnswers = {
+  cause: LossCause;
+  noticed: LossNoticed;
+  notes?: string;
+  photo?: File | null;
 };
 
 export type HarvestAnswers = {
@@ -240,8 +277,34 @@ export function harvestPlant(
   return postMultipart(`/farmer/plants/${plantId}/harvest/`, accessToken, body);
 }
 
-/** Whether a harvested plant may still go back to growing (24 hours, if reported). */
+/**
+ * Reports that a plant died. The plant and its history are kept; it moves to
+ * the Archive's Lost list.
+ */
+export function reportPlantLost(
+  accessToken: string,
+  plantId: number,
+  answers: LossAnswers,
+): Promise<BackendPlant> {
+  const body = new FormData();
+  body.append("cause", answers.cause);
+  body.append("noticed", answers.noticed);
+  if (answers.notes?.trim()) body.append("notes", answers.notes.trim());
+  if (answers.photo) body.append("photo", answers.photo);
+  return postMultipart(`/farmer/plants/${plantId}/lost/`, accessToken, body);
+}
+
+/** Harvested or lost: finished, shown only in the Archive. */
+export function isFinished(plant: BackendPlant): boolean {
+  return plant.status === "HARVESTED" || plant.status === "ARCHIVED" || plant.status === "LOST";
+}
+
+/** Whether a harvested or lost plant may still go back to growing (24 hours, if reported). */
 export function canRestoreHarvest(plant: BackendPlant, now = Date.now()): boolean {
+  if (plant.status === "LOST") {
+    if (!plant.loss_report) return true;
+    return now - new Date(plant.loss_report.lost_at).getTime() < 24 * 60 * 60 * 1000;
+  }
   if (plant.status !== "HARVESTED") return false;
   if (!plant.harvest_report || !plant.harvested_at) return true;
   return now - new Date(plant.harvested_at).getTime() < 24 * 60 * 60 * 1000;

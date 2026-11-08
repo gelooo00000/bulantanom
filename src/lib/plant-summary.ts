@@ -66,4 +66,5 @@ const STATUS_KEYS = {
   READY_FOR_HARVEST: "status.READY_FOR_HARVEST",
   HARVESTED: "status.HARVESTED",
   ARCHIVED: "status.ARCHIVED",
+  LOST: "status.LOST",
 } as const;

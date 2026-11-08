@@ -44,6 +44,7 @@ from .models import (
     Crop,
     CropVariant,
     HarvestReport,
+    LossReport,
     Plant,
     PlantStatus,
     RiskStatus,
@@ -56,6 +57,8 @@ from .serializers import (
     CropVariantSerializer,
     HarvestOutcomeReportSerializer,
     HarvestReportSerializer,
+    LossOutcomeReportSerializer,
+    LossReportSerializer,
     PlantSerializer,
     SoilRecommendationSerializer,
     validate_evidence_file,
@@ -100,7 +103,7 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
         # without a per-row query when listing.
         return with_last_assessment_date(
             Plant.objects.filter(farmer=self.request.user)
-            .select_related("crop", "variant", "harvest_report")
+            .select_related("crop", "variant", "harvest_report", "loss_report")
             .prefetch_related("crop__variants")
         ).order_by("-created_at")
 
@@ -110,7 +113,8 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
         notify_plant_added(plant)
 
     def perform_update(self, serializer):
-        was_harvested = serializer.instance.status == PlantStatus.HARVESTED
+        before = serializer.instance.status
+        was_harvested = before == PlantStatus.HARVESTED
         with transaction.atomic():
             plant = serializer.save()
             if was_harvested and plant.status != PlantStatus.HARVESTED:
@@ -118,6 +122,10 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
                 # new one is written if the plant is harvested again.
                 HarvestReport.objects.filter(plant=plant).delete()
                 plant._state.fields_cache.pop("harvest_report", None)
+            if before == PlantStatus.LOST and plant.status != PlantStatus.LOST:
+                # A loss reported by mistake, undone within the 24 hours.
+                LossReport.objects.filter(plant=plant).delete()
+                plant._state.fields_cache.pop("loss_report", None)
         # Marking a plant harvested from the Harvest page says so, rather
         # than a generic "plant information updated".
         notify_plant_updated(
@@ -138,9 +146,10 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
         amount, photo and notes are optional.
         """
         plant = self.get_object()
-        if plant.status in (PlantStatus.HARVESTED, PlantStatus.ARCHIVED):
+        if plant.status in (PlantStatus.HARVESTED, PlantStatus.ARCHIVED, PlantStatus.LOST):
             return Response(
-                {"detail": "This plant is already harvested."}, status=status.HTTP_409_CONFLICT
+                {"detail": "This plant is already harvested or lost."},
+                status=status.HTTP_409_CONFLICT,
             )
         if plant.is_planned:
             return Response(
@@ -158,6 +167,34 @@ class FarmerPlantViewSet(viewsets.ModelViewSet):
         return Response(
             self.get_serializer(plant).data, status=status.HTTP_201_CREATED
         )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        parser_classes=[MultiPartParser, FormParser, JSONParser],
+    )
+    def lost(self, request, pk=None):
+        """
+        POST /api/farmer/plants/{id}/lost/
+
+        Reports that the plant died, with what happened and when it was
+        noticed (required) and an optional photo and note. The plant and its
+        history are kept, not deleted.
+        """
+        plant = self.get_object()
+        if plant.status in (PlantStatus.HARVESTED, PlantStatus.ARCHIVED, PlantStatus.LOST):
+            return Response(
+                {"detail": "This plant is already harvested or lost."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        serializer = LossReportSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        answers = dict(serializer.validated_data)
+        if answers.get("photo") is None:
+            answers.pop("photo", None)
+        harvest_report.record_loss(plant, answers)
+        plant = self.get_queryset().get(pk=plant.pk)
+        return Response(self.get_serializer(plant).data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
@@ -786,21 +823,41 @@ def farmer_risk_overview(request):
     GET /api/farmer/risk/
     Latest risk per plant for the authenticated Farmer, plus real counts.
     """
-    # Harvested plants are finished: they live in the Harvest Archive, not here.
-    plants = (
-        Plant.objects.filter(farmer=request.user)
-        .exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED])
-        .select_related("crop")
+    # Harvested and lost plants are finished: they live in the Archive, not here.
+    plants = list(
+        with_last_assessment_date(
+            Plant.objects.filter(farmer=request.user)
+            .exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED, PlantStatus.LOST])
+            .select_related("crop", "variant")
+            .prefetch_related("crop__variants")
+        )
     )
+    # Every assessment of these plants in one query, newest first per plant,
+    # rather than one query per plant.
+    history = {}
+    for assessment in (
+        Assessment.objects.filter(plant__in=plants)
+        .select_related("risk", "plant", "plant__crop", "plant__variant")
+        .order_by("plant_id", "-assessment_date", "-created_at")
+    ):
+        history.setdefault(assessment.plant_id, []).append(assessment)
+
     counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "unassessed": 0}
     items = []
 
     for plant in plants:
-        latest = (
-            Assessment.objects.filter(plant=plant)
-            .select_related("risk", "plant__crop")
-            .order_by("-assessment_date", "-created_at")
-            .first()
+        rows = history.get(plant.pk, [])
+        latest = rows[0] if rows else None
+        # The reading before the latest one, for "Low -> High" on the card.
+        previous_level = next(
+            (
+                row.risk.risk_level
+                for row in rows[1:]
+                if getattr(row, "risk", None) is not None
+                and row.risk.status == RiskStatus.COMPLETED
+                and row.risk.risk_level in ("LOW", "MEDIUM", "HIGH")
+            ),
+            None,
         )
         risk = getattr(latest, "risk", None) if latest else None
         level = risk.risk_level if risk and risk.risk_level else None
@@ -817,6 +874,7 @@ def farmer_risk_overview(request):
                     if latest
                     else None
                 ),
+                "previous_risk_level": previous_level,
             }
         )
 
@@ -1146,11 +1204,10 @@ class HarvestPhotoView(APIView):
     """
 
     permission_classes = [IsApproved]
+    model = HarvestReport
 
     def get(self, request, pk):
-        report = (
-            HarvestReport.objects.select_related("plant", "plant__farmer").filter(pk=pk).first()
-        )
+        report = self.model.objects.select_related("plant", "plant__farmer").filter(pk=pk).first()
         allowed = report is not None and report.photo and (
             AssessmentEvidenceView()._may_view(request.user, report)
         )
@@ -1171,10 +1228,19 @@ class HarvestPhotoView(APIView):
         return response
 
 
+class LossPhotoView(HarvestPhotoView):
+    """GET /api/{farmer,lgu}/loss-reports/{pk}/photo/ - same rules, loss photos."""
+
+    model = LossReport
+
+
 def _outcomes_response(request):
     data = harvest_report.outcomes()
     data["recent"] = HarvestOutcomeReportSerializer(
         data["recent"], many=True, context={"request": request}
+    ).data
+    data["recent_losses"] = LossOutcomeReportSerializer(
+        data["recent_losses"], many=True, context={"request": request}
     ).data
     return Response(data)
 

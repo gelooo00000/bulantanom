@@ -140,6 +140,8 @@ class PlantStatus(models.TextChoices):
     READY_FOR_HARVEST = "READY_FOR_HARVEST", "Ready for harvest"
     HARVESTED = "HARVESTED", "Harvested"
     ARCHIVED = "ARCHIVED", "Archived"
+    # Died before harvest; see LossReport.
+    LOST = "LOST", "Lost"
 
 
 class Plant(models.Model):
@@ -785,5 +787,69 @@ class HarvestReport(models.Model):
 @receiver(post_delete, sender=HarvestReport)
 def delete_harvest_photo(sender, instance, **kwargs):
     """Remove the harvest photo with its report (a restore, or a cascade)."""
+    if instance.photo:
+        instance.photo.delete(save=False)
+
+
+def loss_photo_upload_path(instance, filename):
+    """Same rules as evidence photos: random name, JPEG or PNG only."""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png"):
+        ext = ".jpg"
+    return (
+        f"losses/farmer_{instance.plant.farmer_id}/plant_{instance.plant_id}/"
+        f"{uuid.uuid4().hex}{ext}"
+    )
+
+
+class LossReport(models.Model):
+    """
+    Written when a Farmer reports that a plant died before harvest. Instead of
+    deleting the plant (and its history), the loss is recorded, so the LGU sees
+    survival rates, the causes of loss, and whether BulanTanom had warned
+    before the plant died.
+    """
+
+    class Cause(models.TextChoices):
+        PEST = "PEST", "Pests"
+        DISEASE = "DISEASE", "Disease"
+        FLOOD_TYPHOON = "FLOOD_TYPHOON", "Flood or typhoon"
+        DROUGHT_HEAT = "DROUGHT_HEAT", "Drought or too hot"
+        ANIMALS = "ANIMALS", "Animals"
+        OTHER = "OTHER", "Other / not sure"
+
+    class Noticed(models.TextChoices):
+        TODAY = "TODAY", "Today"
+        THIS_WEEK = "THIS_WEEK", "This week"
+        EARLIER = "EARLIER", "Earlier"
+
+    plant = models.OneToOneField(Plant, on_delete=models.CASCADE, related_name="loss_report")
+
+    # What the Farmer tells us: cause and when are required.
+    cause = models.CharField(max_length=16, choices=Cause.choices)
+    noticed = models.CharField(max_length=16, choices=Noticed.choices)
+    photo = models.ImageField(upload_to=loss_photo_upload_path, blank=True, null=True)
+    notes = models.TextField(blank=True)
+
+    # What the system adds, frozen at the time of the report.
+    lost_at = models.DateTimeField(default=timezone.now)
+    age_days = models.PositiveIntegerField()
+    assessments_count = models.PositiveIntegerField(default=0)
+    last_risk = models.CharField(max_length=16, blank=True)
+    highest_risk = models.CharField(max_length=16, blank=True)
+    high_risk_count = models.PositiveIntegerField(default=0)
+    # BulanTanom had read Medium or High risk before the plant was lost.
+    warned_before = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-lost_at"]
+
+    def __str__(self):
+        return f"Loss report for {self.plant}"
+
+
+@receiver(post_delete, sender=LossReport)
+def delete_loss_photo(sender, instance, **kwargs):
+    """Remove the photo with its report (a restore, or a cascade)."""
     if instance.photo:
         instance.photo.delete(save=False)

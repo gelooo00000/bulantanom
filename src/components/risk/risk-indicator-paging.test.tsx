@@ -28,6 +28,7 @@ const plants = [
 vi.mock("@/lib/api/use-authed-query", () => ({
   useAuthedQuery: () => ({ data: { plants }, loading: false, error: null, refetch: vi.fn() }),
 }));
+vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => ({ accessToken: "token" }) }));
 vi.mock("@/components/lgu/risk-pie", () => ({ DonutChart: () => null }));
 vi.mock("@/components/lgu/dashboard-charts", () => ({ HorizontalBars: () => null }));
 

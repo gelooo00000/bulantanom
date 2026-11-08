@@ -1,6 +1,15 @@
 "use client";
 
-import { ClipboardCheck, HeartPulse, Lightbulb, ShieldCheck, Timer, Wheat } from "lucide-react";
+import {
+  BellRing,
+  ClipboardCheck,
+  HeartPulse,
+  Lightbulb,
+  ShieldCheck,
+  Sprout,
+  Timer,
+  Wheat,
+} from "lucide-react";
 import { useState } from "react";
 
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
@@ -9,7 +18,11 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { IconStatCard } from "@/components/shared/icon-stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import type { HarvestOutcomeReport, HarvestOutcomes as Outcomes } from "@/lib/api/lgu-api";
+import type {
+  HarvestOutcomeReport,
+  HarvestOutcomes as Outcomes,
+  LossOutcomeReport,
+} from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { cn } from "@/lib/utils";
 
@@ -47,8 +60,8 @@ export function HarvestOutcomes({
           Harvest Outcomes
         </h2>
         <p className="text-muted-foreground text-sm">
-          How plants monitored with BulanTanom turned out, from the harvest report each Farmer
-          fills in when marking a plant harvested.
+          How plants monitored with BulanTanom turned out, from the report each Farmer fills in
+          when a plant is harvested or lost.
         </p>
       </div>
 
@@ -56,7 +69,7 @@ export function HarvestOutcomes({
         <LguLoading label="Loading harvest outcomes…" />
       ) : error ? (
         <LguError message={error} onRetry={refetch} />
-      ) : !data || data.total === 0 ? (
+      ) : !data || data.total + (data.lost_total ?? 0) === 0 ? (
         <EmptyState
           icon={Wheat}
           title="No harvest reports yet"
@@ -87,6 +100,18 @@ function OutcomeBody({ data }: { data: Outcomes }) {
         From {data.total} harvest report{data.total === 1 ? "" : "s"}. {pct(data.monitored_rate)} of these
         plants had at least one weekly assessment.
       </p>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <IconStatCard icon={Sprout} label="Survival rate (harvested vs lost)" value={pct(data.survival_rate)} />
+        <IconStatCard icon={Wheat} tone="risk-high" label="Plants lost" value={data.lost_total} />
+        <IconStatCard
+          icon={BellRing}
+          tone="risk-medium"
+          label="Lost plants BulanTanom had warned about"
+          value={`${data.warned_before_loss} of ${data.lost_total}`}
+          className="col-span-2 lg:col-span-1"
+        />
+      </div>
 
       <div className="grid gap-3 md:grid-cols-3">
         <BreakdownCard title="Quality" rows={data.quality} total={data.total} />
@@ -134,6 +159,25 @@ function OutcomeBody({ data }: { data: Outcomes }) {
         </CardContent>
       </Card>
 
+      {data.lost_total > 0 && (
+        <div className="grid gap-3 md:grid-cols-3">
+          <BreakdownCard
+            title="Causes of loss"
+            rows={data.causes.filter((c) => c.count > 0)}
+            total={data.lost_total}
+            neutral
+          />
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <h3 className="text-sm font-medium">Latest lost plants</h3>
+            <div className="grid gap-3 lg:grid-cols-2">
+              {data.recent_losses.map((loss) => (
+                <LossCard key={loss.id} loss={loss} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">Latest harvest reports</h3>
         <div className="grid gap-3 lg:grid-cols-2">
@@ -150,10 +194,13 @@ function BreakdownCard({
   title,
   rows,
   total,
+  neutral = false,
 }: {
   title: string;
   rows: Outcomes["quality"];
   total: number;
+  /** One colour for every row, for answers that are not good or bad. */
+  neutral?: boolean;
 }) {
   return (
     <Card className="gap-2 py-4">
@@ -162,12 +209,12 @@ function BreakdownCard({
         {rows.map((row) => (
           <div key={row.value} className="flex flex-col gap-1">
             <div className="flex justify-between text-xs">
-              <span className={TONE[row.value]}>{row.label}</span>
+              <span className={neutral ? "" : TONE[row.value]}>{row.label}</span>
               <span className="text-muted-foreground tabular-nums">{row.count}</span>
             </div>
             <div className="bg-muted h-1.5 overflow-hidden rounded-full">
               <div
-                className={cn("h-full rounded-full bg-current", TONE[row.value])}
+                className={cn("h-full rounded-full bg-current", neutral ? "text-primary" : TONE[row.value])}
                 style={{ width: `${total ? (100 * row.count) / total : 0}%` }}
               />
             </div>
@@ -222,6 +269,53 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
               style={{ color: "var(--landing-accent)" }}
             >
               View harvest photo
+            </button>
+          ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LossCard({ loss }: { loss: LossOutcomeReport }) {
+  const [showPhoto, setShowPhoto] = useState(false);
+  return (
+    <Card className="gap-2 py-4">
+      <CardContent className="flex flex-col gap-1.5 px-4 text-sm">
+        <p className="font-medium">
+          <span aria-hidden="true" className="grayscale">
+            {loss.crop_emoji}
+          </span>{" "}
+          {loss.plant_name}
+        </p>
+        <p className="text-muted-foreground text-xs">
+          {loss.farmer_name} · lost {formatDisplayDate(loss.lost_at.slice(0, 10))} · day {loss.age_days}
+        </p>
+        <p className="text-xs">
+          <span className="font-medium">{loss.cause_label}</span> · noticed {loss.noticed_label.toLowerCase()}
+        </p>
+        <p className={cn("text-xs", loss.warned_before ? "text-risk-medium" : "text-muted-foreground")}>
+          {loss.warned_before
+            ? `Warned beforehand (last reading ${loss.last_risk.toLowerCase()})`
+            : loss.assessments_count
+              ? "No warning before the loss"
+              : "Never assessed"}
+        </p>
+        {loss.notes && <p className="text-muted-foreground line-clamp-3 text-xs italic">“{loss.notes}”</p>}
+        {loss.photo_url &&
+          (showPhoto ? (
+            <AuthedImage
+              src={loss.photo_url}
+              alt={`Lost plant ${loss.plant_name}`}
+              className="bg-muted max-h-64 w-full rounded-lg object-contain"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowPhoto(true)}
+              className="self-start text-xs font-medium"
+              style={{ color: "var(--landing-accent)" }}
+            >
+              View photo
             </button>
           ))}
       </CardContent>

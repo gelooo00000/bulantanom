@@ -32,6 +32,7 @@ import {
   type HarvestAnswers,
 } from "@/lib/api/plants-api";
 import { HarvestReportDialog } from "@/components/farmer/harvest-report-dialog";
+import { LostPlantCard } from "@/components/farmer/lost-plant-card";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { humanDuration } from "@/lib/duration";
@@ -352,7 +353,12 @@ export default function HarvestPage() {
   // The plant whose harvest report (final assessment) is being filled in.
   const [reporting, setReporting] = useState<BackendPlant | null>(null);
 
-  const plants = (data ?? []).map((plant) => updated[plant.id] ?? plant);
+  const everyPlant = (data ?? []).map((plant) => updated[plant.id] ?? plant);
+  // Lost plants have no harvest coming: they appear only in the Archive's Lost list.
+  const plants = everyPlant.filter((plant) => plant.status !== "LOST");
+  const lost = everyPlant
+    .filter((plant) => plant.status === "LOST")
+    .sort((a, b) => (b.loss_report?.lost_at ?? "").localeCompare(a.loss_report?.lost_at ?? ""));
   const sorted = [...plants].sort((a, b) =>
     a.expected_harvest_start.localeCompare(b.expected_harvest_start),
   );
@@ -372,7 +378,9 @@ export default function HarvestPage() {
     if (!accessToken) throw new Error("Not signed in.");
     const saved = await setPlantStatus(accessToken, plant.id, status);
     setUpdated((current) => ({ ...current, [plant.id]: saved }));
-    setMoved({ plant: saved, to: "active" });
+    // A loss undone is just back in the lists; its banner's "Undo" would
+    // open a harvest report, which is not what was undone.
+    setMoved(plant.status === "LOST" ? null : { plant: saved, to: "active" });
     requestNotificationRefresh();
   }
 
@@ -417,7 +425,7 @@ export default function HarvestPage() {
       <Archive className="size-4" />
       {t("archive.button")}
       <span className="bg-muted text-foreground rounded-full px-1.5 text-xs tabular-nums">
-        {archived.length}
+        {archived.length + lost.length}
       </span>
     </Button>
   );
@@ -485,7 +493,7 @@ export default function HarvestPage() {
           <p className="text-muted-foreground text-sm">{error}</p>
           <Button onClick={refetch}>{t("common.tryAgain")}</Button>
         </div>
-      ) : sorted.length === 0 ? (
+      ) : sorted.length === 0 && lost.length === 0 ? (
         <EmptyState icon={Wheat} title={t("riskPage.emptyTitle")} description={t("harvestPage.emptyText")} />
       ) : view === "archive" ? (
         <>
@@ -493,15 +501,34 @@ export default function HarvestPage() {
             <ArrowLeft className="size-4" />
             {t("archive.back")}
           </Button>
-          {archived.length === 0 ? (
+          {archived.length + lost.length === 0 ? (
             <EmptyState icon={Archive} title={t("archive.emptyTitle")} description={t("archive.emptyText")} />
           ) : (
-            <Section
-              phase="harvested"
-              title={t("harvestPage.harvested")}
-              plants={archived}
-              onStatusChange={changeStatus}
-            />
+            <>
+              <Section
+                phase="harvested"
+                title={t("harvestPage.harvested")}
+                plants={archived}
+                onStatusChange={changeStatus}
+              />
+              {lost.length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="text-lg">
+                    {t("lost.section")}{" "}
+                    <span className="text-muted-foreground font-sans text-sm font-normal">
+                      ({lost.length})
+                    </span>
+                  </h2>
+                  <ul aria-label={t("lost.section")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {lost.map((plant) => (
+                      <li key={plant.id} className="min-w-0">
+                        <LostPlantCard plant={plant} onRestore={() => changeStatus(plant, "GROWING")} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
           )}
         </>
       ) : (

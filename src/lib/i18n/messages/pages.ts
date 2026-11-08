@@ -2,6 +2,38 @@ import { defineMessages } from "../define";
 
 /** Risk Indicator, Monitoring, and Assessment History (list and detail). */
 export const pages = defineMessages({
+  // Risk Indicator card additions.
+  "riskCard.whatToDo": { en: "What to do", fil: "Ano ang gagawin", bik: "Ano an gigibuhon" },
+  "riskCard.seeAll": { en: "See what to do", fil: "Tingnan ang gagawin", bik: "Hilingon an gigibuhon" },
+  "riskCard.was": { en: "Was {level}", fil: "Dati ay {level}", bik: "Dati {level}" },
+  "riskCard.overdue": {
+    en: "Overdue {n} days",
+    fil: "Lampas na ng {n} araw",
+    bik: "Lampas na nin {n} adlaw",
+  },
+  "riskCard.overdueOne": { en: "Overdue 1 day", fil: "Lampas na ng 1 araw", bik: "Lampas na nin 1 adlaw" },
+  "riskCard.old": {
+    en: "Old reading – check again",
+    fil: "Lumang resulta – suriin ulit",
+    bik: "Daan na resulta – susiha giraray",
+  },
+  "riskCard.early": {
+    en: "Check again early",
+    fil: "Suriin ulit nang maaga",
+    bik: "Susiha giraray nin temprano",
+  },
+  "riskCard.earlyWhy": {
+    en: "At risk: you can check it again now to see if it is getting better.",
+    fil: "Nanganganib: maaari mo itong suriin ulit ngayon para makita kung gumagaling.",
+    bik: "Nasa peligro: pwede mo ining susihon giraray ngunyan tanganing mahiling kun nagmamarhay.",
+  },
+  "riskCard.failed": {
+    en: "Check failed",
+    fil: "Hindi natapos ang pagsusuri",
+    bik: "Dai natapos an pagsusi",
+  },
+  "riskCard.retry": { en: "Try again", fil: "Subukan ulit", bik: "Probaran giraray" },
+  "riskCard.retrying": { en: "Checking…", fil: "Sinusuri…", bik: "Sinusiha…" },
   "riskPage.title": {
     en: "Plant Risk Indicator",
     fil: "Antas ng Panganib ng Tanim",

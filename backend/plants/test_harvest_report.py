@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from accounts.models import UserRole
 
-from .models import Assessment, HarvestReport, Plant, RiskAssessment, RiskStatus
+from .models import Assessment, HarvestReport, LossReport, Plant, RiskAssessment, RiskStatus
 from .test_risk import LGU_LOGIN_URL, RiskTestCase, make_image, make_user
 
 ANSWERS = {"quality": "GOOD", "final_health": "HEALTHY", "advice_helped": "YES"}
@@ -228,3 +228,169 @@ class HarvestOutcomesReportTests(RiskTestCase):
         self.assertIn(b"4 sacks", b"".join(csv.streaming_content) if csv.streaming else csv.content)
         pdf = self.client.get("/api/lgu/reports/harvest-outcomes/pdf/", **officer)
         self.assertEqual(pdf.status_code, 200)
+
+
+LOSS = {"cause": "PEST", "noticed": "TODAY"}
+
+
+class LossReportTests(RiskTestCase):
+    def setUp(self):
+        super().setUp()
+        self.farmer = make_user("farmer@example.com")
+        self.auth = self.login("farmer@example.com")
+        self.plant = self.make_plant(self.farmer, days_ago=40)
+
+    def reading(self, level, days_ago):
+        assessment = Assessment.objects.create(
+            plant=self.plant,
+            assessment_date=timezone.localdate() - timedelta(days=days_ago),
+            plant_age_days=40 - days_ago,
+            growth_condition="as_expected",
+            health_condition="healthy",
+            watering_frequency="daily",
+        )
+        RiskAssessment.objects.create(
+            assessment=assessment, risk_level=level, status=RiskStatus.COMPLETED
+        )
+
+    def lose(self, **data):
+        return self.client.post(
+            f"/api/farmer/plants/{self.plant.pk}/lost/",
+            {**LOSS, **data},
+            format="multipart" if "photo" in data else "json",
+            **self.auth,
+        )
+
+    def test_cause_and_when_are_required(self):
+        response = self.client.post(
+            f"/api/farmer/plants/{self.plant.pk}/lost/", {}, format="json", **self.auth
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("cause", response.data)
+        self.assertIn("noticed", response.data)
+
+    def test_a_loss_keeps_the_plant_and_records_the_warning(self):
+        self.reading("LOW", 21)
+        self.reading("HIGH", 7)
+        response = self.lose(notes="Worms everywhere.")
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.data["status"], "LOST")
+        loss = response.data["loss_report"]
+        self.assertTrue(loss["warned_before"])
+        self.assertEqual(loss["last_risk"], "HIGH")
+        self.assertEqual(loss["assessments_count"], 2)
+        self.assertEqual(loss["age_days"], 40)
+        # Kept, with its history, but out of the risk page and assessments.
+        self.assertTrue(Plant.objects.filter(pk=self.plant.pk).exists())
+        self.assertEqual(Assessment.objects.filter(plant=self.plant).count(), 2)
+        self.assertEqual(self.client.get("/api/farmer/risk/", **self.auth).data["plants"], [])
+        plant = self.client.get(f"/api/farmer/plants/{self.plant.pk}/", **self.auth).data
+        self.assertTrue(plant["assessment_eligibility"]["lost"])
+
+    def test_no_warning_when_it_was_low_risk(self):
+        self.reading("LOW", 7)
+        self.assertFalse(self.lose().data["loss_report"]["warned_before"])
+
+    def test_a_photo_is_optional(self):
+        response = self.lose(photo=make_image())
+        self.assertEqual(response.status_code, 201, response.data)
+        path = response.data["loss_report"]["photo_url"].split("testserver", 1)[-1]
+        self.assertEqual(self.client.get(path, **self.auth).status_code, 200)
+
+    def test_patch_cannot_mark_lost(self):
+        response = self.client.patch(
+            f"/api/farmer/plants/{self.plant.pk}/", {"status": "LOST"}, format="json", **self.auth
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_undo_within_24_hours_only(self):
+        self.lose()
+        undo = self.client.patch(
+            f"/api/farmer/plants/{self.plant.pk}/", {"status": "GROWING"}, format="json", **self.auth
+        )
+        self.assertEqual(undo.status_code, 200)
+        self.assertIsNone(undo.data["loss_report"])
+
+        self.lose()
+        LossReport.objects.filter(plant=self.plant).update(
+            lost_at=timezone.now() - timedelta(hours=25)
+        )
+        late = self.client.patch(
+            f"/api/farmer/plants/{self.plant.pk}/", {"status": "GROWING"}, format="json", **self.auth
+        )
+        self.assertEqual(late.status_code, 400)
+
+    def test_a_lost_plant_cannot_be_harvested(self):
+        self.lose()
+        response = self.client.post(
+            f"/api/farmer/plants/{self.plant.pk}/harvest/", ANSWERS, format="json", **self.auth
+        )
+        self.assertEqual(response.status_code, 409)
+
+    def test_outcomes_count_losses(self):
+        self.reading("HIGH", 7)
+        self.lose()
+        healthy = self.make_plant(self.farmer, days_ago=400)
+        self.client.post(
+            f"/api/farmer/plants/{healthy.pk}/harvest/", ANSWERS, format="json", **self.auth
+        )
+        make_user("officer@example.com", role=UserRole.LGU_OFFICER)
+        officer = self.login("officer@example.com", LGU_LOGIN_URL)
+        data = self.client.get("/api/lgu/harvest-outcomes/", **officer).data
+        self.assertEqual(data["lost_total"], 1)
+        self.assertEqual(data["survival_rate"], 50)
+        self.assertEqual(data["warned_before_loss"], 1)
+        pest = next(c for c in data["causes"] if c["value"] == "PEST")
+        self.assertEqual(pest["count"], 1)
+        self.assertEqual(data["recent_losses"][0]["cause_label"], "Pests")
+        report = self.client.get("/api/lgu/reports/harvest-outcomes/", **officer)
+        self.assertEqual(report.status_code, 200)
+
+
+class EarlyRecheckTests(RiskTestCase):
+    def setUp(self):
+        super().setUp()
+        self.farmer = make_user("farmer@example.com")
+        self.auth = self.login("farmer@example.com")
+        self.plant = self.make_plant(self.farmer, days_ago=40)
+
+    def reading(self, level, days_ago):
+        assessment = Assessment.objects.create(
+            plant=self.plant,
+            assessment_date=timezone.localdate() - timedelta(days=days_ago),
+            plant_age_days=40 - days_ago,
+            growth_condition="as_expected",
+            health_condition="healthy",
+            watering_frequency="daily",
+        )
+        RiskAssessment.objects.create(
+            assessment=assessment, risk_level=level, status=RiskStatus.COMPLETED
+        )
+
+    def eligibility(self):
+        return self.client.get(
+            f"/api/farmer/plants/{self.plant.pk}/assessments/eligibility/", **self.auth
+        ).data
+
+    def test_high_risk_can_be_rechecked_after_three_days(self):
+        self.reading("HIGH", 3)
+        data = self.eligibility()
+        self.assertTrue(data["can_assess"])
+        self.assertTrue(data["early_recheck"])
+
+    def test_not_before_three_days(self):
+        self.reading("HIGH", 2)
+        self.assertFalse(self.eligibility()["can_assess"])
+
+    def test_low_risk_waits_the_full_week(self):
+        self.reading("LOW", 4)
+        self.assertFalse(self.eligibility()["can_assess"])
+
+    def test_risk_page_shows_the_previous_reading(self):
+        self.reading("LOW", 11)
+        self.reading("HIGH", 4)
+        data = self.client.get("/api/farmer/risk/", **self.auth).data
+        entry = data["plants"][0]
+        self.assertEqual(entry["latest_assessment"]["risk"]["risk_level"], "HIGH")
+        self.assertEqual(entry["previous_risk_level"], "LOW")
+        self.assertTrue(entry["plant"]["assessment_eligibility"]["early_recheck"])

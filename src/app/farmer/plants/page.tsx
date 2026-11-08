@@ -22,7 +22,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { deletePlant, fetchPlants, type BackendPlant } from "@/lib/api/plants-api";
+import { deletePlant, fetchPlants, isFinished, type BackendPlant } from "@/lib/api/plants-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useLanguage } from "@/lib/i18n";
@@ -59,7 +59,7 @@ export default function MyPlantsPage() {
   const { data: allPlants, loading, error, refetch } = useAuthedQuery(fetchPlants);
   // Harvested plants are finished: they live in the Harvest page's Archive
   // with their harvest report, not here.
-  const plants = allPlants?.filter((p) => p.status !== "HARVESTED" && p.status !== "ARCHIVED");
+  const plants = allPlants?.filter((p) => !isFinished(p));
 
   // Open on a farmer's first visit, until they hide it. Read after mount,
   // because the server cannot see localStorage; null renders nothing, so a

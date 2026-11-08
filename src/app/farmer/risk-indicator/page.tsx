@@ -11,9 +11,14 @@ import {
   Leaf,
   LoaderCircle,
   OctagonAlert,
+  RotateCw,
   Sprout,
+  TrendingDown,
+  TrendingUp,
   TriangleAlert,
 } from "lucide-react";
+import { useState } from "react";
+import { LostPlantDialog } from "@/components/farmer/lost-plant-dialog";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
@@ -22,14 +27,36 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { SlidePager } from "@/components/shared/slide-pager";
 import { Button } from "@/components/ui/button";
-import type { BackendPlant } from "@/lib/api/plants-api";
-import { fetchFarmerRisk, type BackendAssessment } from "@/lib/api/risk-api";
+import { reportPlantLost, type BackendPlant, type LossAnswers } from "@/lib/api/plants-api";
+import {
+  fetchFarmerRisk,
+  reanalyzeAssessment,
+  type BackendAssessment,
+} from "@/lib/api/risk-api";
+import { useAuth } from "@/lib/auth/auth-context";
+import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { CARD_OUTLINE, CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Entry = { plant: BackendPlant; latest: BackendAssessment | null };
+type Level = "LOW" | "MEDIUM" | "HIGH";
+type Entry = { plant: BackendPlant; latest: BackendAssessment | null; previous?: Level | null };
+
+/** A reading older than this is shown as out of date. */
+const OLD_READING_DAYS = 14;
+const LEVEL_RANK: Record<Level, number> = { LOW: 0, MEDIUM: 1, HIGH: 2 };
+
+/** Whole days from an ISO date (YYYY-MM-DD) to today, in local time. */
+function daysSince(iso: string): number {
+  const then = new Date(`${iso}T00:00:00`);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((now.getTime() - then.getTime()) / 86_400_000);
+}
+
+/** Card actions shared down the tree: report a loss, reload after a change. */
+type CardActions = { onLost: (plant: BackendPlant) => void; onChanged: () => void };
 
 /** Cards per page in each list; Previous / Next slide in the next page. */
 const PAGE_SIZE = { reading: 4, early: 4, none: 6 } as const;
@@ -69,10 +96,28 @@ function groupOf(latest: BackendAssessment | null): Group {
 export default function RiskIndicatorPage() {
   const { data, loading, error, refetch } = useAuthedQuery(fetchFarmerRisk);
   const { t } = useLanguage();
+  const { accessToken } = useAuth();
+  // The plant whose loss is being reported, and the line said afterwards.
+  const [losing, setLosing] = useState<BackendPlant | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function submitLoss(answers: LossAnswers) {
+    if (!losing || !accessToken) throw new Error("Not signed in.");
+    await reportPlantLost(accessToken, losing.id, answers);
+    setNotice(t("lost.saved", { name: losing.display_name }));
+    setLosing(null);
+    requestNotificationRefresh();
+    refetch();
+  }
+  const actions: CardActions = { onLost: setLosing, onChanged: refetch };
 
   // What can be assessed today first, then the soonest to open.
   const entries: Entry[] = (data?.plants ?? [])
-    .map(({ plant, latest_assessment }) => ({ plant, latest: latest_assessment }))
+    .map(({ plant, latest_assessment, previous_risk_level }) => ({
+      plant,
+      latest: latest_assessment,
+      previous: previous_risk_level,
+    }))
     .sort((a, b) => {
       const ea = a.plant.assessment_eligibility;
       const eb = b.plant.assessment_eligibility;
@@ -86,6 +131,18 @@ export default function RiskIndicatorPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader title={t("riskPage.title")} description={t("riskPage.description")} />
+
+      {losing && (
+        <LostPlantDialog plant={losing} onCancel={() => setLosing(null)} onSubmit={submitLoss} />
+      )}
+      {notice && (
+        <p
+          role="status"
+          className="border-border bg-muted/60 rounded-xl border px-4 py-3 text-sm"
+        >
+          {notice}
+        </p>
+      )}
 
       {loading ? (
         <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3">
@@ -118,6 +175,7 @@ export default function RiskIndicatorPage() {
           {/* Plants with a verdict first, worst first, so a reading is never
               buried under a long run of plants still waiting for one. */}
           <PlantGroup
+            actions={actions}
             title={t("riskPage.withReading")}
             pageSize={PAGE_SIZE.reading}
             entries={entries
@@ -125,11 +183,13 @@ export default function RiskIndicatorPage() {
               .sort((a, b) => SEVERITY[groupOf(a.latest)] - SEVERITY[groupOf(b.latest)])}
           />
           <PlantGroup
+            actions={actions}
             title={t("early.level")}
             pageSize={PAGE_SIZE.early}
             entries={entries.filter((e) => groupOf(e.latest) === "early")}
           />
           <PlantGroup
+            actions={actions}
             title={t("riskPage.withoutReading")}
             pageSize={PAGE_SIZE.none}
             entries={entries.filter((e) => groupOf(e.latest) === "none")}
@@ -192,10 +252,12 @@ function PlantGroup({
   title,
   entries,
   pageSize,
+  actions,
 }: {
   title: string;
   entries: Entry[];
   pageSize: number;
+  actions: CardActions;
 }) {
   if (entries.length === 0) return null;
   return (
@@ -217,7 +279,7 @@ function PlantGroup({
         itemClassName="flex min-w-0 flex-col"
         // Room for a card's hover lift and outline inside the clipping frame.
         frameClassName="-m-1 p-1"
-        renderItem={(entry) => <PlantRiskCard {...entry} />}
+        renderItem={(entry) => <PlantRiskCard entry={entry} actions={actions} />}
       />
     </section>
   );
@@ -242,7 +304,8 @@ function CropIcon({ entry }: { entry: Entry }) {
  * check. The explanation and photo stay in Assessment History, behind the
  * arrow.
  */
-function PlantRiskCard({ plant, latest }: Entry) {
+function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions }) {
+  const { plant, latest, previous } = entry;
   const { t, dateLocale } = useLanguage();
   const level = levelOf(latest);
   const group = groupOf(latest);
@@ -250,6 +313,25 @@ function PlantRiskCard({ plant, latest }: Entry) {
   // A plant with a verdict wears its level's colour on the whole card, so
   // it can be picked out at a glance; one still waiting stays plain.
   const assessed = group !== "none";
+  const eligibility = plant.assessment_eligibility;
+  const failed = latest?.risk?.status === "failed";
+  const atRisk = group === "high" || group === "medium";
+  // The first two things to do, on the card itself rather than behind the arrow.
+  const todo = atRisk ? (latest?.risk?.recommended_actions ?? []).slice(0, 2) : [];
+  // Getting worse or better since the reading before.
+  const current = latest?.risk?.risk_level;
+  const trend =
+    previous && current && current in LEVEL_RANK && current !== previous
+      ? LEVEL_RANK[current as Level] > LEVEL_RANK[previous]
+        ? "up"
+        : "down"
+      : null;
+  // How late this week's check is, once it opened.
+  const overdue =
+    eligibility.can_assess && !eligibility.early_recheck && eligibility.next_assessment_date
+      ? daysSince(eligibility.next_assessment_date)
+      : 0;
+  const old = !!latest && daysSince(latest.assessment_date) > OLD_READING_DAYS;
 
   return (
     // The level's border is set through a variable, not inline, so the
@@ -277,7 +359,7 @@ function PlantRiskCard({ plant, latest }: Entry) {
       />
 
       <div className="flex items-start gap-3">
-        <CropIcon entry={{ plant, latest }} />
+        <CropIcon entry={entry} />
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="font-heading truncate text-base leading-tight font-medium">
             {plant.display_name}
@@ -301,7 +383,12 @@ function PlantRiskCard({ plant, latest }: Entry) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {level ? (
+        {failed ? (
+          <span className="border-risk-high/40 text-risk-high inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium">
+            <TriangleAlert className="size-3" />
+            {t("riskCard.failed")}
+          </span>
+        ) : level ? (
           <RiskBadge size="sm" level={level} />
         ) : (
           <span className="border-border text-muted-foreground inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-[11px] font-medium">
@@ -309,16 +396,73 @@ function PlantRiskCard({ plant, latest }: Entry) {
             {t("riskCounts.noReading")}
           </span>
         )}
-        {plant.assessment_eligibility.can_assess && (
+        {trend && previous && (
           <span
-            className="text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-            style={{ backgroundColor: tint("var(--primary)") }}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+              trend === "up" ? "text-risk-high" : "text-risk-low",
+            )}
+            style={{ backgroundColor: tint(trend === "up" ? "var(--risk-high)" : "var(--risk-low)") }}
+          >
+            {trend === "up" ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+            {t("riskCard.was", { level: t(`riskBadge.${previous.toLowerCase()}` as MessageKey) })}
+          </span>
+        )}
+        {overdue > 0 ? (
+          <span
+            className="text-risk-high inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+            style={{ backgroundColor: tint("var(--risk-high)") }}
           >
             <CalendarClock className="size-3" />
-            {t("riskPage.dueNow")}
+            {overdue === 1 ? t("riskCard.overdueOne") : t("riskCard.overdue", { n: overdue })}
+          </span>
+        ) : (
+          eligibility.can_assess &&
+          !eligibility.early_recheck && (
+            <span
+              className="text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+              style={{ backgroundColor: tint("var(--primary)") }}
+            >
+              <CalendarClock className="size-3" />
+              {t("riskPage.dueNow")}
+            </span>
+          )
+        )}
+        {old && (
+          <span
+            className="text-risk-medium inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+            style={{ backgroundColor: tint("var(--risk-medium)") }}
+          >
+            <Clock className="size-3" />
+            {t("riskCard.old")}
           </span>
         )}
       </div>
+
+      {todo.length > 0 && latest && (
+        <div className="mt-3 rounded-xl border border-dashed p-3 text-xs" style={{ borderColor: tint(color, 50) }}>
+          <p className="font-medium">{t("riskCard.whatToDo")}</p>
+          <ul className="text-muted-foreground mt-1 list-disc space-y-0.5 pl-4">
+            {todo.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ul>
+          <Link
+            href={`/farmer/assessments/${latest.id}`}
+            className="mt-2 inline-flex items-center gap-1 font-medium"
+            style={{ color: "var(--landing-accent)" }}
+          >
+            {t("riskCard.seeAll")}
+            <ArrowRight className="size-3" />
+          </Link>
+        </div>
+      )}
+
+      {failed && latest && <RetryCheck assessmentId={latest.id} onDone={actions.onChanged} />}
+
+      {eligibility.early_recheck && (
+        <p className="text-muted-foreground mt-3 text-xs">{t("riskCard.earlyWhy")}</p>
+      )}
 
       <div className="border-border text-muted-foreground mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-dashed pt-3 text-xs">
         <span className="flex items-center gap-1.5">
@@ -334,6 +478,50 @@ function PlantRiskCard({ plant, latest }: Entry) {
         </span>
         <WeeklyCheck plant={plant} />
       </div>
+
+      {/* Instead of deleting a plant that died: kept, with its history. */}
+      <button
+        type="button"
+        onClick={() => actions.onLost(plant)}
+        className={cn(
+          "mt-2 self-start text-xs underline-offset-2 hover:underline",
+          atRisk ? "text-risk-high font-medium" : "text-muted-foreground",
+        )}
+      >
+        {t("lost.open")}
+      </button>
+    </div>
+  );
+}
+
+/** A check the AI could not finish, run again on the saved answers and photo. */
+function RetryCheck({ assessmentId, onDone }: { assessmentId: number; onDone: () => void }) {
+  const { t } = useLanguage();
+  const { accessToken } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  async function retry() {
+    if (!accessToken || busy) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      await reanalyzeAssessment(accessToken, assessmentId);
+      onDone();
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : t("harvestCard.saveFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-1">
+      <Button size="sm" variant="outline" className="h-8 self-start text-xs" onClick={retry} disabled={busy}>
+        {busy ? <LoaderCircle className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
+        {busy ? t("riskCard.retrying") : t("riskCard.retry")}
+      </Button>
+      {problem && <p className="text-risk-high text-xs">{problem}</p>}
     </div>
   );
 }
@@ -345,7 +533,7 @@ function PlantRiskCard({ plant, latest }: Entry) {
  */
 function WeeklyCheck({ plant }: { plant: BackendPlant }) {
   const { t } = useLanguage();
-  const { can_assess, days_remaining } = plant.assessment_eligibility;
+  const { can_assess, days_remaining, early_recheck } = plant.assessment_eligibility;
 
   if (can_assess) {
     return (
@@ -355,7 +543,7 @@ function WeeklyCheck({ plant }: { plant: BackendPlant }) {
         nativeButton={false}
         render={<Link href={`/farmer/plants/${plant.id}/assessment`} />}
       >
-        {t("riskPage.assessNow")}
+        {early_recheck ? t("riskCard.early") : t("riskPage.assessNow")}
         <ArrowRight className="size-3.5" />
       </Button>
     );

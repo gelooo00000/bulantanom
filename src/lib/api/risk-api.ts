@@ -51,6 +51,13 @@ export type AssessmentEligibility = {
   too_young?: boolean;
   /** Harvested: the plant is finished, with no more weekly assessments. */
   harvested?: boolean;
+  /** Reported dead: finished, with no more weekly assessments. */
+  lost?: boolean;
+  /**
+   * Open before the week is up, because the latest reading was High or
+   * Medium: the farmer can see whether the treatment is working.
+   */
+  early_recheck?: boolean;
   last_assessment_date: string | null;
   next_assessment_date: string | null;
   days_remaining: number;
@@ -126,7 +133,12 @@ export type BackendAssessment = {
 
 export type FarmerRiskOverview = {
   counts: { LOW: number; MEDIUM: number; HIGH: number; unassessed: number };
-  plants: { plant: BackendPlant; latest_assessment: BackendAssessment | null }[];
+  plants: {
+    plant: BackendPlant;
+    latest_assessment: BackendAssessment | null;
+    /** The completed reading before the latest one, for the trend. */
+    previous_risk_level?: "LOW" | "MEDIUM" | "HIGH" | null;
+  }[];
 };
 
 /**

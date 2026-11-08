@@ -224,14 +224,18 @@ export function HarvestReportDialog({
   );
 }
 
-/** One required question answered by tapping one of three big buttons. */
-function Choice<T extends string>({
+/**
+ * One required question answered by tapping a big button. Three options are
+ * coloured good / middling / bad; `neutral` keeps them all one colour.
+ */
+export function Choice<T extends string>({
   legend,
   required,
   options,
   value,
   onChange,
   label,
+  neutral = false,
 }: {
   legend: string;
   required: string;
@@ -239,6 +243,7 @@ function Choice<T extends string>({
   value: T | null;
   onChange: (value: T) => void;
   label: (value: T) => string;
+  neutral?: boolean;
 }) {
   return (
     <fieldset className="flex flex-col gap-2">
@@ -246,7 +251,7 @@ function Choice<T extends string>({
         {legend}
         <span className="text-risk-high text-xs font-normal">{required}</span>
       </legend>
-      <div className="grid grid-cols-3 gap-2">
+      <div className={cn("grid gap-2", options.length > 3 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3")}>
         {options.map((option, index) => (
           <button
             key={option}
@@ -255,7 +260,11 @@ function Choice<T extends string>({
             onClick={() => onChange(option)}
             className={cn(
               "border-border min-h-11 rounded-xl border px-2 py-2 text-sm font-medium transition-colors",
-              value === option ? TONE[index] : "hover:bg-muted",
+              value === option
+                ? neutral
+                  ? "border-primary bg-primary/10"
+                  : TONE[index]
+                : "hover:bg-muted",
             )}
           >
             {label(option)}

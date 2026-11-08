@@ -428,7 +428,7 @@ def _build_summary(period: Period, filters: dict) -> dict:
 
     plants = Plant.objects.filter(
         farmer__role=UserRole.FARMER, farmer__account_status=AccountStatus.APPROVED
-    ).exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED])
+    ).exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED, PlantStatus.LOST])
 
     assessments = _apply_period(
         Assessment.objects.filter(
@@ -609,14 +609,21 @@ def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
     How harvested plants turned out, from each Farmer's harvest report (the
     final assessment). Plants harvested before reports existed are not in it.
     """
-    from plants.harvest_report import outcomes, reports_in_scope
+    from plants.harvest_report import losses_in_scope, outcomes, reports_in_scope
 
     queryset = _apply_period(reports_in_scope(), "harvested_on", period)
+    losses = losses_in_scope()
+    if period.start:
+        losses = losses.filter(lost_at__date__gte=period.start)
+    if period.end:
+        losses = losses.filter(lost_at__date__lte=period.end)
     if filters.get("farmer_id"):
         queryset = queryset.filter(plant__farmer_id=filters["farmer_id"])
+        losses = losses.filter(plant__farmer_id=filters["farmer_id"])
     if filters.get("crop_id"):
         queryset = queryset.filter(plant__crop_id=filters["crop_id"])
-    data = outcomes(queryset[:500], recent=500)
+        losses = losses.filter(plant__crop_id=filters["crop_id"])
+    data = outcomes(queryset[:500], recent=500, losses=losses[:500])
 
     def pct(value):
         return f"{value}%" if value is not None else "-"
@@ -636,6 +643,12 @@ def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
                 "label": "Recovered from High risk",
                 "value": f"{data['recovered_healthy']} of {data['reached_high_risk']}",
                 "tone": "medium",
+            },
+            {"label": "Plants lost", "value": data["lost_total"], "tone": "high"},
+            {"label": "Survival rate (%)", "value": data["survival_rate"] or 0},
+            {
+                "label": "Warned before loss",
+                "value": f"{data['warned_before_loss']} of {data['lost_total']}",
             },
         ],
         "tables": [
@@ -678,6 +691,32 @@ def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
                         "risk": (r.highest_risk.title() if r.highest_risk else "No reading"),
                     }
                     for r in data["recent"]
+                ],
+            },
+            {
+                "title": "Causes of loss",
+                "columns": ["Cause", "Plants lost"],
+                "keys": ["label", "count"],
+                "widths": [2, 1],
+                "rows": [c for c in data["causes"] if c["count"]],
+            },
+            {
+                "title": "Lost plants",
+                "columns": ["Reported", "Farmer", "Plant", "Cause", "Noticed", "Age (days)", "Last risk", "Warned before"],
+                "keys": ["date", "farmer", "plant", "cause", "noticed", "age", "risk", "warned"],
+                "widths": [1.1, 1.5, 1.5, 1.3, 1, 0.9, 1, 1],
+                "rows": [
+                    {
+                        "date": timezone.localtime(r.lost_at).date().isoformat(),
+                        "farmer": _display_name(r.plant.farmer),
+                        "plant": r.plant.display_name,
+                        "cause": r.get_cause_display(),
+                        "noticed": r.get_noticed_display(),
+                        "age": r.age_days,
+                        "risk": r.last_risk.title() if r.last_risk else "No reading",
+                        "warned": "Yes" if r.warned_before else "No",
+                    }
+                    for r in data["recent_losses"]
                 ],
             },
         ],
@@ -748,7 +787,7 @@ REPORTS = {
     "harvest-outcomes": {
         "title": "Harvest Outcomes Report",
         "category": "System Effectiveness",
-        "description": "How monitored plants turned out at harvest, from each farmer's harvest report: health, quality, timing, recovery from High risk and whether the advice helped.",
+        "description": "How monitored plants turned out, from each farmer's harvest and loss reports: health, quality, timing, recovery from High risk, survival, causes of loss, and whether the advice and warnings helped.",
         "icon": "sprout",
         "builder": _build_harvest_outcomes,
         "supports": ["period", "farmer", "crop"],

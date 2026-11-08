@@ -193,7 +193,8 @@ function Section({ title, plants }: { title: string; plants: LguPlant[] }) {
 
 export default function LguHarvestPage() {
   const { data, loading, error, refetch } = useLguQuery(fetchLguPlants);
-  const plants = data ?? [];
+  // Lost plants have no harvest coming; they are counted in Harvest Outcomes.
+  const plants = (data ?? []).filter((p) => p.status !== "LOST");
   const shownIn = (phase: Phase) => plants.filter((p) => phaseOf(p) === phase);
 
   return (

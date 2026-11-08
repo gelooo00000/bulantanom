@@ -16,6 +16,7 @@ from .models import (
     RiskAssessment,
     SoilRecommendation,
     HarvestReport,
+    LossReport,
 )
 
 
@@ -179,6 +180,8 @@ class PlantSerializer(serializers.ModelSerializer):
     # The final assessment, once the plant is harvested (None before, and
     # for plants harvested before reports existed).
     harvest_report = serializers.SerializerMethodField()
+    # The loss report, once the plant was reported dead (status LOST).
+    loss_report = serializers.SerializerMethodField()
 
     class Meta:
         model = Plant
@@ -202,6 +205,7 @@ class PlantSerializer(serializers.ModelSerializer):
             "is_planned",
             "assessment_eligibility",
             "harvest_report",
+            "loss_report",
             "created_at",
             "updated_at",
         ]
@@ -228,6 +232,12 @@ class PlantSerializer(serializers.ModelSerializer):
             return None
         return HarvestReportSerializer(report, context=self.context).data
 
+    def get_loss_report(self, obj):
+        report = getattr(obj, "loss_report", None)
+        if report is None:
+            return None
+        return LossReportSerializer(report, context=self.context).data
+
     def validate_status(self, value):
         """
         Harvesting goes through the harvest report (POST .../harvest/), so a
@@ -239,7 +249,11 @@ class PlantSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Please fill in the harvest report to mark this plant harvested."
             )
-        if current == "HARVESTED" and value != "HARVESTED":
+        if value == "LOST" and current != "LOST":
+            raise serializers.ValidationError(
+                "Please fill in the loss report to mark this plant lost."
+            )
+        if current in ("HARVESTED", "LOST") and value != current:
             from .harvest_report import restore_problem
 
             problem = restore_problem(self.instance)
@@ -729,6 +743,85 @@ class HarvestOutcomeReportSerializer(HarvestReportSerializer):
 
     class Meta(HarvestReportSerializer.Meta):
         fields = HarvestReportSerializer.Meta.fields + [
+            "farmer_name",
+            "plant_name",
+            "crop_name",
+            "crop_emoji",
+        ]
+
+
+
+class LossReportSerializer(serializers.ModelSerializer):
+    """A Farmer's report that a plant died; the system facts are read-only."""
+
+    cause_label = serializers.CharField(source="get_cause_display", read_only=True)
+    noticed_label = serializers.CharField(source="get_noticed_display", read_only=True)
+    photo = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    photo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LossReport
+        fields = [
+            "id",
+            "cause",
+            "cause_label",
+            "noticed",
+            "noticed_label",
+            "photo",
+            "photo_url",
+            "notes",
+            "lost_at",
+            "age_days",
+            "assessments_count",
+            "last_risk",
+            "highest_risk",
+            "high_risk_count",
+            "warned_before",
+        ]
+        read_only_fields = [
+            "id",
+            "lost_at",
+            "age_days",
+            "assessments_count",
+            "last_risk",
+            "highest_risk",
+            "high_risk_count",
+            "warned_before",
+        ]
+        extra_kwargs = {
+            "cause": {"error_messages": {"required": "Please choose what happened."}},
+            "noticed": {"error_messages": {"required": "Please choose when you noticed."}},
+        }
+
+    def get_photo_url(self, obj):
+        if not obj.photo:
+            return None
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        prefix = "lgu" if getattr(user, "role", None) in ("LGU_OFFICER", "ADMIN") else "farmer"
+        path = f"/api/{prefix}/loss-reports/{obj.pk}/photo/"
+        return request.build_absolute_uri(path) if request else path
+
+    def validate_photo(self, image):
+        return validate_evidence_file(image)
+
+    def validate_notes(self, value):
+        problem = notes_problem(value, "Notes", 1000)
+        if problem:
+            raise serializers.ValidationError(problem)
+        return clean_notes(value)
+
+
+class LossOutcomeReportSerializer(LossReportSerializer):
+    """A loss as LGU and Admin see it: with whose plant it was."""
+
+    farmer_name = serializers.CharField(source="plant.farmer.get_full_name", read_only=True)
+    plant_name = serializers.CharField(source="plant.display_name", read_only=True)
+    crop_name = serializers.CharField(source="plant.crop.name", read_only=True)
+    crop_emoji = serializers.CharField(source="plant.crop.emoji", read_only=True)
+
+    class Meta(LossReportSerializer.Meta):
+        fields = LossReportSerializer.Meta.fields + [
             "farmer_name",
             "plant_name",
             "crop_name",

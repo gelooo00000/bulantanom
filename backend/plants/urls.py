@@ -47,6 +47,11 @@ farmer_urlpatterns = [
         name="harvest-photo",
     ),
     path(
+        "loss-reports/<int:pk>/photo/",
+        views.LossPhotoView.as_view(),
+        name="loss-photo",
+    ),
+    path(
         "assessments/<int:pk>/reanalyze/",
         views.reanalyze_assessment,
         name="assessment-reanalyze",

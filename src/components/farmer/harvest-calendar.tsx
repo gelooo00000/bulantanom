@@ -62,7 +62,8 @@ export function HarvestCalendar({
     let later = 0;
     let readyNow = 0;
     for (const plant of plants) {
-      if (plant.status === "HARVESTED" || plant.status === "ARCHIVED") continue;
+      if (plant.status === "HARVESTED" || plant.status === "ARCHIVED" || plant.status === "LOST")
+        continue;
       const start = parseIso(plant.expected_harvest_start);
       const end = parseIso(plant.expected_harvest_end);
       if (end < today) continue; // window already passed

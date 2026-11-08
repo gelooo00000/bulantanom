@@ -18,12 +18,31 @@ from django.utils import timezone
 
 from accounts.models import AccountStatus, UserRole
 
-from .models import Assessment, HarvestReport, Plant, PlantStatus, RiskLevel, RiskStatus
+from .models import (
+    Assessment,
+    HarvestReport,
+    LossReport,
+    Plant,
+    PlantStatus,
+    RiskLevel,
+    RiskStatus,
+)
 
 # How long a reported harvest can still be undone (moved back to growing).
 RESTORE_WINDOW = timedelta(hours=24)
 
 _RISK_ORDER = {RiskLevel.LOW: 1, RiskLevel.MEDIUM: 2, RiskLevel.HIGH: 3}
+
+
+def _risk_history(plant: Plant) -> list[str]:
+    """Completed risk levels over the plant's life, oldest first."""
+    return list(
+        Assessment.objects.filter(
+            plant=plant, risk__status=RiskStatus.COMPLETED, risk__risk_level__in=_RISK_ORDER
+        )
+        .order_by("assessment_date", "created_at")
+        .values_list("risk__risk_level", flat=True)
+    )
 
 
 def system_facts(plant: Plant, harvested_on) -> dict:
@@ -38,11 +57,7 @@ def system_facts(plant: Plant, harvested_on) -> dict:
         timing = HarvestReport.Timing.ON_TIME
 
     assessments = Assessment.objects.filter(plant=plant)
-    levels = list(
-        assessments.filter(risk__status=RiskStatus.COMPLETED, risk__risk_level__in=_RISK_ORDER)
-        .order_by("assessment_date", "created_at")
-        .values_list("risk__risk_level", flat=True)
-    )
+    levels = _risk_history(plant)
     highest = max(levels, key=lambda level: _RISK_ORDER[level], default="")
     high_count = sum(1 for level in levels if level == RiskLevel.HIGH)
     return {
@@ -66,8 +81,34 @@ def record_harvest(plant: Plant, answers: dict) -> HarvestReport:
     return HarvestReport.objects.create(plant=plant, **answers, **system_facts(plant, harvested_on))
 
 
+@transaction.atomic
+def record_loss(plant: Plant, answers: dict) -> LossReport:
+    """Marks `plant` lost and files its loss report, together or not at all."""
+    levels = _risk_history(plant)
+    facts = {
+        "lost_at": timezone.now(),
+        "age_days": plant.age_days,
+        "assessments_count": Assessment.objects.filter(plant=plant).count(),
+        "last_risk": levels[-1] if levels else "",
+        "highest_risk": max(levels, key=lambda level: _RISK_ORDER[level], default=""),
+        "high_risk_count": sum(1 for level in levels if level == RiskLevel.HIGH),
+        "warned_before": any(level in (RiskLevel.MEDIUM, RiskLevel.HIGH) for level in levels),
+    }
+    plant.status = PlantStatus.LOST
+    plant.save(update_fields=["status", "updated_at"])
+    return LossReport.objects.create(plant=plant, **answers, **facts)
+
+
 def restore_problem(plant: Plant) -> str | None:
-    """Why a harvested plant can no longer go back to growing, or None."""
+    """Why a harvested or lost plant can no longer go back to growing, or None."""
+    if plant.status == PlantStatus.LOST:
+        loss = getattr(plant, "loss_report", None)
+        if loss is not None and timezone.now() - loss.lost_at > RESTORE_WINDOW:
+            return (
+                "This loss was reported more than 24 hours ago, so it can no "
+                "longer be undone."
+            )
+        return None
     report = getattr(plant, "harvest_report", None)
     if report is None or plant.harvested_at is None:
         return None  # Harvested before reports existed: unchanged behaviour.
@@ -96,7 +137,33 @@ def reports_in_scope():
     ).select_related("plant", "plant__crop", "plant__variant", "plant__farmer")
 
 
-def outcomes(reports=None, *, recent: int = 10) -> dict:
+def losses_in_scope():
+    """Loss reports of approved Farmers."""
+    return LossReport.objects.filter(
+        plant__farmer__role=UserRole.FARMER,
+        plant__farmer__account_status=AccountStatus.APPROVED,
+    ).select_related("plant", "plant__crop", "plant__variant", "plant__farmer")
+
+
+def loss_outcomes(losses, harvested: int, *, recent: int = 10) -> dict:
+    """Survival, causes of loss, and whether BulanTanom warned beforehand."""
+    losses = list(losses)
+    lost = len(losses)
+    warned = sum(1 for r in losses if r.warned_before)
+    return {
+        "lost_total": lost,
+        "survival_rate": _percent(harvested, harvested + lost),
+        "warned_before_loss": warned,
+        "warned_before_loss_rate": _percent(warned, lost),
+        "causes": [
+            {"value": value, "label": label, "count": sum(1 for r in losses if r.cause == value)}
+            for value, label in LossReport.Cause.choices
+        ],
+        "recent_losses": losses[:recent],
+    }
+
+
+def outcomes(reports=None, *, recent: int = 10, losses=None) -> dict:
     """
     The figures that show how monitored plants turned out:
     healthy at harvest, recovered from High risk, harvested on time, and
@@ -171,4 +238,7 @@ def outcomes(reports=None, *, recent: int = 10) -> dict:
         "timing": breakdown("timing", HarvestReport.Timing),
         "by_crop": crops,
         "recent": reports[:recent],
+        **loss_outcomes(
+            losses if losses is not None else losses_in_scope(), total, recent=recent
+        ),
     }

@@ -1,6 +1,6 @@
 import type { BackendAccountStatus, BackendUser } from "@/lib/api/auth-api";
 import { apiFetch } from "@/lib/api/client";
-import type { HarvestReport } from "@/lib/api/plants-api";
+import type { HarvestReport, LossReport } from "@/lib/api/plants-api";
 
 /**
  * Metrics the LGU dashboard is designed around but which have no backing
@@ -143,6 +143,14 @@ export type HarvestOutcomeReport = HarvestReport & {
 
 type Breakdown = { value: string; label: string; count: number }[];
 
+/** One loss report, as LGU Officers and Admins see it. */
+export type LossOutcomeReport = LossReport & {
+  farmer_name: string;
+  plant_name: string;
+  crop_name: string;
+  crop_emoji: string;
+};
+
 /** How harvested plants turned out, from the Farmers' harvest reports. */
 export type HarvestOutcomes = {
   total: number;
@@ -168,6 +176,15 @@ export type HarvestOutcomes = {
     average_days: number;
   }[];
   recent: HarvestOutcomeReport[];
+  /** Plants reported dead before harvest. */
+  lost_total: number;
+  /** Harvested out of harvested + lost; null while there are neither. */
+  survival_rate: number | null;
+  /** Lost plants BulanTanom had read Medium or High risk for beforehand. */
+  warned_before_loss: number;
+  warned_before_loss_rate: number | null;
+  causes: Breakdown;
+  recent_losses: LossOutcomeReport[];
 };
 
 export function fetchLguHarvestOutcomes(accessToken: string): Promise<HarvestOutcomes> {

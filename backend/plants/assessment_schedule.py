@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from django.db.models import Max
+from django.db.models import Max, OuterRef, Subquery
 from django.utils import timezone
 
 # One completed assessment per plant per 7-day period.
@@ -24,6 +24,29 @@ ASSESSMENT_INTERVAL_DAYS = 7
 # yet — a verdict with nothing behind it. A week is also what the rest of the
 # schedule runs on, so the first check simply falls on the normal cadence.
 FIRST_ASSESSMENT_AGE_DAYS = 7
+
+# A plant whose latest reading is High or Medium may be checked again this
+# soon, instead of waiting the full week: the farmer has treated it and needs
+# to see whether it is recovering before it is too late.
+EARLY_RECHECK_DAYS = 3
+EARLY_RECHECK_LEVELS = ("HIGH", "MEDIUM")
+
+_UNSET = object()
+
+
+def last_risk_level(plant):
+    """The risk level of the plant's latest assessment, or None."""
+    annotated = getattr(plant, "last_risk_level_annotated", _UNSET)
+    if annotated is not _UNSET:
+        return annotated
+    from .models import Assessment
+
+    return (
+        Assessment.objects.filter(plant=plant)
+        .order_by("-assessment_date", "-created_at")
+        .values_list("risk__risk_level", flat=True)
+        .first()
+    )
 
 
 def last_assessment_date(plant):
@@ -46,11 +69,12 @@ def eligibility(plant, today=None) -> dict:
     """
     today = today or timezone.localdate()
 
-    # A harvested plant is finished: no more weekly assessments.
-    if plant.status in ("HARVESTED", "ARCHIVED"):
+    # A harvested or lost plant is finished: no more weekly assessments.
+    if plant.status in ("HARVESTED", "ARCHIVED", "LOST"):
         return {
             "can_assess": False,
-            "harvested": True,
+            "harvested": plant.status != "LOST",
+            "lost": plant.status == "LOST",
             "last_assessment_date": None,
             "next_assessment_date": None,
             "days_remaining": 0,
@@ -93,6 +117,20 @@ def eligibility(plant, today=None) -> dict:
 
     next_date = latest + timedelta(days=ASSESSMENT_INTERVAL_DAYS)
     days_remaining = (next_date - today).days
+    if (
+        days_remaining > 0
+        and (today - latest).days >= EARLY_RECHECK_DAYS
+        and last_risk_level(plant) in EARLY_RECHECK_LEVELS
+    ):
+        return {
+            "can_assess": True,
+            # Allowed before the week is up because the plant is at risk.
+            "early_recheck": True,
+            "last_assessment_date": latest.isoformat(),
+            "next_assessment_date": next_date.isoformat(),
+            "days_remaining": 0,
+            "interval_days": ASSESSMENT_INTERVAL_DAYS,
+        }
     return {
         "can_assess": days_remaining <= 0,
         "last_assessment_date": latest.isoformat(),
@@ -105,4 +143,14 @@ def eligibility(plant, today=None) -> dict:
 
 def with_last_assessment_date(queryset):
     """Annotate a Plant queryset so `eligibility()` needs no extra query."""
-    return queryset.annotate(last_assessment_date_annotated=Max("assessments__assessment_date"))
+    from .models import Assessment
+
+    latest_level = (
+        Assessment.objects.filter(plant=OuterRef("pk"))
+        .order_by("-assessment_date", "-created_at")
+        .values("risk__risk_level")[:1]
+    )
+    return queryset.annotate(
+        last_assessment_date_annotated=Max("assessments__assessment_date"),
+        last_risk_level_annotated=Subquery(latest_level),
+    )

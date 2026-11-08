@@ -10,6 +10,7 @@ export const plants = defineMessages({
   },
   "status.HARVESTED": { en: "Harvested", fil: "Naani na", bik: "Naani na" },
   "status.ARCHIVED": { en: "Archived", fil: "Naka-archive", bik: "Naka-archive" },
+  "status.LOST": { en: "Lost", fil: "Namatay", bik: "Nagadan" },
 
   "age.today": { en: "Planted today", fil: "Itinanim ngayon", bik: "Itinanom yana" },
   "age.one": { en: "1 day old", fil: "1 araw na", bik: "1 adlaw na" },
@@ -109,9 +110,9 @@ export const plants = defineMessages({
     bik: "Paraon an {n} tanom?",
   },
   "myPlants.confirmText": {
-    en: "This permanently deletes the plant and all of its weekly assessments, AI risk readings and evidence photos. It can't be undone.",
-    fil: "Permanenteng mabubura ang tanim at lahat ng lingguhang pagsusuri, resulta ng AI, at mga litrato nito. Hindi na ito maibabalik.",
-    bik: "Permanente na mapapara an tanom asin ngatanan na pagsusi kada semana, resulta san AI, asin mga litrato kaini. Dili na ini maibabalik.",
+    en: "This permanently deletes the plant and all of its weekly assessments, AI risk readings and evidence photos. It can't be undone. Did the plant die? Use \"Plant died?\" on the Risk Indicator instead, so its history is kept.",
+    fil: "Permanenteng mabubura ang tanim at lahat ng lingguhang pagsusuri, resulta ng AI, at mga litrato nito. Hindi na ito maibabalik. Namatay ba ang tanim? Gamitin ang \"Namatay ang tanim?\" sa Risk Indicator para maitago ang kasaysayan nito.",
+    bik: "Permanente na mapapara an tanom asin ngatanan na pagsusi kada semana, resulta san AI, asin mga litrato kaini. Dili na ini maibabalik. Nagadan an tanom? Gamiton an \"Nagadan an tanom?\" sa Risk Indicator tanganing maitago an kasaysayan kaini.",
   },
   "myPlants.confirmOne": {
     en: "Yes, delete 1 plant",

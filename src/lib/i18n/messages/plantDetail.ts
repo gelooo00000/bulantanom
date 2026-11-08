@@ -27,6 +27,12 @@ export const plantDetail = defineMessages({
     fil: "Naani na ang {name}, kaya wala nang lingguhang pagsusuri. Nasa Archive ng Anihan ang ulat ng ani nito.",
     bik: "Naani na an {name}, kaya mayo na nin semanal na pagsusi. Nasa Archive kan Pag-ani an report san ani kaini.",
   },
+  "lock.lostTitle": { en: "Lost", fil: "Namatay", bik: "Nagadan" },
+  "lock.lostText": {
+    en: "{name} was reported lost, so there are no more weekly assessments. Its loss report is in the Harvest Archive.",
+    fil: "Naiulat na namatay ang {name}, kaya wala nang lingguhang pagsusuri. Nasa Archive ng Anihan ang ulat nito.",
+    bik: "Na-report na nagadan an {name}, kaya mayo na nin semanal na pagsusi. Nasa Archive kan Pag-ani an report kaini.",
+  },
   "lock.notPlanted": { en: "Not planted yet", fil: "Hindi pa naitatanim", bik: "Dili pa natatanom" },
   "lock.plannedText": {
     en: "{name} is planned for {date}. You can assess it from that day — {when}.",

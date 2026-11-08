@@ -87,6 +87,11 @@ lgu_urlpatterns = [
         name="lgu-harvest-photo",
     ),
     path(
+        "loss-reports/<int:pk>/photo/",
+        plant_views.LossPhotoView.as_view(),
+        name="lgu-loss-photo",
+    ),
+    path(
         "harvest-outcomes/",
         plant_views.lgu_harvest_outcomes,
         name="lgu-harvest-outcomes",

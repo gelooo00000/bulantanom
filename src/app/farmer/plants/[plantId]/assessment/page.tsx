@@ -83,8 +83,12 @@ export default function AssessmentPage({
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
           {eligibility.can_assess
-            ? t("asmt.intro", { name: plantLabel })
-            : eligibility.harvested
+            ? eligibility.early_recheck
+              ? `${t("asmt.intro", { name: plantLabel })} ${t("riskCard.earlyWhy")}`
+              : t("asmt.intro", { name: plantLabel })
+            : eligibility.lost
+              ? t("lock.lostText", { name: plantLabel })
+              : eligibility.harvested
               ? t("lock.harvestedText", { name: plantLabel })
               : eligibility.too_young
                 ? t("young.why")
