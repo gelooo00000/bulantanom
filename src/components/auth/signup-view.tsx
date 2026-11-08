@@ -6,8 +6,7 @@ import { ArrowRight, Lock, LoaderCircle, Mail, Sprout, User } from "lucide-react
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
-import { cn } from "@/lib/utils";
-import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
+import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
 import { VerifyEmailStep } from "@/components/auth/verify-email-step";
@@ -121,12 +120,12 @@ export function SignupView() {
           <div>
             <div className="flex items-center gap-2.5">
               <span
-                className="flex size-10 shrink-0 items-center justify-center rounded-xl border-2"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
                 style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
               >
                 <Sprout className="size-4" />
               </span>
-              <h1 className="font-heading text-2xl leading-tight tracking-[0.01em] text-foreground sm:text-[1.75rem]">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 Create your Farmer account.
               </h1>
             </div>
@@ -197,7 +196,7 @@ export function SignupView() {
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 
-            <Button type="submit" disabled={submitting} className={cn(AUTH_BUTTON_CLASSES, "mt-1")}>
+            <Button type="submit" disabled={submitting} className="mt-1">
               {submitting ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />

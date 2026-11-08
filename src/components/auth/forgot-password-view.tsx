@@ -6,12 +6,7 @@ import { ArrowRight, KeyRound, LoaderCircle, Lock, Mail } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
-import {
-  AUTH_BUTTON_CLASSES,
-  AuthCodeInput,
-  AuthIconInput,
-  AuthPasswordField,
-} from "@/components/auth/auth-field";
+import { AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
@@ -119,12 +114,12 @@ export function ForgotPasswordView() {
             </Link>
             <div className="mt-3 flex items-center gap-2.5 sm:mt-4">
               <span
-                className="flex size-10 shrink-0 items-center justify-center rounded-xl border-2"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
                 style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
               >
                 <KeyRound className="size-4" />
               </span>
-              <h1 className="font-heading text-2xl leading-tight tracking-[0.01em] text-foreground sm:text-[1.75rem]">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 {sentTo ? "Choose a new password." : "Forgot your password?"}
               </h1>
             </div>
@@ -141,14 +136,19 @@ export function ForgotPasswordView() {
                 <Label htmlFor="code" className="text-foreground">
                   Reset code
                 </Label>
-                <AuthCodeInput
+                <input
                   id="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   autoFocus
+                  maxLength={6}
+                  placeholder="000000"
                   value={code}
-                  onChange={(value) => {
-                    setCode(value);
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
                     setError(null);
                   }}
+                  className="border-input bg-background/70 focus-visible:border-ring focus-visible:ring-ring/50 h-14 w-full rounded-xl border px-4 text-center font-mono text-2xl tracking-[0.5em] outline-none focus-visible:ring-3"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -189,7 +189,7 @@ export function ForgotPasswordView() {
                 </p>
               )}
 
-              <Button type="submit" disabled={submitting || code.length !== 6} className={AUTH_BUTTON_CLASSES}>
+              <Button type="submit" disabled={submitting || code.length !== 6}>
                 {submitting ? (
                   <>
                     <LoaderCircle className="size-4 animate-spin" />
@@ -245,7 +245,7 @@ export function ForgotPasswordView() {
                 </p>
               )}
 
-              <Button type="submit" disabled={submitting} className={AUTH_BUTTON_CLASSES}>
+              <Button type="submit" disabled={submitting}>
                 {submitting ? (
                   <>
                     <LoaderCircle className="size-4 animate-spin" />
