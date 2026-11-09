@@ -17,10 +17,10 @@ import {
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CARD_FOOTER, CardPill, CropTile, FarmCard, TimelineBar } from "@/components/farmer/farm-card";
+import { CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { canRestoreHarvest, type BackendPlant, type HarvestReport } from "@/lib/api/plants-api";
-import { CROP_OUTLINE, cropTint, cropVar } from "@/lib/crop-colors";
 import { humanDuration } from "@/lib/duration";
 import {
   daysUntil,
@@ -34,44 +34,44 @@ import {
 import { useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const PHASE_STYLE: Record<
+export const PHASE_STYLE: Record<
   HarvestPhase,
-  { pill: string; text: string; bar: string; icon: LucideIcon }
+  { pill: string; text: string; color: string; icon: LucideIcon }
 > = {
   open: {
     pill: "bg-risk-low/15 text-risk-low border-risk-low/30",
     text: "text-risk-low",
-    bar: "bg-risk-low",
+    color: "var(--risk-low)",
     icon: CircleCheck,
   },
   approaching: {
     pill: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
     text: "text-risk-medium",
-    bar: "bg-risk-medium",
+    color: "var(--risk-medium)",
     icon: CalendarClock,
   },
   growing: {
     pill: "border-border text-muted-foreground",
     text: "text-foreground",
-    bar: "bg-primary",
+    color: "var(--primary)",
     icon: Sprout,
   },
   passed: {
     pill: "bg-risk-high/15 text-risk-high border-risk-high/30",
     text: "text-risk-high",
-    bar: "bg-risk-high",
+    color: "var(--risk-high)",
     icon: TriangleAlert,
   },
   harvested: {
     pill: "border-border text-muted-foreground",
     text: "text-muted-foreground",
-    bar: "bg-muted-foreground",
+    color: "var(--muted-foreground)",
     icon: CircleCheck,
   },
 };
 
 /** The short status in the corner pill. */
-function phaseLabel(plant: BackendPlant, phase: HarvestPhase, t: Translate): string {
+export function phaseLabel(plant: BackendPlant, phase: HarvestPhase, t: Translate): string {
   const toStart = daysUntil(plant.expected_harvest_start);
   const toEnd = daysUntil(plant.expected_harvest_end);
   switch (phase) {
@@ -135,28 +135,14 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
         )}
       </div>
 
-      {/* Growing part (light) then the harvest window (green); the dark
-          fill shows how far along today is. */}
-      <div className="relative mt-5 h-2.5 w-full rounded-full" aria-hidden="true">
-        <div className="bg-muted absolute inset-y-0 left-0 rounded-l-full" style={{ width: `${windowStart}%` }} />
+      {/* Growing part (the muted track) then the harvest window (green);
+          the fill shows how far along today is. */}
+      <TimelineBar todayAt={todayAt} fill={style.color}>
         <div
           className="bg-risk-low/30 absolute inset-y-0 rounded-r-full"
           style={{ left: `${windowStart}%`, width: `${windowWidth}%` }}
         />
-        <div
-          className={cn("absolute inset-y-0 left-0 rounded-full opacity-80", style.bar)}
-          style={{ width: `${todayAt}%` }}
-        />
-        <div
-          className="absolute -top-5 flex -translate-x-1/2 flex-col items-center"
-          style={{ left: `${Math.min(96, Math.max(4, todayAt))}%` }}
-        >
-          <span className="text-foreground text-[10px] leading-none font-medium">
-            {t("harvestCard.today")}
-          </span>
-          <span className="bg-foreground mt-0.5 h-5 w-0.5 rounded-full" />
-        </div>
-      </div>
+      </TimelineBar>
 
       <div className="text-muted-foreground grid grid-cols-3 gap-2 text-[11px] leading-tight">
         <div>
@@ -242,26 +228,26 @@ export function HarvestPlantCard({
   }
 
   return (
-    // Outlined in the crop's own colour on hover or tap, as on My Plants.
-    <Card
-      style={cropVar(plant.crop.name)}
-      className={cn(
-        "h-full min-w-0 gap-2 py-4 transition-all",
-        CROP_OUTLINE,
-        phase === "harvested" && "opacity-75",
-      )}
+    // Outlined in the crop's own colour on hover or tap, with the phase's
+    // colour washed across the top, as on the Risk Indicator.
+    <FarmCard
+      cropName={plant.crop.name}
+      accent={style.color}
+      strong={phase === "open" || phase === "passed"}
+      className={cn(phase === "harvested" && "opacity-75")}
       data-phase={phase}
     >
       <CardContent className="flex h-full flex-col gap-3.5 px-4 sm:px-5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl text-2xl leading-none"
-              style={{ backgroundColor: cropTint(plant.crop.name) }}
-            >
-              {plant.crop.emoji}
-            </span>
+            <CropTile
+              cropName={plant.crop.name}
+              emoji={plant.crop.emoji}
+              accent={style.color}
+              ring={phase !== "growing" && phase !== "harvested"}
+              dot={phase === "open" || phase === "passed"}
+              pulse={phase === "open" || phase === "passed"}
+            />
             <div className="min-w-0">
               <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
                 {plant.display_name}
@@ -277,15 +263,9 @@ export function HarvestPlantCard({
             </div>
           </div>
           <div className="flex max-w-[55%] shrink-0 items-start gap-1.5">
-            <span
-              className={cn(
-                // May wrap rather than push the card past a phone's edge.
-                "font-heading rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
-                style.pill,
-              )}
-            >
+            <CardPill icon={Icon} className={style.pill}>
               {phaseLabel(plant, phase, t)}
-            </span>
+            </CardPill>
             {hasTip && phase !== "harvested" && <ReadyTip tip={tip} />}
           </div>
         </div>
@@ -315,7 +295,7 @@ export function HarvestPlantCard({
         )}
 
 
-        <div className="border-border mt-auto flex flex-wrap items-center gap-2 border-t pt-3">
+        <div className={CARD_FOOTER}>
           {onStatusChange && canMark && (
             <Button size="sm" onClick={() => change("HARVESTED")} disabled={saving}>
               {saving ? (
@@ -360,7 +340,7 @@ export function HarvestPlantCard({
           )}
         </div>
       </CardContent>
-    </Card>
+    </FarmCard>
   );
 }
 

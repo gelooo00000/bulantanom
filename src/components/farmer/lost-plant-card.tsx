@@ -4,7 +4,8 @@ import { LoaderCircle, TriangleAlert, Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CARD_FOOTER, CropTile, FarmCard } from "@/components/farmer/farm-card";
+import { CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { canRestoreHarvest, type BackendPlant } from "@/lib/api/plants-api";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
@@ -36,15 +37,16 @@ export function LostPlantCard({
   }
 
   return (
-    <Card className="h-full gap-2 py-4 opacity-80">
+    <FarmCard cropName={plant.crop.name} accent="var(--risk-high)" className="opacity-85">
       <CardContent className="flex h-full flex-col gap-3 px-4 sm:px-5">
         <div className="flex items-start gap-3">
-          <span
-            aria-hidden="true"
-            className="bg-muted flex size-11 shrink-0 items-center justify-center rounded-xl text-2xl grayscale"
-          >
-            {plant.crop.emoji}
-          </span>
+          <CropTile
+            cropName={plant.crop.name}
+            emoji={plant.crop.emoji}
+            accent="var(--risk-high)"
+            ring
+            className="grayscale"
+          />
           <div className="min-w-0">
             <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
               {plant.display_name}
@@ -76,19 +78,19 @@ export function LostPlantCard({
         )}
 
         {canRestoreHarvest(plant) && (
-          <div className="border-border mt-auto border-t pt-3">
+          <div className={CARD_FOOTER}>
             <Button size="sm" variant="outline" onClick={restore} disabled={saving}>
               {saving ? <LoaderCircle className="size-3.5 animate-spin" /> : <Undo2 className="size-3.5" />}
               {t("harvestCard.restore")}
             </Button>
             {failed && (
-              <p className="text-risk-high mt-1 text-xs" role="alert">
+              <p className="text-risk-high w-full text-xs" role="alert">
                 {t("harvestCard.saveFailed")}
               </p>
             )}
           </div>
         )}
       </CardContent>
-    </Card>
+    </FarmCard>
   );
 }
