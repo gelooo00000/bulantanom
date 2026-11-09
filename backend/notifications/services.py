@@ -802,7 +802,9 @@ def notify_risk_level_changed(assessment, risk):
             assessment__plant=plant, status=RiskStatus.COMPLETED
         )
         .exclude(pk=risk.pk)
-        .exclude(risk_level="")
+        # Only a real level to compare against: a "Too early to tell"
+        # (INCONCLUSIVE) reading has no place on the Low-Medium-High scale.
+        .filter(risk_level__in=list(_RISK_ORDER))
         .order_by("-assessment__assessment_date", "-assessment__created_at")
         .first()
     )

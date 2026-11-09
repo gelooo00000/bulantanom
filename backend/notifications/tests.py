@@ -816,6 +816,41 @@ class RiskNotificationSourceTests(NotificationTestMixin, TransactionTestCase):
         notify_assessment_evaluated(assessment, risk)
         self.assertEqual(Notification.objects.count(), 0)
 
+    def test_a_too_early_reading_before_a_real_level_does_not_crash(self):
+        """
+        Live bug (2026-11-10): a plant whose last reading was "Too early to
+        tell" (INCONCLUSIVE) made every new assessment answer 500, because
+        the level-change check looked INCONCLUSIVE up on the Low-Medium-High
+        scale. That reading is skipped; with no earlier real level there is
+        nothing to compare, so no change is announced.
+        """
+        from datetime import timedelta
+
+        from notifications.services import notify_risk_level_changed
+
+        farmer = make_user("farmer@example.com")
+        plant = self.make_plant(farmer)
+        fields = dict(
+            plant=plant, plant_age_days=30, growth_condition="as_expected",
+            health_condition="healthy", leaf_condition="healthy",
+            watering_frequency="daily",
+        )
+        earlier = Assessment.objects.create(
+            **fields, assessment_date=timezone.localdate() - timedelta(days=7)
+        )
+        RiskAssessment.objects.create(
+            assessment=earlier, status=RiskStatus.COMPLETED, risk_level="INCONCLUSIVE"
+        )
+        latest = Assessment.objects.create(**fields)
+        risk = RiskAssessment.objects.create(
+            assessment=latest, status=RiskStatus.COMPLETED, risk_level="HIGH"
+        )
+
+        notify_risk_level_changed(latest, risk)
+        self.assertFalse(
+            Notification.objects.filter(notification_type=NotificationType.RISK_CHANGED).exists()
+        )
+
 
 class DailyJobsTests(APITestCase):
     URL = "/api/jobs/daily/"

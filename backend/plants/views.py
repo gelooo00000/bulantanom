@@ -463,6 +463,20 @@ def _age_today(plant) -> int:
     return max(0, (timezone.localdate() - plant.planting_date).days)
 
 
+def _notify_safely(assessment, *senders) -> None:
+    """
+    Sends an assessment's notifications. By now the assessment and its
+    reading are saved, so a notification bug is logged, never turned into an
+    error for the farmer: on 2026-11-10 one did, and the farmer saw
+    "Something went wrong" for an assessment that had in fact been recorded.
+    """
+    for send in senders:
+        try:
+            send()
+        except Exception:  # noqa: BLE001 - a notification must not undo a saved assessment
+            logger.exception("Notification failed for assessment %s", assessment.pk)
+
+
 def _assessment_weather() -> dict:
     """The farm's last week of weather for a new assessment, or {} if unknown."""
     if not settings.ATTACH_WEATHER_TO_ASSESSMENTS:
@@ -758,10 +772,13 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
         #    only from the stored values — no extra Gemini call is made to
         #    write notification text. A failed evaluation produces no risk
         #    notification, because there is no level to report.
-        notify_assessment_submitted(assessment, eligibility(plant))
-        notify_assessment_evaluated(assessment, risk)
-        # Separate from the reading above: only fires if the level moved.
-        notify_risk_level_changed(assessment, risk)
+        _notify_safely(
+            assessment,
+            lambda: notify_assessment_submitted(assessment, eligibility(plant)),
+            lambda: notify_assessment_evaluated(assessment, risk),
+            # Separate from the reading above: only fires if the level moved.
+            lambda: notify_risk_level_changed(assessment, risk),
+        )
 
         return Response(
             self.get_serializer(assessment).data, status=status.HTTP_201_CREATED
@@ -834,8 +851,11 @@ def reanalyze_assessment(request, pk):
     # A retry that finally succeeds still notifies once — the earlier failed
     # attempt produced no risk notification, and the dedupe key makes a
     # second success a no-op.
-    notify_assessment_evaluated(assessment, risk)
-    notify_risk_level_changed(assessment, risk)
+    _notify_safely(
+        assessment,
+        lambda: notify_assessment_evaluated(assessment, risk),
+        lambda: notify_risk_level_changed(assessment, risk),
+    )
     return Response(
         AssessmentSerializer(assessment, context={"request": request}).data
     )
