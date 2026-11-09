@@ -396,3 +396,118 @@ def knowledge_for(crop) -> dict:
         "general": GENERAL_GUIDE,
         "this_crop": CROPS.get(getattr(crop, "id", ""), {}),
     }
+
+
+# Fertilizers commonly sold in the Philippines - at agri-supply (agrivet)
+# stores, DA offices and farmer cooperatives. The risk evaluation may only
+# recommend from this list (its schema allows these ids and nothing else), so
+# a farmer is never sent looking for a product they cannot buy here. Amounts
+# are a general guide for a small plot; the product label always wins.
+PHILIPPINE_FERTILIZERS: dict[str, dict] = {
+    "complete-14-14-14": {
+        "name": "Complete fertilizer",
+        "grade": "14-14-14",
+        "kind": "inorganic",
+        "examples": "Atlas, Philphos, Yara, Planters Complete",
+        "good_for": "general growth of vegetables and young fruit trees; balanced N, P and K",
+        "typical_amount": "1-2 tablespoons (10-20 g) per plant, every 2-3 weeks for vegetables",
+        "how": "scatter in a ring 5-10 cm from the stem, mix into the topsoil, then water",
+    },
+    "urea-46-0-0": {
+        "name": "Urea",
+        "grade": "46-0-0",
+        "kind": "inorganic",
+        "examples": "Atlas Urea, Planters Urea, Yara",
+        "good_for": "leafy growth: pale or yellowing leaves from nitrogen shortage (lettuce, cabbage, corn)",
+        "typical_amount": "1 teaspoon (about 5 g) per plant, or 1 tablespoon dissolved in 4 litres of water",
+        "how": "side-dress away from the stem and water in; never let it touch the leaves",
+    },
+    "ammonium-sulfate-21-0-0": {
+        "name": "Ammonium sulfate",
+        "grade": "21-0-0",
+        "kind": "inorganic",
+        "examples": "Atlas, Planters, Philphos",
+        "good_for": "nitrogen for leafy crops; gentler than urea",
+        "typical_amount": "1 tablespoon (about 10 g) per plant",
+        "how": "side-dress 5-10 cm from the stem and water in",
+    },
+    "ammophos-16-20-0": {
+        "name": "Ammonium phosphate (Ammophos)",
+        "grade": "16-20-0",
+        "kind": "inorganic",
+        "examples": "Philphos Ammophos, Atlas",
+        "good_for": "early growth and root development of young plants",
+        "typical_amount": "1-2 tablespoons (10-20 g) per plant at planting or early growth",
+        "how": "mix into the soil near the roots, then water",
+    },
+    "muriate-of-potash-0-0-60": {
+        "name": "Muriate of potash (MOP)",
+        "grade": "0-0-60",
+        "kind": "inorganic",
+        "examples": "Atlas, Planters, Yara",
+        "good_for": "flowering and fruiting: fruit size, sweetness and sturdier plants",
+        "typical_amount": "1 teaspoon (about 5 g) per plant at flowering and fruit set",
+        "how": "side-dress away from the stem and water in",
+    },
+    "calcium-nitrate": {
+        "name": "Calcium nitrate",
+        "grade": "15.5-0-0 + 19% calcium",
+        "kind": "inorganic",
+        "examples": "YaraLiva Calcinit",
+        "good_for": "tip burn in lettuce and cabbage, blossom-end rot in tomato and pepper",
+        "typical_amount": "1 tablespoon dissolved in 4 litres of water, poured at the base",
+        "how": "apply to the soil around the plant, following the label",
+    },
+    "vermicast": {
+        "name": "Vermicast (vermicompost)",
+        "grade": "organic",
+        "kind": "organic",
+        "examples": "sold by local vermicompost producers, DA and agri-supply stores",
+        "good_for": "soil health, gentle feeding and better moisture holding for any crop",
+        "typical_amount": "1-2 handfuls (200-500 g) per plant",
+        "how": "mix into the topsoil around the plant",
+    },
+    "organic-fertilizer": {
+        "name": "Organic fertilizer (composted manure)",
+        "grade": "organic",
+        "kind": "organic",
+        "examples": "BPI-registered bagged organic fertilizer; well-composted chicken or carabao manure",
+        "good_for": "long-term soil fertility for vegetables and fruit trees",
+        "typical_amount": "1-2 handfuls per plant; a few kilos per young tree",
+        "how": "use only fully composted manure, mixed into the soil, never fresh manure against stems",
+    },
+    "bio-n": {
+        "name": "Bio-N biofertilizer",
+        "grade": "biofertilizer",
+        "kind": "biofertilizer",
+        "examples": "Bio-N (UP Los Banos / DA)",
+        "good_for": "corn and rice: supplies part of the nitrogen naturally",
+        "typical_amount": "as the pack directs (seed or seedling coating)",
+        "how": "follow the pack instructions; usually applied at planting",
+    },
+    "foliar-fertilizer": {
+        "name": "Foliar fertilizer",
+        "grade": "varies",
+        "kind": "inorganic",
+        "examples": "commonly stocked foliar sprays at agrivet stores",
+        "good_for": "a quick boost for a stressed but healthy-rooted plant",
+        "typical_amount": "as the label directs",
+        "how": "spray leaves early morning or late afternoon, never in full sun",
+    },
+}
+
+WHERE_TO_BUY = (
+    "Agri-supply (agrivet) stores, the Municipal Agriculture Office / DA, and "
+    "farmer cooperatives in Bulan and Sorsogon."
+)
+
+
+def fertilizers_for_ai() -> dict:
+    """The fertilizer list as the risk evaluation sees it."""
+    return {
+        "where_to_buy": WHERE_TO_BUY,
+        "products": {
+            key: {k: v for k, v in item.items() if k != "examples"} | {"brands": item["examples"]}
+            for key, item in PHILIPPINE_FERTILIZERS.items()
+        },
+    }

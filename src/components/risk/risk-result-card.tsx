@@ -3,7 +3,10 @@
 import {
   CalendarDays,
   CalendarX,
+  ChevronDown,
+  ClipboardCheck,
   Eye,
+  Sprout,
   Info,
   LoaderCircle,
   RotateCw,
@@ -67,7 +70,11 @@ export function RiskResultCard({
   const [assessment, setAssessment] = useState(initial);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
+  // The details (photo, expected vs observed, what was seen, risk factors,
+  // possible causes, monitoring) stay folded until asked for.
+  const [more, setMore] = useState(false);
   const risk = assessment.risk;
+  const completed = !!risk && risk.status === "completed";
 
   async function retryAnalysis() {
     if (!accessToken) return;
@@ -107,7 +114,8 @@ export function RiskResultCard({
           </span>
         </div>
 
-        {assessment.evidence_image_url && (
+        {/* On a finished reading the photo moves under "See more". */}
+        {assessment.evidence_image_url && !completed && (
           <div
             className="overflow-hidden rounded-xl border"
             style={{ borderColor: "var(--landing-border)" }}
@@ -181,71 +189,117 @@ export function RiskResultCard({
 
             <p className="text-sm leading-relaxed">{risk.summary}</p>
 
-            {(risk.reality_vs_expectation?.expected ||
-              risk.reality_vs_expectation?.observed) && (
-              <div className="border-border grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                    {t("result.expected")}
-                  </p>
-                  <p className="mt-1 text-sm">{risk.reality_vs_expectation.expected}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                    {t("result.observed")}
-                  </p>
-                  <p className="mt-1 text-sm">{risk.reality_vs_expectation.observed}</p>
-                </div>
-                {risk.reality_vs_expectation.assessment && (
-                  <p className="text-muted-foreground text-sm sm:col-span-2">
-                    {risk.reality_vs_expectation.assessment}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {risk.visual_observations.length > 0 && (
-              <div>
-                <h3 className="flex items-center gap-1.5 text-sm font-medium">
-                  <Eye className="size-3.5" />
-                  {t("result.visual")}
+            {/* What to do comes first; it is what the farmer acts on. */}
+            {risk.recommended_actions.length > 0 && (
+              <div className="border-primary/30 bg-primary/5 rounded-xl border p-4">
+                <h3 className="font-heading flex items-center gap-1.5 text-sm font-medium">
+                  <ClipboardCheck className="text-primary size-4" />
+                  {t("result.whatToDo")}
                 </h3>
-                <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-sm">
-                  {risk.visual_observations.map((item) => (
+                <ol className="mt-2 space-y-1.5 text-sm">
+                  {risk.recommended_actions.map((item, i) => (
                     <li key={item} className="flex gap-2">
-                      <span className="bg-muted-foreground/50 mt-2 size-1 shrink-0 rounded-full" />
+                      <span className="bg-primary/15 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
+                        {i + 1}
+                      </span>
                       {item}
                     </li>
                   ))}
-                </ul>
+                </ol>
               </div>
             )}
 
-            {risk.risk_factors.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium">{t("result.factors")}</h3>
-                <ul className="mt-1.5 space-y-2 text-sm">
-                  {risk.risk_factors.map((factor) => (
-                    <li key={factor.factor}>
-                      <span
-                        className={cn(
-                          "font-medium",
-                          SEVERITY_CLASS[factor.severity] ?? "text-foreground",
-                        )}
-                      >
-                        {factor.factor}
-                      </span>
-                      <span className="text-muted-foreground"> — {factor.explanation}</span>
-                    </li>
-                  ))}
-                </ul>
+            <FertilizerAdvice fertilizer={risk.fertilizer} />
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-center"
+              aria-expanded={more}
+              onClick={() => setMore((v) => !v)}
+            >
+              {more ? t("result.seeLess") : t("result.seeMore")}
+              <ChevronDown className={cn("size-4 transition-transform", more && "rotate-180")} />
+            </Button>
+
+            {more && (
+              <div className="animate-in fade-in slide-in-from-top-1 flex flex-col gap-5 duration-200">
+                {assessment.evidence_image_url && (
+                  <div
+                    className="overflow-hidden rounded-xl border"
+                    style={{ borderColor: "var(--landing-border)" }}
+                  >
+                    <p className="text-muted-foreground border-border border-b px-3 py-1.5 text-[11px] tracking-wide uppercase">
+                      {t("result.evidence")}
+                    </p>
+                    <AuthedImage
+                      src={assessment.evidence_image_url}
+                      alt={t("row.photoAlt", { name: assessment.plant_display_name })}
+                      className="max-h-80 w-full bg-muted object-contain"
+                    />
+                  </div>
+                )}
+
+                {(risk.reality_vs_expectation?.expected ||
+                  risk.reality_vs_expectation?.observed) && (
+                  <div className="border-border grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                        {t("result.expected")}
+                      </p>
+                      <p className="mt-1 text-sm">{risk.reality_vs_expectation.expected}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                        {t("result.observed")}
+                      </p>
+                      <p className="mt-1 text-sm">{risk.reality_vs_expectation.observed}</p>
+                    </div>
+                  </div>
+                )}
+
+                {risk.visual_observations.length > 0 && (
+                  <div>
+                    <h3 className="flex items-center gap-1.5 text-sm font-medium">
+                      <Eye className="size-3.5" />
+                      {t("result.visual")}
+                    </h3>
+                    <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-sm">
+                      {risk.visual_observations.map((item) => (
+                        <li key={item} className="flex gap-2">
+                          <span className="bg-muted-foreground/50 mt-2 size-1 shrink-0 rounded-full" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {risk.risk_factors.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium">{t("result.factors")}</h3>
+                    <ul className="mt-1.5 space-y-2 text-sm">
+                      {risk.risk_factors.map((factor) => (
+                        <li key={factor.factor}>
+                          <span
+                            className={cn(
+                              "font-medium",
+                              SEVERITY_CLASS[factor.severity] ?? "text-foreground",
+                            )}
+                          >
+                            {factor.factor}
+                          </span>
+                          <span className="text-muted-foreground"> — {factor.explanation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <Section title={t("result.causes")} items={risk.possible_causes} />
+                <Section title={t("result.monitoring")} items={risk.monitoring_advice} />
               </div>
             )}
-
-            <Section title={t("result.causes")} items={risk.possible_causes} />
-            <Section title={t("result.actions")} items={risk.recommended_actions} />
-            <Section title={t("result.monitoring")} items={risk.monitoring_advice} />
-            <Section title={t("result.limitations")} items={risk.limitations} />
 
             <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-3">
               {risk.next_assessment_days && (
@@ -266,6 +320,65 @@ export function RiskResultCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+type Fertilizer = NonNullable<NonNullable<BackendAssessment["risk"]>["fertilizer"]>;
+
+/**
+ * The fertilizer advice: products only from the Philippine list, named and
+ * described by the system, with how much, how, and where to buy them.
+ */
+function FertilizerAdvice({ fertilizer }: { fertilizer?: Fertilizer }) {
+  const { t } = useFarmerLanguage();
+  const products = fertilizer?.products ?? [];
+  if (!fertilizer || (!fertilizer.advice && products.length === 0)) return null;
+  return (
+    <div className="border-risk-low/30 bg-risk-low/5 rounded-xl border p-4">
+      <h3 className="font-heading flex items-center gap-1.5 text-sm font-medium">
+        <Sprout className="text-risk-low size-4" />
+        {t("result.fertilizer")}
+      </h3>
+      {fertilizer.advice && (
+        <p className="text-muted-foreground mt-1.5 text-sm">{fertilizer.advice}</p>
+      )}
+      {products.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-3">
+          {products.map((product) => (
+            <li key={product.id} className="bg-background/70 rounded-lg border p-3 text-sm">
+              <p className="font-medium">
+                {product.name}{" "}
+                <span className="text-muted-foreground font-normal">({product.grade})</span>
+              </p>
+              {product.why && <p className="text-muted-foreground mt-0.5">{product.why}</p>}
+              <dl className="mt-2 grid gap-1 text-[13px]">
+                <div className="flex gap-1.5">
+                  <dt className="font-medium">{t("result.fertAmount")}:</dt>
+                  <dd className="text-muted-foreground">{product.amount}</dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt className="font-medium">{t("result.fertHow")}:</dt>
+                  <dd className="text-muted-foreground">{product.how}</dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt className="font-medium">{t("result.fertBrands")}:</dt>
+                  <dd className="text-muted-foreground">{product.brands}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+      )}
+      {products.length > 0 && fertilizer.where_to_buy && (
+        <p className="mt-3 text-[13px]">
+          <span className="font-medium">{t("result.fertWhere")}:</span>{" "}
+          <span className="text-muted-foreground">{fertilizer.where_to_buy}</span>
+        </p>
+      )}
+      {products.length > 0 && (
+        <p className="text-muted-foreground/70 mt-2 text-[11px]">{t("result.fertLabel")}</p>
+      )}
+    </div>
   );
 }
 

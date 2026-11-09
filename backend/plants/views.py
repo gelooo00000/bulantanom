@@ -365,6 +365,7 @@ def _store_risk(assessment, result, language="en"):
         risk_factors=result["risk_factors"],
         possible_causes=result["possible_causes"],
         recommended_actions=result["recommended_actions"],
+        fertilizer=result.get("fertilizer", {}),
         monitoring_advice=result["monitoring_advice"],
         limitations=result["limitations"],
         next_assessment_days=result["next_assessment_days"],

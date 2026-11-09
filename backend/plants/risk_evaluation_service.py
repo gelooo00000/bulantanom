@@ -24,7 +24,13 @@ import logging
 from django.conf import settings
 
 from .ai_language import write_in
-from .crop_knowledge import VITALITY_SEVERE, knowledge_for
+from .crop_knowledge import (
+    PHILIPPINE_FERTILIZERS,
+    VITALITY_SEVERE,
+    WHERE_TO_BUY,
+    fertilizers_for_ai,
+    knowledge_for,
+)
 from .assessment_questions import not_applicable
 from .durations import human_duration
 from .gemini_models import generate_with_fallback
@@ -87,6 +93,26 @@ RESPONSE_SCHEMA = {
         },
         "possible_causes": {"type": "array", "items": {"type": "string"}},
         "recommended_actions": {"type": "array", "items": {"type": "string"}},
+        "fertilizer": {
+            "type": "object",
+            "properties": {
+                "advice": {"type": "string"},
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            # Only fertilizers sold in the Philippines.
+                            "id": {"type": "string", "enum": list(PHILIPPINE_FERTILIZERS)},
+                            "amount": {"type": "string"},
+                            "why": {"type": "string"},
+                        },
+                        "required": ["id", "amount", "why"],
+                    },
+                },
+            },
+            "required": ["advice", "products"],
+        },
         "monitoring_advice": {"type": "array", "items": {"type": "string"}},
         "next_assessment_days": {"type": "integer"},
         "limitations": {"type": "array", "items": {"type": "string"}},
@@ -97,6 +123,7 @@ RESPONSE_SCHEMA = {
         "reality_vs_expectation",
         "risk_factors",
         "recommended_actions",
+        "fertilizer",
         "next_assessment_days",
         "planting_date_mismatch",
         "answers_match_photo",
@@ -239,6 +266,21 @@ Rules you must follow:
 - A tree crop years away from its first harvest is behaving normally. Judge
   it on how the young tree is establishing, not on the absence of fruit.
 - `risk_level` must be exactly LOW, MEDIUM or HIGH.
+- `fertilizer`: whether feeding would help THIS plant now, and with what.
+  Choose ONLY from `philippine_fertilizers` (all sold at agri-supply stores,
+  the DA and cooperatives in the Philippines) by their `id`; never name any
+  other product. At most 2 products. Match the crop and stage: nitrogen
+  (urea, ammonium sulfate) for leafy growth or pale leaves; complete
+  14-14-14 for general growth; ammophos for young plants and roots; potash
+  for flowering and fruiting; calcium nitrate for tip burn or blossom-end
+  rot; vermicast or organic fertilizer for soil health. Base `amount` on the
+  product's `typical_amount`, in farmer units (tablespoons, handfuls) - never
+  invent a different rate. `why` is one short sentence tied to what was seen
+  or reported. Leave `products` EMPTY and say why in `advice` when feeding
+  would not help or could harm: a plant that is rotting, dying, waterlogged
+  or diseased (fix that first - fertilizer does not cure rot or disease and
+  can burn weak roots), mushrooms, or a healthy plant that was fed recently.
+  `advice` is one or two plain sentences.
 """.strip()
 
 
@@ -281,6 +323,7 @@ def build_context(assessment) -> dict:
 
     return {
         "crop_reference": knowledge_for(crop),
+        "philippine_fertilizers": fertilizers_for_ai(),
         "photo_check_vitality": (assessment.evidence_validation or {}).get("vitality")
         or "unknown",
         "crop": {
@@ -348,6 +391,41 @@ def build_context(assessment) -> dict:
     }
 
 
+def _fertilizer(raw) -> dict:
+    """
+    The fertilizer advice, keeping only products on the Philippine list and
+    adding their fixed names, grades, brands and where to buy them, so what
+    the farmer reads about a product always comes from the system.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    products = []
+    for item in raw.get("products") or []:
+        if not isinstance(item, dict):
+            continue
+        known = PHILIPPINE_FERTILIZERS.get(item.get("id"))
+        if known is None or any(p["id"] == item["id"] for p in products):
+            continue
+        products.append(
+            {
+                "id": item["id"],
+                "name": known["name"],
+                "grade": known["grade"],
+                "kind": known["kind"],
+                "brands": known["examples"],
+                "how": known["how"],
+                "amount": str(item.get("amount", "")).strip() or known["typical_amount"],
+                "why": str(item.get("why", "")).strip(),
+            }
+        )
+        if len(products) == 2:
+            break
+    advice = str(raw.get("advice", "")).strip()
+    if not advice and not products:
+        return {}
+    return {"advice": advice, "products": products, "where_to_buy": WHERE_TO_BUY}
+
+
 def _validate(payload) -> dict | None:
     if not isinstance(payload, dict):
         return None
@@ -399,6 +477,7 @@ def _validate(payload) -> dict | None:
     answers_match = payload.get("answers_match_photo") is not False or not conflicts
 
     return {
+        "fertilizer": _fertilizer(payload.get("fertilizer")),
         "answers_match_photo": answers_match,
         "answer_conflicts": [] if answers_match else conflicts,
         "risk_level": "INCONCLUSIVE" if mismatch else level,
@@ -506,6 +585,7 @@ def evaluate_assessment(assessment, language: str = "en") -> dict | None:
         logger.warning("Gemini risk response failed validation.")
         return None
     _floor_for_dying_plant(validated, assessment)
+    _no_feeding_when_unhelpful(validated, assessment)
 
     validated["image_analyzed"] = image_analyzed
     # The model that actually answered, recorded on the RiskAssessment.
@@ -543,3 +623,24 @@ def _floor_for_dying_plant(result: dict, assessment) -> None:
                 ),
             },
         )
+
+
+NO_FEEDING_WHILE_DYING = (
+    "Do not add fertilizer now. It does not cure rot or disease and can burn "
+    "weak roots; first remove the rotten parts and fix the watering and "
+    "drainage. Feed again only once healthy new growth appears."
+)
+NO_FEEDING_MUSHROOM = "Mushrooms are not fed with fertilizer; they live on their substrate."
+
+
+def _no_feeding_when_unhelpful(result: dict, assessment) -> None:
+    """No fertilizer product for a plant in severe decline or dying, or for mushrooms."""
+    vitality = (assessment.evidence_validation or {}).get("vitality")
+    is_mushroom = getattr(assessment.plant.crop, "id", None) == "mushroom"
+    if vitality not in VITALITY_SEVERE and not is_mushroom:
+        return
+    result["fertilizer"] = {
+        "advice": NO_FEEDING_MUSHROOM if is_mushroom else NO_FEEDING_WHILE_DYING,
+        "products": [],
+        "where_to_buy": WHERE_TO_BUY,
+    }

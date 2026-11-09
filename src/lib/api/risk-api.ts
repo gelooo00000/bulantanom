@@ -23,6 +23,24 @@ export type BackendRisk = {
   risk_factors: RiskFactor[];
   possible_causes: string[];
   recommended_actions: string[];
+  /**
+   * Fertilizer advice, chosen only from fertilizers sold in the Philippines.
+   * Empty for readings made before it existed.
+   */
+  fertilizer?: {
+    advice?: string;
+    products?: {
+      id: string;
+      name: string;
+      grade: string;
+      kind: string;
+      brands: string;
+      how: string;
+      amount: string;
+      why: string;
+    }[];
+    where_to_buy?: string;
+  };
   monitoring_advice: string[];
   limitations: string[];
   next_assessment_days: number | null;

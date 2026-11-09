@@ -345,6 +345,7 @@ class RiskAssessmentSerializer(serializers.ModelSerializer):
             "risk_factors",
             "possible_causes",
             "recommended_actions",
+            "fertilizer",
             "monitoring_advice",
             "limitations",
             "next_assessment_days",

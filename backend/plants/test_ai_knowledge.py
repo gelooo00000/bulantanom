@@ -114,3 +114,51 @@ class DyingPlantRiskTests(TestCase):
         self.assertIn("CONDITION BEFORE SIZE", photo.SYSTEM_INSTRUCTION)
         self.assertIn('NEVER "as_expected"', photo.SYSTEM_INSTRUCTION)
         self.assertIn("one severe sign is enough for HIGH", risk.SYSTEM_INSTRUCTION)
+
+
+class FertilizerTests(TestCase):
+    def test_only_philippine_products_are_kept_and_named_by_the_system(self):
+        result = risk._fertilizer(
+            {
+                "advice": "Feed lightly to help leafy growth.",
+                "products": [
+                    {"id": "urea-46-0-0", "amount": "1 teaspoon per plant", "why": "Leaves are pale."},
+                    {"id": "made-up-brand", "amount": "lots", "why": "?"},
+                    {"id": "urea-46-0-0", "amount": "again", "why": "duplicate"},
+                ],
+            }
+        )
+        self.assertEqual([p["id"] for p in result["products"]], ["urea-46-0-0"])
+        self.assertEqual(result["products"][0]["name"], "Urea")
+        self.assertEqual(result["products"][0]["grade"], "46-0-0")
+        self.assertIn("Agri-supply", result["where_to_buy"])
+
+    def test_the_schema_only_allows_listed_products(self):
+        enum = risk.RESPONSE_SCHEMA["properties"]["fertilizer"]["properties"]["products"]["items"][
+            "properties"
+        ]["id"]["enum"]
+        self.assertIn("complete-14-14-14", enum)
+        self.assertNotIn("made-up-brand", enum)
+
+    def test_no_fertilizer_for_a_dying_plant(self):
+        result = {"fertilizer": {"advice": "Use urea.", "products": [{"id": "urea-46-0-0"}]}}
+        assessment = SimpleNamespace(
+            evidence_validation={"vitality": "dying_or_dead"},
+            plant=SimpleNamespace(crop=SimpleNamespace(id="lettuce-cabbage")),
+        )
+        risk._no_feeding_when_unhelpful(result, assessment)
+        self.assertEqual(result["fertilizer"]["products"], [])
+        self.assertIn("Do not add fertilizer", result["fertilizer"]["advice"])
+
+    def test_no_fertilizer_for_mushrooms(self):
+        result = {"fertilizer": {"advice": "x", "products": [{"id": "urea-46-0-0"}]}}
+        assessment = SimpleNamespace(
+            evidence_validation={"vitality": "normal"},
+            plant=SimpleNamespace(crop=SimpleNamespace(id="mushroom")),
+        )
+        risk._no_feeding_when_unhelpful(result, assessment)
+        self.assertEqual(result["fertilizer"]["products"], [])
+
+    def test_the_ai_is_given_the_list(self):
+        self.assertIn("urea-46-0-0", risk.fertilizers_for_ai()["products"])
+        self.assertIn("ONLY from `philippine_fertilizers`", risk.SYSTEM_INSTRUCTION)

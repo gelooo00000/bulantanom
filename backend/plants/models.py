@@ -432,6 +432,9 @@ class RiskAssessment(models.Model):
     risk_factors = models.JSONField(default=list, blank=True)
     possible_causes = models.JSONField(default=list, blank=True)
     recommended_actions = models.JSONField(default=list, blank=True)
+    # Fertilizer advice, chosen only from fertilizers sold in the Philippines
+    # (crop_knowledge.PHILIPPINE_FERTILIZERS): {"advice": str, "products": [...]}.
+    fertilizer = models.JSONField(default=dict, blank=True)
     monitoring_advice = models.JSONField(default=list, blank=True)
     limitations = models.JSONField(default=list, blank=True)
     next_assessment_days = models.PositiveIntegerField(null=True, blank=True)
