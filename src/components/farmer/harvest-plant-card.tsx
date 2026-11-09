@@ -273,12 +273,8 @@ export function HarvestPlantCard({
 
         {/* The answer first, in one plain sentence. */}
         <div className="flex flex-col gap-0.5">
-          {/* In the crop's colour, mixed with a little of the text colour so a
-              light crop (banana yellow) stays readable on a light card. */}
-          <p
-            className="font-heading flex items-center gap-1.5 text-[15px] font-medium"
-            style={{ color: `color-mix(in oklab, ${cropColor(plant.crop.name)} 80%, var(--foreground))` }}
-          >
+          {/* One colour on every card, red, so the date stands out. */}
+          <p className="font-heading text-risk-high flex items-center gap-1.5 text-[15px] font-medium">
             <Icon className="size-4 shrink-0" aria-hidden="true" />
             {headline(plant, phase, t, date)}
           </p>
