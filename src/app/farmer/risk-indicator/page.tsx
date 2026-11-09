@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
-  CalendarCheck,
+  Activity,
   CalendarClock,
   ChevronDown,
   ClipboardList,
@@ -13,6 +13,7 @@ import {
   Clock,
   HeartCrack,
   Leaf,
+  Lightbulb,
   LoaderCircle,
   OctagonAlert,
   RotateCw,
@@ -183,6 +184,8 @@ export default function RiskIndicatorPage() {
           <PlantGroup
             actions={actions}
             title={t("riskPage.withReading")}
+            icon={Activity}
+            color="var(--risk-high)"
             pageSize={PAGE_SIZE.reading}
             entries={entries
               .filter((e) => !["early", "none"].includes(groupOf(e.latest)))
@@ -191,12 +194,16 @@ export default function RiskIndicatorPage() {
           <PlantGroup
             actions={actions}
             title={t("early.level")}
+            icon={Clock}
+            color="var(--risk-early)"
             pageSize={PAGE_SIZE.early}
             entries={entries.filter((e) => groupOf(e.latest) === "early")}
           />
           <PlantGroup
             actions={actions}
             title={t("riskPage.withoutReading")}
+            icon={CircleHelp}
+            color="var(--primary)"
             pageSize={PAGE_SIZE.none}
             entries={entries.filter((e) => groupOf(e.latest) === "none")}
           />
@@ -259,16 +266,27 @@ function PlantGroup({
   entries,
   pageSize,
   actions,
+  icon: GroupIcon,
+  color,
 }: {
   title: string;
   entries: Entry[];
   pageSize: number;
   actions: CardActions;
+  icon: typeof Leaf;
+  color: string;
 }) {
   if (entries.length === 0) return null;
   return (
     <section aria-label={title} className="flex flex-col gap-2">
       <h2 className="font-heading flex items-center gap-2 text-lg sm:text-xl">
+        <span
+          aria-hidden="true"
+          className="flex size-8 items-center justify-center rounded-lg"
+          style={{ color, backgroundColor: `color-mix(in oklch, ${color}, transparent 85%)` }}
+        >
+          <GroupIcon className="size-4" />
+        </span>
         {title}
         <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 font-sans text-sm tabular-nums">
           {entries.length}
@@ -469,50 +487,155 @@ function RiskTodoButton({ entries }: { entries: Entry[] }) {
   );
 }
 
-/** Per group: the pill, the headline colour and icon, as on the Harvest cards. */
-const GROUP_STYLE: Record<Group, { pill: string; text: string; headline: MessageKey }> = {
+/** Per group: the pill, the headline colour and the card's accent, as on the Harvest cards. */
+const GROUP_STYLE: Record<
+  Group,
+  { pill: string; text: string; headline: MessageKey; accent: string; tile: string }
+> = {
   high: {
     pill: "bg-risk-high/15 text-risk-high border-risk-high/30",
     text: "text-risk-high",
     headline: "riskCard.headline.high",
+    accent: "var(--risk-high)",
+    tile: "ring-2 ring-risk-high/45",
   },
   medium: {
     pill: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
     text: "text-risk-medium",
     headline: "riskCard.headline.medium",
+    accent: "var(--risk-medium)",
+    tile: "ring-2 ring-risk-medium/45",
   },
   low: {
     pill: "bg-risk-low/15 text-risk-low border-risk-low/30",
     text: "text-risk-low",
     headline: "riskCard.headline.low",
+    accent: "var(--risk-low)",
+    tile: "ring-2 ring-risk-low/45",
   },
   early: {
     pill: "border-border text-muted-foreground",
     text: "text-foreground",
     headline: "riskCard.headline.earlyNext",
+    accent: "var(--risk-early)",
+    tile: "",
   },
   none: {
     pill: "border-dashed border-border text-muted-foreground",
     text: "text-muted-foreground",
     headline: "riskCard.headline.noneNext",
+    accent: "var(--primary)",
+    tile: "",
   },
 };
 
+/** An ISO date (YYYY-MM-DD) moved by whole days. */
+function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * The weekly check as a timeline, the twin of the Harvest card's: the last
+ * check (or planting) on the left, the next check on the right, and today
+ * marked between them. Full and red once the check is overdue.
+ */
+function CheckTimeline({
+  plant,
+  latest,
+  accent,
+  overdue,
+}: {
+  plant: BackendPlant;
+  latest: BackendAssessment | null;
+  accent: string;
+  overdue: number;
+}) {
+  const { t, dateLocale } = useLanguage();
+  const e = plant.assessment_eligibility;
+  const short = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
+
+  const checked = latest?.assessment_date ?? e.last_assessment_date;
+  const start = checked ?? plant.planting_date;
+  const next = e.next_assessment_date ?? addDays(start, checked ? e.interval_days || 7 : 7);
+  const span = Math.max(1, daysSince(start) - daysSince(next));
+  const due = e.can_assess && !e.early_recheck;
+  const todayAt = due ? 100 : Math.min(100, Math.max(0, (daysSince(start) / span) * 100));
+  const daysLeft = Math.max(0, -daysSince(next));
+  const fill = overdue > 0 ? "var(--risk-high)" : due ? "var(--primary)" : accent;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="text-foreground/75 flex items-baseline justify-between gap-2 text-[13px]">
+        <span>{t("riskTimeline.title")}</span>
+        <span
+          className={cn(
+            "font-heading text-sm tabular-nums",
+            overdue > 0 ? "text-risk-high" : due ? "text-primary" : "text-foreground",
+          )}
+        >
+          {due
+            ? t("riskPage.dueNow")
+            : daysLeft === 1
+              ? t("riskPage.nextInOne")
+              : t("riskPage.nextIn", { n: daysLeft })}
+        </span>
+      </div>
+
+      <div className="relative mt-5 h-2.5 w-full rounded-full" aria-hidden="true">
+        <div className="bg-muted absolute inset-0 rounded-full" />
+        <div
+          className="absolute inset-y-0 left-0 rounded-full opacity-85 transition-[width] duration-700"
+          style={{
+            width: `${todayAt}%`,
+            background: `linear-gradient(90deg, color-mix(in oklch, ${fill}, transparent 55%), ${fill})`,
+          }}
+        />
+        <div
+          className="absolute -top-5 flex -translate-x-1/2 flex-col items-center"
+          style={{ left: `${Math.min(96, Math.max(4, todayAt))}%` }}
+        >
+          <span className="text-foreground text-[10px] leading-none font-medium">
+            {t("harvestCard.today")}
+          </span>
+          <span className="bg-foreground mt-0.5 h-5 w-0.5 rounded-full" />
+        </div>
+      </div>
+
+      <div className="text-muted-foreground grid grid-cols-2 gap-2 text-[11px] leading-tight">
+        <div>
+          <p>{checked ? t("riskTimeline.lastCheck") : t("harvestCard.planted")}</p>
+          <p className="text-foreground font-medium">{short(start)}</p>
+        </div>
+        <div className="text-right">
+          <p>{checked ? t("riskTimeline.nextCheck") : t("riskTimeline.firstCheck")}</p>
+          <p className={cn("font-medium", overdue > 0 ? "text-risk-high" : "text-foreground")}>
+            {short(next)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * One plant, laid out like a Harvest card: the crop and name, its level as a
- * pill, one plain sentence, what to do, and the actions along the bottom.
- * The full explanation and photo stay behind the arrow.
+ * pill, one plain sentence, the weekly-check timeline, what to do, and the
+ * actions along the bottom. The full explanation and photo stay behind the
+ * arrow.
  */
 function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions }) {
   const { plant, latest, previous } = entry;
-  const { t, dateLocale } = useLanguage();
+  const { t } = useLanguage();
   const level = levelOf(latest);
   const group = groupOf(latest);
   const style = GROUP_STYLE[group];
   const Icon = GROUPS.find((g) => g.key === group)!.icon;
   const failed = latest?.risk?.status === "failed";
   const atRisk = group === "high" || group === "medium";
-  // The first two things to do, on the card itself.
   // Just the first thing to do; the arrow opens the rest.
   const todo = atRisk ? (latest?.risk?.recommended_actions ?? []).slice(0, 1) : [];
   const current = latest?.risk?.risk_level;
@@ -524,22 +647,58 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
       : null;
   const overdue = overdueDays(plant);
   const old = !!latest && daysSince(latest.assessment_date) > OLD_READING_DAYS;
+  const accent = failed ? "var(--risk-high)" : style.accent;
+  const hasPill = failed || (level && level !== "inconclusive");
 
   return (
     <Card
       id={`risk-plant-${plant.id}`}
       style={cropVar(plant.crop.name)}
-      className={cn("h-full min-w-0 scroll-mt-24 gap-2 py-4 transition-all", CROP_OUTLINE)}
+      className={cn(
+        "relative isolate h-full min-w-0 scroll-mt-24 gap-2 overflow-hidden py-4 transition-all hover:-translate-y-0.5 hover:shadow-lg",
+        CROP_OUTLINE,
+      )}
+      data-group={group}
     >
+      {/* A soft wash of the level's colour across the top of the card. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-28"
+        style={{
+          background: `radial-gradient(120% 100% at 0% 0%, color-mix(in oklch, ${accent}, transparent ${
+            atRisk || failed ? 78 : 88
+          }%), transparent 70%)`,
+        }}
+      />
       <CardContent className="flex h-full flex-col gap-3.5 px-4 sm:px-5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl text-2xl leading-none"
-              style={{ backgroundColor: cropTint(plant.crop.name) }}
-            >
-              {plant.crop.emoji}
+            <span className="relative shrink-0">
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "ring-offset-card flex size-11 items-center justify-center rounded-xl text-2xl leading-none ring-offset-2",
+                  !failed && style.tile,
+                  failed && "ring-risk-high/45 ring-2",
+                )}
+                style={{ backgroundColor: cropTint(plant.crop.name) }}
+              >
+                {plant.crop.emoji}
+              </span>
+              {(atRisk || failed) && (
+                <span aria-hidden="true" className="absolute -top-1 -right-1 flex size-3">
+                  {(group === "high" || failed) && (
+                    <span
+                      className="absolute inset-0 animate-ping rounded-full opacity-60 motion-reduce:hidden"
+                      style={{ backgroundColor: accent }}
+                    />
+                  )}
+                  <span
+                    className="ring-card relative size-3 rounded-full ring-2"
+                    style={{ backgroundColor: accent }}
+                  />
+                </span>
+              )}
             </span>
             <div className="min-w-0">
               <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
@@ -555,13 +714,18 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
           <div className="flex max-w-[55%] shrink-0 items-start gap-1.5">
             {/* Only a real level (or a failed check) gets a pill: "Too early"
                 and "No reading" cards sit under a section that already says so. */}
-            {(failed || (level && level !== "inconclusive")) && (
+            {hasPill && (
               <span
                 className={cn(
-                  "font-heading rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
+                  "font-heading flex items-center gap-1 rounded-2xl border px-2.5 py-0.5 text-center text-xs font-medium tracking-wide",
                   failed ? "bg-risk-high/15 text-risk-high border-risk-high/30" : style.pill,
                 )}
               >
+                {failed ? (
+                  <TriangleAlert className="size-3 shrink-0" aria-hidden="true" />
+                ) : (
+                  <Icon className="size-3 shrink-0" aria-hidden="true" />
+                )}
                 {failed ? t("riskCard.failed") : t(`riskBadge.${level}` as MessageKey)}
               </span>
             )}
@@ -629,52 +793,48 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
           )}
         </div>
 
+        {!failed && <CheckTimeline plant={plant} latest={latest} accent={accent} overdue={overdue} />}
+
         {todo.length > 0 && (
           <div
             className={cn(
-              "rounded-xl border p-3 text-sm",
+              "flex gap-2.5 rounded-xl border border-l-4 p-3 text-sm",
               group === "high"
-                ? "border-risk-high/30 bg-risk-high/5"
-                : "border-risk-medium/30 bg-risk-medium/5",
+                ? "border-risk-high/30 border-l-risk-high bg-risk-high/5"
+                : "border-risk-medium/30 border-l-risk-medium bg-risk-medium/5",
             )}
           >
-            <p className="font-medium">{t("riskCard.whatToDo")}</p>
-            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[13px]">{todo[0]}</p>
+            <Lightbulb
+              className={cn(
+                "mt-0.5 size-4 shrink-0",
+                group === "high" ? "text-risk-high" : "text-risk-medium",
+              )}
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <p className="font-medium">{t("riskCard.whatToDo")}</p>
+              <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[13px]">{todo[0]}</p>
+            </div>
           </div>
         )}
 
         {failed && latest && <RetryCheck assessmentId={latest.id} onDone={actions.onChanged} />}
 
-        <div className="border-border mt-auto flex flex-col gap-3 border-t pt-3">
-          <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs">
-            <span className="flex items-center gap-1.5">
-              <CalendarCheck className="size-3.5" />
-              {latest
-                ? t("riskPage.checked", {
-                    date: new Date(`${latest.assessment_date}T00:00:00`).toLocaleDateString(
-                      dateLocale,
-                      { month: "short", day: "numeric" },
-                    ),
-                  })
-                : t("riskPage.notChecked")}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <WeeklyCheck plant={plant} />
-            {/* Instead of deleting a plant that died: kept, with its history.
-                Shaped like Assess now, in red; a deeper red when pointed at. */}
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => actions.onLost(plant)}
-              // The default button paints a green gradient; this one is red,
-              // turning a deeper red when pointed at.
-              className="border-risk-high focus-visible:ring-risk-high/40 h-7 bg-[linear-gradient(135deg,var(--risk-high)_0%,color-mix(in_oklch,var(--risk-high),black_30%)_140%)] px-2.5 text-xs text-white shadow-[0_6px_18px_-6px_color-mix(in_oklch,var(--risk-high),transparent_40%)] hover:shadow-[0_10px_24px_-6px_color-mix(in_oklch,var(--risk-high),transparent_25%)] hover:brightness-90"
-            >
-              <HeartCrack className="size-3.5" />
-              {t("lost.open")}
-            </Button>
-          </div>
+        <div className="border-border mt-auto flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+          <WeeklyCheck plant={plant} showNext={failed} />
+          {/* Instead of deleting a plant that died: kept, with its history.
+              Shaped like Assess now, in red; a deeper red when pointed at. */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => actions.onLost(plant)}
+            // The default button paints a green gradient; this one is red,
+            // turning a deeper red when pointed at.
+            className="border-risk-high focus-visible:ring-risk-high/40 ml-auto h-7 bg-[linear-gradient(135deg,var(--risk-high)_0%,color-mix(in_oklch,var(--risk-high),black_30%)_140%)] px-2.5 text-xs text-white shadow-[0_6px_18px_-6px_color-mix(in_oklch,var(--risk-high),transparent_40%)] hover:shadow-[0_10px_24px_-6px_color-mix(in_oklch,var(--risk-high),transparent_25%)] hover:brightness-90"
+          >
+            <HeartCrack className="size-3.5" />
+            {t("lost.open")}
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -715,10 +875,10 @@ function RetryCheck({ assessmentId, onDone }: { assessmentId: number; onDone: ()
 
 /**
  * This week's check for one plant: a button when it is due, otherwise when
- * the next one opens. Straight from the server's `assessment_eligibility`,
+ * the next one opens (only where no timeline already says so). Straight from the server's `assessment_eligibility`,
  * so it offers only what the API will accept.
  */
-function WeeklyCheck({ plant }: { plant: BackendPlant }) {
+function WeeklyCheck({ plant, showNext }: { plant: BackendPlant; showNext: boolean }) {
   const { t } = useLanguage();
   const { can_assess, days_remaining, early_recheck } = plant.assessment_eligibility;
 
@@ -735,6 +895,7 @@ function WeeklyCheck({ plant }: { plant: BackendPlant }) {
       </Button>
     );
   }
+  if (!showNext) return null;
   return (
     <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
       <CalendarClock className="size-3.5" />

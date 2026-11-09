@@ -79,6 +79,11 @@ export const pages = defineMessages({
     fil: "Hindi natapos ang pagsusuri",
     bik: "Dai natapos an pagsusi",
   },
+  // The weekly-check timeline on each Risk Indicator card.
+  "riskTimeline.title": { en: "Weekly check", fil: "Lingguhang pagsusuri", bik: "Semanal na pagsusi" },
+  "riskTimeline.lastCheck": { en: "Last check", fil: "Huling pagsusuri", bik: "Huring pagsusi" },
+  "riskTimeline.nextCheck": { en: "Next check", fil: "Susunod na pagsusuri", bik: "Masunod na pagsusi" },
+  "riskTimeline.firstCheck": { en: "First check", fil: "Unang pagsusuri", bik: "Enot na pagsusi" },
   // "What to do now" on the Risk Indicator, from the risk readings.
   "riskTodo.title": { en: "What to do now", fil: "Ano ang gagawin ngayon", bik: "Ano an gigibuhon ngunyan" },
   "riskTodo.failed": {
