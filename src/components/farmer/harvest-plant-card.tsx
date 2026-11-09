@@ -31,6 +31,7 @@ import {
   timeline,
   type HarvestPhase,
 } from "@/lib/harvest";
+import { cropColor } from "@/lib/crop-colors";
 import { useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -228,12 +229,12 @@ export function HarvestPlantCard({
   }
 
   return (
-    // Outlined in the crop's own colour on hover or tap, with the phase's
-    // colour washed across the top, as on the Risk Indicator.
+    // Outlined in the crop's own colour on hover or tap, with the same
+    // colour washed across the top (lettuce green, eggplant purple).
     <FarmCard
       cropName={plant.crop.name}
-      accent={style.color}
-      strong={phase === "open" || phase === "passed"}
+      accent={cropColor(plant.crop.name)}
+      strong
       className={cn(phase === "harvested" && "opacity-75")}
       data-phase={phase}
     >
@@ -272,7 +273,12 @@ export function HarvestPlantCard({
 
         {/* The answer first, in one plain sentence. */}
         <div className="flex flex-col gap-0.5">
-          <p className={cn("font-heading flex items-center gap-1.5 text-[15px] font-medium", style.text)}>
+          {/* In the crop's colour, mixed with a little of the text colour so a
+              light crop (banana yellow) stays readable on a light card. */}
+          <p
+            className="font-heading flex items-center gap-1.5 text-[15px] font-medium"
+            style={{ color: `color-mix(in oklab, ${cropColor(plant.crop.name)} 80%, var(--foreground))` }}
+          >
             <Icon className="size-4 shrink-0" aria-hidden="true" />
             {headline(plant, phase, t, date)}
           </p>
