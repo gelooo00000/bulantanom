@@ -183,3 +183,31 @@ describe("My Plants guide", () => {
     expect(screen.getByText("No plants added yet")).toBeInTheDocument();
   });
 });
+
+describe("My Plants pages", () => {
+  const eight = () =>
+    ["Banana", "Avocado", "Pineapple", "Mango", "Guava", "Papaya", "Calamansi", "Corn"].map(
+      (name, i) => plant(i + 1, name),
+    );
+
+  it("shows 6 plants a page and slides to the rest with Next", async () => {
+    plants = eight();
+    const user = userEvent.setup();
+    render(<MyPlantsPage />);
+    expect(screen.getByText("Papaya")).toBeInTheDocument();
+    expect(screen.queryByText("Calamansi")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Next/ }));
+    expect(await screen.findByText("Calamansi")).toBeInTheDocument();
+    expect(screen.getByText("Corn")).toBeInTheDocument();
+  });
+
+  it("opens on the page of the plant asked for from the Harvest page", () => {
+    plants = eight();
+    window.history.replaceState(null, "", "/farmer/plants?plant=8");
+    Element.prototype.scrollIntoView = vi.fn();
+    render(<MyPlantsPage />);
+    expect(screen.getByText("Corn")).toBeInTheDocument();
+    expect(screen.queryByText("Banana")).not.toBeInTheDocument();
+  });
+});

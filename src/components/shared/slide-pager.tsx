@@ -26,6 +26,7 @@ export function SlidePager<T>({
   itemClassName = "border-border/60 border-t first:border-t-0",
   frameClassName,
   onPageChange,
+  startAt = 0,
 }: {
   items: T[];
   pageSize?: number;
@@ -42,11 +43,19 @@ export function SlidePager<T>({
   frameClassName?: string;
   /** Called when the page changes, e.g. to clear a hover the old page held. */
   onPageChange?: () => void;
+  /**
+   * Index of an item to open on: the pager starts on the page holding it.
+   * Read once, so remount (a `key`) to jump to another.
+   */
+  startAt?: number;
 }) {
   const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
   const pages = Math.max(1, Math.ceil(items.length / pageSize));
-  const [state, setState] = useState({ page: 0, direction: 1 });
+  const [state, setState] = useState(() => ({
+    page: Math.max(0, Math.floor(startAt / pageSize)),
+    direction: 1,
+  }));
   // Clamped, in case the list shrank while a later page was showing.
   const page = Math.min(state.page, pages - 1);
   const shown = items.slice(page * pageSize, page * pageSize + pageSize);

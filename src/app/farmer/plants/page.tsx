@@ -17,6 +17,7 @@ import { AddPlantButton } from "@/components/farmer/add-plant-button";
 import { AddPlantTile } from "@/components/farmer/add-plant-tile";
 import { MyPlantsGuide } from "@/components/farmer/my-plants-guide";
 import { PlantCard } from "@/components/farmer/plant-card";
+import { SlidePager } from "@/components/shared/slide-pager";
 import { NoPlantsMatch, PlantFilterBar } from "@/components/farmer/plant-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -52,6 +53,11 @@ function rememberGuideHidden(hidden: boolean) {
     // Storage unavailable — the guide just reappears next visit.
   }
 }
+
+/** Cards per page; Previous / Next slide in the next page. */
+const PLANTS_PER_PAGE = 6;
+/** Stands in the list for the Add Plant tile. */
+const ADD_TILE = "add-plant" as const;
 
 export default function MyPlantsPage() {
   const { accessToken } = useAuth();
@@ -128,6 +134,14 @@ export default function MyPlantsPage() {
   const [cropId, setCropId] = useState("");
   const filtering = query.trim() !== "" || cropId !== "";
   const visible = filterPlants(plants ?? [], query, cropId);
+  // The cards, plus the Add Plant tile closing the list, so adding another is
+  // where the farmer's eye already is after the last card. Not while
+  // selecting (one more thing to tap by mistake) or searching.
+  const tiles: (BackendPlant | typeof ADD_TILE)[] =
+    !selecting && !filtering ? [...visible, ADD_TILE] : visible;
+  // Open on the page holding the plant just added, or asked for from Harvest.
+  const target = focusId ?? addedId;
+  const targetIndex = Math.max(0, visible.findIndex((p) => p.id === target));
 
   function clearFilters() {
     setQuery("");
@@ -316,21 +330,34 @@ export default function MyPlantsPage() {
           {visible.length === 0 ? (
             <NoPlantsMatch onClear={clearFilters} />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {visible.map((plant) => (
-                <PlantCard
-                  key={plant.id}
-                  plant={plant}
-                  selected={selected.has(plant.id)}
-                  highlighted={plant.id === addedId || plant.id === focusId}
-                  onToggle={selecting ? () => toggle(plant.id) : undefined}
-                />
-              ))}
-              {/* Closes the grid, so adding another is where the farmer's eye
-              already is after reading the last card. Hidden while
-              selecting, where it would be one more thing to tap by mistake. */}
-              {!selecting && !filtering && <AddPlantTile />}
-            </div>
+            // A page at a time; Previous / Next slide the next page in, the
+            // same pager as the Harvest page and the Risk Indicator. It opens
+            // on the page holding the plant just added or asked for, and
+            // starts again on the first page when the search changes.
+            <SlidePager
+              key={`${query}|${cropId}|${target ?? ""}`}
+              items={tiles}
+              pageSize={PLANTS_PER_PAGE}
+              startAt={targetIndex}
+              getKey={(tile) => (tile === ADD_TILE ? "add" : tile.id)}
+              listLabel={t("myPlants.title")}
+              listClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+              itemClassName="min-w-0"
+              // Room for a card's hover outline inside the clipping frame.
+              frameClassName="-m-1 p-1"
+              renderItem={(tile) =>
+                tile === ADD_TILE ? (
+                  <AddPlantTile />
+                ) : (
+                  <PlantCard
+                    plant={tile}
+                    selected={selected.has(tile.id)}
+                    highlighted={tile.id === addedId || tile.id === focusId}
+                    onToggle={selecting ? () => toggle(tile.id) : undefined}
+                  />
+                )
+              }
+            />
           )}
         </>
       )}
