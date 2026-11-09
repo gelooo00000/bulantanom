@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
+  CalendarCheck,
   Activity,
   CalendarClock,
   ChevronDown,
@@ -34,7 +35,6 @@ import { Button } from "@/components/ui/button";
 import {
   CARD_FOOTER,
   CardPill,
-  CheckTimeline,
   CropTile,
   daysSince,
   FarmCard,
@@ -513,13 +513,13 @@ const GROUP_STYLE: Record<
 
 /**
  * One plant, laid out like a Harvest card: the crop and name, its level as a
- * pill, one plain sentence, the weekly-check timeline, and the
+ * pill, one plain sentence, and the
  * actions along the bottom. The full explanation and photo stay behind the
  * arrow.
  */
 function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions }) {
   const { plant, latest, previous } = entry;
-  const { t } = useLanguage();
+  const { t, dateLocale } = useLanguage();
   const level = levelOf(latest);
   const group = groupOf(latest);
   const style = GROUP_STYLE[group];
@@ -647,26 +647,36 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
           )}
         </div>
 
-        {!failed && <CheckTimeline plant={plant} latest={latest} accent={accent} />}
-
-
         {failed && latest && <RetryCheck assessmentId={latest.id} onDone={actions.onChanged} />}
 
-        <div className={cn(CARD_FOOTER, "justify-between gap-3")}>
-          <WeeklyCheck plant={plant} showNext={failed} />
-          {/* Instead of deleting a plant that died: kept, with its history.
-              Shaped like Assess now, in red; a deeper red when pointed at. */}
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => actions.onLost(plant)}
-            // The default button paints a green gradient; this one is red,
-            // turning a deeper red when pointed at.
-            className="border-risk-high focus-visible:ring-risk-high/40 ml-auto h-7 bg-[linear-gradient(135deg,var(--risk-high)_0%,color-mix(in_oklch,var(--risk-high),black_30%)_140%)] px-2.5 text-xs text-white shadow-[0_6px_18px_-6px_color-mix(in_oklch,var(--risk-high),transparent_40%)] hover:shadow-[0_10px_24px_-6px_color-mix(in_oklch,var(--risk-high),transparent_25%)] hover:brightness-90"
-          >
-            <HeartCrack className="size-3.5" />
-            {t("lost.open")}
-          </Button>
+        <div className={cn(CARD_FOOTER, "flex-col items-stretch gap-3")}>
+          <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <CalendarCheck className="size-3.5" />
+            {latest
+              ? t("riskPage.checked", {
+                  date: new Date(`${latest.assessment_date}T00:00:00`).toLocaleDateString(dateLocale, {
+                    month: "short",
+                    day: "numeric",
+                  }),
+                })
+              : t("riskPage.notChecked")}
+          </span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <WeeklyCheck plant={plant} />
+            {/* Instead of deleting a plant that died: kept, with its history.
+                Shaped like Assess now, in red; a deeper red when pointed at. */}
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => actions.onLost(plant)}
+              // The default button paints a green gradient; this one is red,
+              // turning a deeper red when pointed at.
+              className="border-risk-high focus-visible:ring-risk-high/40 ml-auto h-7 bg-[linear-gradient(135deg,var(--risk-high)_0%,color-mix(in_oklch,var(--risk-high),black_30%)_140%)] px-2.5 text-xs text-white shadow-[0_6px_18px_-6px_color-mix(in_oklch,var(--risk-high),transparent_40%)] hover:shadow-[0_10px_24px_-6px_color-mix(in_oklch,var(--risk-high),transparent_25%)] hover:brightness-90"
+            >
+              <HeartCrack className="size-3.5" />
+              {t("lost.open")}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </FarmCard>
@@ -707,10 +717,10 @@ function RetryCheck({ assessmentId, onDone }: { assessmentId: number; onDone: ()
 
 /**
  * This week's check for one plant: a button when it is due, otherwise when
- * the next one opens (only where no timeline already says so). Straight from the server's `assessment_eligibility`,
+ * the next one opens. Straight from the server's `assessment_eligibility`,
  * so it offers only what the API will accept.
  */
-function WeeklyCheck({ plant, showNext }: { plant: BackendPlant; showNext: boolean }) {
+function WeeklyCheck({ plant }: { plant: BackendPlant }) {
   const { t } = useLanguage();
   const { can_assess, days_remaining, early_recheck } = plant.assessment_eligibility;
 
@@ -727,7 +737,6 @@ function WeeklyCheck({ plant, showNext }: { plant: BackendPlant; showNext: boole
       </Button>
     );
   }
-  if (!showNext) return null;
   return (
     <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
       <CalendarClock className="size-3.5" />
