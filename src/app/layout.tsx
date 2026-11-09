@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Lilita_One } from "next/font/google";
 import "./globals.css";
 
+import { SPLASH_INIT_SCRIPT, SplashScreen } from "@/components/shared/splash-screen";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme/theme-context";
 
@@ -34,8 +35,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Runs before paint so a saved Light Mode never flashes dark first. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* Hides the splash at once if this visit already saw it. */}
+        <script dangerouslySetInnerHTML={{ __html: SPLASH_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
+        <SplashScreen />
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>

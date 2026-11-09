@@ -562,3 +562,41 @@
     animation: none;
   }
 }
+
+/* The BulanTanom splash (components/shared/splash-screen): hidden before
+   paint when this visit already saw it; the bar fills over its five seconds. */
+html[data-splash-seen] .splash-screen {
+  display: none;
+}
+@keyframes splash-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+.splash-bar {
+  width: 0;
+  animation-name: splash-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes splash-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.splash-pop {
+  animation: splash-pop 600ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-pop {
+    animation: none;
+  }
+}
