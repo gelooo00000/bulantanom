@@ -5,7 +5,6 @@ import {
   CalendarX,
   ChevronDown,
   ClipboardCheck,
-  Eye,
   Sprout,
   Info,
   LoaderCircle,
@@ -25,12 +24,6 @@ import { useFarmerLanguage } from "@/lib/i18n";
 import { CARD_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
-const SEVERITY_CLASS: Record<string, string> = {
-  low: "text-risk-low",
-  medium: "text-risk-medium",
-  high: "text-risk-high",
-};
-
 function toLevel(level: string): BadgeLevel {
   return level.toLowerCase() as BadgeLevel;
 }
@@ -40,8 +33,8 @@ function Section({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <h3 className="text-sm font-medium">{title}</h3>
-      <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-sm">
+      <h3 className="font-heading text-base">{title}</h3>
+      <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-[15px] leading-snug">
         {items.map((item) => (
           <li key={item} className="flex gap-2">
             <span className="bg-muted-foreground/50 mt-2 size-1 shrink-0 rounded-full" />
@@ -187,16 +180,16 @@ export function RiskResultCard({
               </div>
             )}
 
-            <p className="text-sm leading-relaxed">{risk.summary}</p>
+            <p className="text-foreground text-[15px] leading-relaxed">{risk.summary}</p>
 
             {/* What to do comes first; it is what the farmer acts on. */}
             {risk.recommended_actions.length > 0 && (
               <div className="border-primary/30 bg-primary/5 rounded-xl border p-4">
-                <h3 className="font-heading flex items-center gap-1.5 text-sm font-medium">
+                <h3 className="font-heading flex items-center gap-1.5 text-base">
                   <ClipboardCheck className="text-primary size-4" />
                   {t("result.whatToDo")}
                 </h3>
-                <ol className="mt-2 space-y-1.5 text-sm">
+                <ol className="mt-2 space-y-2 text-[15px] leading-snug">
                   {risk.recommended_actions.map((item, i) => (
                     <li key={item} className="flex gap-2">
                       <span className="bg-primary/15 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
@@ -240,62 +233,6 @@ export function RiskResultCard({
                   </div>
                 )}
 
-                {(risk.reality_vs_expectation?.expected ||
-                  risk.reality_vs_expectation?.observed) && (
-                  <div className="border-border grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
-                    <div>
-                      <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                        {t("result.expected")}
-                      </p>
-                      <p className="mt-1 text-sm">{risk.reality_vs_expectation.expected}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
-                        {t("result.observed")}
-                      </p>
-                      <p className="mt-1 text-sm">{risk.reality_vs_expectation.observed}</p>
-                    </div>
-                  </div>
-                )}
-
-                {risk.visual_observations.length > 0 && (
-                  <div>
-                    <h3 className="flex items-center gap-1.5 text-sm font-medium">
-                      <Eye className="size-3.5" />
-                      {t("result.visual")}
-                    </h3>
-                    <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-sm">
-                      {risk.visual_observations.map((item) => (
-                        <li key={item} className="flex gap-2">
-                          <span className="bg-muted-foreground/50 mt-2 size-1 shrink-0 rounded-full" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {risk.risk_factors.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium">{t("result.factors")}</h3>
-                    <ul className="mt-1.5 space-y-2 text-sm">
-                      {risk.risk_factors.map((factor) => (
-                        <li key={factor.factor}>
-                          <span
-                            className={cn(
-                              "font-medium",
-                              SEVERITY_CLASS[factor.severity] ?? "text-foreground",
-                            )}
-                          >
-                            {factor.factor}
-                          </span>
-                          <span className="text-muted-foreground"> — {factor.explanation}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 <Section title={t("result.causes")} items={risk.possible_causes} />
                 <Section title={t("result.monitoring")} items={risk.monitoring_advice} />
               </div>
@@ -335,7 +272,7 @@ function FertilizerAdvice({ fertilizer }: { fertilizer?: Fertilizer }) {
   if (!fertilizer || (!fertilizer.advice && products.length === 0)) return null;
   return (
     <div className="border-risk-low/30 bg-risk-low/5 rounded-xl border p-4">
-      <h3 className="font-heading flex items-center gap-1.5 text-sm font-medium">
+      <h3 className="font-heading flex items-center gap-1.5 text-base">
         <Sprout className="text-risk-low size-4" />
         {t("result.fertilizer")}
       </h3>

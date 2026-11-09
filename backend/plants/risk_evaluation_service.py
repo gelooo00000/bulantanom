@@ -178,7 +178,9 @@ The farmer's answers are the basis of your reading:
 - Answers left blank or "none reported" are not problems. Do not guess at
   pests, disease or symptoms the farmer did not report and the photo does
   not show.
-- `summary` should read as a direct response to what the farmer told you.
+- `summary` should read as a direct response to what the farmer told you,
+  in at most 2 short sentences: how the plant is, and the main reason. Do
+  not repeat the farmer's answers back to them one by one.
 
 Check the answers against the photo first:
 
@@ -260,6 +262,10 @@ Rules you must follow:
   when the two cannot both be true.
 - Do not claim to replace an agricultural extension officer or agronomist.
 - Keep advice practical and specific for a working smallholder farmer.
+- Be brief. `recommended_actions`: at most 3, most important first, each one
+  short sentence a farmer can act on today. `possible_causes` and
+  `monitoring_advice`: at most 2 each, short. Plain words, no repeats
+  between sections.
 - Say durations the way a farmer says them — "about 4 years", "three
   months" — using the readable forms given to you. Never quote raw day
   counts like "1460 days".
@@ -490,9 +496,9 @@ def _validate(payload) -> dict | None:
         },
         "visual_observations": _str_list("visual_observations"),
         "risk_factors": factors,
-        "possible_causes": _str_list("possible_causes"),
-        "recommended_actions": _str_list("recommended_actions"),
-        "monitoring_advice": _str_list("monitoring_advice"),
+        "possible_causes": _str_list("possible_causes")[:2],
+        "recommended_actions": _str_list("recommended_actions")[:3],
+        "monitoring_advice": _str_list("monitoring_advice")[:2],
         "limitations": _str_list("limitations"),
         "next_assessment_days": next_days,
     }

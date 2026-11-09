@@ -7,6 +7,7 @@ import type { BackendAssessment } from "@/lib/api/risk-api";
 
 vi.mock("@/lib/auth/auth-context", () => ({ useAuth: () => ({ accessToken: "token" }) }));
 vi.mock("@/components/shared/authed-image", () => ({
+  // eslint-disable-next-line @next/next/no-img-element -- a stand-in for the authorized image
   AuthedImage: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
@@ -52,8 +53,12 @@ describe("the risk reading", () => {
     expect(screen.queryByText("Top view only.")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "See more" }));
-    expect(screen.getByText("Pale outer leaves")).toBeInTheDocument();
+    // Only what matters: the photo, possible causes and what to watch.
     expect(screen.getByText("Nitrogen shortage")).toBeInTheDocument();
+    expect(screen.getByText("Watch the new leaves.")).toBeInTheDocument();
+    expect(screen.queryByText("Pale outer leaves")).not.toBeInTheDocument();
+    expect(screen.queryByText("A crisp green rosette.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Pale leaves")).not.toBeInTheDocument();
     expect(screen.getByAltText(/Leaf Lettuce/)).toBeInTheDocument();
     expect(screen.queryByText("Top view only.")).not.toBeInTheDocument();
     expect(screen.queryByText("Behind for its age.")).not.toBeInTheDocument();
