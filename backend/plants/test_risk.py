@@ -374,7 +374,11 @@ class GeminiFailureTests(RiskTestCase):
     def test_reanalyze_leaves_a_completed_assessment_untouched(self):
         with patch(
             "plants.risk_evaluation_service.evaluate_assessment",
-            return_value={**GEMINI_OK, "image_analyzed": False},
+            return_value={
+                **GEMINI_OK,
+                "image_analyzed": False,
+                "fertilizer": {"advice": "Feed lightly.", "products": []},
+            },
         ):
             created = self.client.post(self.url, payload_with_image(), **self.auth)
         assessment_id = created.data["id"]
@@ -388,6 +392,50 @@ class GeminiFailureTests(RiskTestCase):
                 f"/api/farmer/assessments/{assessment_id}/reanalyze/", **self.auth
             )
         self.assertEqual(response.data["risk"]["risk_level"], GEMINI_OK["risk_level"])
+
+    def test_an_old_reading_without_fertilizer_advice_can_be_updated_once(self):
+        with patch(
+            "plants.risk_evaluation_service.evaluate_assessment",
+            return_value={**GEMINI_OK, "image_analyzed": False},
+        ):
+            created = self.client.post(self.url, payload_with_image(), **self.auth)
+        url = f"/api/farmer/assessments/{created.data['id']}/reanalyze/"
+        updated_reading = {
+            **GEMINI_OK,
+            "risk_level": "HIGH",
+            "image_analyzed": False,
+            "fertilizer": {"advice": "Do not add fertilizer now.", "products": []},
+        }
+        with patch(
+            "plants.risk_evaluation_service.evaluate_assessment", return_value=updated_reading
+        ):
+            response = self.client.post(url, **self.auth)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["risk"]["fertilizer"]["advice"], "Do not add fertilizer now.")
+        self.assertEqual(RiskAssessment.objects.count(), 1)
+
+        # Now it has fertilizer advice, so it is left alone.
+        with patch(
+            "plants.risk_evaluation_service.evaluate_assessment",
+            return_value={**updated_reading, "risk_level": "LOW"},
+        ):
+            again = self.client.post(url, **self.auth)
+        self.assertEqual(again.data["risk"]["risk_level"], "HIGH")
+
+    def test_updating_an_old_reading_keeps_it_when_the_ai_fails(self):
+        with patch(
+            "plants.risk_evaluation_service.evaluate_assessment",
+            return_value={**GEMINI_OK, "image_analyzed": False},
+        ):
+            created = self.client.post(self.url, payload_with_image(), **self.auth)
+        with patch("plants.risk_evaluation_service.evaluate_assessment", return_value=None):
+            response = self.client.post(
+                f"/api/farmer/assessments/{created.data['id']}/reanalyze/", **self.auth
+            )
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        risk = RiskAssessment.objects.get()
+        self.assertEqual(risk.status, RiskStatus.COMPLETED)
+        self.assertEqual(risk.risk_level, GEMINI_OK["risk_level"])
 
     def test_deleting_an_assessment_removes_its_evidence_file(self):
         with patch(

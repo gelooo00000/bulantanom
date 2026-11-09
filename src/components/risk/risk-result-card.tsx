@@ -202,7 +202,35 @@ export function RiskResultCard({
               </div>
             )}
 
-            <FertilizerAdvice fertilizer={risk.fertilizer} />
+            {hasFertilizerAdvice(risk.fertilizer) ? (
+              <FertilizerAdvice fertilizer={risk.fertilizer} />
+            ) : (
+              // Made before fertilizer advice existed: offer to update it
+              // once, with the same answers and photo.
+              !readOnly && (
+                <div className="border-risk-low/30 bg-risk-low/5 flex flex-col items-start gap-2 rounded-xl border p-4">
+                  <h3 className="font-heading flex items-center gap-1.5 text-base">
+                    <Sprout className="text-risk-low size-4" />
+                    {t("result.fertilizer")}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">{t("result.fertMissing")}</p>
+                  {retryError && <p className="text-destructive text-sm">{retryError}</p>}
+                  <Button size="sm" variant="outline" onClick={retryAnalysis} disabled={retrying}>
+                    {retrying ? (
+                      <>
+                        <LoaderCircle className="size-3.5 animate-spin" />
+                        {t("result.updating")}
+                      </>
+                    ) : (
+                      <>
+                        <RotateCw className="size-3.5" />
+                        {t("result.update")}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )
+            )}
 
             <Button
               variant="outline"
@@ -261,6 +289,11 @@ export function RiskResultCard({
 }
 
 type Fertilizer = NonNullable<NonNullable<BackendAssessment["risk"]>["fertilizer"]>;
+
+/** Readings made before fertilizer advice existed have none at all. */
+function hasFertilizerAdvice(fertilizer?: Fertilizer): boolean {
+  return !!fertilizer && (!!fertilizer.advice || (fertilizer.products ?? []).length > 0);
+}
 
 /**
  * The fertilizer advice: products only from the Philippine list, named and

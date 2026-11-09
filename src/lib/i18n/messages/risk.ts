@@ -87,6 +87,13 @@ export const risk = defineMessages({
     fil: "Pangkalahatang gabay para sa maliit na taniman. Laging sundin ang nakasulat sa produkto.",
     bik: "Pangkalahatan na giya para sa sadit na tanuman. Pirmeng sundon an nakasurat sa produkto.",
   },
+  "result.fertMissing": {
+    en: "This reading was made before fertilizer advice was added. Update it to get fertilizer advice from the same answers and photo.",
+    fil: "Ginawa ang resultang ito bago idinagdag ang payo sa pataba. I-update ito para makakuha ng payo sa pataba mula sa parehong sagot at litrato.",
+    bik: "Ginibo an resulta na ini bago idinugang an sadol sa abono. I-update ini tanganing makakua nin sadol sa abono gikan sa parehong simbag asin litrato.",
+  },
+  "result.update": { en: "Update reading", fil: "I-update ang resulta", bik: "I-update an resulta" },
+  "result.updating": { en: "Updating…", fil: "Ina-update…", bik: "Ina-update…" },
   "result.seeMore": { en: "See more", fil: "Tingnan pa", bik: "Hilingon pa" },
   "result.seeLess": { en: "See less", fil: "Itago", bik: "Itago" },
   "result.actions": {

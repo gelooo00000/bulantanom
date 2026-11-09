@@ -102,4 +102,10 @@ describe("the risk reading", () => {
     expect(screen.getByText("Do not add fertilizer now.")).toBeInTheDocument();
     expect(screen.queryByText("Where to buy:")).not.toBeInTheDocument();
   });
+
+  it("offers to update a reading made before fertilizer advice existed", () => {
+    render(<RiskResultCard assessment={reading(undefined)} />);
+    expect(screen.getByText(/made before fertilizer advice was added/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update reading" })).toBeInTheDocument();
+  });
 });

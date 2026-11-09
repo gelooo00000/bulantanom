@@ -799,6 +799,30 @@ def reanalyze_assessment(request, pk):
 
     existing = getattr(assessment, "risk", None)
     if existing and existing.status == RiskStatus.COMPLETED:
+        # A finished reading is left alone - except one made before fertilizer
+        # advice existed, which may be updated once with the same answers and
+        # photo. If the AI cannot answer, the old reading stays as it was.
+        if existing.fertilizer:
+            return Response(
+                AssessmentSerializer(assessment, context={"request": request}).data
+            )
+        from .risk_evaluation_service import evaluate_assessment
+
+        result = evaluate_assessment(assessment, from_request(request))
+        if result is None or not result.get("answers_match_photo", True):
+            return Response(
+                {
+                    "detail": (
+                        "The reading could not be updated right now. Your earlier "
+                        "reading is kept; please try again later."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        with transaction.atomic():
+            existing.delete()
+            _store_risk(assessment, result, from_request(request))
+        assessment.refresh_from_db()
         return Response(
             AssessmentSerializer(assessment, context={"request": request}).data
         )
