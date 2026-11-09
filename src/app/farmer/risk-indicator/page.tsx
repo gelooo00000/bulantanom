@@ -591,7 +591,13 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
             ) : (
               <Icon className="size-4 shrink-0" aria-hidden="true" />
             )}
-            {t(failed ? "riskCard.headline.failed" : style.headline)}
+            {t(
+              failed
+                ? "riskCard.headline.failed"
+                : group === "early" && overdue > 0
+                  ? "riskCard.headline.earlyDue"
+                  : style.headline,
+            )}
           </p>
           {trend && previous && (
             <p
@@ -730,7 +736,7 @@ function WeeklyCheck({ plant }: { plant: BackendPlant }) {
     );
   }
   return (
-    <span className="flex items-center gap-1.5">
+    <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
       <CalendarClock className="size-3.5" />
       {days_remaining === 1 ? t("riskPage.nextInOne") : t("riskPage.nextIn", { n: days_remaining })}
     </span>

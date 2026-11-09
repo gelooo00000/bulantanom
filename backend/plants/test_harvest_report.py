@@ -380,7 +380,14 @@ class EarlyRecheckTests(RiskTestCase):
 
     def test_not_before_three_days(self):
         self.reading("HIGH", 2)
-        self.assertFalse(self.eligibility()["can_assess"])
+        data = self.eligibility()
+        self.assertFalse(data["can_assess"])
+        # Counts down to the early re-check, not to the full week.
+        self.assertEqual(data["days_remaining"], 1)
+
+    def test_a_fresh_high_reading_counts_down_three_days(self):
+        self.reading("HIGH", 0)
+        self.assertEqual(self.eligibility()["days_remaining"], 3)
 
     def test_low_risk_waits_the_full_week(self):
         self.reading("LOW", 4)

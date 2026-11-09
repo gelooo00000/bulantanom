@@ -801,7 +801,11 @@ class WeeklyAssessmentLockTests(RiskTestCase):
         self.assertIsNone(data["next_assessment_date"])
         self.assertEqual(data["days_remaining"], 0)
 
-    @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
+    # A Low reading: Medium and High count down to the 3-day early re-check.
+    @patch(
+        "plants.risk_evaluation_service.evaluate_assessment",
+        return_value={**GEMINI_OK, "risk_level": "LOW"},
+    )
     def test_2_completing_an_assessment_locks_for_seven_days(self, _mock):
         created = self.client.post(self.url, payload_with_image(), **self.auth)
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)

@@ -238,4 +238,25 @@ describe("What to do now", () => {
     render(<RiskIndicatorPage />);
     expect(screen.getByText("Old reading – check again")).toBeInTheDocument();
   });
+
+  it("does not say 'check again next week' on a late Too early card", () => {
+    plants = [
+      {
+        plant: plant(16, "Late Early", {
+          can_assess: true,
+          days_remaining: 0,
+          next_assessment_date: isoDaysAgo(21),
+          last_assessment_date: isoDaysAgo(28),
+        }),
+        latest_assessment: {
+          id: 40,
+          assessment_date: isoDaysAgo(28),
+          risk: { status: "completed", risk_level: "INCONCLUSIVE", recommended_actions: [] },
+        },
+      },
+    ];
+    render(<RiskIndicatorPage />);
+    expect(screen.getByText("Too early last time – check it again now")).toBeInTheDocument();
+    expect(screen.queryByText(/check again next week/)).not.toBeInTheDocument();
+  });
 });

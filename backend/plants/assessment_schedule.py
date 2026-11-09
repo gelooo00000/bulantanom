@@ -117,6 +117,18 @@ def eligibility(plant, today=None) -> dict:
 
     next_date = latest + timedelta(days=ASSESSMENT_INTERVAL_DAYS)
     days_remaining = (next_date - today).days
+    at_risk = last_risk_level(plant) in EARLY_RECHECK_LEVELS
+    early_date = latest + timedelta(days=EARLY_RECHECK_DAYS)
+    if days_remaining > 0 and at_risk and today < early_date:
+        # At risk, and the early re-check has not opened yet: count down to
+        # it, so the card agrees with the reading's "reassess in 3 days".
+        return {
+            "can_assess": False,
+            "last_assessment_date": latest.isoformat(),
+            "next_assessment_date": early_date.isoformat(),
+            "days_remaining": (early_date - today).days,
+            "interval_days": ASSESSMENT_INTERVAL_DAYS,
+        }
     if (
         days_remaining > 0
         and (today - latest).days >= EARLY_RECHECK_DAYS
