@@ -6,9 +6,13 @@ import {
   Bluetooth,
   Cable,
   Cpu,
+  Laptop,
   LoaderCircle,
+  Power,
   RotateCw,
+  Smartphone,
   Sprout,
+  TriangleAlert,
   Usb,
 } from "lucide-react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
@@ -20,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import {
   isBluetoothSupported,
   isSerialSupported,
-  prefersBluetooth,
   readSoilSensor,
   readSoilSensorBluetooth,
   SensorError,
@@ -58,6 +61,8 @@ export function ArduinoSensorSign({ onStart }: { onStart: () => void }) {
 type Step = 1 | 2 | 3;
 /** How the browser reaches the sensor: the USB cable, or Bluetooth. */
 type Method = "usb" | "bluetooth";
+/** What the farmer reads with: a laptop (USB cable) or a phone (Bluetooth). */
+type Device = "laptop" | "phone";
 type ReadState =
   | { kind: "ready" }
   | { kind: "reading" }
@@ -65,9 +70,11 @@ type ReadState =
   | { kind: "error"; message: string; received?: string };
 
 /**
- * Three pages: what the sensor does, how to use it, then Go. Go reads the
- * probe over USB, or over Bluetooth on phones, and shows the readings; "Use these readings" hands them to
- * the form, which carries on to the recommendation.
+ * First the farmer picks a laptop or a phone (iPhones cannot connect, so a
+ * warning says so). Then three pages: what the sensor does, how to use it on
+ * that device, then Go. Go reads the probe over USB on a laptop, or over
+ * Bluetooth on a phone, and shows the readings; "Use these readings" hands
+ * them to the form, which carries on to the recommendation.
  *
  * `afterReadings` is shown under the readings once they are in - the form
  * passes its Additional Soil Information box.
@@ -82,6 +89,7 @@ export function ArduinoSensorWizard({
   afterReadings?: ReactNode;
 }) {
   const { t } = useLanguage();
+  const [device, setDevice] = useState<Device | null>(null);
   const [step, setStep] = useState<Step>(1);
   // Which way the pages slide: forward from the right, back from the left.
   const [direction, setDirection] = useState(1);
@@ -92,15 +100,28 @@ export function ArduinoSensorWizard({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const usbSupported = isSerialSupported();
   const bluetoothSupported = isBluetoothSupported();
-  const supported = usbSupported || bluetoothSupported;
-  // On Android, Web Serial exists but finds no USB device: Bluetooth leads.
-  const bluetoothFirst = bluetoothSupported && (!usbSupported || prefersBluetooth());
+  const onPhone = device === "phone";
+  // A phone reads only by Bluetooth; a laptop by USB, or Bluetooth if it has it.
+  const supported = onPhone ? bluetoothSupported : usbSupported || bluetoothSupported;
   // The way the last reading came, so "Read again" uses it too.
-  const [method, setMethod] = useState<Method>(bluetoothFirst ? "bluetooth" : "usb");
+  const [method, setMethod] = useState<Method>("usb");
 
   function goTo(next: Step) {
     setDirection(next > step ? 1 : -1);
     setStep(next);
+  }
+
+  function chooseDevice(next: Device) {
+    setDirection(1);
+    setDevice(next);
+    setStep(1);
+    setMethod(next === "phone" ? "bluetooth" : "usb");
+    setState({ kind: "ready" });
+  }
+
+  function backToDevices() {
+    setDirection(-1);
+    setDevice(null);
   }
 
   async function read(how: Method) {
@@ -151,19 +172,73 @@ export function ArduinoSensorWizard({
     }
   }
 
-  const steps = [
-    { icon: Sprout, text: t("arduino.how1") },
-    bluetoothFirst
-      ? { icon: Bluetooth, text: t("arduino.how2Bluetooth") }
-      : { icon: Cable, text: t("arduino.how2") },
-    bluetoothFirst
-      ? { icon: Bluetooth, text: t("arduino.how3Bluetooth") }
-      : { icon: Usb, text: t("arduino.how3") },
-    { icon: LoaderCircle, text: t("arduino.how4") },
+  const steps = onPhone
+    ? [
+        { icon: Smartphone, text: t("arduino.phoneHow1") },
+        { icon: Sprout, text: t("arduino.how1") },
+        { icon: Power, text: t("arduino.phoneHow2") },
+        { icon: Bluetooth, text: t("arduino.how3Bluetooth") },
+        { icon: LoaderCircle, text: t("arduino.how4") },
+      ]
+    : [
+        { icon: Sprout, text: t("arduino.how1") },
+        { icon: Cable, text: t("arduino.how2") },
+        { icon: Usb, text: t("arduino.how3") },
+        { icon: LoaderCircle, text: t("arduino.how4") },
+      ];
+
+  const devices = [
+    {
+      value: "laptop" as const,
+      icon: Laptop,
+      label: t("arduino.deviceLaptop"),
+      hint: t("arduino.deviceLaptopHint"),
+    },
+    {
+      value: "phone" as const,
+      icon: Smartphone,
+      label: t("arduino.devicePhone"),
+      hint: t("arduino.devicePhoneHint"),
+    },
   ];
 
   let page;
-  if (step === 1) {
+  if (device === null) {
+    page = (
+      <div className="flex flex-col gap-3">
+        <h2 className="font-heading text-lg font-semibold">{t("arduino.deviceTitle")}</h2>
+        <p className="text-muted-foreground text-sm">{t("arduino.deviceBody")}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {devices.map(({ value, icon: Icon, label, hint }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => chooseDevice(value)}
+              className="border-border hover:border-primary hover:bg-primary/5 focus-visible:ring-ring flex items-start gap-3 rounded-lg border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+                <Icon className="size-5" />
+              </span>
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-semibold">{label}</span>
+                <span className="text-muted-foreground text-xs">{hint}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div
+          className="border-risk-high/40 bg-risk-high/5 flex items-start gap-2.5 rounded-lg border px-3 py-2.5"
+          role="note"
+        >
+          <TriangleAlert className="text-risk-high mt-0.5 size-4 shrink-0" />
+          <p className="text-sm">
+            <span className="font-semibold">{t("arduino.iphoneWarningTitle")}</span>{" "}
+            {t("arduino.iphoneWarning")}
+          </p>
+        </div>
+      </div>
+    );
+  } else if (step === 1) {
     page = (
       <div className="flex flex-col gap-3">
         <span className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-xl">
@@ -207,7 +282,7 @@ export function ArduinoSensorWizard({
 
         {!supported ? (
           <p className="text-risk-high text-sm" role="alert">
-            {t("arduino.unsupported")}
+            {onPhone ? t("arduino.unsupportedPhone") : t("arduino.unsupported")}
           </p>
         ) : state.kind === "done" ? (
           <>
@@ -232,7 +307,7 @@ export function ArduinoSensorWizard({
         ) : (
           <>
             <p className="text-muted-foreground text-sm">
-              {bluetoothFirst ? t("arduino.goBodyBluetooth") : t("arduino.goBody")}
+              {onPhone ? t("arduino.goBodyBluetooth") : t("arduino.goBody")}
             </p>
             {state.kind === "error" && (
               <div className="flex flex-col gap-1.5" role="alert">
@@ -260,15 +335,22 @@ export function ArduinoSensorWizard({
         className="border-border flex flex-col gap-5 overflow-hidden rounded-lg border p-4 sm:p-5"
       >
         <div className="flex items-center justify-between gap-2">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t("arduino.stepOf", { step })}
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+            {device === null ? (
+              t("arduino.deviceStep")
+            ) : (
+              <>
+                {onPhone ? <Smartphone className="size-3.5" /> : <Laptop className="size-3.5" />}
+                {t("arduino.stepOf", { step })}
+              </>
+            )}
           </p>
           <div className="flex gap-1.5" aria-hidden="true">
             {[1, 2, 3].map((dot) => (
               <span
                 key={dot}
                 className={
-                  dot <= step ? "bg-primary h-1.5 w-6 rounded-full" : "bg-muted h-1.5 w-6 rounded-full"
+                  device !== null && dot <= step ? "bg-primary h-1.5 w-6 rounded-full" : "bg-muted h-1.5 w-6 rounded-full"
                 }
               />
             ))}
@@ -277,7 +359,7 @@ export function ArduinoSensorWizard({
 
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.div
-            key={step}
+            key={device === null ? "device" : `${device}-${step}`}
             custom={direction}
             initial={{ opacity: 0, x: 40 * direction }}
             animate={{ opacity: 1, x: 0 }}
@@ -289,9 +371,14 @@ export function ArduinoSensorWizard({
         </AnimatePresence>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {step === 1 ? (
+          {device === null ? (
             <Button type="button" variant="ghost" onClick={onCancel}>
               {t("arduino.typeInstead")}
+            </Button>
+          ) : step === 1 ? (
+            <Button type="button" variant="ghost" onClick={backToDevices}>
+              <ArrowLeft className="size-4" />
+              {t("arduino.back")}
             </Button>
           ) : (
             <Button
@@ -305,7 +392,7 @@ export function ArduinoSensorWizard({
             </Button>
           )}
 
-          {step < 3 ? (
+          {device === null ? null : step < 3 ? (
             <Button type="button" onClick={() => goTo((step + 1) as Step)}>
               {t("arduino.next")}
               <ArrowRight className="size-4" />
@@ -326,12 +413,11 @@ export function ArduinoSensorWizard({
               </Button>
             </div>
           ) : (
-            <div className={bluetoothFirst ? "flex flex-wrap-reverse gap-2" : "flex flex-wrap gap-2"}>
-              {usbSupported ? (
+            <div className="flex flex-wrap gap-2">
+              {!onPhone && usbSupported ? (
                 <Button
                   type="button"
-                  size={bluetoothFirst ? "default" : "lg"}
-                  variant={bluetoothFirst ? "outline" : "default"}
+                  size="lg"
                   onClick={() => read("usb")}
                   disabled={state.kind === "reading"}
                 >
@@ -346,8 +432,8 @@ export function ArduinoSensorWizard({
               {bluetoothSupported ? (
                 <Button
                   type="button"
-                  size={bluetoothFirst ? "lg" : "default"}
-                  variant={bluetoothFirst ? "default" : "outline"}
+                  size={onPhone || !usbSupported ? "lg" : "default"}
+                  variant={onPhone || !usbSupported ? "default" : "outline"}
                   onClick={() => read("bluetooth")}
                   disabled={state.kind === "reading"}
                 >

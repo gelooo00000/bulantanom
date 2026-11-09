@@ -39,6 +39,58 @@ export const soil = defineMessages({
     fil: "I-type na lang ang mga sukat",
     bik: "I-type na sana an mga sukat",
   },
+  "arduino.deviceStep": {
+    en: "Choose your device",
+    fil: "Piliin ang iyong device",
+    bik: "Pilion an imo device",
+  },
+  "arduino.deviceTitle": {
+    en: "Which device will you use?",
+    fil: "Aling device ang gagamitin mo?",
+    bik: "Arin na device an gagamiton mo?",
+  },
+  "arduino.deviceBody": {
+    en: "The sensor connects to a laptop with a USB cable, or to a phone by Bluetooth.",
+    fil: "Kumokonekta ang sensor sa laptop gamit ang USB cable, o sa telepono gamit ang Bluetooth.",
+    bik: "Nagkokonekta an sensor sa laptop gamit an USB cable, o sa telepono gamit an Bluetooth.",
+  },
+  "arduino.deviceLaptop": { en: "Laptop", fil: "Laptop", bik: "Laptop" },
+  "arduino.deviceLaptopHint": {
+    en: "Chrome or Edge, with the USB cable",
+    fil: "Chrome o Edge, gamit ang USB cable",
+    bik: "Chrome o Edge, gamit an USB cable",
+  },
+  "arduino.devicePhone": { en: "Phone", fil: "Telepono", bik: "Telepono" },
+  "arduino.devicePhoneHint": {
+    en: "Android phone with Chrome, by Bluetooth",
+    fil: "Android na telepono na may Chrome, gamit ang Bluetooth",
+    bik: "Android na telepono na may Chrome, gamit an Bluetooth",
+  },
+  "arduino.iphoneWarningTitle": {
+    en: "iPhones can't use the Arduino.",
+    fil: "Hindi magagamit ng iPhone ang Arduino.",
+    bik: "Dili magagamit kan iPhone an Arduino.",
+  },
+  "arduino.iphoneWarning": {
+    en: "iPhones and iPads cannot connect to the sensor. Use an Android phone or a laptop, or type the readings instead.",
+    fil: "Hindi makakonekta sa sensor ang iPhone at iPad. Gumamit ng Android na telepono o laptop, o i-type na lang ang mga sukat.",
+    bik: "Dili makakonekta sa sensor an iPhone asin iPad. Maggamit nin Android na telepono o laptop, o i-type na sana an mga sukat.",
+  },
+  "arduino.phoneHow1": {
+    en: "Open BulanTanom in Chrome on your Android phone and turn on Bluetooth (and Location, on older phones).",
+    fil: "Buksan ang BulanTanom sa Chrome sa iyong Android na telepono at buksan ang Bluetooth (at ang Location, sa mas lumang telepono).",
+    bik: "Buksan an BulanTanom sa Chrome sa imo Android na telepono asin buksan an Bluetooth (asin an Location, sa mas gurang na telepono).",
+  },
+  "arduino.phoneHow2": {
+    en: "Turn the sensor on with its power bank or charger, and keep your phone within a few metres of it.",
+    fil: "Buksan ang sensor gamit ang power bank o charger nito, at ilapit ang telepono nang ilang metro lang.",
+    bik: "Buksan an sensor gamit an power bank o charger kaini, asin idani an telepono nin pira sana na metro.",
+  },
+  "arduino.unsupportedPhone": {
+    en: "This phone's browser cannot connect to the sensor by Bluetooth. Open BulanTanom in Chrome on an Android phone (iPhones cannot connect), use a laptop, or type the readings instead.",
+    fil: "Hindi makakonekta sa sensor gamit ang Bluetooth ang browser ng teleponong ito. Buksan ang BulanTanom sa Chrome sa Android na telepono (hindi makakonekta ang iPhone), gumamit ng laptop, o i-type na lang ang mga sukat.",
+    bik: "Dili makakonekta sa sensor gamit an Bluetooth an browser kan telepono na ini. Buksan an BulanTanom sa Chrome sa Android na telepono (dili makakonekta an iPhone), maggamit nin laptop, o i-type na sana an mga sukat.",
+  },
   "arduino.stepOf": { en: "Step {step} of 3", fil: "Hakbang {step} sa 3", bik: "Lakdang {step} sa 3" },
   "arduino.next": { en: "Next", fil: "Susunod", bik: "Sunod" },
   "arduino.back": { en: "Back", fil: "Bumalik", bik: "Balik" },
