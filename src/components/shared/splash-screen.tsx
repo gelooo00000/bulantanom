@@ -7,7 +7,7 @@ import { Logo } from "@/components/shared/logo";
 /** Set for the rest of the browser tab's visit once the splash has shown. */
 const SPLASH_STORAGE_KEY = "bulantanom-splash-seen";
 /** How long the splash stays up. */
-export const SPLASH_MS = 5000;
+export const SPLASH_MS = 3000;
 /** The fade out at the end. */
 const FADE_MS = 500;
 
@@ -28,7 +28,7 @@ export const SPLASH_INIT_SCRIPT = `
 
 /**
  * The BulanTanom splash: the farm's logo and the name over the whole screen
- * for five seconds when the site is first opened (on Render's free tier
+ * for three seconds when the site is first opened (on Render's free tier
  * that is often right after the server woke up), with a bar filling as the
  * time runs. Once per visit: later pages and reloads go straight in.
  *

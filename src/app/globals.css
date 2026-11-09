@@ -564,7 +564,7 @@
 }
 
 /* The BulanTanom splash (components/shared/splash-screen): hidden before
-   paint when this visit already saw it; the bar fills over its five seconds. */
+   paint when this visit already saw it; the bar fills over its three seconds. */
 html[data-splash-seen] .splash-screen {
   display: none;
 }
