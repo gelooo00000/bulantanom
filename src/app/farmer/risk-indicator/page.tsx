@@ -50,7 +50,7 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
-import { CARD_OUTLINE } from "@/lib/crop-colors";
+import { CARD_OUTLINE, cropColor } from "@/lib/crop-colors";
 import { useLanguage, type MessageKey, type Translate } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -543,8 +543,10 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
     <FarmCard
       id={`risk-plant-${plant.id}`}
       cropName={plant.crop.name}
-      accent={accent}
-      strong={atRisk || failed}
+      // The glow across the top is the crop's colour, as on the Harvest
+      // cards; the headline, pill, ring and dot keep the risk level's.
+      accent={cropColor(plant.crop.name)}
+      strong
       className="scroll-mt-24"
       data-group={group}
     >
