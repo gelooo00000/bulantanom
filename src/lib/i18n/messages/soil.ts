@@ -62,6 +62,16 @@ export const soil = defineMessages({
     fil: "Isaksak ang Arduino sa computer na ito gamit ang USB cable.",
     bik: "Isaksak an Arduino sa computer na ini gamit an USB cable.",
   },
+  "arduino.how2Bluetooth": {
+    en: "Turn the sensor on and keep this phone within a few metres of it, with Bluetooth on.",
+    fil: "Buksan ang sensor at ilapit ang teleponong ito nang ilang metro lang, nakabukas ang Bluetooth.",
+    bik: "Buksan an sensor asin idani an telepono na ini nin pira sana na metro, bukas an Bluetooth.",
+  },
+  "arduino.how3Bluetooth": {
+    en: "Press Connect by Bluetooth, then choose BulanTanom-Soil from the list.",
+    fil: "Pindutin ang Connect by Bluetooth, saka piliin ang BulanTanom-Soil sa listahan.",
+    bik: "Pinduton an Connect by Bluetooth, dangan pilion an BulanTanom-Soil sa listahan.",
+  },
   "arduino.how3": {
     en: "Press Go, then choose the Arduino from the list your browser shows.",
     fil: "Pindutin ang Go, saka piliin ang Arduino sa listahang ipapakita ng browser.",
@@ -82,7 +92,18 @@ export const soil = defineMessages({
     fil: "Pindutin ang Go at piliin ang port ng Arduino.",
     bik: "Pinduton an Go asin pilion an port san Arduino.",
   },
+  "arduino.goBodyBluetooth": {
+    en: "Press Connect by Bluetooth and pick BulanTanom-Soil.",
+    fil: "Pindutin ang Connect by Bluetooth at piliin ang BulanTanom-Soil.",
+    bik: "Pinduton an Connect by Bluetooth asin pilion an BulanTanom-Soil.",
+  },
   "arduino.go": { en: "Go", fil: "Go", bik: "Go" },
+  "arduino.goUsb": { en: "Connect by USB", fil: "Kumonekta sa USB", bik: "Magkonekta sa USB" },
+  "arduino.goBluetooth": {
+    en: "Connect by Bluetooth",
+    fil: "Kumonekta sa Bluetooth",
+    bik: "Magkonekta sa Bluetooth",
+  },
   "arduino.reading": {
     en: "Reading your soil… keep the probe still.",
     fil: "Sinusukat ang iyong lupa… huwag galawin ang probe.",
@@ -100,9 +121,9 @@ export const soil = defineMessages({
   },
   "arduino.readAgain": { en: "Read again", fil: "Sukatin muli", bik: "Sukaton giraray" },
   "arduino.unsupported": {
-    en: "This browser cannot connect to the Arduino. Open BulanTanom in Chrome or Edge on a computer, or type the readings instead.",
-    fil: "Hindi makakonekta ang browser na ito sa Arduino. Buksan ang BulanTanom sa Chrome o Edge sa computer, o i-type na lang ang mga sukat.",
-    bik: "Dili makakonekta an browser na ini sa Arduino. Buksan an BulanTanom sa Chrome o Edge sa computer, o i-type na sana an mga sukat.",
+    en: "This browser cannot connect to the Arduino. Open BulanTanom in Chrome on an Android phone or in Chrome or Edge on a computer, or type the readings instead.",
+    fil: "Hindi makakonekta ang browser na ito sa Arduino. Buksan ang BulanTanom sa Chrome sa Android na telepono o sa Chrome o Edge sa computer, o i-type na lang ang mga sukat.",
+    bik: "Dili makakonekta an browser na ini sa Arduino. Buksan an BulanTanom sa Chrome sa Android na telepono o sa Chrome o Edge sa computer, o i-type na sana an mga sukat.",
   },
   "arduino.error.cancelled": {
     en: "No Arduino was chosen. Press Go to try again.",
@@ -138,6 +159,41 @@ export const soil = defineMessages({
     en: "The Arduino was disconnected. Plug it back in and try again.",
     fil: "Natanggal ang Arduino. Isaksak itong muli at subukan ulit.",
     bik: "Natanggal an Arduino. Isaksak ini giraray asin probaran utro.",
+  },
+  "arduino.error.bluetooth_off": {
+    en: "Bluetooth is off. Turn on Bluetooth (and Location, on older Android phones), then try again.",
+    fil: "Nakapatay ang Bluetooth. Buksan ang Bluetooth (at ang Location, sa mas lumang Android), saka subukan muli.",
+    bik: "Nakapatay an Bluetooth. Buksan an Bluetooth (asin an Location, sa mas gurang na Android), dangan probaran giraray.",
+  },
+  "arduino.error.ble_permission_denied": {
+    en: "Chrome is not allowed to use Bluetooth. Allow Nearby devices for Chrome in your phone's Settings, and Bluetooth for this site in Chrome's site settings, then try again.",
+    fil: "Hindi pinapayagang gumamit ng Bluetooth ang Chrome. Payagan ang Nearby devices para sa Chrome sa Settings ng telepono, at ang Bluetooth para sa site na ito sa site settings ng Chrome, saka subukan muli.",
+    bik: "Dili tinutugutan an Chrome na maggamit nin Bluetooth. Tugutan an Nearby devices para sa Chrome sa Settings san telepono, asin an Bluetooth para sa site na ini sa site settings san Chrome, dangan probaran giraray.",
+  },
+  "arduino.error.ble_not_found": {
+    en: "No sensor was chosen. If BulanTanom-Soil did not show up in the list, check that the sensor is on and close by, then try again.",
+    fil: "Walang napiling sensor. Kung hindi lumabas ang BulanTanom-Soil sa listahan, tiyaking nakabukas at malapit ang sensor, saka subukan muli.",
+    bik: "Waray napili na sensor. Kun dili nagluwas an BulanTanom-Soil sa listahan, siguraduhon na bukas asin harani an sensor, dangan probaran giraray.",
+  },
+  "arduino.error.ble_wrong_device": {
+    en: "That device is not sending BulanTanom soil readings. Upload the BulanTanom soil sensor sketch (hardware/soil-sensor) to the ESP32, then try again.",
+    fil: "Hindi nagpapadala ng sukat ng BulanTanom ang device na iyon. I-upload ang BulanTanom soil sensor sketch (hardware/soil-sensor) sa ESP32, saka subukan muli.",
+    bik: "Dili nagpapadara nin sukat san BulanTanom an device na iyan. I-upload an BulanTanom soil sensor sketch (hardware/soil-sensor) sa ESP32, dangan probaran giraray.",
+  },
+  "arduino.error.ble_connect_failed": {
+    en: "Could not connect to the sensor. Move closer, turn the sensor off and on, then try again.",
+    fil: "Hindi makakonekta sa sensor. Lumapit, patayin at buksan muli ang sensor, saka subukan ulit.",
+    bik: "Dili makakonekta sa sensor. Magdani, patayon asin buksan giraray an sensor, dangan probaran utro.",
+  },
+  "arduino.error.ble_no_data": {
+    en: "The sensor connected but sent nothing. Turn it off and on, then try again.",
+    fil: "Nakakonekta ang sensor pero walang ipinadala. Patayin at buksan ito muli, saka subukan ulit.",
+    bik: "Nakakonekta an sensor pero waray pinadara. Patayon asin buksan ini giraray, dangan probaran utro.",
+  },
+  "arduino.error.ble_disconnected": {
+    en: "The Bluetooth connection to the sensor dropped. Move closer and try again.",
+    fil: "Naputol ang Bluetooth na koneksyon sa sensor. Lumapit at subukan muli.",
+    bik: "Napugtol an Bluetooth na koneksyon sa sensor. Magdani asin probaran giraray.",
   },
   "arduino.filledNotice": {
     en: "All seven readings were filled in from the sensor.",

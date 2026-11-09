@@ -2,14 +2,20 @@
 //
 // Reads the probe over Modbus RTU and prints one JSON line every two seconds
 // on the USB serial port, which the Crop Recommendation page reads in Chrome
-// or Edge:
+// or Edge on a computer, and over Bluetooth Low Energy as "BulanTanom-Soil"
+// (Nordic UART service, TX notifications in 20-byte chunks), which it reads
+// in Chrome on Android:
 //
 //   {"moisture":65.2,"temperature":28.5,"ec":850,"ph":6.5,"n":120,"p":80,"k":150}
 //
 // or {"error":"no_response"} when the probe does not answer. Wiring and setup
-// are in README.md beside this file. No extra libraries are needed.
+// are in README.md beside this file. No extra libraries are needed: the BLE
+// library comes with the ESP32 board package.
 
 #include <Arduino.h>
+#include <BLE2902.h>
+#include <BLEDevice.h>
+#include <BLEServer.h>
 
 // --- Wiring (change these to match your board) -----------------------------
 const int RS485_RX_PIN = 16;  // MAX3485 RO
@@ -27,7 +33,50 @@ const uint32_t RESPONSE_TIMEOUT_MS = 500;
 const uint32_t USB_BAUD = 115200;  // The website opens the port at this speed.
 const uint32_t POLL_INTERVAL_MS = 2000;
 
+// --- Bluetooth -----------------------------------------------------------------
+// The website's Bluetooth chooser lists only devices with this exact name.
+const char *BLE_NAME = "BulanTanom-Soil";
+const char *UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const char *UART_TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";  // notify
+const size_t BLE_CHUNK = 20;  // Fits the smallest BLE packet (default MTU 23).
+
 HardwareSerial RS485(2);
+BLECharacteristic *bleTx = nullptr;
+volatile bool bleConnected = false;
+
+class ConnectionCallbacks : public BLEServerCallbacks {
+  void onConnect(BLEServer *) override { bleConnected = true; }
+  void onDisconnect(BLEServer *) override {
+    bleConnected = false;
+    BLEDevice::startAdvertising();  // Ready for the next phone.
+  }
+};
+
+void startBluetooth() {
+  BLEDevice::init(BLE_NAME);
+  BLEServer *server = BLEDevice::createServer();
+  server->setCallbacks(new ConnectionCallbacks());
+  BLEService *service = server->createService(UART_SERVICE_UUID);
+  bleTx = service->createCharacteristic(UART_TX_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+  bleTx->addDescriptor(new BLE2902());
+  service->start();
+  // Only the name is advertised: the name plus a 128-bit UUID would not fit
+  // in one advertising packet, and the website finds the sensor by name.
+  BLEDevice::startAdvertising();
+}
+
+// One JSON line, to USB and, while a phone is connected, over Bluetooth.
+void sendLine(const char *line) {
+  Serial.print(line);
+  if (!bleConnected || bleTx == nullptr) return;
+  size_t length = strlen(line);
+  for (size_t sent = 0; sent < length; sent += BLE_CHUNK) {
+    size_t size = min(BLE_CHUNK, length - sent);
+    bleTx->setValue((uint8_t *)(line + sent), size);
+    bleTx->notify();
+    delay(10);  // Give the BLE stack time to send each chunk.
+  }
+}
 
 uint16_t modbusCrc(const uint8_t *data, size_t length) {
   uint16_t crc = 0xFFFF;
@@ -85,6 +134,7 @@ void setup() {
   pinMode(RS485_DE_RE_PIN, OUTPUT);
   digitalWrite(RS485_DE_RE_PIN, LOW);
   RS485.begin(PROBE_BAUD, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
+  startBluetooth();
 }
 
 void loop() {
@@ -94,12 +144,14 @@ void loop() {
     float moisture = r[0] / 10.0;
     float temperature = (int16_t)r[1] / 10.0;
     float ph = r[3] / 10.0;
-    Serial.printf(
-        "{\"moisture\":%.1f,\"temperature\":%.1f,\"ec\":%u,\"ph\":%.1f,"
-        "\"n\":%u,\"p\":%u,\"k\":%u}\n",
-        moisture, temperature, r[2], ph, r[4], r[5], r[6]);
+    char line[128];
+    snprintf(line, sizeof(line),
+             "{\"moisture\":%.1f,\"temperature\":%.1f,\"ec\":%u,\"ph\":%.1f,"
+             "\"n\":%u,\"p\":%u,\"k\":%u}\n",
+             moisture, temperature, r[2], ph, r[4], r[5], r[6]);
+    sendLine(line);
   } else {
-    Serial.println("{\"error\":\"no_response\"}");
+    sendLine("{\"error\":\"no_response\"}\n");
   }
   delay(POLL_INTERVAL_MS);
 }

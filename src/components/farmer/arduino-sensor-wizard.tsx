@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  Bluetooth,
   Cable,
   Cpu,
   LoaderCircle,
@@ -17,8 +18,11 @@ import { SoilNumberField } from "@/components/farmer/soil-number-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  isBluetoothSupported,
   isSerialSupported,
+  prefersBluetooth,
   readSoilSensor,
+  readSoilSensorBluetooth,
   SensorError,
   toFormValues,
   type MeasuredField,
@@ -52,6 +56,8 @@ export function ArduinoSensorSign({ onStart }: { onStart: () => void }) {
 }
 
 type Step = 1 | 2 | 3;
+/** How the browser reaches the sensor: the USB cable, or Bluetooth. */
+type Method = "usb" | "bluetooth";
 type ReadState =
   | { kind: "ready" }
   | { kind: "reading" }
@@ -60,7 +66,7 @@ type ReadState =
 
 /**
  * Three pages: what the sensor does, how to use it, then Go. Go reads the
- * probe over USB and shows the readings; "Use these readings" hands them to
+ * probe over USB, or over Bluetooth on phones, and shows the readings; "Use these readings" hands them to
  * the form, which carries on to the recommendation.
  *
  * `afterReadings` is shown under the readings once they are in - the form
@@ -84,22 +90,32 @@ export function ArduinoSensorWizard({
   // here instead of sending the farmer back to the typed form.
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const supported = isSerialSupported();
+  const usbSupported = isSerialSupported();
+  const bluetoothSupported = isBluetoothSupported();
+  const supported = usbSupported || bluetoothSupported;
+  // On Android, Web Serial exists but finds no USB device: Bluetooth leads.
+  const bluetoothFirst = bluetoothSupported && (!usbSupported || prefersBluetooth());
+  // The way the last reading came, so "Read again" uses it too.
+  const [method, setMethod] = useState<Method>(bluetoothFirst ? "bluetooth" : "usb");
 
   function goTo(next: Step) {
     setDirection(next > step ? 1 : -1);
     setStep(next);
   }
 
-  async function read() {
+  async function read(how: Method) {
+    setMethod(how);
     setState({ kind: "reading" });
     try {
-      const readings = toFormValues(await readSoilSensor());
+      const readings = toFormValues(
+        await (how === "bluetooth" ? readSoilSensorBluetooth() : readSoilSensor()),
+      );
       setValues(readings);
       setErrors(validateAll(readings));
       setState({ kind: "done" });
     } catch (err) {
-      const code = err instanceof SensorError ? err.code : "disconnected";
+      const code =
+        err instanceof SensorError ? err.code : how === "bluetooth" ? "ble_disconnected" : "disconnected";
       setState({
         kind: "error",
         message: t(`arduino.error.${code}` as MessageKey),
@@ -137,8 +153,12 @@ export function ArduinoSensorWizard({
 
   const steps = [
     { icon: Sprout, text: t("arduino.how1") },
-    { icon: Cable, text: t("arduino.how2") },
-    { icon: Usb, text: t("arduino.how3") },
+    bluetoothFirst
+      ? { icon: Bluetooth, text: t("arduino.how2Bluetooth") }
+      : { icon: Cable, text: t("arduino.how2") },
+    bluetoothFirst
+      ? { icon: Bluetooth, text: t("arduino.how3Bluetooth") }
+      : { icon: Usb, text: t("arduino.how3") },
     { icon: LoaderCircle, text: t("arduino.how4") },
   ];
 
@@ -211,7 +231,9 @@ export function ArduinoSensorWizard({
           </p>
         ) : (
           <>
-            <p className="text-muted-foreground text-sm">{t("arduino.goBody")}</p>
+            <p className="text-muted-foreground text-sm">
+              {bluetoothFirst ? t("arduino.goBodyBluetooth") : t("arduino.goBody")}
+            </p>
             {state.kind === "error" && (
               <div className="flex flex-col gap-1.5" role="alert">
                 <p className="text-risk-high text-sm">{state.message}</p>
@@ -294,7 +316,7 @@ export function ArduinoSensorWizard({
             </Button>
           ) : state.kind === "done" ? (
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={read}>
+              <Button type="button" variant="outline" onClick={() => read(method)}>
                 <RotateCw className="size-4" />
                 {t("arduino.readAgain")}
               </Button>
@@ -304,14 +326,40 @@ export function ArduinoSensorWizard({
               </Button>
             </div>
           ) : (
-            <Button type="button" size="lg" onClick={read} disabled={state.kind === "reading"}>
-              {state.kind === "reading" ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <Usb className="size-4" />
-              )}
-              {t("arduino.go")}
-            </Button>
+            <div className={bluetoothFirst ? "flex flex-wrap-reverse gap-2" : "flex flex-wrap gap-2"}>
+              {usbSupported ? (
+                <Button
+                  type="button"
+                  size={bluetoothFirst ? "default" : "lg"}
+                  variant={bluetoothFirst ? "outline" : "default"}
+                  onClick={() => read("usb")}
+                  disabled={state.kind === "reading"}
+                >
+                  {state.kind === "reading" && method === "usb" ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <Usb className="size-4" />
+                  )}
+                  {bluetoothSupported ? t("arduino.goUsb") : t("arduino.go")}
+                </Button>
+              ) : null}
+              {bluetoothSupported ? (
+                <Button
+                  type="button"
+                  size={bluetoothFirst ? "lg" : "default"}
+                  variant={bluetoothFirst ? "default" : "outline"}
+                  onClick={() => read("bluetooth")}
+                  disabled={state.kind === "reading"}
+                >
+                  {state.kind === "reading" && method === "bluetooth" ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <Bluetooth className="size-4" />
+                  )}
+                  {t("arduino.goBluetooth")}
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
       </section>

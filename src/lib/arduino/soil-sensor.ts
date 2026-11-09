@@ -6,9 +6,16 @@
  *
  *   {"moisture":65.2,"temperature":28.5,"ec":850,"ph":6.5,"n":120,"p":80,"k":150}
  *
- * or `{"error":"no_response"}` when the probe does not answer. The browser
- * reads those lines with the Web Serial API, which Chrome and Edge offer on
- * computers. Safari and iPhones have no Web Serial at all.
+ * or `{"error":"no_response"}` when the probe does not answer. The same lines
+ * go out two ways:
+ *
+ * - over the USB cable, read with the Web Serial API (Chrome and Edge on
+ *   computers);
+ * - over Bluetooth Low Energy as "BulanTanom-Soil", a Nordic UART service whose
+ *   TX characteristic notifies the line in chunks of up to 20 bytes, read with
+ *   Web Bluetooth (Chrome on Android, where Web Serial finds no USB device).
+ *
+ * Safari and iPhones have neither.
  *
  * The probe measures all seven of the form's readings.
  */
@@ -56,7 +63,15 @@ export type SensorErrorCode =
   | "no_data"
   | "unrecognized"
   | "probe_not_answering"
-  | "disconnected";
+  | "disconnected"
+  // Bluetooth only.
+  | "bluetooth_off"
+  | "ble_permission_denied"
+  | "ble_not_found"
+  | "ble_wrong_device"
+  | "ble_connect_failed"
+  | "ble_no_data"
+  | "ble_disconnected";
 
 export class SensorError extends Error {
   /** For "unrecognized": the last line the Arduino sent, to show the farmer. */
@@ -139,6 +154,51 @@ export function isSerialSupported(): boolean {
 }
 
 /**
+ * Gathers SAMPLES_PER_READING readings from a stream of bytes and averages
+ * them. `next` returns the next chunk, or null once the stream has ended (the
+ * read timed out, or the port closed). Bytes may split anywhere, mid-line
+ * included: they are buffered and split on newlines.
+ */
+async function collectReadings(
+  next: () => Promise<Uint8Array | null>,
+  codes: { noData: SensorErrorCode; disconnected: SensorErrorCode },
+): Promise<SensorReadings> {
+  const decoder = new TextDecoder();
+  const samples: SensorReadings[] = [];
+  let probeErrors = 0;
+  // The last line that was not a reading: a sketch other than BulanTanom's,
+  // or the ESP32's own boot messages, tell the farmer what is wrong.
+  let lastIgnored = "";
+  let buffer = "";
+
+  while (samples.length < SAMPLES_PER_READING) {
+    let chunk: Uint8Array | null;
+    try {
+      chunk = await next();
+    } catch (err) {
+      if (err instanceof SensorError) throw err;
+      throw new SensorError(codes.disconnected);
+    }
+    if (chunk === null) {
+      if (probeErrors > 0) throw new SensorError("probe_not_answering");
+      const tail = (lastIgnored || buffer).trim();
+      if (tail) throw new SensorError("unrecognized", tail.slice(0, RECEIVED_PREVIEW));
+      throw new SensorError(codes.noData);
+    }
+    buffer += decoder.decode(chunk, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const parsed = parseSensorLine(line);
+      if (parsed.kind === "reading") samples.push(parsed.readings);
+      if (parsed.kind === "probe_error") probeErrors += 1;
+      if (parsed.kind === "ignored" && line.trim()) lastIgnored = line.trim();
+    }
+  }
+  return averageReadings(samples.slice(0, SAMPLES_PER_READING));
+}
+
+/**
  * Asks the farmer to pick the ESP32's port, then returns the average of the
  * first SAMPLES_PER_READING readings. The port is closed again before this
  * returns, whatever happens.
@@ -171,42 +231,217 @@ export async function readSoilSensor(): Promise<SensorReadings> {
   const timer = setTimeout(() => {
     reader.cancel().catch(() => {});
   }, READ_TIMEOUT_MS);
-  const decoder = new TextDecoder();
-  const samples: SensorReadings[] = [];
-  let probeErrors = 0;
-  // The last line that was not a reading: a sketch other than BulanTanom's,
-  // or the ESP32's own boot messages, tell the farmer what is wrong.
-  let lastIgnored = "";
-  let buffer = "";
 
   try {
-    while (samples.length < SAMPLES_PER_READING) {
-      let chunk: ReadableStreamReadResult<Uint8Array>;
-      try {
-        chunk = await reader.read();
-      } catch {
-        throw new SensorError("disconnected");
-      }
-      if (chunk.done) {
-        if (probeErrors > 0) throw new SensorError("probe_not_answering");
-        const tail = (lastIgnored || buffer).trim();
-        if (tail) throw new SensorError("unrecognized", tail.slice(0, RECEIVED_PREVIEW));
-        throw new SensorError("no_data");
-      }
-      buffer += decoder.decode(chunk.value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const parsed = parseSensorLine(line);
-        if (parsed.kind === "reading") samples.push(parsed.readings);
-        if (parsed.kind === "probe_error") probeErrors += 1;
-        if (parsed.kind === "ignored" && line.trim()) lastIgnored = line.trim();
-      }
-    }
-    return averageReadings(samples.slice(0, SAMPLES_PER_READING));
+    return await collectReadings(
+      async () => {
+        const chunk = await reader.read();
+        return chunk.done ? null : chunk.value;
+      },
+      { noData: "no_data", disconnected: "disconnected" },
+    );
   } finally {
     clearTimeout(timer);
     reader.releaseLock();
     await port.close().catch(() => {});
+  }
+}
+
+// --- Bluetooth -------------------------------------------------------------
+
+/** The name the firmware advertises; the browser's chooser lists only it. */
+export const BLE_DEVICE_NAME = "BulanTanom-Soil";
+/** Nordic UART service, and its TX characteristic (ESP32 -> browser). */
+export const BLE_UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+export const BLE_UART_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+
+// The parts of Web Bluetooth used here. TypeScript's DOM library does not
+// describe it yet.
+type BleCharacteristicLike = EventTarget & {
+  value?: DataView | null;
+  startNotifications(): Promise<unknown>;
+  stopNotifications(): Promise<unknown>;
+};
+type BleServerLike = {
+  getPrimaryService(uuid: string): Promise<{
+    getCharacteristic(uuid: string): Promise<BleCharacteristicLike>;
+  }>;
+};
+type BleDeviceLike = EventTarget & {
+  gatt?: { connected: boolean; connect(): Promise<BleServerLike>; disconnect(): void };
+};
+type BluetoothLike = {
+  getAvailability?(): Promise<boolean>;
+  requestDevice(options: {
+    filters: { name: string }[];
+    optionalServices: string[];
+  }): Promise<BleDeviceLike>;
+};
+
+function bluetoothApi(): BluetoothLike | null {
+  if (typeof navigator === "undefined") return null;
+  return (navigator as Navigator & { bluetooth?: BluetoothLike }).bluetooth ?? null;
+}
+
+export function isBluetoothSupported(): boolean {
+  return bluetoothApi() !== null;
+}
+
+/** Android, where Bluetooth is the way that works (Web Serial finds no USB device). */
+export function prefersBluetooth(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent);
+}
+
+function errorParts(err: unknown): { name: string; message: string } {
+  if (err && typeof err === "object") {
+    const record = err as { name?: unknown; message?: unknown };
+    return { name: String(record.name ?? ""), message: String(record.message ?? "") };
+  }
+  return { name: "", message: String(err ?? "") };
+}
+
+/**
+ * What a failed requestDevice() means. Chrome rejects with NotFoundError both
+ * when Bluetooth is off ("Bluetooth adapter not available.") and when the
+ * chooser is closed, which is also how it ends when the sensor never shows up
+ * in the list; the message tells the two apart.
+ */
+export function bluetoothRequestError(err: unknown): SensorErrorCode {
+  const { name, message } = errorParts(err);
+  if (/adapter|turned off|bluetooth is (off|disabled)|radio/i.test(message)) return "bluetooth_off";
+  if (
+    name === "NotAllowedError" ||
+    name === "SecurityError" ||
+    /permission|blocked/i.test(message)
+  ) {
+    return "ble_permission_denied";
+  }
+  if (name === "NotFoundError") return "ble_not_found";
+  return "ble_connect_failed";
+}
+
+async function connectGatt(device: BleDeviceLike): Promise<BleServerLike> {
+  if (!device.gatt) throw new SensorError("ble_connect_failed");
+  // Android's first GATT connection fails now and then; one retry clears
+  // most of those.
+  try {
+    return await device.gatt.connect();
+  } catch {
+    try {
+      return await device.gatt.connect();
+    } catch {
+      throw new SensorError("ble_connect_failed");
+    }
+  }
+}
+
+/**
+ * Asks the farmer to pick "BulanTanom-Soil" in the browser's Bluetooth
+ * chooser, then returns the average of the first SAMPLES_PER_READING readings.
+ * The device is disconnected again before this returns, whatever happens.
+ */
+export async function readSoilSensorBluetooth(): Promise<SensorReadings> {
+  const bluetooth = bluetoothApi();
+  if (!bluetooth) throw new SensorError("unsupported");
+
+  if (bluetooth.getAvailability) {
+    const available = await bluetooth.getAvailability().catch(() => true);
+    if (!available) throw new SensorError("bluetooth_off");
+  }
+
+  let device: BleDeviceLike;
+  try {
+    device = await bluetooth.requestDevice({
+      filters: [{ name: BLE_DEVICE_NAME }],
+      optionalServices: [BLE_UART_SERVICE],
+    });
+  } catch (err) {
+    throw new SensorError(bluetoothRequestError(err));
+  }
+
+  // Chunks not read yet, the read waiting for the next one, and why the
+  // stream ended (no error: the read timed out).
+  const queue: Uint8Array[] = [];
+  let waiting: {
+    resolve: (chunk: Uint8Array | null) => void;
+    reject: (err: unknown) => void;
+  } | null = null;
+  let ended: { error?: SensorError } | null = null;
+
+  function push(chunk: Uint8Array) {
+    if (ended) return;
+    if (waiting) {
+      waiting.resolve(chunk);
+      waiting = null;
+    } else {
+      queue.push(chunk);
+    }
+  }
+  function end(error?: SensorError) {
+    if (ended) return;
+    ended = { error };
+    if (waiting) {
+      if (error) waiting.reject(error);
+      else waiting.resolve(null);
+      waiting = null;
+    }
+  }
+
+  const onValue = (event: Event) => {
+    const value = (event.target as BleCharacteristicLike).value;
+    if (!value) return;
+    // Copy: the browser may reuse the DataView's buffer for the next chunk.
+    push(new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength)));
+  };
+  const onDisconnect = () => end(new SensorError("ble_disconnected"));
+  // Read through a function: TypeScript cannot see the listeners set `ended`.
+  const endError = () => ended?.error;
+
+  let characteristic: BleCharacteristicLike | null = null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  device.addEventListener("gattserverdisconnected", onDisconnect);
+
+  try {
+    const server = await connectGatt(device);
+    try {
+      const service = await server.getPrimaryService(BLE_UART_SERVICE);
+      characteristic = await service.getCharacteristic(BLE_UART_TX);
+    } catch (err) {
+      const dropped = endError();
+      if (dropped) throw dropped;
+      // Connected, but no UART service: not BulanTanom's firmware.
+      throw new SensorError(
+        errorParts(err).name === "NotFoundError" ? "ble_wrong_device" : "ble_connect_failed",
+      );
+    }
+    characteristic.addEventListener("characteristicvaluechanged", onValue);
+    try {
+      await characteristic.startNotifications();
+    } catch {
+      throw endError() ?? new SensorError("ble_connect_failed");
+    }
+
+    timer = setTimeout(() => end(), READ_TIMEOUT_MS);
+    return await collectReadings(
+      () => {
+        const chunk = queue.shift();
+        if (chunk) return Promise.resolve(chunk);
+        if (ended) return ended.error ? Promise.reject(ended.error) : Promise.resolve(null);
+        return new Promise<Uint8Array | null>((resolve, reject) => {
+          waiting = { resolve, reject };
+        });
+      },
+      { noData: "ble_no_data", disconnected: "ble_disconnected" },
+    );
+  } finally {
+    clearTimeout(timer);
+    ended ??= {};
+    device.removeEventListener("gattserverdisconnected", onDisconnect);
+    if (characteristic) {
+      characteristic.removeEventListener("characteristicvaluechanged", onValue);
+      if (device.gatt?.connected) await characteristic.stopNotifications().catch(() => {});
+    }
+    if (device.gatt?.connected) device.gatt.disconnect();
   }
 }

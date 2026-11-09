@@ -1,7 +1,8 @@
 # Soil sensor (optional)
 
 An ESP32 that reads a 7-in-1 RS485 soil probe and sends the readings to the
-Crop Recommendation page over a USB cable. Typing the readings in by hand still
+Crop Recommendation page over a USB cable (computers) or Bluetooth (Android
+phones). Typing the readings in by hand still
 works, and is the default.
 
 | Part | Notes |
@@ -34,9 +35,17 @@ If readings never arrive, swap A and B first: it is the most common mistake.
 
 ## Use it on BulanTanom
 
-Use Chrome or Edge on a computer; Safari and iPhones cannot read USB devices.
-On Crop Recommendation, choose **Use the Arduino sensor**, push the probe into
-the soil, plug in the ESP32, and press **Go**. The probe fills in all seven readings
+**On a computer:** use Chrome or Edge. On Crop Recommendation, choose **Use the
+Arduino sensor**, push the probe into the soil, plug in the ESP32, and press
+**Connect by USB**.
+
+**On an Android phone:** use Chrome with Bluetooth on (and Location too, on
+Android 11 and older). Power the ESP32, choose **Use the Arduino sensor**, press
+**Connect by Bluetooth** and pick **BulanTanom-Soil**. The ESP32 advertises
+under that name as soon as it starts. If the phone does not list it, an app such
+as nRF Connect can check whether it is visible.
+
+Safari and iPhones support neither USB nor Bluetooth from a web page. The probe fills in all seven readings
 and the recommendation starts straight away.
 
 The probe's N, P and K are estimates, not lab results.

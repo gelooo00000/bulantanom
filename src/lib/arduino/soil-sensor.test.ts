@@ -4,6 +4,7 @@ import {
   averageReadings,
   parseSensorLine,
   readSoilSensor,
+  readSoilSensorBluetooth,
   SensorError,
   toFormValues,
   type SensorReadings,
@@ -113,5 +114,120 @@ describe("readSoilSensor", () => {
   it("says when the browser has no Web Serial", async () => {
     await expect(readSoilSensor()).rejects.toBeInstanceOf(SensorError);
     await expect(readSoilSensor()).rejects.toMatchObject({ code: "unsupported" });
+  });
+});
+
+type FakeBle = {
+  device: EventTarget & { gatt: { connected: boolean; connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> } };
+  requestDevice: ReturnType<typeof vi.fn>;
+};
+
+/**
+ * A fake "BulanTanom-Soil" that notifies `lines` in 20-byte chunks once
+ * notifications start. `dropAfter` disconnects after that many chunks.
+ */
+function fakeBluetooth(lines: string[], options: { dropAfter?: number } = {}): FakeBle {
+  const bytes = new TextEncoder().encode(lines.map((line) => line + "\n").join(""));
+  const characteristic = Object.assign(new EventTarget(), {
+    value: null as DataView | null,
+    startNotifications: vi.fn(async () => {
+      queueMicrotask(() => {
+        for (let i = 0, sent = 0; i < bytes.length; i += 20, sent += 1) {
+          if (options.dropAfter !== undefined && sent === options.dropAfter) {
+            device.gatt.connected = false;
+            device.dispatchEvent(new Event("gattserverdisconnected"));
+            return;
+          }
+          characteristic.value = new DataView(bytes.slice(i, i + 20).buffer);
+          characteristic.dispatchEvent(new Event("characteristicvaluechanged"));
+        }
+      });
+    }),
+    stopNotifications: vi.fn().mockResolvedValue(undefined),
+  });
+  const server = {
+    getPrimaryService: vi.fn().mockResolvedValue({
+      getCharacteristic: vi.fn().mockResolvedValue(characteristic),
+    }),
+  };
+  const device = Object.assign(new EventTarget(), {
+    gatt: {
+      connected: false,
+      connect: vi.fn(async () => {
+        device.gatt.connected = true;
+        return server;
+      }),
+      disconnect: vi.fn(() => {
+        device.gatt.connected = false;
+      }),
+    },
+  });
+  const requestDevice = vi.fn().mockResolvedValue(device);
+  Object.defineProperty(navigator, "bluetooth", {
+    configurable: true,
+    value: { requestDevice, getAvailability: vi.fn().mockResolvedValue(true) },
+  });
+  return { device, requestDevice };
+}
+
+function bluetoothRejects(error: unknown) {
+  Object.defineProperty(navigator, "bluetooth", {
+    configurable: true,
+    value: { requestDevice: vi.fn().mockRejectedValue(error) },
+  });
+}
+
+describe("readSoilSensorBluetooth", () => {
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "bluetooth");
+  });
+
+  it("asks only for BulanTanom-Soil and its UART service", async () => {
+    const { requestDevice } = fakeBluetooth([LINE, LINE, LINE]);
+    await readSoilSensorBluetooth();
+    expect(requestDevice).toHaveBeenCalledWith({
+      filters: [{ name: "BulanTanom-Soil" }],
+      optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"],
+    });
+  });
+
+  it("joins 20-byte notifications into lines, averages three and disconnects", async () => {
+    const { device } = fakeBluetooth(["boot message", LINE, LINE, LINE]);
+    await expect(readSoilSensorBluetooth()).resolves.toEqual(READING);
+    expect(device.gatt.disconnect).toHaveBeenCalled();
+  });
+
+  it("says when the connection drops mid-reading", async () => {
+    fakeBluetooth([LINE, LINE, LINE], { dropAfter: 5 });
+    await expect(readSoilSensorBluetooth()).rejects.toMatchObject({ code: "ble_disconnected" });
+  });
+
+  it("says when the probe never answered", async () => {
+    fakeBluetooth(['{"error":"no_response"}']);
+    vi.useFakeTimers();
+    const result = readSoilSensorBluetooth();
+    const check = expect(result).rejects.toMatchObject({ code: "probe_not_answering" });
+    await vi.advanceTimersByTimeAsync(25000);
+    await check;
+    vi.useRealTimers();
+  });
+
+  it("tells Bluetooth off, permission denied and no device apart", async () => {
+    bluetoothRejects(new DOMException("Bluetooth adapter not available.", "NotFoundError"));
+    await expect(readSoilSensorBluetooth()).rejects.toMatchObject({ code: "bluetooth_off" });
+    bluetoothRejects(new DOMException("Bluetooth permission has been blocked.", "NotAllowedError"));
+    await expect(readSoilSensorBluetooth()).rejects.toMatchObject({ code: "ble_permission_denied" });
+    bluetoothRejects(new DOMException("User cancelled the requestDevice() chooser.", "NotFoundError"));
+    await expect(readSoilSensorBluetooth()).rejects.toMatchObject({ code: "ble_not_found" });
+  });
+
+  it("says Bluetooth is off before opening the chooser", async () => {
+    const requestDevice = vi.fn();
+    Object.defineProperty(navigator, "bluetooth", {
+      configurable: true,
+      value: { requestDevice, getAvailability: vi.fn().mockResolvedValue(false) },
+    });
+    await expect(readSoilSensorBluetooth()).rejects.toMatchObject({ code: "bluetooth_off" });
+    expect(requestDevice).not.toHaveBeenCalled();
   });
 });
