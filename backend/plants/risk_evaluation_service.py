@@ -24,6 +24,7 @@ import logging
 from django.conf import settings
 
 from .ai_language import write_in
+from .crop_knowledge import VITALITY_SEVERE, knowledge_for
 from .assessment_questions import not_applicable
 from .durations import human_duration
 from .gemini_models import generate_with_fallback
@@ -112,6 +113,19 @@ Evaluate the supplied crop information, plant age, farmer observations, and
 plant-condition image. Compare the ACTUAL reported condition against what
 would normally be EXPECTED for this crop at this age.
 
+Use `crop_reference`: BulanTanom's reference for this crop (what it looks
+like healthy, its warning signs, and the pests and diseases common on
+Philippine farms) and a general guide to judging how alive a plant is. Use it
+to recognise what you see and to give specific, practical advice for THIS
+crop - name the likely pest or disease groups as POSSIBLE causes, matched to
+the signs actually seen or reported, never as a certain diagnosis.
+`photo_check_vitality` is how alive the earlier photo check judged the plant
+("thriving", "normal", "stressed", "severe_decline", "dying_or_dead").
+
+Judge the plant's CONDITION before its size. A full-size plant that is
+rotting, collapsed or mostly dead is not "developing as expected": it has
+stopped growing.
+
 The farmer's answers are the basis of your reading:
 
 - Build the risk level from what the farmer reported in `farmer_assessment`
@@ -148,7 +162,9 @@ Check the answers against the photo first:
   open flowers are clearly visible; "not fruiting" but fruit is clearly
   visible, or fruiting reported but the plant clearly has none; "none
   observed" for pests while insects or heavy feeding damage are plainly
-  visible; a height that is wildly different from the plant in the photo.
+  visible; a height that is wildly different from the plant in the photo;
+  growth "about as expected" or "faster than expected", or health "healthy",
+  while the photo shows a plant that is rotting, collapsed or mostly dead.
 - Small differences, things the photo cannot show (watering, soil moisture,
   smell, last week's weather), and parts of the plant out of frame are NOT
   contradictions. When in doubt, it matches.
@@ -182,7 +198,15 @@ Rules you must follow:
   A poor-quality image is NOT by itself a reason to raise the risk level.
 - If no image is supplied, leave `visual_observations` empty and note the
   absence in `limitations`.
-- Weigh the whole picture. Do not escalate to HIGH on a single symptom.
+- Weigh the whole picture. Do not escalate to HIGH on a single MILD symptom.
+  But one severe sign is enough for HIGH: a plant that is rotting, wilting
+  and not recovering, collapsing, heavily eaten, or mostly brown or dead is
+  HIGH, and so is any plant whose `photo_check_vitality` is
+  "severe_decline" or "dying_or_dead". For a plant that is dying or dead,
+  say so plainly in `summary`, give what can still be saved (cut away rot,
+  isolate it so it does not spread, check the plants next to it, fix the
+  watering or drainage), and say that if it does not recover the farmer can
+  report it as lost.
     LOW          = developing broadly as expected, no significant warning
                    signs.
     MEDIUM       = some deviation from expectation, or moderate warning
@@ -256,6 +280,9 @@ def build_context(assessment) -> dict:
         return NOT_APPLICABLE_TEXT if field in skip else value
 
     return {
+        "crop_reference": knowledge_for(crop),
+        "photo_check_vitality": (assessment.evidence_validation or {}).get("vitality")
+        or "unknown",
         "crop": {
             "name": crop.name,
             "category": crop.get_category_display(),
@@ -478,8 +505,41 @@ def evaluate_assessment(assessment, language: str = "en") -> dict | None:
     if validated is None:
         logger.warning("Gemini risk response failed validation.")
         return None
+    _floor_for_dying_plant(validated, assessment)
 
     validated["image_analyzed"] = image_analyzed
     # The model that actually answered, recorded on the RiskAssessment.
     validated["model_name"] = model
     return validated
+
+
+def _floor_for_dying_plant(result: dict, assessment) -> None:
+    """
+    A plant the photo check saw in severe decline, or dying, is HIGH risk
+    whatever level the model chose: an "as expected" reading of a rotting
+    plant is the one mistake this system must not make. A planting-date
+    mismatch or contradicting answers are left alone - those stop the reading
+    for other reasons.
+    """
+    vitality = (assessment.evidence_validation or {}).get("vitality")
+    if vitality not in VITALITY_SEVERE:
+        return
+    if result.get("date_mismatch") or not result.get("answers_match_photo", True):
+        return
+    if result["risk_level"] == "HIGH":
+        return
+    result["risk_level"] = "HIGH"
+    words = "dying" if vitality == "dying_or_dead" else "in severe decline"
+    if not any("decline" in f["factor"].lower() or "dying" in f["factor"].lower()
+               for f in result["risk_factors"]):
+        result["risk_factors"].insert(
+            0,
+            {
+                "factor": "The plant looks " + words,
+                "severity": "high",
+                "explanation": (
+                    "The photo shows a plant " + words + ", which needs attention "
+                    "now even if other answers look normal."
+                ),
+            },
+        )

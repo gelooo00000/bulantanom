@@ -48,6 +48,7 @@ from dataclasses import dataclass
 from django.conf import settings
 
 from .ai_language import write_in
+from .crop_knowledge import VITALITY, VITALITY_SEVERE, knowledge_for
 from .durations import human_duration
 from .gemini_models import generate_with_fallback
 from .growth_stage import STAGES, expected_stage, not_the_same_plant, too_far_ahead
@@ -117,6 +118,7 @@ RESPONSE_SCHEMA = {
         "detected_subject": {"type": "string"},
         "reason": {"type": "string"},
         "observed_stage": {"type": "string", "enum": [*STAGES, "unknown"]},
+        "vitality": {"type": "string", "enum": [*VITALITY, "unknown"]},
         "observed": {
             "type": "object",
             "properties": {
@@ -127,7 +129,8 @@ RESPONSE_SCHEMA = {
         },
     },
     "required": [
-        "verdict", "confidence", "detected_subject", "reason", "observed_stage", "observed",
+        "verdict", "confidence", "detected_subject", "reason", "observed_stage", "vitality",
+        "observed",
     ],
 }
 
@@ -136,10 +139,17 @@ You verify whether a farmer's uploaded photo actually shows the crop they
 selected in BulanTanom, an agricultural monitoring system for Layuan Nature
 Integrated Farm in Bulan, Sorsogon, Philippines.
 
-You are NOT diagnosing plant health here. Your questions are: is this a
-real photo the farmer took of a growing plant, does it plausibly show the
-expected crop, and could it be the plant the farmer recorded, given how long
-ago it was planted?
+Your questions are: is this a real photo the farmer took of a plant, does
+it plausibly show the expected crop, could it be the plant the farmer
+recorded, given how long ago it was planted, and what condition is it in?
+You do not name diseases, but you must describe the plant's condition
+honestly: a sick, rotting or dying plant must never be reported as fine.
+
+You are given `crop_reference`: what this crop looks like when healthy, its
+warning signs, and the pests and diseases common on Philippine farms, plus a
+general guide to judging how alive a plant is. Use it to recognise what you
+see. A plant that is rotting or dying is still the expected crop: a rotten
+lettuce is a "match" for lettuce, with a very poor condition.
 
 Choose exactly one verdict:
 
@@ -213,20 +223,35 @@ pods or a tuber/root visibly forming), or "mature" (full-grown, ready to
 harvest). Use "unknown" when you cannot tell. Report what you see honestly
 even when it does not fit the plant's age: the system makes the comparison.
 
+`vitality` — how alive the plant looks, judged FIRST and from the whole
+plant (see `crop_reference.general.vitality_scale`): "thriving", "normal",
+"stressed", "severe_decline" or "dying_or_dead". Rotting, mushy, slimy,
+blackened, collapsed or mostly brown and dried-out tissue over much of the
+plant is "severe_decline" or "dying_or_dead", however big the plant is.
+"unknown" only when the plant itself is not visible clearly enough.
+
 `observed` — what the photo shows of the plant, used to pre-fill the
 farmer's weekly checklist. Fill it only for a "match"; for any other verdict
-set every field to "unknown".
-- growth_condition: the plant's size and stage compared with what its age
-  allows (`plant_age` in the context: days since planting and the expected
-  stage), and, when given, with the previous photo. "faster_than_expected"
-  (clearly bigger or further along than its age), "as_expected",
-  "slower_than_expected" (smaller or behind for its age) or "stunted" (barely
-  grown, tiny for its age). With no plant age in the context, "unknown".
-- health_condition: overall look of the plant. "healthy", "slightly_unhealthy"
-  or "unhealthy".
+set every field to "unknown". Judge CONDITION BEFORE SIZE, and keep the
+answers consistent with `vitality`:
+- growth_condition: is the plant growing the way a HEALTHY plant of its age
+  should (`plant_age`: days since planting and the expected stage; and, when
+  given, the previous photo)? "faster_than_expected" (healthy and clearly
+  bigger or further along than its age), "as_expected" (healthy and about the
+  right size and stage), "slower_than_expected" (alive but smaller, behind,
+  or held back by stress) or "stunted" (barely growing, or not growing at
+  all). A plant whose `vitality` is "severe_decline" or "dying_or_dead" has
+  stopped growing: its growth is "stunted", NEVER "as_expected" or
+  "faster_than_expected", even if it is full size. A "stressed" plant is at
+  best "slower_than_expected" unless it is clearly still growing well. With
+  no plant age in the context, judge from condition alone, or "unknown".
+- health_condition: overall look of the plant. "healthy" (vitality thriving
+  or normal), "slightly_unhealthy" (stressed) or "unhealthy" (severe decline,
+  dying or dead).
 - leaf_condition: "healthy" (green), "slight_yellowing", "yellowing",
   "spots" (spots or lesions), "wilting" (drooping) or "damaged" (holes,
-  tears, chewed).
+  tears, chewed, rotting, brown or dead). Pick the most serious sign you
+  see; rotting or dead leaves are "damaged", never "healthy".
 - flowering_status: "not_flowering", "starting", "flowering" or "finished".
 - fruiting_status: "not_fruiting", "forming", "developing" or "ripening".
 - mushroom_condition (mushrooms only; "unknown" for any other crop):
@@ -256,6 +281,7 @@ def build_context(
     email, id, tokens or any other account information is ever sent.
     """
     context = {
+        "crop_reference": knowledge_for(crop),
         "expected_crop": crop.name,
         "crop_category": crop.get_category_display(),
         "crop_description": crop.description,
@@ -318,6 +344,37 @@ def _suggestions(observed) -> dict:
         for field, values in SUGGESTIBLE.items()
         if observed.get(field) in values
     }
+
+
+# Answers that cannot be true of a plant in severe decline or dying.
+_NOT_FOR_SEVERE = {
+    "growth_condition": ("faster_than_expected", "as_expected", "slower_than_expected"),
+    "health_condition": ("healthy", "slightly_unhealthy"),
+    "leaf_condition": ("healthy", "slight_yellowing"),
+}
+_SEVERE_ANSWER = {
+    "growth_condition": "stunted",
+    "health_condition": "unhealthy",
+    "leaf_condition": "damaged",
+}
+
+
+def _consistent(suggestions: dict, vitality: str | None) -> dict:
+    """
+    Keeps the suggested answers true to how alive the plant looks. A plant
+    the model itself saw as rotting or dying is never pre-filled as growing
+    "as expected" or "healthy", whatever its size, so the farmer is not
+    handed a reading that contradicts their own photo.
+    """
+    if vitality not in VITALITY_SEVERE:
+        return suggestions
+    fixed = dict(suggestions)
+    for field, wrong in _NOT_FOR_SEVERE.items():
+        if field in fixed and fixed[field] in wrong:
+            fixed[field] = _SEVERE_ANSWER[field]
+        elif field not in fixed and field != "leaf_condition":
+            fixed[field] = _SEVERE_ANSWER[field]
+    return fixed
 
 
 def _validate(
@@ -392,9 +449,15 @@ def _validate(
             f"it is {crop.name.lower()}."
         )
 
+    vitality = payload.get("vitality")
+    vitality = vitality if vitality in VITALITY else None
+    suggestions = _suggestions(payload.get("observed")) if verdict == "match" else {}
+    suggestions = _consistent(suggestions, vitality)
+
     return {
         "evidence_valid": verdict == "match",
-        "suggested_answers": _suggestions(payload.get("observed")) if verdict == "match" else {},
+        "suggested_answers": suggestions,
+        "vitality": vitality,
         "verdict": verdict,
         "confidence": confidence,
         "detected_subject": detected,
