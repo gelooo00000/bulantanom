@@ -11,7 +11,6 @@ import {
   LoaderCircle,
   Sprout,
   TriangleAlert,
-  Undo2,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -20,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { CARD_FOOTER, CardPill, CropTile, FarmCard, TimelineBar } from "@/components/farmer/farm-card";
 import { CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import { canRestoreHarvest, type BackendPlant, type HarvestReport } from "@/lib/api/plants-api";
+import type { BackendPlant, HarvestReport } from "@/lib/api/plants-api";
 import { humanDuration } from "@/lib/duration";
 import {
   daysUntil,
@@ -311,16 +310,6 @@ export function HarvestPlantCard({
                   {t("harvestCard.markHarvested")}
                 </>
               )}
-            </Button>
-          )}
-          {onStatusChange && canRestoreHarvest(plant) && (
-            <Button size="sm" variant="outline" onClick={() => change("GROWING")} disabled={saving}>
-              {saving ? (
-                <LoaderCircle className="size-3.5 animate-spin" />
-              ) : (
-                <Undo2 className="size-3.5" />
-              )}
-              {t("harvestCard.restore")}
             </Button>
           )}
           {/* To this plant's card on My Plants. Harvested plants are no longer

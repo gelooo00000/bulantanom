@@ -1,40 +1,17 @@
 "use client";
 
-import { LoaderCircle, TriangleAlert, Undo2 } from "lucide-react";
-import { useState } from "react";
+import { TriangleAlert } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { CARD_FOOTER, CropTile, FarmCard } from "@/components/farmer/farm-card";
+import { CropTile, FarmCard } from "@/components/farmer/farm-card";
 import { CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import { canRestoreHarvest, type BackendPlant } from "@/lib/api/plants-api";
+import type { BackendPlant } from "@/lib/api/plants-api";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 
-/** A plant reported dead, in the Archive's Lost list. */
-export function LostPlantCard({
-  plant,
-  onRestore,
-}: {
-  plant: BackendPlant;
-  /** Undo a loss reported by mistake (within 24 hours). */
-  onRestore: () => Promise<void>;
-}) {
+/** A plant reported dead, in the Archive's Lost list. Final: it cannot be restored. */
+export function LostPlantCard({ plant }: { plant: BackendPlant }) {
   const { t, dateLocale } = useLanguage();
-  const [saving, setSaving] = useState(false);
-  const [failed, setFailed] = useState(false);
   const report = plant.loss_report;
-
-  async function restore() {
-    setSaving(true);
-    setFailed(false);
-    try {
-      await onRestore();
-    } catch {
-      setFailed(true);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <FarmCard cropName={plant.crop.name} accent="var(--risk-high)" className="opacity-85">
@@ -77,19 +54,6 @@ export function LostPlantCard({
           </div>
         )}
 
-        {canRestoreHarvest(plant) && (
-          <div className={CARD_FOOTER}>
-            <Button size="sm" variant="outline" onClick={restore} disabled={saving}>
-              {saving ? <LoaderCircle className="size-3.5 animate-spin" /> : <Undo2 className="size-3.5" />}
-              {t("harvestCard.restore")}
-            </Button>
-            {failed && (
-              <p className="text-risk-high w-full text-xs" role="alert">
-                {t("harvestCard.saveFailed")}
-              </p>
-            )}
-          </div>
-        )}
       </CardContent>
     </FarmCard>
   );

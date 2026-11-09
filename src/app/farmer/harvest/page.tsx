@@ -12,7 +12,6 @@ import {
   Sprout,
   TriangleAlert,
   Wheat,
-  Undo2,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -343,7 +342,7 @@ export default function HarvestPage() {
   // harvested moves it at once, without reloading the whole page.
   const [updated, setUpdated] = useState<Record<number, BackendPlant>>({});
   const [view, setView] = useState<"active" | "archive">("active");
-  // The plant just moved, for the "Moved to the Archive · Undo" banner.
+  // The plant just moved, for the "Moved to the Archive" banner.
   const [moved, setMoved] = useState<{ plant: BackendPlant; to: "archive" | "active" } | null>(
     null,
   );
@@ -394,22 +393,6 @@ export default function HarvestPage() {
     requestNotificationRefresh();
   }
 
-  async function undoMove() {
-    if (!moved) return;
-    const { plant, to } = moved;
-    setMoved(null);
-    if (to === "active") {
-      // Harvesting again means a new harvest report.
-      setReporting(plant);
-      return;
-    }
-    try {
-      await changeStatus(plant, "GROWING");
-    } catch {
-      // The card's own Restore button is still there to try again.
-    }
-  }
-
   function showView(next: "active" | "archive") {
     setView(next);
     setMoved(null);
@@ -449,7 +432,7 @@ export default function HarvestPage() {
         action={data && data.length > 0 ? archiveButton : undefined}
       />
 
-      {/* Says where a plant just went, with a one-tap undo. */}
+      {/* Says where a plant just went. Moving to the Archive is final. */}
       {moved && (
         <div
           role="status"
@@ -461,10 +444,6 @@ export default function HarvestPage() {
               ? t("archive.moved", { name: moved.plant.display_name })
               : t("archive.restored", { name: moved.plant.display_name })}
           </span>
-          <Button size="sm" variant="outline" onClick={undoMove}>
-            <Undo2 className="size-3.5" />
-            {t("archive.undo")}
-          </Button>
           {moved.to === "archive" && view === "active" && (
             <Button size="sm" variant="ghost" onClick={() => showView("archive")}>
               {t("archive.view")}
@@ -522,7 +501,7 @@ export default function HarvestPage() {
                   <ul aria-label={t("lost.section")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {lost.map((plant) => (
                       <li key={plant.id} className="min-w-0">
-                        <LostPlantCard plant={plant} onRestore={() => changeStatus(plant, "GROWING")} />
+                        <LostPlantCard plant={plant} />
                       </li>
                     ))}
                   </ul>

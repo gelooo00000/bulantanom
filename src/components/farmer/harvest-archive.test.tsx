@@ -129,19 +129,9 @@ describe("the harvest report", () => {
     const archive = screen.getByRole("list", { name: "Harvested" });
     expect(within(archive).getByText("12 kg")).toBeInTheDocument();
     expect(within(archive).getByText("Recovered from High risk")).toBeInTheDocument();
-    // Within 24 hours it can still be restored.
-    expect(within(archive).getByRole("button", { name: "Restore" })).toBeInTheDocument();
-  });
-
-  it("undoes a harvest from the banner", async () => {
-    mockServer();
-    render(<HarvestPage />);
-    await harvestWithReport();
-    await userEvent.click(within(await screen.findByRole("dialog", { name: "Successfully harvested!" })).getByRole("button", { name: "Continue" }));
-    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
-
-    expect(setPlantStatus).toHaveBeenLastCalledWith("token", 7, "GROWING");
-    expect(await screen.findByRole("button", { name: /Mark as harvested/ })).toBeInTheDocument();
+    // Moving to the Archive is final: no Restore, no Undo.
+    expect(within(archive).queryByRole("button", { name: "Restore" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   });
 });
 

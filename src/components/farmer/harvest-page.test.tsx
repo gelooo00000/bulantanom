@@ -162,7 +162,7 @@ describe("the harvest card", () => {
     expect(screen.getByText(/0 days of about 4 years grown/)).toBeInTheDocument();
   });
 
-  it("says what to do when the harvest time has passed, and can undo a harvest", async () => {
+  it("says what to do when the harvest time has passed, and offers no Restore once harvested", async () => {
     const late = { ...ready, expected_harvest_start: isoIn(-30), expected_harvest_end: isoIn(-9) };
     const { unmount } = render(<HarvestPlantCard plant={late} onStatusChange={vi.fn()} />);
     expect(screen.getByText(/Harvest time ended on/)).toBeInTheDocument();
@@ -170,11 +170,9 @@ describe("the harvest card", () => {
     expect(screen.queryByText(/of about .* grown/)).not.toBeInTheDocument();
     unmount();
 
-    const onStatusChange = vi.fn().mockResolvedValue(undefined);
     const done = { ...late, status: "HARVESTED" } as BackendPlant;
-    render(<HarvestPlantCard plant={done} onStatusChange={onStatusChange} />);
-    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
-    expect(onStatusChange).toHaveBeenCalledWith(done, "GROWING");
+    render(<HarvestPlantCard plant={done} onStatusChange={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Restore" })).not.toBeInTheDocument();
   });
 
   it("keeps the harvest window visible on a tree crop's timeline", () => {

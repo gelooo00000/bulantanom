@@ -168,9 +168,9 @@ export const harvest = defineMessages({
   "archive.button": { en: "Archive", fil: "Archive", bik: "Archive" },
   "archive.title": { en: "Archive", fil: "Archive", bik: "Archive" },
   "archive.description": {
-    en: "Plants you have harvested. Restore one if you marked it by mistake.",
-    fil: "Mga tanim na naani mo na. Ibalik ang isa kung namarkahan mo ito nang mali.",
-    bik: "Mga tanom na naani mo na. Ibalik an saro kun namarkahan mo ini nin sala.",
+    en: "Plants you have harvested, and plants that died. Once here, they stay here.",
+    fil: "Mga tanim na naani mo na, at mga tanim na namatay. Kapag narito na, dito na sila mananatili.",
+    bik: "Mga tanom na naani mo na, asin mga tanom na nagadan. Pag yaon na digdi, digdi na sinda maaaraw.",
   },
   "archive.back": { en: "Back to Harvest", fil: "Bumalik sa Anihan", bik: "Balik sa Pag-ani" },
   "archive.emptyTitle": { en: "Nothing archived yet", fil: "Wala pang naka-archive", bik: "Waray pa naka-archive" },
