@@ -68,13 +68,25 @@ export function SlidePager<T>({
   const offset = reduceMotion ? 0 : 32;
 
   // The tallest page seen so far, so a short last page does not shrink the
-  // card and jump everything below it.
+  // card and jump everything below it. Forgotten when the number of items
+  // changes (some deleted, or Select hiding a tile), so no empty gap is left
+  // where removed cards used to be.
   const listRef = useRef<HTMLDivElement>(null);
-  const [minHeight, setMinHeight] = useState(0);
+  const [tallest, setTallest] = useState({ count: items.length, height: 0 });
+  const minHeight = tallest.count === items.length ? tallest.height : 0;
   useLayoutEffect(() => {
-    const height = listRef.current?.offsetHeight ?? 0;
-    if (pages > 1 && height > minHeight) setMinHeight(height);
-  }, [page, pages, minHeight]);
+    if (pages <= 1) return;
+    const frame = listRef.current;
+    if (!frame) return;
+    // Measured without the old minimum, so a shorter list really is shorter.
+    const previous = frame.style.minHeight;
+    frame.style.minHeight = "";
+    const height = frame.offsetHeight;
+    frame.style.minHeight = previous;
+    if (tallest.count !== items.length || height > tallest.height) {
+      setTallest({ count: items.length, height });
+    }
+  }, [page, pages, items.length, tallest]);
 
   return (
     <div className={className}>

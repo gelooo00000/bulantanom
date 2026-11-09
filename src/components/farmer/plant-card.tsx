@@ -127,7 +127,9 @@ export function PlantCard({
         aria-checked={selected}
         aria-label={t("card.select", { name: plantTitle(plant) })}
         onClick={onToggle}
-        className="focus-visible:ring-ring/50 h-full rounded-xl text-left outline-none focus-visible:ring-3"
+        // A button is only as wide as its content; block + full width keeps
+        // the card filling its grid cell exactly as it does outside Select.
+        className="focus-visible:ring-ring/50 block h-full w-full rounded-xl text-left outline-none focus-visible:ring-3"
       >
         {card}
       </button>

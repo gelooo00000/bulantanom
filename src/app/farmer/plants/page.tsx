@@ -55,7 +55,7 @@ function rememberGuideHidden(hidden: boolean) {
 }
 
 /** Cards per page; Previous / Next slide in the next page. */
-const PLANTS_PER_PAGE = 6;
+const PLANTS_PER_PAGE = 9;
 /** Stands in the list for the Add Plant tile. */
 const ADD_TILE = "add-plant" as const;
 
@@ -342,7 +342,9 @@ export default function MyPlantsPage() {
               getKey={(tile) => (tile === ADD_TILE ? "add" : tile.id)}
               listLabel={t("myPlants.title")}
               listClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-              itemClassName="min-w-0"
+              // Every cell stretches its card to the row's height, in and out
+              // of Select, so cards side by side line up top and bottom.
+              itemClassName="flex min-w-0 flex-col [&>*]:flex-1"
               // Room for a card's hover outline inside the clipping frame.
               frameClassName="-m-1 p-1"
               renderItem={(tile) =>
