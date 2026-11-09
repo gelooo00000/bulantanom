@@ -13,7 +13,6 @@ import {
   Clock,
   HeartCrack,
   Leaf,
-  Lightbulb,
   LoaderCircle,
   OctagonAlert,
   RotateCw,
@@ -623,7 +622,7 @@ function CheckTimeline({
 
 /**
  * One plant, laid out like a Harvest card: the crop and name, its level as a
- * pill, one plain sentence, the weekly-check timeline, what to do, and the
+ * pill, one plain sentence, the weekly-check timeline, and the
  * actions along the bottom. The full explanation and photo stay behind the
  * arrow.
  */
@@ -636,8 +635,7 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
   const Icon = GROUPS.find((g) => g.key === group)!.icon;
   const failed = latest?.risk?.status === "failed";
   const atRisk = group === "high" || group === "medium";
-  // Just the first thing to do; the arrow opens the rest.
-  const todo = atRisk ? (latest?.risk?.recommended_actions ?? []).slice(0, 1) : [];
+  // What to do is on the full reading, behind the arrow.
   const current = latest?.risk?.risk_level;
   const trend =
     previous && current && current in LEVEL_RANK && current !== previous
@@ -795,28 +793,6 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
 
         {!failed && <CheckTimeline plant={plant} latest={latest} accent={accent} overdue={overdue} />}
 
-        {todo.length > 0 && (
-          <div
-            className={cn(
-              "flex gap-2.5 rounded-xl border border-l-4 p-3 text-sm",
-              group === "high"
-                ? "border-risk-high/30 border-l-risk-high bg-risk-high/5"
-                : "border-risk-medium/30 border-l-risk-medium bg-risk-medium/5",
-            )}
-          >
-            <Lightbulb
-              className={cn(
-                "mt-0.5 size-4 shrink-0",
-                group === "high" ? "text-risk-high" : "text-risk-medium",
-              )}
-              aria-hidden="true"
-            />
-            <div className="min-w-0">
-              <p className="font-medium">{t("riskCard.whatToDo")}</p>
-              <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[13px]">{todo[0]}</p>
-            </div>
-          </div>
-        )}
 
         {failed && latest && <RetryCheck assessmentId={latest.id} onDone={actions.onChanged} />}
 

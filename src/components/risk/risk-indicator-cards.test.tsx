@@ -71,10 +71,9 @@ describe("a risky plant's card", () => {
       },
     ];
     render(<RiskIndicatorPage />);
-    expect(screen.getByText("What to do")).toBeInTheDocument();
-    expect(screen.getByText("Remove the yellow leaves.")).toBeInTheDocument();
-    // Only the first step on the card; the arrow opens the rest.
-    expect(screen.queryByText("Spray neem oil.")).not.toBeInTheDocument();
+    // No "What to do" on the card; the arrow opens the full reading.
+    expect(screen.queryByText("What to do")).not.toBeInTheDocument();
+    expect(screen.queryByText("Remove the yellow leaves.")).not.toBeInTheDocument();
     // The arrow opens the full reading; no second "See what to do" link.
     expect(screen.queryByText("See what to do")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back Row/ })).toHaveAttribute("href", "/farmer/assessments/9");
