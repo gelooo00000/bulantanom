@@ -2,10 +2,11 @@
 
 import { CalendarClock, Check, CircleCheck, ClipboardList } from "lucide-react";
 
-import { CropTile, FarmCard, overdueDays } from "@/components/farmer/farm-card";
+import { CropTile, FarmCard } from "@/components/farmer/farm-card";
 import { CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant } from "@/lib/api/plants-api";
+import { cropColor } from "@/lib/crop-colors";
 import { useLanguage } from "@/lib/i18n";
 import { plantSubtitle, plantTitle } from "@/lib/plant-summary";
 import { cn } from "@/lib/utils";
@@ -32,17 +33,9 @@ export function PlantCard({
   const selecting = onToggle !== undefined;
   const { t, dateLocale } = useLanguage();
   const date = (iso: string) => formatDisplayDate(iso, dateLocale);
-  const e = plant.assessment_eligibility;
-  const overdue = overdueDays(plant);
-  // The card's colour, from where its weekly check stands: the same card
-  // design as the Risk Indicator and Harvest pages.
-  const accent = plant.is_planned || e.too_young
-    ? "var(--risk-early)"
-    : e.can_assess
-      ? overdue > 0
-        ? "var(--risk-high)"
-        : "var(--primary)"
-      : "var(--risk-low)";
+  // The glow across the top is the crop's own colour, as on the Harvest
+  // and Risk Indicator cards.
+  const accent = cropColor(plant.crop.name);
 
   const card = (
     <FarmCard
@@ -54,7 +47,7 @@ export function PlantCard({
       id={`plant-${plant.id}`}
       cropName={plant.crop.name}
       accent={accent}
-      strong={e.can_assess}
+      strong
       className={cn(
         "scroll-mt-24 gap-0",
         selecting &&
@@ -83,9 +76,6 @@ export function PlantCard({
           cropName={plant.crop.name}
           emoji={plant.crop.emoji}
           accent={accent}
-          ring={e.can_assess}
-          dot={e.can_assess}
-          pulse={overdue > 0}
           className="size-12 text-[28px]"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
