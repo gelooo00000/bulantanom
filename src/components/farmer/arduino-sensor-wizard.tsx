@@ -72,8 +72,8 @@ type ReadState =
 /**
  * First the farmer picks a laptop or a phone (iPhones cannot connect, so a
  * warning says so). Then three pages: what the sensor does, how to use it on
- * that device, then Go. Go reads the probe over USB on a laptop, or over
- * Bluetooth on a phone, and shows the readings; "Use these readings" hands
+ * that device, then Connect. It reads the probe over USB on a laptop, or
+ * over Bluetooth on a phone, and shows the readings; "Use these readings" hands
  * them to the form, which carries on to the recommendation.
  *
  * `afterReadings` is shown under the readings once they are in - the form
@@ -101,8 +101,8 @@ export function ArduinoSensorWizard({
   const usbSupported = isSerialSupported();
   const bluetoothSupported = isBluetoothSupported();
   const onPhone = device === "phone";
-  // A phone reads only by Bluetooth; a laptop by USB, or Bluetooth if it has it.
-  const supported = onPhone ? bluetoothSupported : usbSupported || bluetoothSupported;
+  // A phone reads only by Bluetooth, a laptop only by the USB cable.
+  const supported = onPhone ? bluetoothSupported : usbSupported;
   // The way the last reading came, so "Read again" uses it too.
   const [method, setMethod] = useState<Method>("usb");
 
@@ -414,37 +414,35 @@ export function ArduinoSensorWizard({
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {!onPhone && usbSupported ? (
+              {onPhone ? (
                 <Button
                   type="button"
                   size="lg"
-                  onClick={() => read("usb")}
-                  disabled={state.kind === "reading"}
-                >
-                  {state.kind === "reading" && method === "usb" ? (
-                    <LoaderCircle className="size-4 animate-spin" />
-                  ) : (
-                    <Usb className="size-4" />
-                  )}
-                  {bluetoothSupported ? t("arduino.goUsb") : t("arduino.go")}
-                </Button>
-              ) : null}
-              {bluetoothSupported ? (
-                <Button
-                  type="button"
-                  size={onPhone || !usbSupported ? "lg" : "default"}
-                  variant={onPhone || !usbSupported ? "default" : "outline"}
                   onClick={() => read("bluetooth")}
                   disabled={state.kind === "reading"}
                 >
-                  {state.kind === "reading" && method === "bluetooth" ? (
+                  {state.kind === "reading" ? (
                     <LoaderCircle className="size-4 animate-spin" />
                   ) : (
                     <Bluetooth className="size-4" />
                   )}
                   {t("arduino.goBluetooth")}
                 </Button>
-              ) : null}
+              ) : (
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => read("usb")}
+                  disabled={state.kind === "reading"}
+                >
+                  {state.kind === "reading" ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <Usb className="size-4" />
+                  )}
+                  {t("arduino.goUsb")}
+                </Button>
+              )}
             </div>
           )}
         </div>

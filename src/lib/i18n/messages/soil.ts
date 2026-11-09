@@ -125,9 +125,9 @@ export const soil = defineMessages({
     bik: "Pinduton an Connect by Bluetooth, dangan pilion an BulanTanom-Soil sa listahan.",
   },
   "arduino.how3": {
-    en: "Press Go, then choose the Arduino from the list your browser shows.",
-    fil: "Pindutin ang Go, saka piliin ang Arduino sa listahang ipapakita ng browser.",
-    bik: "Pinduton an Go, dangan pilion an Arduino sa listahan na ipapahiling san browser.",
+    en: "Press Connect by USB, then choose the Arduino from the list your browser shows.",
+    fil: "Pindutin ang Kumonekta sa USB, saka piliin ang Arduino sa listahang ipapakita ng browser.",
+    bik: "Pinduton an Magkonekta sa USB, dangan pilion an Arduino sa listahan na ipapahiling san browser.",
   },
   "arduino.how4": {
     en: "Keep the probe still for about 10 seconds while it reads.",
@@ -140,16 +140,15 @@ export const soil = defineMessages({
     bik: "Andam na sukaton an imo daga",
   },
   "arduino.goBody": {
-    en: "Press Go and pick the Arduino's port.",
-    fil: "Pindutin ang Go at piliin ang port ng Arduino.",
-    bik: "Pinduton an Go asin pilion an port san Arduino.",
+    en: "Press Connect by USB and pick the Arduino's port.",
+    fil: "Pindutin ang Kumonekta sa USB at piliin ang port ng Arduino.",
+    bik: "Pinduton an Magkonekta sa USB asin pilion an port san Arduino.",
   },
   "arduino.goBodyBluetooth": {
     en: "Press Connect by Bluetooth and pick BulanTanom-Soil.",
     fil: "Pindutin ang Connect by Bluetooth at piliin ang BulanTanom-Soil.",
     bik: "Pinduton an Connect by Bluetooth asin pilion an BulanTanom-Soil.",
   },
-  "arduino.go": { en: "Go", fil: "Go", bik: "Go" },
   "arduino.goUsb": { en: "Connect by USB", fil: "Kumonekta sa USB", bik: "Magkonekta sa USB" },
   "arduino.goBluetooth": {
     en: "Connect by Bluetooth",
@@ -178,9 +177,9 @@ export const soil = defineMessages({
     bik: "Dili makakonekta an browser na ini sa Arduino. Buksan an BulanTanom sa Chrome sa Android na telepono o sa Chrome o Edge sa computer, o i-type na sana an mga sukat.",
   },
   "arduino.error.cancelled": {
-    en: "No Arduino was chosen. Press Go to try again.",
-    fil: "Walang napiling Arduino. Pindutin ang Go para subukan muli.",
-    bik: "Waray napili na Arduino. Pinduton an Go para probaran giraray.",
+    en: "No Arduino was chosen. Press Connect by USB to try again.",
+    fil: "Walang napiling Arduino. Pindutin ang Kumonekta sa USB para subukan muli.",
+    bik: "Waray napili na Arduino. Pinduton an Magkonekta sa USB para probaran giraray.",
   },
   "arduino.error.busy": {
     en: "Another program is using the Arduino. Close the Arduino IDE's Serial Monitor, then try again.",

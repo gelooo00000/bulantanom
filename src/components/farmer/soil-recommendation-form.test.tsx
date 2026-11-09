@@ -351,7 +351,7 @@ const SENSOR_READING = {
   potassium: 150,
 };
 
-/** Sign -> Laptop -> instructions -> Go -> readings -> "Use these readings". */
+/** Sign -> Laptop -> instructions -> Connect by USB -> readings -> "Use these readings". */
 async function readWithSensor() {
   await userEvent.click(screen.getByRole("button", { name: "Use the Arduino sensor" }));
   await userEvent.click(await screen.findByRole("button", { name: /laptop/i }));
@@ -359,7 +359,7 @@ async function readWithSensor() {
   await userEvent.click(screen.getByRole("button", { name: /next/i }));
   expect(await screen.findByText("How to use the sensor")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: /next/i }));
-  await userEvent.click(await screen.findByRole("button", { name: /^go$/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
   await userEvent.click(await screen.findByRole("button", { name: /use these readings/i }));
 }
 
@@ -434,7 +434,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     await userEvent.click(await screen.findByRole("button", { name: /laptop/i }));
     await userEvent.click(await screen.findByRole("button", { name: /next/i }));
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
-    await userEvent.click(await screen.findByRole("button", { name: /^go$/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
     await userEvent.type(
       await screen.findByLabelText(/additional soil information/i),
       "Dries out fast",
@@ -453,7 +453,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     await userEvent.click(await screen.findByRole("button", { name: /laptop/i }));
     await userEvent.click(await screen.findByRole("button", { name: /next/i }));
     await userEvent.click(await screen.findByRole("button", { name: /next/i }));
-    await userEvent.click(await screen.findByRole("button", { name: /^go$/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/probe is not answering/i);
   });
@@ -470,6 +470,22 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(screen.queryByText(/usb cable/i)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/iphones cannot connect/i);
-    expect(screen.queryByRole("button", { name: /^go$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /connect by usb/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /connect by bluetooth/i })).not.toBeInTheDocument();
+  });
+
+  it("offers only Connect by USB on a laptop, even when Bluetooth exists", async () => {
+    Object.defineProperty(navigator, "bluetooth", { value: {}, configurable: true });
+    try {
+      render(<SoilRecommendationForm />);
+      await userEvent.click(await screen.findByRole("button", { name: "Use the Arduino sensor" }));
+      await userEvent.click(await screen.findByRole("button", { name: /laptop/i }));
+      await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+      await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+      expect(await screen.findByRole("button", { name: /connect by usb/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /connect by bluetooth/i })).not.toBeInTheDocument();
+    } finally {
+      delete (navigator as { bluetooth?: unknown }).bluetooth;
+    }
   });
 });
