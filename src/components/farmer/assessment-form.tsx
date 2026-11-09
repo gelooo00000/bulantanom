@@ -501,8 +501,9 @@ function AssessmentFormBody({
 
   if (status === "analyzing") {
     return (
+      // Only the "Evaluating…" screen: the photo was already accepted, and
+      // the reading that follows says what the photo shows.
       <div className="flex flex-col gap-4">
-        {evidenceResult && <EvidenceVerdict result={evidenceResult} />}
         <div className="border-border flex flex-col items-center gap-3 rounded-2xl border border-dashed px-4 py-10 text-center">
           {cropEmoji ? (
             <span aria-hidden="true" className="animate-bounce text-4xl">
