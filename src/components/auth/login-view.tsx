@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Lock, LoaderCircle, Mail, Shield, ShieldCheck, Sprout } from "lucide-react";
 import { useEffect, useRef, useState, type ElementType, type FormEvent } from "react";
 
-import { AuthCard } from "@/components/auth/auth-card";
+import { AUTH_GOLD_BUTTON, AuthCard } from "@/components/auth/auth-card";
 import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { EmailNotVerifiedError, NewDeviceError, useAuth } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
+import { INK, PALETTE, gradient, tint, type Swatch } from "@/components/admin/palette";
 import { cn } from "@/lib/utils";
 
 type SelectableRole = "farmer" | "lgu" | "admin";
@@ -38,6 +39,10 @@ const ROLE_CARDS: {
   /** Short name, as shown on the role switch. */
   title: string;
   icon: ElementType;
+  /** Gold line above the heading in the banner. */
+  eyebrow: string;
+  swatch: Swatch;
+  ink: string;
   loginHeading: string;
   loginSupporting: string;
   submitLabel: string;
@@ -46,6 +51,9 @@ const ROLE_CARDS: {
     role: "farmer",
     title: "Farmer",
     icon: Sprout,
+    eyebrow: "Farmer sign in",
+    swatch: PALETTE.forest,
+    ink: INK.forest,
     loginHeading: "Welcome back, Farmer.",
     loginSupporting:
       "Continue monitoring your crops and making better decisions at Layuan Farm.",
@@ -55,6 +63,9 @@ const ROLE_CARDS: {
     role: "lgu",
     title: "LGU Officer",
     icon: Shield,
+    eyebrow: "LGU Officer sign in",
+    swatch: PALETTE.gold,
+    ink: INK.gold,
     loginHeading: "Welcome back, LGU Officer.",
     loginSupporting:
       "Monitor farmer activity, plant health, risk assessments, and agricultural data across Layuan Farm.",
@@ -64,6 +75,9 @@ const ROLE_CARDS: {
     role: "admin",
     title: "Administrator",
     icon: ShieldCheck,
+    eyebrow: "Administrator",
+    swatch: PALETTE.violet,
+    ink: INK.violet,
     loginHeading: "Administrator sign in.",
     loginSupporting:
       "Manage account approvals, roles, and system access for BulanTanom.",
@@ -203,66 +217,60 @@ export function LoginView() {
   return (
     <AuthSplitLayout busy={submitting}>
       <FadeIn duration={500}>
-        <AuthCard>
-          <div>
-            <Link
-              href="/"
-              className="-my-2 inline-block py-2 text-sm transition-colors hover:text-foreground"
-              style={{ color: "var(--landing-accent)" }}
-            >
-              ← Back to home
-            </Link>
-
-            {PUBLIC_ROLES.includes(selectedRole) && (
-              <div
-                role="group"
-                aria-label="Sign in as"
-                className="mt-3 grid grid-cols-2 gap-1 rounded-xl sm:mt-4 border border-[var(--glass-divider)] bg-[var(--glass-tile)] p-1"
+        <AuthCard
+          header={{
+            icon: roleCard.icon,
+            eyebrow: roleCard.eyebrow,
+            title: roleCard.loginHeading,
+            description: roleCard.loginSupporting,
+            top: (
+              <Link
+                href="/"
+                className="-my-2 inline-block py-2 text-sm text-white/80 transition-colors hover:text-white"
               >
-                {ROLE_CARDS.filter((card) => PUBLIC_ROLES.includes(card.role)).map(
-                  ({ role, title, icon: Icon }) => {
-                    const active = role === selectedRole;
-                    return (
-                      <button
-                        key={role}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => {
-                          setSelectedRole(role);
-                          setError(null);
-                        }}
-                        className={cn(
-                          "focus-visible:ring-ring/50 font-heading flex h-10 items-center justify-center gap-2 rounded-lg text-sm tracking-wide transition-colors outline-none focus-visible:ring-3",
-                          active
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <Icon className="size-4" />
-                        {title}
-                      </button>
-                    );
-                  },
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 flex items-center gap-2.5 sm:mt-5">
-              <span
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
-                style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
-              >
-                <roleCard.icon className="size-4" />
-              </span>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                {roleCard.loginHeading}
-              </h1>
+                ← Back to home
+              </Link>
+            ),
+          }}
+        >
+          {PUBLIC_ROLES.includes(selectedRole) && (
+            <div role="group" aria-label="Sign in as" className="grid grid-cols-2 gap-2">
+              {ROLE_CARDS.filter((card) => PUBLIC_ROLES.includes(card.role)).map(
+                ({ role, title, icon: Icon, swatch, ink }) => {
+                  const active = role === selectedRole;
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => {
+                        setSelectedRole(role);
+                        setError(null);
+                      }}
+                      className={cn(
+                        "focus-visible:ring-ring/50 font-heading flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-semibold tracking-wide transition-all outline-none focus-visible:ring-3",
+                        active
+                          ? "border-transparent text-white shadow-[0_10px_22px_-10px_var(--role)]"
+                          : "border-[var(--glass-divider)] bg-[var(--glass-tile)] text-muted-foreground hover:text-foreground",
+                      )}
+                      style={
+                        {
+                          "--role": swatch[1],
+                          ...(active ? { backgroundImage: gradient(swatch) } : {}),
+                        } as React.CSSProperties
+                      }
+                    >
+                      <Icon className="size-4" style={active ? undefined : { color: ink }} />
+                      {title}
+                    </button>
+                  );
+                },
+              )}
             </div>
-            <p className="mt-1.5 text-sm text-muted-foreground sm:mt-2">{roleCard.loginSupporting}</p>
-          </div>
+          )}
 
           {justReset && (
-            <p className="text-risk-low bg-risk-low/10 rounded-lg px-3 py-2 text-sm" role="status">
+            <p className="text-risk-low bg-risk-low/10 rounded-xl px-3 py-2 text-sm" role="status">
               Your password has been changed. Please sign in.
             </p>
           )}
@@ -313,7 +321,12 @@ export function LoginView() {
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 
-            <Button type="submit" disabled={submitting} className={`${AUTH_BUTTON_CLASSES} mt-1`}>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className={cn(AUTH_BUTTON_CLASSES, AUTH_GOLD_BUTTON.className, "mt-1")}
+              style={AUTH_GOLD_BUTTON.style}
+            >
               {submitting ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
@@ -338,8 +351,11 @@ export function LoginView() {
           ) : (
             /* Each non-Farmer role gets its own note — the Admin screen used
                to show the LGU wording, which was simply untrue there. */
-            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-              <Shield className="size-3.5 shrink-0" />
+            <p
+              className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-center text-xs text-muted-foreground"
+              style={{ backgroundColor: tint(roleCard.ink, 10) }}
+            >
+              <Shield className="size-3.5 shrink-0" style={{ color: roleCard.ink }} />
               {selectedRole === "admin"
                 ? "Administrator access is restricted to system accounts."
                 : "LGU accounts are provisioned by system administrators."}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Lock, LoaderCircle, Mail, Sprout, User } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { AuthCard } from "@/components/auth/auth-card";
+import { AUTH_GOLD_BUTTON, AuthCard } from "@/components/auth/auth-card";
 import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { DashboardLoadingScreen } from "@/components/auth/dashboard-loading-screen";
@@ -17,12 +17,13 @@ import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth, type PendingVerification } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
 import type { Gender } from "@/lib/api/auth-api";
+import { INK, tint } from "@/components/admin/palette";
 import { cn } from "@/lib/utils";
 
-const GENDER_OPTIONS: { value: Exclude<Gender, "">; label: string }[] = [
-  { value: "MALE", label: "Male" },
-  { value: "FEMALE", label: "Female" },
-  { value: "UNDISCLOSED", label: "Prefer not to say" },
+const GENDER_OPTIONS: { value: Exclude<Gender, "">; label: string; ink: string }[] = [
+  { value: "MALE", label: "Male", ink: INK.sky },
+  { value: "FEMALE", label: "Female", ink: INK.pink },
+  { value: "UNDISCLOSED", label: "Prefer not to say", ink: INK.forest },
 ];
 import { NAME_MAX, cleanText, nameProblem } from "@/lib/text-validation";
 
@@ -125,25 +126,15 @@ export function SignupView() {
   return (
     <AuthSplitLayout busy={submitting}>
       <FadeIn duration={500}>
-        <AuthCard>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
-                style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
-              >
-                <Sprout className="size-4" />
-              </span>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                Create your Farmer account.
-              </h1>
-            </div>
-            <p className="mt-1.5 text-sm text-muted-foreground sm:mt-2">
-              Manage your plants, assessments, risk monitoring, crop recommendations, and
-              harvest tracking — all in one place for Layuan Farm.
-            </p>
-          </div>
-
+        <AuthCard
+          header={{
+            icon: Sprout,
+            eyebrow: "New farmer account",
+            title: "Create your Farmer account.",
+            description:
+              "Manage your plants, assessments, risk monitoring, crop recommendations, and harvest tracking — all in one place for Layuan Farm.",
+          }}
+        >
           {/* "new-password" lets the phone suggest a strong password and save
               it with this email, ready to fill in on the sign-in page. */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -170,12 +161,17 @@ export function SignupView() {
                   <label
                     key={option.value}
                     className={cn(
-                      "border-input flex cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-center text-sm transition-colors",
+                      "font-heading flex cursor-pointer items-center justify-center rounded-xl border px-2 py-2.5 text-center text-sm transition-all",
                       "has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:ring-[3px]",
                       gender === option.value
-                        ? "border-[var(--landing-accent)] bg-[color-mix(in_oklch,var(--landing-accent),transparent_88%)] font-medium"
-                        : "hover:bg-muted text-muted-foreground",
+                        ? "font-semibold shadow-sm"
+                        : "border-input hover:bg-muted text-muted-foreground",
                     )}
+                    style={
+                      gender === option.value
+                        ? { borderColor: option.ink, color: option.ink, backgroundColor: tint(option.ink, 12) }
+                        : undefined
+                    }
                   >
                     <input
                       type="radio"
@@ -234,7 +230,12 @@ export function SignupView() {
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 
-            <Button type="submit" disabled={submitting} className={`${AUTH_BUTTON_CLASSES} mt-1`}>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className={cn(AUTH_BUTTON_CLASSES, AUTH_GOLD_BUTTON.className, "mt-1")}
+              style={AUTH_GOLD_BUTTON.style}
+            >
               {submitting ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
