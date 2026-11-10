@@ -2,16 +2,58 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, KeyRound, LoaderCircle, Lock, Mail } from "lucide-react";
+import { ArrowRight, CircleAlert, CircleCheck, KeyRound, LoaderCircle, Lock, Mail, MailCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
-import { AuthCard } from "@/components/auth/auth-card";
+import { INK, PALETTE, gradient, tint } from "@/components/admin/palette";
+import { AUTH_GOLD_BUTTON, AuthCard } from "@/components/auth/auth-card";
 import { AUTH_BUTTON_CLASSES, AuthIconInput, AuthPasswordField } from "@/components/auth/auth-field";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { requestPasswordReset, resetPassword } from "@/lib/api/auth-api";
+import { cn } from "@/lib/utils";
+
+/** Two steps, shown as a small progress bar under the banner. */
+function ResetSteps({ step }: { step: 1 | 2 }) {
+  const steps = [
+    { n: 1, label: "Get a code", icon: MailCheck },
+    { n: 2, label: "New password", icon: Lock },
+  ] as const;
+  return (
+    <ol className="grid grid-cols-2 gap-2" aria-label={`Step ${step} of 2`}>
+      {steps.map(({ n, label, icon: Icon }) => {
+        const done = n < step;
+        const current = n === step;
+        return (
+          <li key={n} className="flex flex-col gap-1.5">
+            <span
+              className="h-1.5 rounded-full transition-colors"
+              style={{ backgroundImage: done || current ? gradient(PALETTE.forest, 90) : undefined }}
+              data-state={done ? "done" : current ? "current" : "todo"}
+            >
+              {!done && !current && <span className="bg-muted block h-full rounded-full" />}
+            </span>
+            <span
+              className={cn(
+                "font-heading flex items-center gap-1.5 text-xs font-semibold",
+                current ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {done ? (
+                <CircleCheck className="size-3.5" style={{ color: INK.forest }} />
+              ) : (
+                <Icon className="size-3.5" style={current ? { color: INK.forest } : undefined} />
+              )}
+              {label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 /**
  * A Farmer who forgot their password: ask for a code by email, then type it
@@ -103,32 +145,25 @@ export function ForgotPasswordView() {
   return (
     <AuthSplitLayout busy={submitting}>
       <FadeIn duration={500}>
-        <AuthCard>
-          <div>
-            <Link
-              href="/login"
-              className="-my-2 inline-block py-2 text-sm transition-colors hover:text-foreground"
-              style={{ color: "var(--landing-accent)" }}
-            >
-              ← Back to sign in
-            </Link>
-            <div className="mt-3 flex items-center gap-2.5 sm:mt-4">
-              <span
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg border sm:size-9"
-                style={{ borderColor: "var(--landing-accent)", color: "var(--landing-accent)" }}
+        <AuthCard
+          header={{
+            icon: KeyRound,
+            eyebrow: "Password reset",
+            title: sentTo ? "Choose a new password." : "Forgot your password?",
+            description: sentTo
+              ? "Enter the 6-digit code from your email. The code works once and expires in 10 minutes."
+              : "Enter your Farmer account's email and we'll send you a 6-digit code.",
+            top: (
+              <Link
+                href="/login"
+                className="-my-2 inline-block py-2 text-sm text-white/80 transition-colors hover:text-white"
               >
-                <KeyRound className="size-4" />
-              </span>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                {sentTo ? "Choose a new password." : "Forgot your password?"}
-              </h1>
-            </div>
-            <p className="mt-1.5 text-sm text-muted-foreground sm:mt-2">
-              {sentTo
-                ? "Enter the 6-digit code from your email. The code works once and expires in 10 minutes."
-                : "Enter your Farmer account's email and we'll send you a 6-digit code."}
-            </p>
-          </div>
+                ← Back to sign in
+              </Link>
+            ),
+          }}
+        >
+          <ResetSteps step={sentTo ? 2 : 1} />
 
           {sentTo ? (
             <form onSubmit={handleReset} className="flex flex-col gap-4">
@@ -148,7 +183,8 @@ export function ForgotPasswordView() {
                     setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
                     setError(null);
                   }}
-                  className="border-input bg-background/70 focus-visible:border-ring focus-visible:ring-ring/50 h-14 w-full rounded-xl border px-4 text-center font-mono text-2xl tracking-[0.5em] outline-none focus-visible:ring-3"
+                  className="border-input h-14 w-full rounded-2xl border px-4 text-center font-mono text-2xl tracking-[0.5em] outline-none focus-visible:border-emerald-500/60 focus-visible:shadow-[0_0_0_4px_rgb(16_185_129/0.18)]"
+                  style={{ backgroundColor: tint(INK.forest, 6) }}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -179,17 +215,32 @@ export function ForgotPasswordView() {
               </div>
 
               {error && (
-                <p className="text-destructive text-sm" role="alert">
+                <p
+                  className="flex items-start gap-2 rounded-xl px-3 py-2 text-sm"
+                  style={{ color: INK.rose, backgroundColor: tint(INK.rose, 10) }}
+                  role="alert"
+                >
+                  <CircleAlert className="mt-0.5 size-4 shrink-0" />
                   {error}
                 </p>
               )}
               {notice && (
-                <p className="text-risk-low text-sm" role="status">
+                <p
+                  className="flex items-start gap-2 rounded-xl px-3 py-2 text-sm"
+                  style={{ color: INK.forest, backgroundColor: tint(INK.forest, 10) }}
+                  role="status"
+                >
+                  <MailCheck className="mt-0.5 size-4 shrink-0" />
                   {notice}
                 </p>
               )}
 
-              <Button type="submit" disabled={submitting || code.length !== 6} className={AUTH_BUTTON_CLASSES}>
+              <Button
+                type="submit"
+                disabled={submitting || code.length !== 6}
+                className={cn(AUTH_BUTTON_CLASSES, AUTH_GOLD_BUTTON.className)}
+                style={AUTH_GOLD_BUTTON.style}
+              >
                 {submitting ? (
                   <>
                     <LoaderCircle className="size-4 animate-spin" />
@@ -240,12 +291,22 @@ export function ForgotPasswordView() {
               </div>
 
               {error && (
-                <p className="text-destructive text-sm" role="alert">
+                <p
+                  className="flex items-start gap-2 rounded-xl px-3 py-2 text-sm"
+                  style={{ color: INK.rose, backgroundColor: tint(INK.rose, 10) }}
+                  role="alert"
+                >
+                  <CircleAlert className="mt-0.5 size-4 shrink-0" />
                   {error}
                 </p>
               )}
 
-              <Button type="submit" disabled={submitting} className={AUTH_BUTTON_CLASSES}>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className={cn(AUTH_BUTTON_CLASSES, AUTH_GOLD_BUTTON.className)}
+                style={AUTH_GOLD_BUTTON.style}
+              >
                 {submitting ? (
                   <>
                     <LoaderCircle className="size-4 animate-spin" />
