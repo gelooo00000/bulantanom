@@ -77,6 +77,25 @@ const ROLE_ICON = {
 /** A role colour at low strength, for avatar and chip backgrounds. */
 const tint = (color: string, percent = 12) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
 
+/** Bright pairs for avatars; each person keeps the same one. */
+const AVATAR_GRADIENTS = [
+  ["#34d399", "#059669"],
+  ["#60a5fa", "#2563eb"],
+  ["#a78bfa", "#7c3aed"],
+  ["#fbbf24", "#d97706"],
+  ["#f472b6", "#db2777"],
+  ["#2dd4bf", "#0d9488"],
+  ["#fb923c", "#ea580c"],
+  ["#818cf8", "#4f46e5"],
+] as const;
+
+function avatarGradient(seed: string) {
+  let hash = 0;
+  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  const [from, to] = AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+  return `linear-gradient(135deg, ${from}, ${to})`;
+}
+
 /**
  * Django Admin sits on the API host, not the Next.js host. Derived from the
  * configured API base so it follows the backend in every environment.
@@ -360,34 +379,38 @@ export function AccountManagement() {
       >
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <HeroStat
+            filled
             icon={Users}
             label="All accounts"
             value={users.length}
-            color="var(--muted-foreground)"
+            color="#7c5cdb"
             onClick={() => setTab("all")}
             active={tab === "all"}
           />
           <HeroStat
+            filled
             icon={Sprout}
             label="Farmers"
             value={farmers.length}
-            color={ROLE_COLOR.FARMER}
+            color="#1f9d55"
             onClick={() => setTab("farmers")}
             active={tab === "farmers"}
           />
           <HeroStat
+            filled
             icon={ShieldCheck}
             label="LGU Officers"
             value={officers.length}
-            color={ROLE_COLOR.LGU_OFFICER}
+            color="#2a78d6"
             onClick={() => setTab("officers")}
             active={tab === "officers"}
           />
           <HeroStat
+            filled
             icon={Ban}
             label="Suspended"
             value={suspended}
-            color="var(--risk-high)"
+            color="#e0533d"
             hint={suspended === 0 ? "Everyone has access" : "Lost access"}
           />
         </div>
@@ -485,18 +508,34 @@ function Panel({
   title,
   description,
   icon: Icon,
+  color,
   children,
 }: {
   title: string;
   description: string;
   icon: typeof Users;
+  /** Two colours for the icon tile and the panel's wash. */
+  color: readonly [string, string];
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-border bg-card flex flex-col gap-4 rounded-3xl border p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+    <section
+      className="border-border bg-card relative isolate flex flex-col gap-4 overflow-hidden rounded-3xl border p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)]"
+      style={{
+        backgroundImage: `radial-gradient(120% 70% at 100% 0%, color-mix(in oklab, ${color[0]} 14%, transparent), transparent 60%)`,
+      }}
+    >
       <header className="flex items-start gap-3">
-        <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
-          <Icon className="size-[18px]" aria-hidden="true" />
+        <span
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_18px_-8px_var(--panel)]"
+          style={
+            {
+              "--panel": color[1],
+              backgroundImage: `linear-gradient(135deg, ${color[0]}, ${color[1]})`,
+            } as React.CSSProperties
+          }
+        >
+          <Icon className="size-5" aria-hidden="true" />
         </span>
         <div>
           <h2 className="font-heading text-base font-medium">{title}</h2>
@@ -523,7 +562,7 @@ function RoleBreakdown({
     { key: "officers", label: "LGU Officers", value: officers, color: ROLE_COLOR.LGU_OFFICER, icon: ShieldCheck },
   ];
   return (
-    <Panel icon={PieChart} title="Accounts by role" description="Select a role to see its accounts.">
+    <Panel icon={PieChart} color={["#a78bfa", "#7c3aed"]} title="Accounts by role" description="Select a role to see its accounts.">
       <div className="grid items-center gap-5 sm:grid-cols-[200px_1fr]">
         <DonutChart rows={rows} unit="account" name="Accounts by role" onSelectKey={onSelect} />
         <HorizontalBars rows={rows} unit="account" label="Accounts by role" onSelect={onSelect} />
@@ -542,7 +581,7 @@ function OnlineNow({ farmers, officers }: { farmers: AdminUser[]; officers: Admi
   ];
 
   return (
-    <Panel icon={Radio} title="Online now" description="Signed in and active in the last few minutes.">
+    <Panel icon={Radio} color={["#34d399", "#059669"]} title="Online now" description="Signed in and active in the last few minutes.">
       <div className="flex items-center gap-3">
         <span className="relative flex size-3">
           {online.length > 0 && (
@@ -578,7 +617,7 @@ function OnlineNow({ farmers, officers }: { farmers: AdminUser[]; officers: Admi
                   className="h-full rounded-full transition-[width] duration-300"
                   style={{
                     width: `${list.length > 0 ? (count / list.length) * 100 : 0}%`,
-                    backgroundColor: color,
+                    backgroundImage: `linear-gradient(90deg, color-mix(in oklab, ${color} 55%, white), ${color})`,
                   }}
                 />
               </div>
@@ -616,7 +655,6 @@ function Avatar({
   title?: string;
   showOnline?: boolean;
 }) {
-  const color = ROLE_COLOR[user.role];
   const initials =
     `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase() || user.email.charAt(0).toUpperCase();
   return (
@@ -624,10 +662,10 @@ function Avatar({
       aria-hidden="true"
       title={title}
       className={cn(
-        "ring-card relative flex shrink-0 items-center justify-center rounded-full font-heading font-medium ring-2",
+        "ring-card relative flex shrink-0 items-center justify-center rounded-full font-heading font-semibold text-white ring-2 shadow-[0_6px_14px_-6px_rgb(0_0_0/0.35)]",
         size === "sm" ? "size-8 text-[11px]" : "size-12 text-sm",
       )}
-      style={{ backgroundColor: tint(color, 16), color }}
+      style={{ backgroundImage: avatarGradient(user.email) }}
     >
       {initials}
       {showOnline && user.is_online && (
@@ -658,13 +696,17 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
         badge && "opacity-80",
       )}
     >
-      {/* The role's colour as a soft wash across the top of the card. */}
+      {/* The person's colour as a wash across the top, with a glowing band. */}
       <span
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 -z-10 h-16"
-        style={{ background: `linear-gradient(180deg, ${tint(color, 14)}, transparent)` }}
+        className="absolute inset-x-0 top-0 -z-10 h-20 opacity-25 transition-opacity group-hover:opacity-40"
+        style={{ backgroundImage: avatarGradient(user.email), maskImage: "linear-gradient(to bottom, black, transparent)" }}
       />
-      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} />
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-1.5"
+        style={{ backgroundImage: avatarGradient(user.email) }}
+      />
 
       <div className="flex items-start gap-3">
         <Avatar user={user} showOnline />
@@ -696,7 +738,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
 
       <div className="border-border text-muted-foreground mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-dashed pt-3 text-xs">
         <span className="flex items-center gap-1.5">
-          <CalendarDays className="size-3.5" />
+          <CalendarDays className="size-3.5 text-violet-500" />
           Joined {joined}
         </span>
         {user.is_online ? (
@@ -706,7 +748,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
           </span>
         ) : (
           <span className="flex items-center gap-1.5">
-            <Clock className="size-3.5" />
+            <Clock className="size-3.5 text-amber-500" />
             {lastActiveLabel(user.last_seen_at).replace(/^Last active /, "Active ")}
           </span>
         )}

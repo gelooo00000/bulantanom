@@ -1,4 +1,4 @@
-import type { ElementType, ReactNode } from "react";
+import type { CSSProperties, ElementType, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -80,6 +80,7 @@ export function HeroStat({
   hint,
   onClick,
   active,
+  filled,
 }: {
   icon: ElementType;
   label: string;
@@ -88,7 +89,45 @@ export function HeroStat({
   hint?: string;
   onClick?: () => void;
   active?: boolean;
+  /** A solid, colourful tile with white text instead of a light one. */
+  filled?: boolean;
 }) {
+  if (filled) {
+    const tile = cn(
+      "relative isolate flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3.5 text-white transition-all",
+      "shadow-[0_12px_28px_-14px_var(--tile)]",
+      onClick && "cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-14px_var(--tile)]",
+      active && "ring-offset-background ring-2 ring-white/80 ring-offset-2",
+    );
+    const style = {
+      "--tile": color,
+      backgroundImage: `linear-gradient(135deg, ${color} 0%, color-mix(in oklch, ${color}, black 28%) 100%)`,
+    } as CSSProperties;
+    const content = (
+      <>
+        {/* A large faded icon in the corner, for texture. */}
+        <Icon aria-hidden="true" className="absolute -right-3 -bottom-4 -z-10 size-20 opacity-15" />
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+          <Icon className="size-5" aria-hidden="true" />
+        </span>
+        <span className="flex min-w-0 flex-col text-left">
+          <span className="font-heading text-2xl leading-none font-semibold tabular-nums">{value}</span>
+          <span className="mt-1 truncate text-xs text-white/85">{label}</span>
+          {hint && <span className="truncate text-[11px] text-white/70">{hint}</span>}
+        </span>
+      </>
+    );
+    return onClick ? (
+      <button type="button" onClick={onClick} aria-pressed={active} className={tile} style={style}>
+        {content}
+      </button>
+    ) : (
+      <div className={tile} style={style}>
+        {content}
+      </div>
+    );
+  }
+
   const body = (
     <>
       <span
