@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CircleHelp, Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
+import { ArrowRight, TriangleAlert } from "lucide-react";
 
 import {
   Breadcrumbs,
@@ -9,8 +9,8 @@ import {
   ChartCard,
   LiveDataNote,
 } from "@/components/analytics/cards";
-import { CROP_PAGE_SIZE, HorizontalBars, WeeklyColumns, type BarRow } from "@/components/lgu/dashboard-charts";
-import { RiskPie } from "@/components/lgu/risk-pie";
+import { CROP_PAGE_SIZE, HorizontalBars, WeeklyColumns } from "@/components/lgu/dashboard-charts";
+import { RiskOverview } from "@/components/lgu/risk-overview";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   analyticsQuery,
@@ -18,7 +18,9 @@ import {
   fetchOverview,
   type AnalyticsFilters,
 } from "@/lib/api/analytics-api";
+import { fetchLguPlants } from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import { livePlants } from "@/lib/lgu-plant-stats";
 import { cropColor } from "@/lib/crop-colors";
 
 /** A query that refetches whenever the filters change. */
@@ -36,6 +38,8 @@ export function AnalyticsDashboard() {
   const filters = EMPTY_FILTERS;
 
   const overview = useFiltered(fetchOverview, filters);
+  // The plant list behind the Plant risk card, the same one Risk Overview reads.
+  const plantsQuery = useAuthedQuery(fetchLguPlants);
 
   const highRisk = overview.data?.risk.HIGH ?? 0;
 
@@ -70,32 +74,14 @@ export function AnalyticsDashboard() {
         </div>
       )}
 
+      {/* Weekly assessments and Crops planted side by side; the plant risk,
+          as on Risk Overview, across the full width below. */}
       <div className="grid gap-3 lg:grid-cols-2">
-        <ChartCard title="Plant risk" description="Latest AI reading per plant across approved farmers." href="/lgu/risks" linkLabel="Risk overview">
-          <CardState query={overview} isEmpty={(d) => d.risk.LOW + d.risk.MEDIUM + d.risk.HIGH + d.risk.unassessed === 0}
-            emptyHint="No plants recorded yet.">
-            {(d) => {
-              const rows: BarRow[] = [
-                { key: "HIGH", label: "High risk", value: d.risk.HIGH, color: "var(--risk-high)", icon: OctagonAlert },
-                { key: "MEDIUM", label: "Medium risk", value: d.risk.MEDIUM, color: "var(--risk-medium)", icon: TriangleAlert },
-                { key: "LOW", label: "Low risk", value: d.risk.LOW, color: "var(--risk-low)", icon: Leaf },
-                { key: "none", label: "No reading yet", value: d.risk.unassessed, color: "var(--muted-foreground)", icon: CircleHelp },
-              ];
-              return (
-                <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,180px)_1fr]">
-                  <RiskPie rows={rows} />
-                  <HorizontalBars rows={rows} unit="plant" label="Plants by risk level" />
-                </div>
-              );
-            }}
-          </CardState>
-        </ChartCard>
-
         <ChartCard title="Weekly assessments" description="Are farmers keeping up their weekly plant checks?">
           <CardState query={overview}>{(d) => <WeeklyColumns weeks={d.assessment_trend} />}</CardState>
         </ChartCard>
 
-        <ChartCard title="Crops planted" description="Plants per crop at Layuan, most planted first." href="/lgu/plants" linkLabel="All plants" className="lg:col-span-2">
+        <ChartCard title="Crops planted" description="Plants per crop at Layuan, most planted first." href="/lgu/plants" linkLabel="All plants">
           <CardState query={overview} isEmpty={(d) => d.crops.length === 0} emptyHint="No plants recorded yet.">
             {(d) => (
               <HorizontalBars
@@ -103,6 +89,18 @@ export function AnalyticsDashboard() {
                 unit="plant" label="Plants per crop" pageSize={CROP_PAGE_SIZE}
               />
             )}
+          </CardState>
+        </ChartCard>
+
+        <ChartCard
+          title="Plant risk"
+          description="Latest AI reading for each plant — point at a level to see its crops."
+          href="/lgu/risks"
+          linkLabel="Risk overview"
+          className="lg:col-span-2"
+        >
+          <CardState query={plantsQuery} isEmpty={(list) => livePlants(list).length === 0} emptyHint="No plants recorded yet.">
+            {(list) => <RiskOverview plants={livePlants(list)} bare />}
           </CardState>
         </ChartCard>
       </div>

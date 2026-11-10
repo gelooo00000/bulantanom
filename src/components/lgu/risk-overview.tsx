@@ -33,7 +33,7 @@ const LEVELS: { key: RiskKey; label: string; short: string; color: string; icon:
   { key: "NONE", label: "Not assessed", short: "not assessed", color: "var(--muted-foreground)", icon: CircleHelp },
 ];
 
-export function RiskOverview({ plants }: { plants: LguPlant[] }) {
+export function RiskOverview({ plants, bare = false }: { plants: LguPlant[]; bare?: boolean }) {
   const tally = useMemo(() => riskTally(plants), [plants]);
 
   const riskRows: BarRow[] = useMemo(
@@ -47,6 +47,9 @@ export function RiskOverview({ plants }: { plants: LguPlant[] }) {
       })),
     [tally],
   );
+
+  // Inside another page's card, only the chart itself.
+  if (bare) return <PlantRisk plants={plants} riskRows={riskRows} />;
 
   return (
     <Panel
