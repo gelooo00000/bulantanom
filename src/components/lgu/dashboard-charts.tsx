@@ -508,7 +508,7 @@ export function ColumnChart({
  * every row with its count and a bar, the highest one marked, and the
  * total along the bottom.
  */
-function NumbersDialog({
+export function NumbersDialog({
   open,
   onOpenChange,
   title,
@@ -516,14 +516,27 @@ function NumbersDialog({
   heading,
   unit,
   rows,
+  triggerLabel = "Show numbers",
+  countHeading,
+  totalLabel = "Total",
+  totalText,
+  emptyText,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   summary: string;
   heading: string;
+  /** Singular noun, e.g. "assessment"; used for the default wording below. */
   unit: string;
   rows: { key: string; label: string; count: number }[];
+  /** Wording for translated screens; English defaults otherwise. */
+  triggerLabel?: string;
+  countHeading?: string;
+  totalLabel?: string;
+  totalText?: string;
+  /** Shown in place of the rows when there are none. */
+  emptyText?: string;
 }) {
   const max = Math.max(0, ...rows.map((row) => row.count));
   const total = rows.reduce((sum, row) => sum + row.count, 0);
@@ -531,7 +544,7 @@ function NumbersDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Trigger className="text-primary hover:bg-primary/10 mt-2 inline-flex items-center gap-1.5 self-start rounded-lg px-2 py-1 text-xs font-medium transition-colors">
         <BarChart3 className="size-3.5" aria-hidden="true" />
-        Show numbers
+        {triggerLabel}
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-emerald-950/50 backdrop-blur-sm transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
@@ -575,10 +588,17 @@ function NumbersDialog({
               <thead>
                 <tr className="text-muted-foreground text-left text-xs">
                   <th className="pb-2 font-medium">{heading}</th>
-                  <th className="pb-2 text-right font-medium capitalize">{plural(unit, 2)}</th>
+                  <th className="pb-2 text-right font-medium capitalize">{countHeading ?? plural(unit, 2)}</th>
                 </tr>
               </thead>
               <tbody>
+                {rows.length === 0 && emptyText && (
+                  <tr className="border-border/60 border-t">
+                    <td colSpan={2} className="text-muted-foreground py-3">
+                      {emptyText}
+                    </td>
+                  </tr>
+                )}
                 {rows.map((row) => {
                   const top = max > 0 && row.count === max;
                   return (
@@ -617,9 +637,9 @@ function NumbersDialog({
           </div>
 
           <div className="border-border bg-muted/30 flex shrink-0 items-center justify-between border-t px-5 py-3 text-sm">
-            <span className="text-muted-foreground">Total</span>
+            <span className="text-muted-foreground">{totalLabel}</span>
             <span className="font-heading font-semibold tabular-nums">
-              {total} {plural(unit, total)}
+              {totalText ?? `${total} ${plural(unit, total)}`}
             </span>
           </div>
         </Dialog.Popup>

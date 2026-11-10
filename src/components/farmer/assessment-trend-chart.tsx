@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 
+import { NumbersDialog } from "@/components/lgu/dashboard-charts";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDisplayDate, formatShortDate } from "@/components/ui/date-picker";
+import {
+  formatDisplayDate,
+  formatShortDate,
+} from "@/components/ui/date-picker";
 import type { AssessmentTrend } from "@/lib/api/dashboard-api";
 import { useLanguage } from "@/lib/i18n";
 import { CARD_OUTLINE } from "@/lib/crop-colors";
@@ -48,90 +52,73 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
   const y = (count: number) =>
     VIEW_H - PAD_TOP - (count / peak) * (VIEW_H - PAD_TOP * 2);
 
-  const points = days.map((d, i) => ({ ...d, x: PAD_X + i * stepX, y: y(d.count) }));
-  const line = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const points = days.map((d, i) => ({
+    ...d,
+    x: PAD_X + i * stepX,
+    y: y(d.count),
+  }));
+  const line = points
+    .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(" ");
   const area = `${line} ${VIEW_W - PAD_X},${VIEW_H} ${PAD_X},${VIEW_H}`;
 
   const active = points.filter((p) => p.count > 0);
+  const summary =
+    trend.total === 0
+      ? t("trend.none", { days: trend.range_days })
+      : trend.total === 1
+        ? t("trend.one", { days: trend.range_days })
+        : t("trend.many", { n: trend.total, days: trend.range_days });
   const first = days[0];
   const last = days[days.length - 1];
 
   return (
     <Card className={`gap-0 py-4 ${CARD_OUTLINE}`}>
       <CardContent className="px-4">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-medium">{t("trend.title")}</h2>
-          <button
-            type="button"
-            onClick={() => setShowTable((v) => !v)}
-            className="text-muted-foreground hover:text-foreground shrink-0 text-xs underline underline-offset-2"
-            aria-expanded={showTable}
-          >
-            {showTable ? t("trend.showChart") : t("trend.showNumbers")}
-          </button>
+          <NumbersDialog
+            open={showTable}
+            onOpenChange={setShowTable}
+            title={t("trend.title")}
+            summary={summary}
+            heading={t("trend.date")}
+            unit="assessment"
+            countHeading={t("trend.count")}
+            triggerLabel={t("trend.showNumbers")}
+            totalLabel={t("trend.total")}
+            totalText={String(trend.total)}
+            emptyText={t("trend.emptyPeriod")}
+            // Only the days with activity: thirty rows of zero say less
+            // than the chart they stand in for.
+            rows={active.map((d) => ({
+              key: d.date,
+              label: formatDisplayDate(d.date, dateLocale),
+              count: d.count,
+            }))}
+          />
         </div>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          {trend.total === 0
-            ? t("trend.none", { days: trend.range_days })
-            : trend.total === 1
-              ? t("trend.one", { days: trend.range_days })
-              : t("trend.many", { n: trend.total, days: trend.range_days })}
-        </p>
+        <p className="text-muted-foreground mt-0.5 text-xs">{summary}</p>
 
-        {showTable ? (
-          <div className="mt-3 max-h-56 overflow-y-auto">
-            <table className="w-full text-sm">
-              <caption className="sr-only">{t("trend.caption")}</caption>
-              <thead className="bg-card sticky top-0">
-                <tr className="text-muted-foreground text-left text-xs">
-                  <th scope="col" className="pb-1 font-medium">
-                    {t("trend.date")}
-                  </th>
-                  <th scope="col" className="pb-1 text-right font-medium">
-                    {t("trend.count")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Only the days with activity — thirty rows of zero is a
-                    worse answer than the chart it is standing in for. */}
-                {active.length > 0 ? (
-                  active.map((d) => (
-                    <tr key={d.date} className="border-border/60 border-t">
-                      <td className="py-1.5">{formatDisplayDate(d.date, dateLocale)}</td>
-                      <td className="py-1.5 text-right tabular-nums">{d.count}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr className="border-border/60 border-t">
-                    <td colSpan={2} className="text-muted-foreground py-2">
-                      {t("trend.emptyPeriod")}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <>
-            {/* The line is drawn in SVG stretched to the card width, but the
+        <>
+          {/* The line is drawn in SVG stretched to the card width, but the
                 markers are HTML: `preserveAspectRatio="none"` scales x and y
                 differently, which turns an SVG circle into an oval at any
                 width but this one. Positioning them as elements keeps them
                 round wherever the card lands. */}
-            <div
-              className="relative mt-3 h-20"
-              role="img"
-              aria-label={
-                trend.total === 0
-                  ? t("trend.none", { days: trend.range_days })
-                  : t("trend.chartLabel", {
-                      n: trend.total,
-                      days: trend.range_days,
-                      peak: trend.busiest_count,
-                    })
-              }
-            >
+          <div
+            className="relative mt-3 h-20"
+            role="img"
+            aria-label={
+              trend.total === 0
+                ? t("trend.none", { days: trend.range_days })
+                : t("trend.chartLabel", {
+                    n: trend.total,
+                    days: trend.range_days,
+                    peak: trend.busiest_count,
+                  })
+            }
+          >
             <svg
               viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
               className="absolute inset-0 h-full w-full"
@@ -189,15 +176,14 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
                 title={`${formatShortDate(p.date, dateLocale)}: ${p.count}`}
               />
             ))}
-            </div>
+          </div>
 
-            <div className="text-muted-foreground mt-1 flex justify-between text-[11px]">
-              <span>{formatShortDate(first.date, dateLocale)}</span>
-              <span>{t("trend.peak", { n: trend.busiest_count })}</span>
-              <span>{formatShortDate(last.date, dateLocale)}</span>
-            </div>
-          </>
-        )}
+          <div className="text-muted-foreground mt-1 flex justify-between text-[11px]">
+            <span>{formatShortDate(first.date, dateLocale)}</span>
+            <span>{t("trend.peak", { n: trend.busiest_count })}</span>
+            <span>{formatShortDate(last.date, dateLocale)}</span>
+          </div>
+        </>
       </CardContent>
     </Card>
   );

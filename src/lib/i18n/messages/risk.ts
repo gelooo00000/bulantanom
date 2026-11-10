@@ -139,6 +139,7 @@ export const risk = defineMessages({
     bik: "Aktibidad san pagsusi",
   },
   "trend.showChart": { en: "Show chart", fil: "Ipakita ang tsart", bik: "Ipahiling an tsart" },
+  "trend.total": { en: "Total", fil: "Kabuuan", bik: "Kabilugan" },
   "trend.showNumbers": {
     en: "Show numbers",
     fil: "Ipakita ang mga bilang",
