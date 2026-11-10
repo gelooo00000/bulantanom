@@ -29,6 +29,13 @@ import type {
   LossOutcomeReport,
 } from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
+import {
+  INK,
+  PALETTE,
+  gradient,
+  tint,
+  type Swatch,
+} from "@/components/admin/palette";
 import { cn } from "@/lib/utils";
 
 const pct = (value: number | null | undefined) =>
@@ -61,7 +68,50 @@ const CHIP: Record<string, string> = {
 };
 
 const SURFACE =
-  "border-border bg-card rounded-2xl border shadow-[0_1px_2px_rgb(0_0_0/0.04)]";
+  "border-border bg-card rounded-2xl border shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:border-white/10";
+
+/**
+ * A card's colour, as on the Admin console: a soft wash from its top
+ * corner and, on the dark theme, a glow in that colour underneath.
+ */
+const GLOW = "dark:shadow-[0_16px_40px_-24px_var(--panel)]";
+function panelStyle(swatch: Swatch): React.CSSProperties {
+  return {
+    "--panel": swatch[1],
+    backgroundImage: `radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, ${swatch[0]} 15%, transparent), transparent 60%)`,
+  } as React.CSSProperties;
+}
+
+/** A gradient tile holding an icon, in a card's colour. */
+function IconTile({
+  icon: Icon,
+  swatch,
+  size = "md",
+}: {
+  icon: ElementType;
+  swatch: Swatch;
+  size?: "sm" | "md";
+}) {
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_18px_-8px_var(--tile)]",
+        size === "sm" ? "size-7 rounded-lg" : "size-10",
+      )}
+      style={
+        {
+          "--tile": swatch[1],
+          backgroundImage: gradient(swatch),
+        } as React.CSSProperties
+      }
+    >
+      <Icon
+        className={size === "sm" ? "size-3.5" : "size-5"}
+        aria-hidden="true"
+      />
+    </span>
+  );
+}
 
 /**
  * "Harvest Outcomes": how plants monitored with BulanTanom turned out, from
@@ -166,13 +216,13 @@ function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <FlatStat
             icon={Sprout}
-            color="var(--risk-low)"
+            swatch={PALETTE.forest}
             label="Survival rate (harvested vs lost)"
             value={pct(data.survival_rate)}
           />
           <FlatStat
             icon={Wheat}
-            color="var(--risk-high)"
+            swatch={PALETTE.rose}
             label="Plants lost"
             value={lost}
           />
@@ -219,19 +269,19 @@ function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <FlatStat
               icon={Sprout}
-              color="var(--risk-low)"
+              swatch={PALETTE.forest}
               label="Survival rate (harvested vs lost)"
               value={pct(data.survival_rate)}
             />
             <FlatStat
               icon={Wheat}
-              color="var(--risk-high)"
+              swatch={PALETTE.rose}
               label="Plants lost"
               value={lost}
             />
             <FlatStat
               icon={BellRing}
-              color="var(--risk-medium)"
+              swatch={PALETTE.gold}
               label="Lost plants BulanTanom had warned about"
               value={`${data.warned_before_loss ?? 0} of ${lost}`}
             />
@@ -239,23 +289,31 @@ function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
         </Section>
       )}
 
-      <Section id="breakdown" title="Quality & health" icon={PieChart}>
+      <Section
+        id="breakdown"
+        title="Quality & health"
+        icon={PieChart}
+        swatch={PALETTE.gold}
+      >
         <div className="grid gap-3 md:grid-cols-3">
           <BreakdownCard
             title="Quality"
             icon={Wheat}
+            swatch={PALETTE.gold}
             rows={data.quality}
             total={data.total}
           />
           <BreakdownCard
             title="Health at harvest"
             icon={HeartPulse}
+            swatch={PALETTE.forest}
             rows={data.final_health}
             total={data.total}
           />
           <BreakdownCard
             title="Did the advice help?"
             icon={Lightbulb}
+            swatch={PALETTE.sky}
             rows={data.advice_helped}
             total={data.total}
           />
@@ -336,11 +394,17 @@ function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
       )}
 
       {lost > 0 && (
-        <Section id="losses" title="Lost plants" icon={HeartCrack}>
+        <Section
+          id="losses"
+          title="Lost plants"
+          icon={HeartCrack}
+          swatch={PALETTE.rose}
+        >
           <div className="grid gap-3 lg:grid-cols-3">
             <BreakdownCard
               title="Causes of loss"
               icon={HeartCrack}
+              swatch={PALETTE.rose}
               rows={(data.causes ?? []).filter((c) => c.count > 0)}
               total={lost}
               neutral
@@ -354,7 +418,12 @@ function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
         </Section>
       )}
 
-      <Section id="reports" title="Latest harvest reports" icon={ClipboardList}>
+      <Section
+        id="reports"
+        title="Latest harvest reports"
+        icon={ClipboardList}
+        swatch={PALETTE.sky}
+      >
         {data.recent.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No harvest reports yet.
@@ -451,13 +520,15 @@ function SectionNav({ sections }: { sections: SectionDef[] }) {
 function Section({
   id,
   title,
-  icon: Icon,
+  icon,
+  swatch = PALETTE.forest,
   note,
   children,
 }: {
   id: SectionKey;
   title: string;
   icon: ElementType;
+  swatch?: Swatch;
   note?: string;
   children: ReactNode;
 }) {
@@ -468,8 +539,8 @@ function Section({
       className="flex scroll-mt-32 flex-col gap-3"
     >
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-        <h3 className="font-heading flex items-center gap-2 text-base font-medium">
-          <Icon className="text-primary size-4" aria-hidden="true" />
+        <h3 className="font-heading flex items-center gap-2.5 text-base font-semibold">
+          <IconTile icon={icon} swatch={swatch} size="sm" />
           {title}
         </h3>
         {note && <p className="text-muted-foreground text-xs">{note}</p>}
@@ -561,27 +632,22 @@ function RingStat({
 }
 
 function FlatStat({
-  icon: Icon,
-  color,
+  icon,
+  swatch,
   label,
   value,
 }: {
   icon: ElementType;
-  color: string;
+  swatch: Swatch;
   label: string;
   value: ReactNode;
 }) {
   return (
-    <div className={cn(SURFACE, "flex items-center gap-3 p-4")}>
-      <span
-        className="flex size-10 shrink-0 items-center justify-center rounded-xl"
-        style={{
-          color,
-          backgroundColor: `color-mix(in oklch, ${color}, transparent 85%)`,
-        }}
-      >
-        <Icon className="size-5" aria-hidden="true" />
-      </span>
+    <div
+      className={cn(SURFACE, GLOW, "flex items-center gap-3 p-4")}
+      style={panelStyle(swatch)}
+    >
+      <IconTile icon={icon} swatch={swatch} />
       <div className="min-w-0">
         <p className="font-heading text-xl font-semibold tabular-nums">
           {value}
@@ -609,22 +675,27 @@ function MiniBar({ value, color }: { value: number | null; color: string }) {
 
 function BreakdownCard({
   title,
-  icon: Icon,
+  icon,
+  swatch = PALETTE.forest,
   rows,
   total,
   neutral = false,
 }: {
   title: string;
   icon: ElementType;
+  swatch?: Swatch;
   rows: Outcomes["quality"];
   total: number;
   /** One colour for every row, for answers that are not good or bad. */
   neutral?: boolean;
 }) {
   return (
-    <div className={cn(SURFACE, "flex flex-col gap-3 p-4")}>
-      <p className="font-heading flex items-center gap-2 text-sm font-medium">
-        <Icon className="text-muted-foreground size-4" aria-hidden="true" />
+    <div
+      className={cn(SURFACE, GLOW, "flex flex-col gap-3 p-4")}
+      style={panelStyle(swatch)}
+    >
+      <p className="font-heading flex items-center gap-2.5 text-sm font-semibold">
+        <IconTile icon={icon} swatch={swatch} size="sm" />
         {title}
       </p>
       {rows.map((row) => {
@@ -708,14 +779,22 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
     <article
       className={cn(
         SURFACE,
-        "flex flex-col gap-3 p-4 text-sm transition-shadow hover:shadow-md",
+        GLOW,
+        "relative isolate flex flex-col gap-3 overflow-hidden p-4 pt-5 text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-20px_var(--panel)]",
       )}
+      style={panelStyle(PALETTE.forest)}
     >
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-1"
+        style={{ backgroundImage: gradient(PALETTE.forest, 90) }}
+      />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span
             aria-hidden="true"
-            className="bg-risk-low/10 flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
+            style={{ backgroundColor: tint(INK.forest, 14) }}
           >
             {report.crop_emoji}
           </span>
@@ -748,7 +827,10 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
         </Chip>
       </div>
 
-      <div className="bg-muted/50 grid grid-cols-2 gap-2 rounded-xl p-2.5 text-xs">
+      <div
+        className="grid grid-cols-2 gap-2 rounded-xl p-2.5 text-xs"
+        style={{ backgroundColor: tint(INK.sky, 9) }}
+      >
         <p>
           <span className="text-muted-foreground block">Yield</span>
           <span className="font-medium">{amount}</span>
@@ -792,9 +874,16 @@ function LossCard({ loss }: { loss: LossOutcomeReport }) {
     <article
       className={cn(
         SURFACE,
-        "border-risk-high/20 flex flex-col gap-2.5 p-4 text-sm",
+        GLOW,
+        "border-risk-high/20 relative isolate flex flex-col gap-2.5 overflow-hidden p-4 pt-5 text-sm",
       )}
+      style={panelStyle(PALETTE.rose)}
     >
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-1"
+        style={{ backgroundImage: gradient(PALETTE.rose, 90) }}
+      />
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
