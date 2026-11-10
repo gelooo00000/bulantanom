@@ -1,7 +1,11 @@
 "use client";
 
+import { Dialog } from "@base-ui/react/dialog";
+import { BarChart3, X } from "lucide-react";
 import type { ElementType } from "react";
 import { useEffect, useRef, useState } from "react";
+
+import { INK, PALETTE, gradient, tint } from "@/components/admin/palette";
 
 import { SlidePager } from "@/components/shared/slide-pager";
 import { formatDisplayDate, formatShortDate } from "@/components/ui/date-picker";
@@ -226,6 +230,7 @@ export function WeeklyColumns({ weeks }: { weeks: WeekCount[] }) {
       }))}
       unit="assessment"
       tableHeading="Week of"
+      tableTitle="Weekly assessments"
       summary={
         total === 0
           ? `No assessments in the last ${weeks.length} weeks.`
@@ -287,6 +292,7 @@ export function ColumnChart({
   summary,
   name,
   tableHeading,
+  tableTitle = "The numbers",
   labelIndex,
   axisEvery = 1,
   onHoverIndex,
@@ -302,6 +308,8 @@ export function ColumnChart({
   /** Accessible description of the whole chart. */
   name: string;
   tableHeading: string;
+  /** Heading of the "Show numbers" pop-up. */
+  tableTitle?: string;
   /** The one column that carries its value as a direct label. */
   labelIndex?: number;
   /** Label every Nth column on the axis (the last is always labelled). */
@@ -482,33 +490,141 @@ export function ColumnChart({
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowTable((v) => !v)}
-        className="text-muted-foreground mt-2 text-xs underline underline-offset-2"
-        aria-expanded={showTable}
-      >
-        {showTable ? "Hide numbers" : "Show numbers"}
-      </button>
-      {showTable && (
-        <table className="mt-2 w-full text-xs">
-          <thead>
-            <tr className="text-muted-foreground text-left">
-              <th className="py-1 font-normal">{tableHeading}</th>
-              <th className="py-1 text-right font-normal capitalize">{plural(unit, 2)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {columns.map((column) => (
-              <tr key={column.key} className="border-border/60 border-t">
-                <td className="py-1">{column.tableLabel}</td>
-                <td className="py-1 text-right tabular-nums">{column.count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <NumbersDialog
+        open={showTable}
+        onOpenChange={setShowTable}
+        title={tableTitle}
+        summary={summary}
+        heading={tableHeading}
+        unit={unit}
+        rows={columns.map((column) => ({ key: column.key, label: column.tableLabel, count: column.count }))}
+      />
     </div>
+  );
+}
+
+/**
+ * "Show numbers" as a pop-up rather than a table that stretches the card:
+ * every row with its count and a bar, the highest one marked, and the
+ * total along the bottom.
+ */
+function NumbersDialog({
+  open,
+  onOpenChange,
+  title,
+  summary,
+  heading,
+  unit,
+  rows,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  summary: string;
+  heading: string;
+  unit: string;
+  rows: { key: string; label: string; count: number }[];
+}) {
+  const max = Math.max(0, ...rows.map((row) => row.count));
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Trigger className="text-primary hover:bg-primary/10 mt-2 inline-flex items-center gap-1.5 self-start rounded-lg px-2 py-1 text-xs font-medium transition-colors">
+        <BarChart3 className="size-3.5" aria-hidden="true" />
+        Show numbers
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-emerald-950/50 backdrop-blur-sm transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Popup
+          className={cn(
+            "bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-2rem)] w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[1.5rem] border border-white/10",
+            "shadow-[0_30px_80px_-30px_#065f46] transition-all duration-200 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+          )}
+        >
+          <div
+            className="relative isolate shrink-0 overflow-hidden px-5 pt-5 pb-5 text-white"
+            style={{ backgroundImage: "linear-gradient(135deg, #064e3b 0%, #065f46 45%, #0f766e 100%)" }}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute -top-14 -right-10 -z-10 size-40 rounded-full opacity-40 blur-3xl"
+              style={{ backgroundColor: PALETTE.gold[0] }}
+            />
+            <div className="flex items-start gap-3">
+              <span
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl text-amber-950 shadow-[0_10px_24px_-10px_#f59e0b]"
+                style={{ backgroundImage: gradient(PALETTE.gold) }}
+              >
+                <BarChart3 className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <Dialog.Title className="text-lg font-semibold tracking-tight">{title}</Dialog.Title>
+                <Dialog.Description className="mt-0.5 text-sm text-emerald-50/85">{summary}</Dialog.Description>
+              </div>
+              <Dialog.Close
+                aria-label="Close"
+                className="rounded-xl border border-white/20 bg-white/10 p-1.5 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+              >
+                <X className="size-4" />
+              </Dialog.Close>
+            </div>
+          </div>
+
+          <div className="overflow-y-auto px-5 py-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-muted-foreground text-left text-xs">
+                  <th className="pb-2 font-medium">{heading}</th>
+                  <th className="pb-2 text-right font-medium capitalize">{plural(unit, 2)}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const top = max > 0 && row.count === max;
+                  return (
+                    <tr key={row.key} className="border-border/60 border-t">
+                      <td className="py-2 pr-3">
+                        <span className="flex flex-col gap-1">
+                          <span className={cn(top && "font-semibold")}>{row.label}</span>
+                          <span className="bg-muted block h-1.5 w-full overflow-hidden rounded-full">
+                            <span
+                              className="block h-full rounded-full"
+                              style={{
+                                width: `${max ? (100 * row.count) / max : 0}%`,
+                                backgroundImage: gradient(top ? PALETTE.gold : PALETTE.forest, 90),
+                              }}
+                            />
+                          </span>
+                        </span>
+                      </td>
+                      <td className="py-2 text-right align-top">
+                        <span
+                          className="font-heading inline-flex min-w-8 justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums"
+                          style={
+                            row.count > 0
+                              ? { color: top ? INK.gold : INK.forest, backgroundColor: tint(top ? INK.gold : INK.forest, 14) }
+                              : undefined
+                          }
+                        >
+                          {row.count}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border-border bg-muted/30 flex shrink-0 items-center justify-between border-t px-5 py-3 text-sm">
+            <span className="text-muted-foreground">Total</span>
+            <span className="font-heading font-semibold tabular-nums">
+              {total} {plural(unit, total)}
+            </span>
+          </div>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
