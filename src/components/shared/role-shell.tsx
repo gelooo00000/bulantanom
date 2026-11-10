@@ -72,9 +72,15 @@ export function RoleShell({
   const logout = () => endSession("/");
 
   const claimedBy = navItems.find((item) => item.claims?.test(pathname));
+  // The most specific item wins: /admin/harvest-outcomes lights its own
+  // item, not Account Management at /admin as well.
+  const matchedHref = navItems
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
   function isActive(href: string) {
     if (claimedBy) return claimedBy.href === href;
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return href === matchedHref;
   }
 
   const primaryTabs = navItems.slice(0, 3);

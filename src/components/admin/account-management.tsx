@@ -407,8 +407,8 @@ export function AccountManagement() {
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="gap-4">
-        <div className="border-border bg-card/80 sticky top-[3.25rem] z-[5] flex flex-col gap-2 rounded-2xl border p-2 shadow-sm backdrop-blur-md md:flex-row md:items-center md:justify-between">
-          <TabsList className="max-w-full overflow-x-auto">
+        <div className="border-border bg-card/80 sticky top-[3.25rem] z-[5] flex flex-col gap-2 rounded-2xl border p-2 shadow-sm backdrop-blur-md xl:flex-row xl:items-center xl:justify-between">
+          <TabsList className="max-w-full overflow-x-auto [scrollbar-width:none]">
             {TABS.map((t) => (
               <TabsTab key={t.key} value={t.key}>
                 {t.label}
@@ -418,7 +418,7 @@ export function AccountManagement() {
           </TabsList>
 
           <div className="flex gap-2">
-            <div className="relative min-w-0 flex-1 md:w-64 md:flex-none">
+            <div className="relative min-w-0 flex-1 xl:w-64 xl:flex-none">
               <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <input
                 type="search"
