@@ -1,6 +1,6 @@
 "use client";
 
-import { FlaskConical, LayoutDashboard, Radar, Sprout, Wheat } from "lucide-react";
+import { FlaskConical, LayoutDashboard, MapPin, Radar, Sprout, Wheat } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
@@ -26,6 +26,7 @@ export function FarmerShell({ children }: { children: ReactNode }) {
       claims: /^\/farmer\/(plants\/[^/]+\/assessment|assessments)(\/|$)/,
     },
     { label: t("nav.harvest"), href: "/farmer/harvest", icon: Wheat },
+    { label: t("nav.farm"), href: "/farmer/farm", icon: MapPin },
   ];
 
   return (
