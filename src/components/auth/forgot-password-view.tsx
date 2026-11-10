@@ -71,7 +71,6 @@ export function ForgotPasswordView() {
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [wait, setWait] = useState(0);
 
   useEffect(() => {
@@ -88,7 +87,6 @@ export function ForgotPasswordView() {
     try {
       const response = await requestPasswordReset(email);
       setWait(response.resend_after);
-      setNotice(response.detail);
       setSentTo(email);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -101,12 +99,10 @@ export function ForgotPasswordView() {
     if (!sentTo || resending || wait > 0) return;
     setResending(true);
     setError(null);
-    setNotice(null);
     try {
       const response = await requestPasswordReset(sentTo);
       setWait(response.resend_after);
       setCode("");
-      setNotice(response.detail);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -118,7 +114,6 @@ export function ForgotPasswordView() {
     event.preventDefault();
     if (!sentTo || submitting) return;
     setError(null);
-    setNotice(null);
     if (password !== confirmPassword) {
       setError("Passwords don't match.");
       return;
@@ -150,9 +145,7 @@ export function ForgotPasswordView() {
             icon: KeyRound,
             eyebrow: "Password reset",
             title: sentTo ? "Choose a new password." : "Forgot your password?",
-            description: sentTo
-              ? "Enter the 6-digit code from your email. The code works once and expires in 10 minutes."
-              : "Enter your Farmer account's email and we'll send you a 6-digit code.",
+            description: sentTo ? undefined : "Enter your Farmer account's email and we'll send you a 6-digit code.",
             top: (
               <Link
                 href="/login"
@@ -222,16 +215,6 @@ export function ForgotPasswordView() {
                 >
                   <CircleAlert className="mt-0.5 size-4 shrink-0" />
                   {error}
-                </p>
-              )}
-              {notice && (
-                <p
-                  className="flex items-start gap-2 rounded-xl px-3 py-2 text-sm"
-                  style={{ color: INK.forest, backgroundColor: tint(INK.forest, 10) }}
-                  role="status"
-                >
-                  <MailCheck className="mt-0.5 size-4 shrink-0" />
-                  {notice}
                 </p>
               )}
 
