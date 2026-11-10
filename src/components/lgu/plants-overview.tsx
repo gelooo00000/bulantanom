@@ -230,6 +230,7 @@ export function HarvestOutlook({
         }))}
         unit="plant"
         tableHeading="Month"
+        tableTitle="Harvests by month"
         summary={
           outlook.total === 0
             ? `No harvests due in the next ${OUTLOOK_MONTHS} months.`

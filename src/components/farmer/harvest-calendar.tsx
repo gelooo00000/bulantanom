@@ -120,6 +120,7 @@ export function HarvestCalendar({
         }))}
         unit={t("calendarChart.unit")}
         tableHeading={t("calendarChart.month")}
+        tableTitle={t("calendarChart.title")}
         summary={
           total === 0
             ? t("calendarChart.summaryNone")
