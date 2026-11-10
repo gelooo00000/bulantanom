@@ -1,14 +1,7 @@
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
-import {
-  CalendarDays,
-  CalendarRange,
-  Clock,
-  Search,
-  Timer,
-  X,
-} from "lucide-react";
+import { CalendarDays, CalendarRange, Search, Timer, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
 
 import {
@@ -260,7 +253,6 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
           <span className="font-heading truncate font-medium">
             <Highlight text={farmer.full_name || farmer.email} query={query} />
           </span>
-          <UsagePopover farmer={farmer} />
           {/* Approved is the normal state, so only the exceptions get a badge. */}
           {farmer.account_status !== "APPROVED" && (
             <span
@@ -279,20 +271,21 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
       </div>
 
       <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:w-auto sm:justify-end">
-        {farmer.is_online ? (
-          <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:hidden" />
-              <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+        {/* "⏱️ Last active …" also opens the farmer's time on BulanTanom. */}
+        <UsagePopover farmer={farmer}>
+          <span aria-hidden="true" className="text-sm leading-none">
+            ⏱️
+          </span>
+          {farmer.is_online ? (
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+              Online now
             </span>
-            Online now
-          </span>
-        ) : (
-          <span className="text-muted-foreground flex items-center gap-1">
-            <Clock className="size-3.5" />
-            {lastActiveLabel(farmer.last_seen_at)}
-          </span>
-        )}
+          ) : (
+            <span className="text-muted-foreground">
+              {lastActiveLabel(farmer.last_seen_at)}
+            </span>
+          )}
+        </UsagePopover>
       </div>
     </li>
   );
@@ -307,10 +300,16 @@ export function formatUsage(minutes: number): string {
 }
 
 /**
- * The ⏱️ beside a farmer's name, which opens how long they use BulanTanom:
+ * "⏱️ Last active …" on a farmer's row, which opens how long they use BulanTanom:
  * today, the last 7 days and the last 30, when pointed at, tapped or focused.
  */
-function UsagePopover({ farmer }: { farmer: LguFarmer }) {
+function UsagePopover({
+  farmer,
+  children,
+}: {
+  farmer: LguFarmer;
+  children: React.ReactNode;
+}) {
   const usage = farmer.usage;
   const rows: {
     label: string;
@@ -350,14 +349,14 @@ function UsagePopover({ farmer }: { farmer: LguFarmer }) {
         delay={150}
         aria-label={`Time on BulanTanom: ${farmer.full_name || farmer.email}`}
         title="Time on BulanTanom"
-        className="hover:bg-muted data-[popup-open]:bg-muted focus-visible:ring-ring/50 flex size-7 shrink-0 items-center justify-center rounded-lg text-base leading-none transition-transform outline-none hover:scale-110 focus-visible:ring-3"
+        className="hover:bg-muted data-[popup-open]:bg-muted focus-visible:ring-ring/50 -mx-2 -my-1 flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors outline-none focus-visible:ring-3"
       >
-        <span aria-hidden="true">⏱️</span>
+        {children}
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner
           side="bottom"
-          align="start"
+          align="end"
           sideOffset={8}
           className="z-50"
         >
