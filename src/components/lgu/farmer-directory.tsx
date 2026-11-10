@@ -231,14 +231,14 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
     <li
       tabIndex={0}
       className={cn(
-        "border-border bg-card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 transition-[border-color,box-shadow]",
+        "border-border bg-card flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border px-5 py-4 transition-[border-color,box-shadow]",
         "[--crop:var(--primary)]",
         CROP_OUTLINE,
       )}
     >
       <span
         aria-hidden="true"
-        className="bg-primary/10 text-primary relative flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-medium"
+        className="bg-primary/10 text-primary relative flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-medium"
       >
         {initials}
         {/* The light-green dot on the avatar: this Farmer is using
@@ -250,7 +250,7 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
 
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2">
-          <span className="font-heading truncate font-medium">
+          <span className="font-heading truncate text-base leading-tight font-medium">
             <Highlight text={farmer.full_name || farmer.email} query={query} />
           </span>
           {/* Approved is the normal state, so only the exceptions get a badge. */}
@@ -265,12 +265,12 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
             </span>
           )}
         </p>
-        <p className="text-muted-foreground truncate text-sm">
+        <p className="text-muted-foreground mt-1.5 truncate text-sm">
           <Highlight text={farmer.email} query={query} />
         </p>
       </div>
 
-      <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-xs xl:w-auto xl:justify-end">
+      <div className="border-border/70 flex w-full flex-wrap items-center gap-x-4 gap-y-1 border-t border-dashed pt-3 text-xs">
         {/* "⏱️ Last active …" also opens the farmer's time on BulanTanom. */}
         <UsagePopover farmer={farmer}>
           <span aria-hidden="true" className="text-sm leading-none">
