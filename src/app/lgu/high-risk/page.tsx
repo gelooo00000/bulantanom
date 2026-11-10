@@ -71,9 +71,10 @@ export default function LguHighRiskPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-3">
+          {/* Two cases a line on wider screens; each opens in place. */}
+          <div className="grid items-start gap-3 md:grid-cols-2">
             {shown.length === 0 ? (
-              <p className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
+              <p className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm md:col-span-2">
                 No cases at this level.
               </p>
             ) : (

@@ -192,7 +192,7 @@ export function HighRiskCaseCard({ assessment }: { assessment: BackendAssessment
               )}
 
               {(risk.reality_vs_expectation?.expected || risk.reality_vs_expectation?.observed) && (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3">
                   <div className="border-border bg-muted/40 rounded-xl border p-3.5">
                     <p className="text-risk-low text-[11px] font-semibold tracking-wide uppercase">
                       Expected for this age
@@ -206,7 +206,7 @@ export function HighRiskCaseCard({ assessment }: { assessment: BackendAssessment
                     <p className="mt-1 text-sm">{risk.reality_vs_expectation.observed}</p>
                   </div>
                   {risk.reality_vs_expectation.assessment && (
-                    <p className="text-muted-foreground text-sm sm:col-span-2">
+                    <p className="text-muted-foreground text-sm">
                       {risk.reality_vs_expectation.assessment}
                     </p>
                   )}
@@ -243,7 +243,7 @@ export function HighRiskCaseCard({ assessment }: { assessment: BackendAssessment
                 </div>
               )}
 
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3">
                 <ListBox icon={Search} title="Possible causes" items={risk.possible_causes} color="var(--risk-medium)" />
                 <ListBox
                   icon={ClipboardCheck}
