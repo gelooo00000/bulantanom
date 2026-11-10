@@ -6,6 +6,8 @@ import {
   CircleCheck,
   Clock,
   ExternalLink,
+  Mars,
+  Venus,
   LoaderCircle,
   PieChart,
   Radio,
@@ -36,6 +38,7 @@ import {
   deleteAccount,
   listUsers,
   reactivateOfficer,
+  setAccountGender,
   suspendFarmer,
   suspendOfficer,
   type AdminUser,
@@ -208,12 +211,31 @@ export function AccountManagement() {
     }
   }
 
+  async function changeGender(user: AdminUser, gender: "MALE" | "FEMALE") {
+    if (!accessToken) return;
+    try {
+      await setAccountGender(accessToken, user.id, gender);
+      await load();
+      setToast(`${user.full_name || user.email} is now shown as ${gender === "MALE" ? "male" : "female"}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not change the gender.");
+    }
+  }
+
   /** Only the moves that are legal for this account's role and current status. */
   function actionsFor(user: AdminUser): ActionItem[] {
     const items: ActionItem[] = [];
     const isSelf = String(user.id) === currentUser?.id;
 
     if (user.role === "ADMIN") return items;
+
+    // Gender only colours the card, so it is set straight away, no dialog.
+    if (user.gender !== "MALE") {
+      items.push({ label: "Set as male", icon: Mars, onSelect: () => void changeGender(user, "MALE") });
+    }
+    if (user.gender !== "FEMALE") {
+      items.push({ label: "Set as female", icon: Venus, onSelect: () => void changeGender(user, "FEMALE") });
+    }
 
     if (user.account_status === "APPROVED") {
       items.push({

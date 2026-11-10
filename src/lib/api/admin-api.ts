@@ -62,6 +62,15 @@ export function rejectFarmer(accessToken: string, userId: number): Promise<Backe
   return apiFetch(`/admin/farmers/${userId}/reject/`, { method: "PATCH", accessToken });
 }
 
+/** Sets a Farmer's or LGU Officer's gender (colours their card). */
+export function setAccountGender(
+  accessToken: string,
+  userId: number,
+  gender: "MALE" | "FEMALE" | "UNDISCLOSED" | "",
+): Promise<BackendUser> {
+  return apiFetch(`/admin/accounts/${userId}/gender/`, { method: "PATCH", accessToken, body: { gender } });
+}
+
 export function suspendFarmer(accessToken: string, userId: number): Promise<BackendUser> {
   return apiFetch(`/admin/farmers/${userId}/suspend/`, { method: "PATCH", accessToken });
 }

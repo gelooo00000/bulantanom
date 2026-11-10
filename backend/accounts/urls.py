@@ -49,6 +49,7 @@ admin_urlpatterns = [
         name="admin-reactivate-officer",
     ),
     path("accounts/<int:user_id>/", views.delete_account, name="admin-delete-account"),
+    path("accounts/<int:user_id>/gender/", views.set_gender, name="admin-set-gender"),
     path("dashboard/", views.admin_dashboard, name="admin-dashboard"),
     path(
         "harvest-outcomes/",

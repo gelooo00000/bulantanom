@@ -43,3 +43,24 @@ class GenderTests(APITestCase):
         rows = self.client.get(ADMIN_USERS_URL).data
         row = next(r for r in rows if r["email"] == "girl@example.com")
         self.assertEqual(row["gender"], "FEMALE")
+
+    def test_admin_sets_a_farmers_gender(self):
+        farmer = make_user("f@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        admin = make_user("admin@example.com", UserRole.ADMIN, AccountStatus.APPROVED)
+        self.client.force_authenticate(admin)
+        url = f"/api/admin/accounts/{farmer.pk}/gender/"
+        response = self.client.patch(url, {"gender": "FEMALE"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        farmer.refresh_from_db()
+        self.assertEqual(farmer.gender, "FEMALE")
+
+    def test_only_an_admin_sets_someone_elses_gender(self):
+        farmer = make_user("f@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        other = make_user("o@example.com", UserRole.FARMER, AccountStatus.APPROVED)
+        self.client.force_authenticate(other)
+        response = self.client.patch(
+            f"/api/admin/accounts/{farmer.pk}/gender/", {"gender": "MALE"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        farmer.refresh_from_db()
+        self.assertEqual(farmer.gender, "")

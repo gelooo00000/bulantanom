@@ -820,6 +820,25 @@ def suspend_farmer(request, user_id):
     return _transition(request, user_id, {AccountStatus.APPROVED}, AccountStatus.SUSPENDED)
 
 
+@api_view(["PATCH"])
+@permission_classes([IsAdmin])
+def set_gender(request, user_id):
+    """
+    PATCH /api/admin/accounts/{id}/gender/ — {"gender": "MALE" | "FEMALE" |
+    "UNDISCLOSED" | ""}. Only Farmer and LGU Officer accounts; the user can
+    still change it themselves afterwards.
+    """
+    user = User.objects.filter(
+        pk=user_id, role__in=[UserRole.FARMER, UserRole.LGU_OFFICER]
+    ).first()
+    if user is None:
+        return Response({"detail": "Account not found."}, status=status.HTTP_404_NOT_FOUND)
+    serializer = MeUpdateSerializer(user, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(UserSerializer(user).data)
+
+
 class AdminCreateLguOfficerView(generics.CreateAPIView):
     """POST /api/admin/lgu-officers/ — the only way an LGU Officer account can exist."""
 
