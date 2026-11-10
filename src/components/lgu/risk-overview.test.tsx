@@ -83,10 +83,12 @@ describe("RiskOverview", () => {
 
   const level = (name: RegExp) => screen.getByRole("button", { name });
 
-  it("shows the crops at a risk level while it is pointed at, and hides them after", async () => {
+  it("opens on High risk, and shows another level while it is pointed at", async () => {
     const user = userEvent.setup();
     render(<RiskOverview plants={PLANTS} />);
-    expect(screen.getByText(/Point at a risk level/)).toBeInTheDocument();
+    expect(level(/^High risk: 2 plants/)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/High risk · 2 plants/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Pineapple: 2 plants/)).toBeInTheDocument();
 
     // Low: Maria's corn and Ana's corn.
     await user.hover(level(/^Low risk: 2 plants/));
@@ -96,6 +98,7 @@ describe("RiskOverview", () => {
 
     await user.unhover(level(/^Low risk: 2 plants/));
     expect(screen.queryByLabelText(/^Corn: 2 plants/)).not.toBeInTheDocument();
+    expect(screen.getByText(/High risk · 2 plants/)).toBeInTheDocument();
   });
 
   it("keeps the crop panel one fixed size, however long the list it reveals", async () => {
@@ -121,6 +124,8 @@ describe("RiskOverview", () => {
   it("keeps a clicked level open, showing its crops as plain rows", async () => {
     const user = userEvent.setup();
     render(<RiskOverview plants={PLANTS} />);
+    // High is open already: one click closes it, a second opens it again.
+    await user.click(level(/^High risk: 2 plants/));
     await user.click(level(/^High risk: 2 plants/));
     await user.unhover(level(/^High risk: 2 plants/));
     expect(level(/^High risk: 2 plants/)).toHaveAttribute("aria-pressed", "true");

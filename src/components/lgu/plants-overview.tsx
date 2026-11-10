@@ -70,7 +70,11 @@ export function PlantsOverview({ plants }: { plants: LguPlant[] }) {
  */
 export function CropsPlanted({ plants }: { plants: LguPlant[] }) {
   const [hoverType, setHoverType] = useState<string | null>(null);
-  const [pinnedType, setPinnedType] = useState<string | null>(null);
+  // Opens on Fruit's crops (or the first type), so the card is never empty.
+  const [pinnedType, setPinnedType] = useState<string | null>(() => {
+    const types = cropTypeCounts(plants).map((type) => type.label);
+    return types.includes("Fruit") ? "Fruit" : (types[0] ?? null);
+  });
   const shownType = hoverType ?? pinnedType;
 
   const typeRows: BarRow[] = useMemo(
@@ -181,7 +185,11 @@ export function HarvestOutlook({
   today?: Date;
 }) {
   const [hoverMonth, setHoverMonth] = useState<number | null>(null);
-  const [pinnedMonth, setPinnedMonth] = useState<number | null>(null);
+  // Opens on the first month with something due, so its crops show at once.
+  const [pinnedMonth, setPinnedMonth] = useState<number | null>(() => {
+    const first = harvestOutlook(plants, today, OUTLOOK_MONTHS).buckets.findIndex((b) => b.count > 0);
+    return first === -1 ? null : first;
+  });
   const shownMonth = hoverMonth ?? pinnedMonth;
 
   const outlook = useMemo(() => {

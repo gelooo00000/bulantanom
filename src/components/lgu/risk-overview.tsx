@@ -74,7 +74,12 @@ export function PlantRisk({
   riskRows: BarRow[];
 }) {
   const [hoverLevel, setHoverLevel] = useState<RiskKey | null>(null);
-  const [pinnedLevel, setPinnedLevel] = useState<RiskKey | null>(null);
+  // Opens on High risk, the level that needs action; failing that, the
+  // first level that has any plants.
+  const [pinnedLevel, setPinnedLevel] = useState<RiskKey | null>(() => {
+    const atLevel = (key: RiskKey) => plants.some((plant) => riskKey(plant) === key);
+    return LEVELS.find((level) => atLevel(level.key))?.key ?? null;
+  });
   const shownLevel = hoverLevel ?? pinnedLevel;
 
   // Every level's crop rows, worked out once rather than on every hover.
