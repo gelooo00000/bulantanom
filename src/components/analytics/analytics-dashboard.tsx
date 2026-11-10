@@ -95,8 +95,6 @@ export function AnalyticsDashboard() {
         <ChartCard
           title="Plant risk"
           description="Latest AI reading for each plant — point at a level to see its crops."
-          href="/lgu/risks"
-          linkLabel="Risk overview"
           className="lg:col-span-2"
         >
           <CardState query={plantsQuery} isEmpty={(list) => livePlants(list).length === 0} emptyHint="No plants recorded yet.">
