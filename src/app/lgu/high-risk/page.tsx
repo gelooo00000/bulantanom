@@ -71,10 +71,10 @@ export default function LguHighRiskPage() {
             />
           </div>
 
-          {/* Two cases a line on wider screens; each opens in place. */}
-          <div className="grid items-start gap-3 md:grid-cols-2">
+          {/* Three cases a line on wide screens, two on medium; each opens in a pop-up. */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {shown.length === 0 ? (
-              <p className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm md:col-span-2">
+              <p className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm sm:col-span-2 lg:col-span-3">
                 No cases at this level.
               </p>
             ) : (

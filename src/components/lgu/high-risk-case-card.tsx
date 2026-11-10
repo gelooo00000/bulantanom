@@ -119,11 +119,8 @@ export function HighRiskCaseCard({
     "--level": color,
   } as React.CSSProperties;
 
-  /**
-   * Name, badge and farmer; the pop-up's header (`full`) also gives the
-   * plant's age, the reading date and the number of reasons.
-   */
-  const heading = (full: boolean) => (
+  /** The pop-up's header: name, risk, farmer, age, reading date and reasons. */
+  const heading = (
     <>
       <span
         aria-hidden="true"
@@ -151,13 +148,11 @@ export function HighRiskCaseCard({
           {assessment.farmer && (
             <Fact icon={User}>{assessment.farmer.full_name}</Fact>
           )}
-          {full && <Fact icon={Sprout}>Day {assessment.plant_age_days}</Fact>}
-          {full && (
-            <Fact icon={CalendarDays}>
-              {new Date(assessment.assessment_date).toLocaleDateString()}
-            </Fact>
-          )}
-          {full && analyzed && reasonCount > 0 && (
+          <Fact icon={Sprout}>Day {assessment.plant_age_days}</Fact>
+          <Fact icon={CalendarDays}>
+            {new Date(assessment.assessment_date).toLocaleDateString()}
+          </Fact>
+          {analyzed && reasonCount > 0 && (
             <span
               className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
               style={{ color, backgroundColor: tint(color, 14) }}
@@ -196,10 +191,38 @@ export function HighRiskCaseCard({
         />
 
         {/* The whole card opens the case in a pop-up, so the list keeps its shape. */}
-        <Dialog.Trigger className="hover:bg-muted/30 focus-visible:bg-muted/30 flex w-full items-center gap-3.5 py-3.5 pr-4 pl-5 text-left transition-colors outline-none">
-          {heading(false)}
-          <span className="border-border text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full border">
-            <ChevronRight className="size-4" aria-hidden="true" />
+        {/* A squarish card: the crop on top, then the plant, its risk and
+            the farmer. The whole card opens the case. */}
+        <Dialog.Trigger className="hover:bg-muted/30 focus-visible:bg-muted/30 flex min-h-44 w-full flex-col items-start gap-3 py-5 pr-5 pl-6 text-left transition-colors outline-none">
+          <span className="flex w-full items-start justify-between gap-2">
+            <span
+              aria-hidden="true"
+              className="flex size-14 shrink-0 items-center justify-center rounded-2xl text-3xl"
+              style={{
+                backgroundColor:
+                  "color-mix(in oklab, var(--crop) 18%, transparent)",
+              }}
+            >
+              {assessment.crop_emoji}
+            </span>
+            <span className="border-border text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full border">
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </span>
+          </span>
+          <span className="font-heading line-clamp-2 text-lg leading-tight font-semibold">
+            {assessment.plant_display_name}
+          </span>
+          <span className="mt-auto flex flex-wrap items-center gap-1.5">
+            {level ? (
+              <RiskBadge level={level.toLowerCase() as BadgeLevel} size="sm" />
+            ) : (
+              <span className="font-heading text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
+                No reading
+              </span>
+            )}
+            {assessment.farmer && (
+              <Fact icon={User}>{assessment.farmer.full_name}</Fact>
+            )}
           </span>
         </Dialog.Trigger>
       </Card>
@@ -228,7 +251,7 @@ export function HighRiskCaseCard({
               {assessment.plant_display_name}:{" "}
               {level ? `${level.toLowerCase()} risk` : "no reading"}
             </Dialog.Title>
-            {heading(true)}
+            {heading}
             <Dialog.Close
               aria-label="Close"
               className="border-border text-muted-foreground hover:text-foreground hover:bg-muted flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors"
@@ -357,7 +380,6 @@ export function HighRiskCaseCard({
                     color="var(--risk-low)"
                   />
                 </div>
-
               </>
             )}
           </div>
