@@ -6,7 +6,11 @@ import {
   ClipboardList,
   Download,
   FileSpreadsheet,
+  FileText,
   FlaskConical,
+  History,
+  ScrollText,
+  SlidersHorizontal,
   LoaderCircle,
   Printer,
   Radar,
@@ -15,16 +19,16 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState, type ElementType } from "react";
 
+import { AdminHero, HeroStat } from "@/components/admin/admin-hero";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { INK, PALETTE, gradient, tint, type Swatch } from "@/components/admin/palette";
 import { RequireRole } from "@/components/auth/require-role";
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
 import { ReportPreview } from "@/components/lgu/report-preview";
 import { FadeIn } from "@/components/motion/fade-in";
 import { EmptyState } from "@/components/shared/empty-state";
-import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Breadcrumbs } from "@/components/analytics/cards";
 import { DataTable } from "@/components/analytics/data-table";
 import { fetchReportHistory, type ReportHistoryEntry } from "@/lib/api/analytics-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
@@ -42,7 +46,6 @@ import {
 } from "@/lib/api/reports-api";
 import { useAuth } from "@/lib/auth/auth-context";
 import { REPORT_STRINGS as t } from "@/lib/report-strings";
-import { CARD_OUTLINE, CROP_OUTLINE } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
 const REPORT_ICONS: Record<string, ElementType> = {
@@ -53,6 +56,54 @@ const REPORT_ICONS: Record<string, ElementType> = {
   activity: Activity,
   users: Users,
 };
+
+/** Each report's own colour, in the order the catalog lists them. */
+const REPORT_SWATCHES: Swatch[] = [
+  PALETTE.forest,
+  PALETTE.gold,
+  PALETTE.rose,
+  PALETTE.sky,
+  PALETTE.violet,
+  PALETTE.pink,
+];
+
+const FIELD =
+  "border-border bg-background h-10 rounded-xl border px-3 text-sm transition-shadow focus-visible:border-emerald-500/60 focus-visible:shadow-[0_0_0_4px_rgb(16_185_129/0.15)] focus-visible:outline-none dark:border-white/10";
+
+/** A gradient tile holding an icon. */
+function Tile({ icon: Icon, swatch, size = "md" }: { icon: ElementType; swatch: Swatch; size?: "sm" | "md" }) {
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center text-white shadow-[0_8px_18px_-8px_var(--tile)]",
+        size === "sm" ? "size-7 rounded-lg" : "size-10 rounded-xl",
+      )}
+      style={{ "--tile": swatch[1], backgroundImage: gradient(swatch) } as React.CSSProperties}
+    >
+      <Icon className={size === "sm" ? "size-3.5" : "size-5"} aria-hidden="true" />
+    </span>
+  );
+}
+
+/** A section heading with its gradient icon, as on Account Management. */
+function SectionHeading({
+  icon,
+  swatch,
+  id,
+  children,
+}: {
+  icon: ElementType;
+  swatch: Swatch;
+  id?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <h2 id={id} className="font-heading flex items-center gap-2.5 text-base font-semibold">
+      <Tile icon={icon} swatch={swatch} size="sm" />
+      {children}
+    </h2>
+  );
+}
 
 /** Native select styled to match the filter chips used elsewhere in the app. */
 function FilterSelect({
@@ -77,7 +128,7 @@ function FilterSelect({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border-border bg-card focus-visible:ring-ring/50 rounded-lg border px-3 py-1.5 text-sm focus-visible:ring-[3px] focus-visible:outline-none"
+        className={cn(FIELD, "cursor-pointer")}
       >
         {children}
       </select>
@@ -227,46 +278,69 @@ function ReportsPage() {
   }
 
   const supports = activeSpec?.supports ?? [];
-  const actions = (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => window.print()}
-        disabled={!report}
-      >
-        <Printer className="size-3.5" />
-        {t.print}
-      </Button>
-      <Button size="sm" onClick={handleDownload} disabled={!report || downloading}>
-        {downloading ? (
-          <LoaderCircle className="size-3.5 animate-spin" />
-        ) : (
-          <Download className="size-3.5" />
-        )}
-        {downloading ? t.preparing : t.download}
-      </Button>
-      <Button size="sm" variant="outline" onClick={handleCsv} disabled={!report || exporting}>
-        {exporting ? <LoaderCircle className="size-3.5 animate-spin" /> : <FileSpreadsheet className="size-3.5" />}
-        {t.downloadCsv}
-      </Button>
-    </div>
-  );
+  const renderActions = (onBanner: boolean) => {
+    const quiet = onBanner
+      ? "border-white/25 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+      : "";
+    return (
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" className={cn("h-9 rounded-xl", quiet)} onClick={() => window.print()} disabled={!report}>
+          <Printer className="size-3.5" />
+          {t.print}
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleDownload}
+          disabled={!report || downloading}
+          className="h-9 rounded-xl border-amber-200/60 text-amber-950 shadow-[0_10px_26px_-10px_#f59e0b] hover:brightness-105"
+          style={{ backgroundImage: gradient(PALETTE.gold) }}
+        >
+          {downloading ? <LoaderCircle className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+          {downloading ? t.preparing : t.download}
+        </Button>
+        <Button size="sm" variant="outline" className={cn("h-9 rounded-xl", quiet)} onClick={handleCsv} disabled={!report || exporting}>
+          {exporting ? <LoaderCircle className="size-3.5 animate-spin" /> : <FileSpreadsheet className="size-3.5" />}
+          {t.downloadCsv}
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="print-hide flex flex-col gap-2">
-        <Breadcrumbs items={[{ label: "Admin console", href: "/admin" }, { label: t.pageTitle }]} />
-        <PageHeader
+      <div className="print-hide">
+        <AdminHero
+          icon={FileText}
+          eyebrow="Admin console"
           title={t.pageTitle}
           description={t.pageDescription}
-          action={actions}
-        />
+          action={renderActions(true)}
+        >
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <HeroStat icon={ScrollText} label="Reports available" value={catalog.reports.length} swatch={PALETTE.forest} />
+            <HeroStat
+              icon={History}
+              label="Exports made"
+              value={history.data?.results.length ?? "–"}
+              swatch={PALETTE.gold}
+            />
+            <HeroStat icon={Users} label="Farmers" value={catalog.filters.farmers.length} swatch={PALETTE.sky} />
+            <HeroStat icon={Sprout} label="Crops" value={catalog.filters.crops.length} swatch={PALETTE.violet} />
+          </div>
+        </AdminHero>
       </div>
 
       {/* Filters. Mobile order is filters -> list -> preview -> actions, which
           is the order the page already renders in. */}
-      <section className={cn("print-hide border-border bg-card rounded-2xl border p-4", CARD_OUTLINE)}>
+      <section
+        className="print-hide border-border bg-card flex flex-col gap-3 rounded-3xl border p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:border-white/10 dark:shadow-[0_16px_40px_-24px_#065f46]"
+        style={{
+          backgroundImage: `radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, ${PALETTE.forest[0]} 12%, transparent), transparent 60%)`,
+        }}
+      >
+        <SectionHeading icon={SlidersHorizontal} swatch={PALETTE.forest}>
+          Filters
+        </SectionHeading>
         <div className="flex flex-wrap items-end gap-3">
           <FilterSelect
             id="report-period"
@@ -292,7 +366,7 @@ function ReportsPage() {
                   type="date"
                   value={query.dateFrom}
                   onChange={(e) => setQuery((q) => ({ ...q, dateFrom: e.target.value }))}
-                  className="border-border bg-card focus-visible:ring-ring/50 rounded-lg border px-3 py-1.5 text-sm focus-visible:ring-[3px] focus-visible:outline-none"
+                  className={FIELD}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -304,7 +378,7 @@ function ReportsPage() {
                   type="date"
                   value={query.dateTo}
                   onChange={(e) => setQuery((q) => ({ ...q, dateTo: e.target.value }))}
-                  className="border-border bg-card focus-visible:ring-ring/50 rounded-lg border px-3 py-1.5 text-sm focus-visible:ring-[3px] focus-visible:outline-none"
+                  className={FIELD}
                 />
               </div>
             </>
@@ -395,11 +469,14 @@ function ReportsPage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
         {/* LEFT: Available Reports */}
         <div className="print-hide flex flex-col gap-2">
-          <h2 className="font-heading text-sm font-medium">{t.availableReports}</h2>
-          <div className="flex flex-col gap-2.5">
-            {catalog.reports.map((item) => {
+          <SectionHeading icon={ScrollText} swatch={PALETTE.gold}>
+            {t.availableReports}
+          </SectionHeading>
+          <div className="mt-1 flex flex-col gap-2.5">
+            {catalog.reports.map((item, index) => {
               const Icon = REPORT_ICONS[item.icon] ?? ClipboardList;
               const active = item.slug === selected;
+              const swatch = REPORT_SWATCHES[index % REPORT_SWATCHES.length];
               return (
                 <button
                   key={item.slug}
@@ -407,29 +484,37 @@ function ReportsPage() {
                   onClick={() => setSelected(item.slug)}
                   aria-current={active ? "true" : undefined}
                   className={cn(
-                    "bg-card relative flex items-start gap-3 overflow-hidden rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md",
-                    // The same light outline as the other cards, on hover or tap.
-                    "[--crop:var(--primary)]",
-                    CROP_OUTLINE,
-                    active ? "border-primary/50 shadow-sm" : "border-border",
+                    "bg-card group relative isolate flex items-start gap-3 overflow-hidden rounded-2xl border p-3.5 text-left transition-all duration-200",
+                    "hover:-translate-y-0.5 hover:border-[var(--report)] hover:shadow-[0_16px_32px_-20px_var(--report)]",
+                    active
+                      ? "border-[var(--report)] shadow-[0_16px_32px_-18px_var(--report)]"
+                      : "border-border dark:border-white/10",
                   )}
+                  style={
+                    {
+                      "--report": swatch[1],
+                      backgroundImage: active
+                        ? `linear-gradient(110deg, color-mix(in oklab, ${swatch[0]} 16%, transparent), transparent 70%)`
+                        : undefined,
+                    } as React.CSSProperties
+                  }
                 >
                   {active && (
-                    <span aria-hidden="true" className="bg-primary absolute inset-y-0 left-0 w-1" />
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 w-1"
+                      style={{ backgroundImage: gradient(swatch, 180) }}
+                    />
                   )}
-                  <span
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-full",
-                      active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
-                    )}
-                  >
-                    <Icon className="size-4.5" />
-                  </span>
+                  <Tile icon={Icon} swatch={swatch} />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-heading text-sm leading-tight font-medium">{item.title}</span>
+                      <span className="font-heading text-sm leading-tight font-semibold">{item.title}</span>
                       {item.latest && (
-                        <span className="font-heading bg-primary/10 text-primary rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+                        <span
+                          className="font-heading rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                          style={{ color: INK.gold, backgroundColor: tint(INK.gold, 15) }}
+                        >
                           {t.latest}
                         </span>
                       )}
@@ -450,10 +535,14 @@ function ReportsPage() {
 
         {/* RIGHT: Report preview */}
         <div className="flex min-w-0 flex-col gap-2">
-          <h2 className="print-hide font-heading text-sm font-medium">{t.reportPreview}</h2>
+          <div className="print-hide">
+            <SectionHeading icon={FileText} swatch={PALETTE.sky}>
+              {t.reportPreview}
+            </SectionHeading>
+          </div>
 
           {downloadError && (
-            <p className="text-destructive bg-destructive/10 print-hide rounded-lg px-3 py-2 text-sm">
+            <p className="text-destructive bg-destructive/10 print-hide rounded-xl px-3 py-2 text-sm">
               {downloadError}
             </p>
           )}
@@ -472,14 +561,14 @@ function ReportsPage() {
 
           {/* Repeated below the report so the actions are reachable on mobile
               without scrolling back to the header. */}
-          {report && <div className="print-hide flex justify-end pt-1">{actions}</div>}
+          {report && <div className="print-hide flex justify-end pt-1">{renderActions(false)}</div>}
         </div>
       </div>
 
       <section aria-labelledby="report-history" className="print-hide flex flex-col gap-2">
-        <h2 id="report-history" className="font-heading text-sm font-medium">
+        <SectionHeading icon={History} swatch={PALETTE.violet} id="report-history">
           {t.history}
-        </h2>
+        </SectionHeading>
         <p className="text-muted-foreground text-xs">{t.historyHint}</p>
         {history.error ? (
           <LguError message={history.error} onRetry={history.refetch} />
