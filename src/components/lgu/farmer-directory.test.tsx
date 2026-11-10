@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   FarmerDirectory,
+  formatUsage,
   lastActiveLabel,
   matchesSearch,
 } from "@/components/lgu/farmer-directory";
@@ -158,5 +159,32 @@ describe("farmer helpers", () => {
 
   it("ignores case and accents when searching", () => {
     expect(matchesSearch(farmer({ full_name: "José Peña" }), "jose pena")).toBe(true);
+  });
+});
+
+describe("suspended farmers and usage time", () => {
+  it("lists only suspended farmers under Suspended", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderOn([...FARMERS, farmer({ id: 5, full_name: "Rosa Cruz", email: "rosa@example.com", account_status: "SUSPENDED" })]);
+    await user.click(screen.getByRole("button", { name: /Suspended/ }));
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("Rosa Cruz")).toBeInTheDocument();
+  });
+
+  it("shows how long a farmer used BulanTanom when the name is opened", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderOn([farmer({ usage: { today: 65, week: 300, month: 900, since: "2026-09-01" } })]);
+    await user.click(screen.getByRole("button", { name: "Juan Cruz" }));
+    expect(await screen.findByText("Time on BulanTanom")).toBeInTheDocument();
+    expect(screen.getByText("1 hr 5 min")).toBeInTheDocument();
+    expect(screen.getByText("5 hr")).toBeInTheDocument();
+    expect(screen.getByText("15 hr")).toBeInTheDocument();
+  });
+
+  it("formats minutes as hours and minutes", () => {
+    expect(formatUsage(0)).toBe("0 min");
+    expect(formatUsage(45)).toBe("45 min");
+    expect(formatUsage(60)).toBe("1 hr");
+    expect(formatUsage(125)).toBe("2 hr 5 min");
   });
 });

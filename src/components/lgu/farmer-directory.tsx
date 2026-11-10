@@ -1,7 +1,24 @@
 "use client";
 
-import { Clock, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Popover } from "@base-ui/react/popover";
+import {
+  CalendarDays,
+  CalendarRange,
+  Clock,
+  Search,
+  Timer,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
+
+import {
+  INK,
+  PALETTE,
+  gradient,
+  tint,
+  type Swatch,
+} from "@/components/admin/palette";
+import { formatDisplayDate } from "@/components/ui/date-picker";
 
 import type { BackendAccountStatus } from "@/lib/api/auth-api";
 import type { LguFarmer } from "@/lib/api/lgu-api";
@@ -17,7 +34,7 @@ import { cn } from "@/lib/utils";
  * right.
  */
 
-type StatusFilter = "APPROVED" | "ALL";
+type StatusFilter = "APPROVED" | "SUSPENDED" | "ALL";
 
 const STATUS_LABEL: Record<BackendAccountStatus, string> = {
   // Farmers are approved on sign-up; PENDING only remains on older accounts.
@@ -74,6 +91,7 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
   const counts = useMemo(
     () => ({
       APPROVED: farmers.filter((f) => f.account_status === "APPROVED").length,
+      SUSPENDED: farmers.filter((f) => f.account_status === "SUSPENDED").length,
       ALL: farmers.length,
     }),
     [farmers],
@@ -133,10 +151,15 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2" role="group" aria-label="Filter by account status">
+        <div
+          className="flex gap-2"
+          role="group"
+          aria-label="Filter by account status"
+        >
           {(
             [
               ["APPROVED", "Approved"],
+              ["SUSPENDED", "Suspended"],
               ["ALL", "All"],
             ] as const
           ).map(([value, label]) => (
@@ -153,13 +176,16 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
               )}
             >
               {label}
-              <span className="text-muted-foreground ml-1.5 tabular-nums">{counts[value]}</span>
+              <span className="text-muted-foreground ml-1.5 tabular-nums">
+                {counts[value]}
+              </span>
             </button>
           ))}
         </div>
 
         <p className="text-muted-foreground text-sm" role="status">
-          {shown.length === 1 ? "1 farmer" : `${shown.length} farmers`} · newest first
+          {shown.length === 1 ? "1 farmer" : `${shown.length} farmers`} · newest
+          first
           {filtered && (
             <>
               {" · "}
@@ -231,9 +257,9 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
 
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2">
-          <span className="font-heading truncate font-medium">
+          <UsagePopover farmer={farmer}>
             <Highlight text={farmer.full_name || farmer.email} query={query} />
-          </span>
+          </UsagePopover>
           {/* Approved is the normal state, so only the exceptions get a badge. */}
           {farmer.account_status !== "APPROVED" && (
             <span
@@ -271,17 +297,166 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
   );
 }
 
+/** "1 hr 5 min", "45 min", "0 min". */
+export function formatUsage(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`;
+}
+
+/**
+ * The farmer's name, which opens how long they use BulanTanom: today, the
+ * last 7 days and the last 30, when pointed at, tapped or focused.
+ */
+function UsagePopover({
+  farmer,
+  children,
+}: {
+  farmer: LguFarmer;
+  children: React.ReactNode;
+}) {
+  const usage = farmer.usage;
+  const rows: {
+    label: string;
+    minutes: number;
+    icon: ElementType;
+    swatch: Swatch;
+    days: number;
+  }[] = usage
+    ? [
+        {
+          label: "Today",
+          minutes: usage.today,
+          icon: Timer,
+          swatch: PALETTE.forest,
+          days: 1,
+        },
+        {
+          label: "Last 7 days",
+          minutes: usage.week,
+          icon: CalendarDays,
+          swatch: PALETTE.gold,
+          days: 7,
+        },
+        {
+          label: "Last 30 days",
+          minutes: usage.month,
+          icon: CalendarRange,
+          swatch: PALETTE.sky,
+          days: 30,
+        },
+      ]
+    : [];
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        openOnHover
+        delay={200}
+        className="font-heading hover:text-primary focus-visible:ring-ring/50 decoration-primary/40 truncate rounded text-left font-medium underline decoration-dotted underline-offset-4 outline-none focus-visible:ring-3"
+      >
+        {children}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner
+          side="bottom"
+          align="start"
+          sideOffset={8}
+          className="z-50"
+        >
+          <Popover.Popup className="bg-popover text-popover-foreground w-72 overflow-hidden rounded-2xl border border-white/10 shadow-[0_24px_60px_-24px_#065f46] transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
+            <div
+              className="relative isolate overflow-hidden px-4 py-3 text-white"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, #064e3b 0%, #065f46 45%, #0f766e 100%)",
+              }}
+            >
+              <span
+                aria-hidden="true"
+                className="absolute -top-10 -right-8 -z-10 size-28 rounded-full opacity-40 blur-2xl"
+                style={{ backgroundColor: PALETTE.gold[0] }}
+              />
+              <p className="font-heading text-[10px] font-semibold tracking-[0.16em] text-amber-300 uppercase">
+                Time on BulanTanom
+              </p>
+              <Popover.Title className="font-heading truncate text-base font-semibold">
+                {farmer.full_name || farmer.email}
+              </Popover.Title>
+            </div>
+            {usage ? (
+              <div className="flex flex-col gap-2 p-3">
+                {rows.map(({ label, minutes, icon: Icon, swatch, days }) => (
+                  <div
+                    key={label}
+                    className="flex items-center gap-3 rounded-xl px-2.5 py-2"
+                    style={{ backgroundColor: tint(swatch[1], 9) }}
+                  >
+                    <span
+                      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-white"
+                      style={{ backgroundImage: gradient(swatch) }}
+                    >
+                      <Icon className="size-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-muted-foreground text-[11px]">
+                        {label}
+                      </p>
+                      <p className="font-heading font-semibold tabular-nums">
+                        {formatUsage(minutes)}
+                      </p>
+                    </div>
+                    {days > 1 && minutes > 0 && (
+                      <span className="text-muted-foreground text-right text-[10px] leading-tight">
+                        about
+                        <br />
+                        <span
+                          className="font-semibold"
+                          style={{ color: INK.forest }}
+                        >
+                          {formatUsage(Math.round(minutes / days))}
+                        </span>
+                        /day
+                      </span>
+                    )}
+                  </div>
+                ))}
+                <p className="text-muted-foreground px-1 pt-1 text-[11px] leading-snug">
+                  Counted while BulanTanom is open on screen, since{" "}
+                  {formatDisplayDate(usage.since)}.{" "}
+                  {farmer.is_online
+                    ? "Online now."
+                    : lastActiveLabel(farmer.last_seen_at) + "."}
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground p-4 text-sm">
+                Usage time is not available yet.
+              </p>
+            )}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
 /** "Last active 14 days ago" — when the Farmer last had BulanTanom open. */
-export function lastActiveLabel(lastSeenAt: string | null, now = new Date()): string {
+export function lastActiveLabel(
+  lastSeenAt: string | null,
+  now = new Date(),
+): string {
   if (!lastSeenAt) return "Not signed in yet";
   const minutes = Math.max(
     0,
     Math.floor((now.getTime() - new Date(lastSeenAt).getTime()) / 60_000),
   );
   if (minutes < 1) return "Last active just now";
-  if (minutes < 60) return `Last active ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  if (minutes < 60)
+    return `Last active ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Last active ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  if (hours < 24)
+    return `Last active ${hours} hour${hours === 1 ? "" : "s"} ago`;
   const days = Math.floor(hours / 24);
   return days === 1 ? "Last active 1 day ago" : `Last active ${days} days ago`;
 }

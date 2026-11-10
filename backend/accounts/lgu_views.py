@@ -266,6 +266,8 @@ class LguFarmerListView(generics.ListAPIView):
       if they have never submitted one.
     - `is_online` / `last_seen_at`: whether the Farmer is using BulanTanom
       right now, and when they last were (see `accounts.presence`).
+    - `usage`: minutes with BulanTanom open today, in the last 7 days and in
+      the last 30 (see `accounts.usage`), and the day counting began.
     """
 
     def list(self, request, *args, **kwargs):
@@ -294,7 +296,10 @@ class LguFarmerListView(generics.ListAPIView):
 
         from .presence import is_online
 
+        from .usage import TRACKING_SINCE, usage_summary
+
         now = timezone.now()
+        usage = usage_summary([farmer.id for farmer in farmers], now)
         rows = []
         for farmer in farmers:
             row = self.get_serializer(farmer).data
@@ -309,6 +314,8 @@ class LguFarmerListView(generics.ListAPIView):
             row["last_seen_at"] = (
                 farmer.last_seen_at.isoformat() if farmer.last_seen_at else None
             )
+            # Minutes with BulanTanom open: today, last 7 and last 30 days.
+            row["usage"] = {**usage[farmer.id], "since": TRACKING_SINCE.isoformat()}
             rows.append(row)
         return Response(rows)
 

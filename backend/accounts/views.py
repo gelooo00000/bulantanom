@@ -29,6 +29,7 @@ from .devices import (
     trust_device,
 )
 from .lifecycle import announce_officer_created, announce_status_change
+from .usage import record_minute
 from .sessions import (
     SID_CLAIM,
     SIGNED_IN_ELSEWHERE,
@@ -718,6 +719,8 @@ class HeartbeatView(APIView):
     """
 
     def post(self, request):
+        # Each heartbeat is a minute of BulanTanom open on screen.
+        record_minute(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

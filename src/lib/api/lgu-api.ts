@@ -107,6 +107,11 @@ export type LguFarmer = BackendUser & {
   is_online: boolean;
   /** When they last used BulanTanom (ISO datetime), or null if never. */
   last_seen_at: string | null;
+  /**
+   * Minutes with BulanTanom open on screen: today, in the last 7 days and in
+   * the last 30, counted from `since` (YYYY-MM-DD). Absent on older servers.
+   */
+  usage?: { today: number; week: number; month: number; since: string };
 };
 
 export function fetchLguFarmers(

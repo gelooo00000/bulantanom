@@ -244,3 +244,25 @@ class TrustedDevice(models.Model):
 
     def __str__(self):
         return f"Trusted device for {self.user.email}"
+
+
+class UsageDay(models.Model):
+    """
+    Minutes a user had BulanTanom open on screen, per day (Asia/Manila).
+
+    The app sends a heartbeat about once a minute while a page is open and
+    visible; each one counts as a minute, at most one per 50 seconds however
+    many tabs are open (see `accounts.usage`). The LGU sees the totals.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="usage_days")
+    date = models.DateField()
+    minutes = models.PositiveIntegerField(default=0)
+    # When the last minute was counted, so a burst of heartbeats is one minute.
+    counted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "date"], name="one_usage_row_per_day")]
+
+    def __str__(self):
+        return f"{self.user.email} on {self.date}: {self.minutes} min"
