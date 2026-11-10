@@ -6,7 +6,7 @@ import { CropsPlanted, HarvestOutlook, PlantsOverview } from "@/components/lgu/p
 import type { LguPlant } from "@/lib/api/lgu-api";
 
 const FRUIT = "Fruit";
-const VEG = "Vegetables & Crops";
+const VEG = "Vegetables";
 
 function plant(id: number, crop: string, emoji: string, type: string): LguPlant {
   return {
@@ -42,7 +42,7 @@ describe("CropsPlanted", () => {
     renderCard();
     expect(fruitRow()).toBeInTheDocument();
     expect(screen.queryByLabelText(/^Pineapple/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Point at Fruit or Vegetables & Crops/)).toBeInTheDocument();
+    expect(screen.getByText(/Point at Fruit or Vegetables/)).toBeInTheDocument();
   });
 
   it("reveals a type's crops while it is pointed at, and hides them after", async () => {

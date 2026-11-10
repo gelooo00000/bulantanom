@@ -197,7 +197,7 @@ export const CROPS: Crop[] = [
     searchTerms: ["cocoa"],
   },
 
-  // ------------------------------------------------- Vegetables & Crops
+  // ------------------------------------------------- Vegetables
   {
     id: "pepper",
     name: "Green Chili Pepper",
@@ -301,7 +301,7 @@ export const CROPS: Crop[] = [
 
 export const CROP_CATEGORY_LABEL: Record<CropCategory, string> = {
   fruit: "Fruits",
-  vegetable: "Vegetables & Crops",
+  vegetable: "Vegetables",
 };
 
 export function getCropsByCategory(category: CropCategory): Crop[] {

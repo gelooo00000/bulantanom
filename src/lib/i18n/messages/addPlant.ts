@@ -258,11 +258,7 @@ export const addPlant = defineMessages({
   "cropSelect.search": { en: "Search crops…", fil: "Maghanap ng pananim…", bik: "Hanapon an tanom…" },
   "cropSelect.searchLabel": { en: "Search crops", fil: "Maghanap ng pananim", bik: "Hanapon an tanom" },
   "cropSelect.fruit": { en: "Fruits", fil: "Mga Prutas", bik: "Mga Prutas" },
-  "cropSelect.vegetable": {
-    en: "Vegetables & Crops",
-    fil: "Mga Gulay at Pananim",
-    bik: "Mga Gulay asin Tanom",
-  },
+  "cropSelect.vegetable": { en: "Vegetables", fil: "Mga Gulay", bik: "Mga Gulay" },
   "cropSelect.noMatch": {
     en: "No crops match “{query}”.",
     fil: "Walang pananim na tugma sa “{query}”.",

@@ -13,7 +13,7 @@ import type { BackendCrop } from "@/lib/api/plants-api";
 function crop(over: Partial<BackendCrop> & Pick<BackendCrop, "id" | "name">): BackendCrop {
   return {
     category: "vegetable",
-    category_label: "Vegetables & Crops",
+    category_label: "Vegetables",
     emoji: "🌱",
     growing_duration_days: 100,
     harvest_window_days: 30,

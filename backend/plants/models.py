@@ -16,7 +16,7 @@ from .ai_language import LANGUAGE_CHOICES
 
 class CropCategory(models.TextChoices):
     FRUIT = "fruit", "Fruit"
-    VEGETABLE = "vegetable", "Vegetables & Crops"
+    VEGETABLE = "vegetable", "Vegetables"
 
 
 class Crop(models.Model):

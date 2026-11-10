@@ -22,7 +22,7 @@ export function riskKey(plant: LguPlant): RiskKey {
   return level === "HIGH" || level === "MEDIUM" || level === "LOW" ? level : "NONE";
 }
 
-/** Plants per crop type (Fruit, Vegetables & Crops), largest first. */
+/** Plants per crop type (Fruit, Vegetables), largest first. */
 export function cropTypeCounts(plants: LguPlant[]): { label: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const plant of plants) {

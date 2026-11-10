@@ -10,7 +10,7 @@ const MARIA = { id: 1, full_name: "Maria Santos", email: "maria@example.com" };
 const JUAN = { id: 2, full_name: "Juan Cruz", email: "juan@example.com" };
 const ANA = { id: 3, full_name: "Ana Lim", email: "ana@example.com" };
 const PINEAPPLE = { id: "pineapple", name: "Pineapple", emoji: "🍍", category_label: "Fruit" };
-const CORN = { id: "corn", name: "Corn", emoji: "🌽", category_label: "Vegetables & Crops" };
+const CORN = { id: "corn", name: "Corn", emoji: "🌽", category_label: "Vegetables" };
 
 let nextId = 1;
 function plant(

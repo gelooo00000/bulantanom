@@ -22,7 +22,7 @@ function crop(
     id,
     name,
     category: "vegetable",
-    category_label: "Vegetables & Crops",
+    category_label: "Vegetables",
     emoji: "🌱",
     growing_duration_days: 100,
     harvest_window_days: 30,

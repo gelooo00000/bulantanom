@@ -36,7 +36,7 @@ const CROP_PANEL_HEIGHT = "h-[21rem]";
 // The pair is validated for colour-blind separation in both themes.
 const CROP_TYPE_COLOR: Record<string, string> = {
   Fruit: "var(--chart-series-1)",
-  "Vegetables & Crops": "var(--chart-series-2)",
+  "Vegetables": "var(--chart-series-2)",
 };
 
 export function PlantsOverview({ plants }: { plants: LguPlant[] }) {
