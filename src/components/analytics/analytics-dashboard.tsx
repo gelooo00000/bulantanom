@@ -27,7 +27,7 @@ export function useFiltered<T>(fetcher: (token: string, f: AnalyticsFilters) => 
 }
 
 /**
- * The Agricultural Analytics System: the four farm cards, always
+ * The Agricultural Analytics System: the farm cards, always
  * across every record. The dashboard has no
  * filter bar, so it deliberately ignores any filters left in the address.
  * All figures come from /api/analytics/*, counted at request time.
@@ -95,27 +95,12 @@ export function AnalyticsDashboard() {
           <CardState query={overview}>{(d) => <WeeklyColumns weeks={d.assessment_trend} />}</CardState>
         </ChartCard>
 
-        <ChartCard title="Crops planted" description="Plants per crop at Layuan, most planted first." href="/lgu/plants" linkLabel="All plants">
+        <ChartCard title="Crops planted" description="Plants per crop at Layuan, most planted first." href="/lgu/plants" linkLabel="All plants" className="lg:col-span-2">
           <CardState query={overview} isEmpty={(d) => d.crops.length === 0} emptyHint="No plants recorded yet.">
             {(d) => (
               <HorizontalBars
                 rows={d.crops.map((c) => ({ key: c.name, label: c.name, emoji: c.emoji, value: c.count, color: cropColor(c.name) }))}
                 unit="plant" label="Plants per crop" pageSize={CROP_PAGE_SIZE}
-              />
-            )}
-          </CardState>
-        </ChartCard>
-
-        <ChartCard title="Farmer accounts" description="Farmer accounts by status." href="/lgu/farmers" linkLabel="Farmer records">
-          <CardState query={overview} isEmpty={(d) => d.farmers.total === 0} emptyHint="No farmer accounts yet.">
-            {(d) => (
-              <HorizontalBars
-                rows={[
-                  { key: "approved", label: "Approved", value: d.farmers.approved, color: "var(--primary)" },
-                  { key: "rejected", label: "Rejected", value: d.farmers.rejected, color: "var(--muted-foreground)" },
-                  { key: "suspended", label: "Suspended", value: d.farmers.suspended, color: "var(--muted-foreground)" },
-                ]}
-                unit="farmer" label="Farmer accounts by status"
               />
             )}
           </CardState>
