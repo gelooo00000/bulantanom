@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Lock, LoaderCircle, Mail, Shield, ShieldCheck, Sprout } from "lucide-react";
+import {
+  ArrowRight,
+  Lock,
+  LoaderCircle,
+  Mail,
+  MonitorSmartphone,
+  Shield,
+  ShieldCheck,
+  Sprout,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ElementType, type FormEvent } from "react";
 
 import { AUTH_GOLD_BUTTON, AuthCard } from "@/components/auth/auth-card";
@@ -15,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { EmailNotVerifiedError, NewDeviceError, useAuth } from "@/lib/auth/auth-context";
+import { takeSignedOutReason } from "@/lib/auth/signed-out-reason";
 import type { AuthUser } from "@/lib/auth/types";
 import { INK, PALETTE, gradient, tint, type Swatch } from "@/components/admin/palette";
 import { cn } from "@/lib/utils";
@@ -96,6 +106,15 @@ export function LoginView() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const justReset = searchParams.get("reset") === "1";
+  // Set on arrival when this device was signed out by a sign-in elsewhere.
+  const [signedOutElsewhere, setSignedOutElsewhere] = useState(false);
+  useEffect(() => {
+    // Read after the first render (session storage does not exist on the
+    // server), and only once: reading clears it.
+    if (takeSignedOutReason() === "signed_in_elsewhere") {
+      queueMicrotask(() => setSignedOutElsewhere(true));
+    }
+  }, []);
   // Set once a Farmer or LGU Officer signs in: the form gives way to the
   // "Preparing your dashboard..." screen, which opens the dashboard itself.
   const [preparingFor, setPreparingFor] = useState<AuthUser | null>(null);
@@ -269,6 +288,18 @@ export function LoginView() {
           {justReset && (
             <p className="text-risk-low bg-risk-low/10 rounded-xl px-3 py-2 text-sm" role="status">
               Your password has been changed. Please sign in.
+            </p>
+          )}
+
+          {signedOutElsewhere && (
+            <p
+              className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm"
+              style={{ color: INK.gold, backgroundColor: tint(INK.gold, 12) }}
+              role="status"
+            >
+              <MonitorSmartphone className="mt-0.5 size-4 shrink-0" />
+              You were signed out because this account signed in on another device. Only one
+              device can use an account at a time.
             </p>
           )}
 

@@ -110,6 +110,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_seen_at = models.DateTimeField(null=True, blank=True)
     last_logout_at = models.DateTimeField(null=True, blank=True)
 
+    # One device per account: every sign-in writes a fresh key here and into
+    # its tokens (the "sid" claim). A token carrying any other key belongs to
+    # a device that has since been replaced, and is refused (accounts.sessions).
+    session_key = models.CharField(max_length=32, blank=True, default="")
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"

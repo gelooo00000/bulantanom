@@ -11,7 +11,10 @@ Farmer offline at once instead of waiting for the window to lapse.
 from datetime import timedelta
 
 from django.utils import timezone
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from .sessions import SIGNED_IN_ELSEWHERE, SIGNED_IN_ELSEWHERE_MESSAGE, is_current
 
 # The frontend heartbeat runs every 60 seconds; two minutes leaves room for
 # one late beat before a Farmer who is still there is shown as offline.
@@ -41,10 +44,16 @@ def is_online(user, now=None):
 
 
 class PresenceJWTAuthentication(JWTAuthentication):
-    """The project's JWT authentication, plus a `last_seen_at` stamp."""
+    """
+    The project's JWT authentication, plus a `last_seen_at` stamp, and a
+    refusal for a token from a session another sign-in has replaced.
+    """
 
     def authenticate(self, request):
         result = super().authenticate(request)
         if result is not None:
-            touch(result[0])
+            user, token = result
+            if not is_current(user, token):
+                raise AuthenticationFailed(SIGNED_IN_ELSEWHERE_MESSAGE, code=SIGNED_IN_ELSEWHERE)
+            touch(user)
         return result

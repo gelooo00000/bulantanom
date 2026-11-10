@@ -1,5 +1,6 @@
 import { setAccessToken } from "@/lib/auth/token-storage";
 import { currentLanguage } from "@/lib/i18n";
+import { rememberSignedOutReason } from "@/lib/auth/signed-out-reason";
 
 /**
  * The API is served from this site's own address and forwarded to Django by
@@ -171,7 +172,12 @@ export async function refreshSharedSession(): Promise<RefreshedSession | null> {
           credentials: "include",
           headers: { "Content-Type": "application/json" },
         });
-        if (!response.ok) return null;
+        if (!response.ok) {
+          // Another device signed in to this account: say so on the sign-in page.
+          const body = (await response.json().catch(() => null)) as { code?: unknown } | null;
+          if (body?.code === "signed_in_elsewhere") rememberSignedOutReason("signed_in_elsewhere");
+          return null;
+        }
 
         const data = (await response.json()) as { access?: unknown; user?: unknown };
         if (typeof data.access !== "string") return null;

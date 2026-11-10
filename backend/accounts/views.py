@@ -29,6 +29,13 @@ from .devices import (
     trust_device,
 )
 from .lifecycle import announce_officer_created, announce_status_change
+from .sessions import (
+    SID_CLAIM,
+    SIGNED_IN_ELSEWHERE,
+    SIGNED_IN_ELSEWHERE_MESSAGE,
+    is_current,
+    start_session,
+)
 from .models import AccountStatus, RegistrationNotification, User, UserRole
 from .permissions import IsAdmin, IsApproved
 from .serializers import (
@@ -110,12 +117,17 @@ def _clear_refresh_cookie(response):
     )
 
 
-def _tokens_response(user, status_code=status.HTTP_200_OK):
+def _tokens_response(user, status_code=status.HTTP_200_OK, *, session_key=None):
     """
     Access token in the JSON body only (held in memory by the frontend).
     Refresh token in an HttpOnly cookie, never exposed to JavaScript.
+
+    Without `session_key` this is a new sign-in, which starts a new session
+    and so signs the account out everywhere else (accounts.sessions). A
+    refresh passes the session it is continuing.
     """
     refresh = RefreshToken.for_user(user)
+    refresh[SID_CLAIM] = session_key if session_key is not None else start_session(user)
     response = Response(
         {"access": str(refresh.access_token), "user": UserSerializer(user).data},
         status=status_code,
@@ -627,12 +639,25 @@ class RefreshView(APIView):
             _clear_refresh_cookie(response)
             return response
 
+        # Another device signed in since: this one's session is over.
+        if not is_current(user, old_refresh):
+            response = Response(
+                {"detail": SIGNED_IN_ELSEWHERE_MESSAGE, "code": SIGNED_IN_ELSEWHERE},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+            try:
+                old_refresh.blacklist()
+            except AttributeError:
+                pass
+            _clear_refresh_cookie(response)
+            return response
+
         try:
             old_refresh.blacklist()
         except AttributeError:
             pass
 
-        return _tokens_response(user)
+        return _tokens_response(user, session_key=user.session_key)
 
 
 class MeView(generics.RetrieveAPIView):

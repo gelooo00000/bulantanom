@@ -235,3 +235,17 @@ describe("LoginView forgot password", () => {
     expect(screen.queryByRole("link", { name: /forgot password/i })).toBeNull();
   });
 });
+
+describe("signed out by another device", () => {
+  it("says why, once", async () => {
+    sessionStorage.setItem("bt-signed-out-reason", "signed_in_elsewhere");
+    const { unmount } = render(<LoginView />);
+    await act(async () => {});
+    expect(screen.getByText(/signed in on another device/)).toBeInTheDocument();
+    unmount();
+
+    render(<LoginView />);
+    await act(async () => {});
+    expect(screen.queryByText(/signed in on another device/)).toBeNull();
+  });
+});
