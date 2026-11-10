@@ -19,7 +19,7 @@ export default function AdminHarvestOutcomesPage() {
             title="Harvest Outcomes"
             description="How plants monitored with BulanTanom turned out, from the report each Farmer fills in when a plant is harvested or lost."
           />
-          <HarvestOutcomes fetcher={fetchAdminHarvestOutcomes} showHeading={false} />
+          <HarvestOutcomes fetcher={fetchAdminHarvestOutcomes} showHeading={false} compact />
         </div>
       </AdminShell>
     </RequireRole>

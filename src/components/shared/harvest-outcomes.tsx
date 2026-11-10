@@ -31,7 +31,8 @@ import type {
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { cn } from "@/lib/utils";
 
-const pct = (value: number | null | undefined) => (value === null || value === undefined ? "—" : `${value}%`);
+const pct = (value: number | null | undefined) =>
+  value === null || value === undefined ? "—" : `${value}%`;
 
 /** Good, middling and bad answers, as text colour. */
 const TONE: Record<string, string> = {
@@ -59,7 +60,8 @@ const CHIP: Record<string, string> = {
   NO: "bg-risk-high/12 text-risk-high border-risk-high/25",
 };
 
-const SURFACE = "border-border bg-card rounded-2xl border shadow-[0_1px_2px_rgb(0_0_0/0.04)]";
+const SURFACE =
+  "border-border bg-card rounded-2xl border shadow-[0_1px_2px_rgb(0_0_0/0.04)]";
 
 /**
  * "Harvest Outcomes": how plants monitored with BulanTanom turned out, from
@@ -70,24 +72,33 @@ const SURFACE = "border-border bg-card rounded-2xl border shadow-[0_1px_2px_rgb(
 export function HarvestOutcomes({
   fetcher,
   showHeading = true,
+  compact = false,
 }: {
   fetcher: (accessToken: string) => Promise<Outcomes>;
   showHeading?: boolean;
+  /**
+   * The Admin page's shorter version: no section bar, no Overview rates,
+   * no "warned about" count and no By crop table.
+   */
+  compact?: boolean;
 }) {
   const { data, loading, error, refetch } = useAuthedQuery(fetcher);
 
   return (
     <section className="flex flex-col gap-5" aria-labelledby="harvest-outcomes">
       <div className={cn(!showHeading && "sr-only")}>
-        <h2 id="harvest-outcomes" className="font-heading flex items-center gap-2 text-lg sm:text-xl">
+        <h2
+          id="harvest-outcomes"
+          className="font-heading flex items-center gap-2 text-lg sm:text-xl"
+        >
           <span className="bg-risk-low/15 text-risk-low flex size-8 items-center justify-center rounded-lg">
             <ClipboardCheck className="size-4" aria-hidden="true" />
           </span>
           Harvest Outcomes
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          How plants monitored with BulanTanom turned out, from the report each Farmer fills in
-          when a plant is harvested or lost.
+          How plants monitored with BulanTanom turned out, from the report each
+          Farmer fills in when a plant is harvested or lost.
         </p>
       </div>
 
@@ -102,109 +113,227 @@ export function HarvestOutcomes({
           description="Outcomes appear here once Farmers mark plants harvested and fill in the harvest report."
         />
       ) : (
-        <OutcomeBody data={data} />
+        <OutcomeBody data={data} compact={compact} />
       )}
     </section>
   );
 }
 
 type SectionKey = "overview" | "breakdown" | "crops" | "losses" | "reports";
-type SectionDef = { key: SectionKey; label: string; icon: ElementType; count?: number };
+type SectionDef = {
+  key: SectionKey;
+  label: string;
+  icon: ElementType;
+  count?: number;
+};
 
 const sectionId = (key: SectionKey) => `outcomes-${key}`;
 
-function OutcomeBody({ data }: { data: Outcomes }) {
+function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
   const lost = data.lost_total ?? 0;
   const sections: SectionDef[] = [
     { key: "overview", label: "Overview", icon: LayoutGrid },
     { key: "breakdown", label: "Quality & health", icon: PieChart },
-    { key: "crops", label: "By crop", icon: Sprout, count: data.by_crop.length },
-    ...(lost > 0 ? [{ key: "losses" as const, label: "Lost plants", icon: HeartCrack, count: lost }] : []),
-    { key: "reports", label: "Latest reports", icon: ClipboardList, count: data.recent.length },
+    {
+      key: "crops",
+      label: "By crop",
+      icon: Sprout,
+      count: data.by_crop.length,
+    },
+    ...(lost > 0
+      ? [
+          {
+            key: "losses" as const,
+            label: "Lost plants",
+            icon: HeartCrack,
+            count: lost,
+          },
+        ]
+      : []),
+    {
+      key: "reports",
+      label: "Latest reports",
+      icon: ClipboardList,
+      count: data.recent.length,
+    },
   ];
 
   return (
     <>
-      <SectionNav sections={sections} />
+      {!compact && <SectionNav sections={sections} />}
 
-      <Section id="overview" title="Overview" icon={LayoutGrid} note={`From ${data.total} harvest report${data.total === 1 ? "" : "s"}. ${pct(data.monitored_rate)} of these plants had at least one weekly assessment.`}>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <RingStat icon={HeartPulse} color="var(--risk-low)" label="Healthy at harvest" percent={data.healthy_rate} />
-          <RingStat
-            icon={ShieldCheck}
-            color="var(--risk-medium)"
-            label="Recovered from High risk"
-            percent={data.reached_high_risk ? (100 * data.recovered_healthy) / data.reached_high_risk : null}
-            value={`${data.recovered_healthy} of ${data.reached_high_risk}`}
-          />
-          <RingStat icon={Timer} color="var(--chart-series-1)" label="Harvested on time" percent={data.on_time_rate} />
-          <RingStat icon={Lightbulb} color="var(--primary)" label="Farmers say the advice helped" percent={data.advice_helped_rate} />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <FlatStat icon={Sprout} color="var(--risk-low)" label="Survival rate (harvested vs lost)" value={pct(data.survival_rate)} />
-          <FlatStat icon={Wheat} color="var(--risk-high)" label="Plants lost" value={lost} />
+      {compact ? (
+        <div className="grid gap-3 sm:grid-cols-2">
           <FlatStat
-            icon={BellRing}
-            color="var(--risk-medium)"
-            label="Lost plants BulanTanom had warned about"
-            value={`${data.warned_before_loss ?? 0} of ${lost}`}
+            icon={Sprout}
+            color="var(--risk-low)"
+            label="Survival rate (harvested vs lost)"
+            value={pct(data.survival_rate)}
+          />
+          <FlatStat
+            icon={Wheat}
+            color="var(--risk-high)"
+            label="Plants lost"
+            value={lost}
           />
         </div>
-      </Section>
+      ) : (
+        <Section
+          id="overview"
+          title="Overview"
+          icon={LayoutGrid}
+          note={`From ${data.total} harvest report${data.total === 1 ? "" : "s"}. ${pct(data.monitored_rate)} of these plants had at least one weekly assessment.`}
+        >
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <RingStat
+              icon={HeartPulse}
+              color="var(--risk-low)"
+              label="Healthy at harvest"
+              percent={data.healthy_rate}
+            />
+            <RingStat
+              icon={ShieldCheck}
+              color="var(--risk-medium)"
+              label="Recovered from High risk"
+              percent={
+                data.reached_high_risk
+                  ? (100 * data.recovered_healthy) / data.reached_high_risk
+                  : null
+              }
+              value={`${data.recovered_healthy} of ${data.reached_high_risk}`}
+            />
+            <RingStat
+              icon={Timer}
+              color="var(--chart-series-1)"
+              label="Harvested on time"
+              percent={data.on_time_rate}
+            />
+            <RingStat
+              icon={Lightbulb}
+              color="var(--primary)"
+              label="Farmers say the advice helped"
+              percent={data.advice_helped_rate}
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FlatStat
+              icon={Sprout}
+              color="var(--risk-low)"
+              label="Survival rate (harvested vs lost)"
+              value={pct(data.survival_rate)}
+            />
+            <FlatStat
+              icon={Wheat}
+              color="var(--risk-high)"
+              label="Plants lost"
+              value={lost}
+            />
+            <FlatStat
+              icon={BellRing}
+              color="var(--risk-medium)"
+              label="Lost plants BulanTanom had warned about"
+              value={`${data.warned_before_loss ?? 0} of ${lost}`}
+            />
+          </div>
+        </Section>
+      )}
 
       <Section id="breakdown" title="Quality & health" icon={PieChart}>
         <div className="grid gap-3 md:grid-cols-3">
-          <BreakdownCard title="Quality" icon={Wheat} rows={data.quality} total={data.total} />
-          <BreakdownCard title="Health at harvest" icon={HeartPulse} rows={data.final_health} total={data.total} />
-          <BreakdownCard title="Did the advice help?" icon={Lightbulb} rows={data.advice_helped} total={data.total} />
+          <BreakdownCard
+            title="Quality"
+            icon={Wheat}
+            rows={data.quality}
+            total={data.total}
+          />
+          <BreakdownCard
+            title="Health at harvest"
+            icon={HeartPulse}
+            rows={data.final_health}
+            total={data.total}
+          />
+          <BreakdownCard
+            title="Did the advice help?"
+            icon={Lightbulb}
+            rows={data.advice_helped}
+            total={data.total}
+          />
         </div>
       </Section>
 
-      <Section id="crops" title="By crop" icon={Sprout}>
-        <div className={cn(SURFACE, "overflow-x-auto")}>
-          <table className="w-full min-w-[40rem] text-sm">
-            <thead>
-              <tr className="text-muted-foreground bg-muted/40 border-b text-left text-xs">
-                <th className="px-4 py-2.5 font-medium">Crop</th>
-                <th className="px-2 py-2.5 font-medium">Harvests</th>
-                <th className="px-2 py-2.5 font-medium">Healthy</th>
-                <th className="px-2 py-2.5 font-medium">Good quality</th>
-                <th className="px-2 py-2.5 font-medium">On time</th>
-                <th className="px-2 py-2.5 font-medium">Avg. days</th>
-                <th className="px-4 py-2.5 font-medium">Avg. yield</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.by_crop.map((crop) => (
-                <tr key={crop.crop} className="hover:bg-muted/30 border-b transition-colors last:border-0">
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-2.5 font-medium">
-                      <span
-                        aria-hidden="true"
-                        className="bg-muted flex size-8 items-center justify-center rounded-lg text-base"
-                      >
-                        {crop.emoji}
-                      </span>
-                      {crop.crop}
-                    </span>
-                  </td>
-                  <td className="font-heading px-2 py-3 tabular-nums">{crop.harvests}</td>
-                  <td className="px-2 py-3"><MiniBar value={crop.healthy_rate} color="var(--risk-low)" /></td>
-                  <td className="px-2 py-3"><MiniBar value={crop.good_quality_rate} color="var(--primary)" /></td>
-                  <td className="px-2 py-3"><MiniBar value={crop.on_time_rate} color="var(--chart-series-1)" /></td>
-                  <td className="px-2 py-3 tabular-nums">{crop.average_days}</td>
-                  <td className="px-4 py-3 tabular-nums">
-                    {crop.average_yield.length
-                      ? crop.average_yield.map((y) => `${y.average} ${y.unit_label}`).join(" · ")
-                      : <span className="text-muted-foreground">Not given</span>}
-                  </td>
+      {!compact && (
+        <Section id="crops" title="By crop" icon={Sprout}>
+          <div className={cn(SURFACE, "overflow-x-auto")}>
+            <table className="w-full min-w-[40rem] text-sm">
+              <thead>
+                <tr className="text-muted-foreground bg-muted/40 border-b text-left text-xs">
+                  <th className="px-4 py-2.5 font-medium">Crop</th>
+                  <th className="px-2 py-2.5 font-medium">Harvests</th>
+                  <th className="px-2 py-2.5 font-medium">Healthy</th>
+                  <th className="px-2 py-2.5 font-medium">Good quality</th>
+                  <th className="px-2 py-2.5 font-medium">On time</th>
+                  <th className="px-2 py-2.5 font-medium">Avg. days</th>
+                  <th className="px-4 py-2.5 font-medium">Avg. yield</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Section>
+              </thead>
+              <tbody>
+                {data.by_crop.map((crop) => (
+                  <tr
+                    key={crop.crop}
+                    className="hover:bg-muted/30 border-b transition-colors last:border-0"
+                  >
+                    <td className="px-4 py-3">
+                      <span className="flex items-center gap-2.5 font-medium">
+                        <span
+                          aria-hidden="true"
+                          className="bg-muted flex size-8 items-center justify-center rounded-lg text-base"
+                        >
+                          {crop.emoji}
+                        </span>
+                        {crop.crop}
+                      </span>
+                    </td>
+                    <td className="font-heading px-2 py-3 tabular-nums">
+                      {crop.harvests}
+                    </td>
+                    <td className="px-2 py-3">
+                      <MiniBar
+                        value={crop.healthy_rate}
+                        color="var(--risk-low)"
+                      />
+                    </td>
+                    <td className="px-2 py-3">
+                      <MiniBar
+                        value={crop.good_quality_rate}
+                        color="var(--primary)"
+                      />
+                    </td>
+                    <td className="px-2 py-3">
+                      <MiniBar
+                        value={crop.on_time_rate}
+                        color="var(--chart-series-1)"
+                      />
+                    </td>
+                    <td className="px-2 py-3 tabular-nums">
+                      {crop.average_days}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {crop.average_yield.length ? (
+                        crop.average_yield
+                          .map((y) => `${y.average} ${y.unit_label}`)
+                          .join(" · ")
+                      ) : (
+                        <span className="text-muted-foreground">Not given</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
 
       {lost > 0 && (
         <Section id="losses" title="Lost plants" icon={HeartCrack}>
@@ -227,7 +356,9 @@ function OutcomeBody({ data }: { data: Outcomes }) {
 
       <Section id="reports" title="Latest harvest reports" icon={ClipboardList}>
         {data.recent.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No harvest reports yet.</p>
+          <p className="text-muted-foreground text-sm">
+            No harvest reports yet.
+          </p>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {data.recent.map((report) => (
@@ -254,8 +385,11 @@ function SectionNav({ sections }: { sections: SectionDef[] }) {
       (entries) => {
         const visible = entries
           .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible) setCurrent(visible.target.id.replace("outcomes-", "") as SectionKey);
+          .sort(
+            (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
+          )[0];
+        if (visible)
+          setCurrent(visible.target.id.replace("outcomes-", "") as SectionKey);
       },
       { rootMargin: "-120px 0px -60% 0px" },
     );
@@ -281,7 +415,9 @@ function SectionNav({ sections }: { sections: SectionDef[] }) {
                 onClick={(e) => {
                   e.preventDefault();
                   setCurrent(key);
-                  document.getElementById(sectionId(key))?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  document
+                    .getElementById(sectionId(key))
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
                 aria-current={active ? "location" : undefined}
                 className={cn(
@@ -326,7 +462,11 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section id={sectionId(id)} aria-label={title} className="flex scroll-mt-32 flex-col gap-3">
+    <section
+      id={sectionId(id)}
+      aria-label={title}
+      className="flex scroll-mt-32 flex-col gap-3"
+    >
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <h3 className="font-heading flex items-center gap-2 text-base font-medium">
           <Icon className="text-primary size-4" aria-hidden="true" />
@@ -356,21 +496,43 @@ function RingStat({
 }) {
   const r = 26;
   const circumference = 2 * Math.PI * r;
-  const filled = percent === null || percent === undefined ? 0 : Math.max(0, Math.min(100, percent));
+  const filled =
+    percent === null || percent === undefined
+      ? 0
+      : Math.max(0, Math.min(100, percent));
   return (
     <div
-      className={cn(SURFACE, "relative flex flex-col gap-3 overflow-hidden p-4")}
-      style={{ backgroundImage: `linear-gradient(160deg, color-mix(in oklch, ${color}, transparent 90%), transparent 60%)` }}
+      className={cn(
+        SURFACE,
+        "relative flex flex-col gap-3 overflow-hidden p-4",
+      )}
+      style={{
+        backgroundImage: `linear-gradient(160deg, color-mix(in oklch, ${color}, transparent 90%), transparent 60%)`,
+      }}
     >
       <div className="flex items-center justify-between gap-2">
         <span
           className="flex size-9 items-center justify-center rounded-xl"
-          style={{ color, backgroundColor: `color-mix(in oklch, ${color}, transparent 85%)` }}
+          style={{
+            color,
+            backgroundColor: `color-mix(in oklch, ${color}, transparent 85%)`,
+          }}
         >
           <Icon className="size-[18px]" aria-hidden="true" />
         </span>
-        <svg viewBox="0 0 64 64" className="size-16 -rotate-90" aria-hidden="true">
-          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--muted)" strokeWidth="6" />
+        <svg
+          viewBox="0 0 64 64"
+          className="size-16 -rotate-90"
+          aria-hidden="true"
+        >
+          <circle
+            cx="32"
+            cy="32"
+            r={r}
+            fill="none"
+            stroke="var(--muted)"
+            strokeWidth="6"
+          />
           <circle
             cx="32"
             cy="32"
@@ -386,7 +548,10 @@ function RingStat({
         </svg>
       </div>
       <div>
-        <p className="font-heading text-2xl font-semibold tabular-nums" style={{ color }}>
+        <p
+          className="font-heading text-2xl font-semibold tabular-nums"
+          style={{ color }}
+        >
           {value ?? pct(percent)}
         </p>
         <p className="text-muted-foreground text-xs">{label}</p>
@@ -410,12 +575,17 @@ function FlatStat({
     <div className={cn(SURFACE, "flex items-center gap-3 p-4")}>
       <span
         className="flex size-10 shrink-0 items-center justify-center rounded-xl"
-        style={{ color, backgroundColor: `color-mix(in oklch, ${color}, transparent 85%)` }}
+        style={{
+          color,
+          backgroundColor: `color-mix(in oklch, ${color}, transparent 85%)`,
+        }}
       >
         <Icon className="size-5" aria-hidden="true" />
       </span>
       <div className="min-w-0">
-        <p className="font-heading text-xl font-semibold tabular-nums">{value}</p>
+        <p className="font-heading text-xl font-semibold tabular-nums">
+          {value}
+        </p>
         <p className="text-muted-foreground text-xs">{label}</p>
       </div>
     </div>
@@ -427,7 +597,10 @@ function MiniBar({ value, color }: { value: number | null; color: string }) {
   return (
     <span className="flex items-center gap-2">
       <span className="bg-muted h-1.5 w-14 overflow-hidden rounded-full">
-        <span className="block h-full rounded-full" style={{ width: `${value ?? 0}%`, backgroundColor: color }} />
+        <span
+          className="block h-full rounded-full"
+          style={{ width: `${value ?? 0}%`, backgroundColor: color }}
+        />
       </span>
       <span className="tabular-nums">{pct(value)}</span>
     </span>
@@ -459,7 +632,11 @@ function BreakdownCard({
         return (
           <div key={row.value} className="flex flex-col gap-1">
             <div className="flex justify-between text-xs">
-              <span className={cn("font-medium", neutral ? "" : TONE[row.value])}>{row.label}</span>
+              <span
+                className={cn("font-medium", neutral ? "" : TONE[row.value])}
+              >
+                {row.label}
+              </span>
               <span className="text-muted-foreground tabular-nums">
                 {row.count}
                 <span className="ml-1 opacity-70">· {share}%</span>
@@ -494,10 +671,22 @@ function Chip({ value, children }: { value: string; children: ReactNode }) {
   );
 }
 
-function PhotoToggle({ src, alt, label }: { src: string; alt: string; label: string }) {
+function PhotoToggle({
+  src,
+  alt,
+  label,
+}: {
+  src: string;
+  alt: string;
+  label: string;
+}) {
   const [show, setShow] = useState(false);
   return show ? (
-    <AuthedImage src={src} alt={alt} className="bg-muted max-h-64 w-full rounded-xl object-contain" />
+    <AuthedImage
+      src={src}
+      alt={alt}
+      className="bg-muted max-h-64 w-full rounded-xl object-contain"
+    />
   ) : (
     <button
       type="button"
@@ -512,9 +701,16 @@ function PhotoToggle({ src, alt, label }: { src: string; alt: string; label: str
 
 function ReportCard({ report }: { report: HarvestOutcomeReport }) {
   const amount =
-    report.yield_amount !== null ? `${Number(report.yield_amount)} ${report.yield_unit_label}` : "Amount not given";
+    report.yield_amount !== null
+      ? `${Number(report.yield_amount)} ${report.yield_unit_label}`
+      : "Amount not given";
   return (
-    <article className={cn(SURFACE, "flex flex-col gap-3 p-4 text-sm transition-shadow hover:shadow-md")}>
+    <article
+      className={cn(
+        SURFACE,
+        "flex flex-col gap-3 p-4 text-sm transition-shadow hover:shadow-md",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span
@@ -524,7 +720,9 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
             {report.crop_emoji}
           </span>
           <div className="min-w-0">
-            <p className="font-heading truncate font-medium">{report.plant_name}</p>
+            <p className="font-heading truncate font-medium">
+              {report.plant_name}
+            </p>
             <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
               <span className="flex items-center gap-1">
                 <User className="size-3" aria-hidden="true" />
@@ -545,7 +743,9 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
       <div className="flex flex-wrap gap-1.5">
         <Chip value={report.quality}>{report.quality_label} quality</Chip>
         <Chip value={report.final_health}>{report.final_health_label}</Chip>
-        <Chip value={report.advice_helped}>Advice helped: {report.advice_helped_label}</Chip>
+        <Chip value={report.advice_helped}>
+          Advice helped: {report.advice_helped_label}
+        </Chip>
       </div>
 
       <div className="bg-muted/50 grid grid-cols-2 gap-2 rounded-xl p-2.5 text-xs">
@@ -556,8 +756,11 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
         <p>
           <span className="text-muted-foreground block">Monitoring</span>
           <span className="font-medium">
-            {report.assessments_count} check{report.assessments_count === 1 ? "" : "s"} ·{" "}
-            {report.highest_risk ? `peak ${report.highest_risk.toLowerCase()}` : "no reading"}
+            {report.assessments_count} check
+            {report.assessments_count === 1 ? "" : "s"} ·{" "}
+            {report.highest_risk
+              ? `peak ${report.highest_risk.toLowerCase()}`
+              : "no reading"}
           </span>
         </p>
       </div>
@@ -574,7 +777,11 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
         </p>
       )}
       {report.photo_url && (
-        <PhotoToggle src={report.photo_url} alt={`Harvest of ${report.plant_name}`} label="View harvest photo" />
+        <PhotoToggle
+          src={report.photo_url}
+          alt={`Harvest of ${report.plant_name}`}
+          label="View harvest photo"
+        />
       )}
     </article>
   );
@@ -582,7 +789,12 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
 
 function LossCard({ loss }: { loss: LossOutcomeReport }) {
   return (
-    <article className={cn(SURFACE, "border-risk-high/20 flex flex-col gap-2.5 p-4 text-sm")}>
+    <article
+      className={cn(
+        SURFACE,
+        "border-risk-high/20 flex flex-col gap-2.5 p-4 text-sm",
+      )}
+    >
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
@@ -593,7 +805,8 @@ function LossCard({ loss }: { loss: LossOutcomeReport }) {
         <div className="min-w-0">
           <p className="font-heading truncate font-medium">{loss.plant_name}</p>
           <p className="text-muted-foreground text-xs">
-            {loss.farmer_name} · lost {formatDisplayDate(loss.lost_at.slice(0, 10))} · day {loss.age_days}
+            {loss.farmer_name} · lost{" "}
+            {formatDisplayDate(loss.lost_at.slice(0, 10))} · day {loss.age_days}
           </p>
         </div>
       </div>
@@ -608,7 +821,9 @@ function LossCard({ loss }: { loss: LossOutcomeReport }) {
       <p
         className={cn(
           "flex items-center gap-1.5 text-xs",
-          loss.warned_before ? "text-risk-medium font-medium" : "text-muted-foreground",
+          loss.warned_before
+            ? "text-risk-medium font-medium"
+            : "text-muted-foreground",
         )}
       >
         <BellRing className="size-3.5" aria-hidden="true" />
@@ -624,7 +839,11 @@ function LossCard({ loss }: { loss: LossOutcomeReport }) {
         </p>
       )}
       {loss.photo_url && (
-        <PhotoToggle src={loss.photo_url} alt={`Lost plant ${loss.plant_name}`} label="View photo" />
+        <PhotoToggle
+          src={loss.photo_url}
+          alt={`Lost plant ${loss.plant_name}`}
+          label="View photo"
+        />
       )}
     </article>
   );
