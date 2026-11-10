@@ -37,6 +37,7 @@ from .serializers import (
     LoginCodeResendSerializer,
     LoginCodeSerializer,
     LoginSerializer,
+    MeUpdateSerializer,
     ResendCodeSerializer,
     ResetPasswordSerializer,
     UserSerializer,
@@ -636,7 +637,9 @@ class RefreshView(APIView):
 
 class MeView(generics.RetrieveAPIView):
     """
-    GET /api/auth/me/
+    GET /api/auth/me/ — the signed-in user.
+    PATCH /api/auth/me/ — change what a user may change about themselves
+    (only `gender`); answers with the whole user, as GET does.
     IsApproved re-reads account_status from the database on every request,
     so revoking access takes effect immediately rather than when the
     15-minute access token expires.
@@ -644,9 +647,16 @@ class MeView(generics.RetrieveAPIView):
 
     serializer_class = UserSerializer
     permission_classes = [IsApproved]
+    http_method_names = ["get", "patch", "head", "options"]
 
     def get_object(self):
         return self.request.user
+
+    def patch(self, request):
+        serializer = MeUpdateSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserSerializer(request.user).data)
 
 
 class LogoutView(APIView):

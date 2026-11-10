@@ -77,22 +77,22 @@ const ROLE_ICON = {
 /** A role colour at low strength, for avatar and chip backgrounds. */
 const tint = (color: string, percent = 12) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
 
-/** Bright pairs for avatars; each person keeps the same one. */
-const AVATAR_GRADIENTS = [
-  ["#34d399", "#059669"],
-  ["#60a5fa", "#2563eb"],
-  ["#a78bfa", "#7c3aed"],
-  ["#fbbf24", "#d97706"],
-  ["#f472b6", "#db2777"],
-  ["#2dd4bf", "#0d9488"],
-  ["#fb923c", "#ea580c"],
-  ["#818cf8", "#4f46e5"],
-] as const;
+/**
+ * Card and avatar colours by gender: blue for male, pink for female, and
+ * the BulanTanom green for anyone who has not said or prefers not to.
+ */
+const GENDER_STYLE = {
+  MALE: { from: "#60a5fa", to: "#2563eb", label: "Male" },
+  FEMALE: { from: "#f472b6", to: "#db2777", label: "Female" },
+  NONE: { from: "#34d399", to: "#059669", label: null },
+} as const;
 
-function avatarGradient(seed: string) {
-  let hash = 0;
-  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-  const [from, to] = AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+function genderStyle(user: AdminUser) {
+  return user.gender === "MALE" || user.gender === "FEMALE" ? GENDER_STYLE[user.gender] : GENDER_STYLE.NONE;
+}
+
+function avatarGradient(user: AdminUser) {
+  const { from, to } = genderStyle(user);
   return `linear-gradient(135deg, ${from}, ${to})`;
 }
 
@@ -665,7 +665,7 @@ function Avatar({
         "ring-card relative flex shrink-0 items-center justify-center rounded-full font-heading font-semibold text-white ring-2 shadow-[0_6px_14px_-6px_rgb(0_0_0/0.35)]",
         size === "sm" ? "size-8 text-[11px]" : "size-12 text-sm",
       )}
-      style={{ backgroundImage: avatarGradient(user.email) }}
+      style={{ backgroundImage: avatarGradient(user) }}
     >
       {initials}
       {showOnline && user.is_online && (
@@ -683,6 +683,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
   const color = ROLE_COLOR[user.role];
   const RoleIcon = ROLE_ICON[user.role];
   const badge = STATUS_BADGE[user.account_status];
+  const gender = genderStyle(user);
   const joined = new Date(user.date_joined).toLocaleDateString("en-PH", {
     month: "short",
     day: "numeric",
@@ -700,12 +701,12 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
       <span
         aria-hidden="true"
         className="absolute inset-x-0 top-0 -z-10 h-20 opacity-25 transition-opacity group-hover:opacity-40"
-        style={{ backgroundImage: avatarGradient(user.email), maskImage: "linear-gradient(to bottom, black, transparent)" }}
+        style={{ backgroundImage: avatarGradient(user), maskImage: "linear-gradient(to bottom, black, transparent)" }}
       />
       <span
         aria-hidden="true"
         className="absolute inset-x-0 top-0 h-1.5"
-        style={{ backgroundImage: avatarGradient(user.email) }}
+        style={{ backgroundImage: avatarGradient(user) }}
       />
 
       <div className="flex items-start gap-3">
@@ -729,6 +730,14 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
           <RoleIcon className="size-3" />
           {ROLE_LABEL[user.role]}
         </span>
+        {gender.label && (
+          <span
+            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+            style={{ backgroundColor: tint(gender.to, 14), color: gender.to }}
+          >
+            {gender.label}
+          </span>
+        )}
         {badge && (
           <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", badge.className)}>
             {badge.label}

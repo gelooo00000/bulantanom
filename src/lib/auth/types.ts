@@ -7,6 +7,8 @@ export type AuthUser = {
   name: string;
   firstName: string;
   email: string;
+  /** Empty when not answered. */
+  gender?: "MALE" | "FEMALE" | "UNDISCLOSED" | "";
   role: Role;
   accountStatus: AccountStatus;
 };

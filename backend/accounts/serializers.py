@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "full_name",
             "email",
+            "gender",
             "role",
             "account_status",
             "email_verified",
@@ -42,11 +43,11 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "password", "password_confirm"]
+        fields = ["first_name", "last_name", "email", "gender", "password", "password_confirm"]
         # Disable DRF's auto-generated UniqueValidator (from the model's
         # `unique=True`) so duplicate-email always goes through our own
         # validate_email() below, with our own message.
-        extra_kwargs = {"email": {"validators": []}}
+        extra_kwargs = {"email": {"validators": []}, "gender": {"required": False}}
 
     def validate_first_name(self, value):
         problem = name_problem(value, "First name")
@@ -100,6 +101,14 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
             pending_signup=True,
             **validated_data,
         )
+
+
+class MeUpdateSerializer(serializers.ModelSerializer):
+    """What a signed-in user may change about themselves: only their gender."""
+
+    class Meta:
+        model = User
+        fields = ["gender"]
 
 
 class VerifyCodeSerializer(serializers.Serializer):

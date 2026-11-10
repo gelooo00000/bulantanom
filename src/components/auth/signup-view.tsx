@@ -16,6 +16,14 @@ import { Label } from "@/components/ui/label";
 import { DASHBOARD_BY_ROLE } from "@/lib/auth/constants";
 import { useAuth, type PendingVerification } from "@/lib/auth/auth-context";
 import type { AuthUser } from "@/lib/auth/types";
+import type { Gender } from "@/lib/api/auth-api";
+import { cn } from "@/lib/utils";
+
+const GENDER_OPTIONS: { value: Exclude<Gender, "">; label: string }[] = [
+  { value: "MALE", label: "Male" },
+  { value: "FEMALE", label: "Female" },
+  { value: "UNDISCLOSED", label: "Prefer not to say" },
+];
 import { NAME_MAX, cleanText, nameProblem } from "@/lib/text-validation";
 
 export function SignupView() {
@@ -24,6 +32,7 @@ export function SignupView() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [gender, setGender] = useState<Gender>("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -75,7 +84,7 @@ export function SignupView() {
     try {
       // The account exists but is not signed in: a code is on its way to
       // the email, and typing it back is what opens the dashboard.
-      setPending(await signup({ name: fullName, email, password }));
+      setPending(await signup({ name: fullName, email, password, gender }));
     } catch (err) {
       signingUp.current = false;
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -152,6 +161,35 @@ export function SignupView() {
                 onChange={(e) => setFullName(e.target.value)}
               />
             </div>
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-foreground mb-2 text-sm font-medium">
+                Gender <span className="text-muted-foreground font-normal">(optional)</span>
+              </legend>
+              <div className="grid grid-cols-3 gap-2">
+                {GENDER_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      "border-input flex cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-center text-sm transition-colors",
+                      "has-[:focus-visible]:ring-ring/50 has-[:focus-visible]:ring-[3px]",
+                      gender === option.value
+                        ? "border-[var(--landing-accent)] bg-[color-mix(in_oklch,var(--landing-accent),transparent_88%)] font-medium"
+                        : "hover:bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="gender"
+                      value={option.value}
+                      checked={gender === option.value}
+                      onChange={() => setGender(option.value)}
+                      className="sr-only"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <div className="flex flex-col gap-2">
               <Label htmlFor="email" className="text-foreground">
                 Email

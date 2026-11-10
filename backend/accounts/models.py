@@ -10,6 +10,17 @@ class UserRole(models.TextChoices):
     ADMIN = "ADMIN", "Admin"
 
 
+class Gender(models.TextChoices):
+    """
+    Asked once at sign-up and editable by the user. Optional: an empty value
+    means not answered. The Admin console colours account cards by it.
+    """
+
+    MALE = "MALE", "Male"
+    FEMALE = "FEMALE", "Female"
+    UNDISCLOSED = "UNDISCLOSED", "Prefer not to say"
+
+
 class AccountStatus(models.TextChoices):
     """
     Explicit account lifecycle. Deliberately not a boolean — the system has
@@ -73,6 +84,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # is what made the sign-up form repeat the first name as the last name.
     last_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
+    gender = models.CharField(max_length=12, choices=Gender.choices, blank=True, default="")
     role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.FARMER)
     account_status = models.CharField(
         max_length=20, choices=AccountStatus.choices, default=AccountStatus.PENDING

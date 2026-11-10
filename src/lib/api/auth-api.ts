@@ -3,12 +3,16 @@ import { ApiError, apiFetch, refreshSharedSession } from "@/lib/api/client";
 export type BackendRole = "FARMER" | "LGU_OFFICER" | "ADMIN";
 export type BackendAccountStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
 
+/** Empty when the user has not answered. */
+export type Gender = "MALE" | "FEMALE" | "UNDISCLOSED" | "";
+
 export type BackendUser = {
   id: number;
   first_name: string;
   last_name: string;
   full_name: string;
   email: string;
+  gender?: Gender;
   role: BackendRole;
   account_status: BackendAccountStatus;
   date_joined: string;
@@ -88,6 +92,7 @@ export function signupFarmer(payload: {
   first_name: string;
   last_name: string;
   email: string;
+  gender?: Gender;
   password: string;
   password_confirm: string;
 }): Promise<VerificationPending> {
@@ -143,6 +148,11 @@ export async function refreshSession(): Promise<AuthResponse> {
 
 export function fetchCurrentUser(accessToken: string): Promise<BackendUser> {
   return apiFetch("/auth/me/", { accessToken });
+}
+
+/** Changes what users may change about themselves (only gender). */
+export function updateCurrentUser(accessToken: string, changes: { gender: Gender }): Promise<BackendUser> {
+  return apiFetch("/auth/me/", { method: "PATCH", accessToken, body: changes });
 }
 
 export function logoutSession(): Promise<{ detail: string }> {

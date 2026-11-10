@@ -74,6 +74,14 @@ describe("creating a Farmer account", () => {
     expect(screen.getByRole("button", { name: /Verify and continue/ })).toBeDisabled();
   });
 
+  it("sends the gender chosen", async () => {
+    signup.mockResolvedValue(CODE_SENT);
+    render(<SignupView />);
+    fireEvent.click(screen.getByLabelText("Female"));
+    await createAccount();
+    expect(signup).toHaveBeenCalledWith(expect.objectContaining({ gender: "FEMALE" }));
+  });
+
   it("keeps the farmer on the code step when the code is wrong", async () => {
     signup.mockResolvedValue(CODE_SENT);
     verifyEmail.mockRejectedValue(new Error("That code is not correct."));

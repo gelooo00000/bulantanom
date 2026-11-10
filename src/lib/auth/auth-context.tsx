@@ -14,9 +14,11 @@ import {
   resendLoginCode as resendLoginCodeApi,
   verifyLoginCode,
   signupFarmer,
+  updateCurrentUser,
   verifyFarmerEmail,
   type BackendRole,
   type BackendUser,
+  type Gender,
 } from "@/lib/api/auth-api";
 import { ApiError, onSessionExpired } from "@/lib/api/client";
 import {
@@ -79,7 +81,10 @@ type AuthContextValue = {
     name: string;
     email: string;
     password: string;
+    gender?: Gender;
   }) => Promise<PendingVerification>;
+  /** Saves the signed-in user's gender. */
+  setGender: (gender: Gender) => Promise<void>;
   /** Types the emailed code back, which signs the Farmer in. */
   verifyEmail: (email: string, code: string) => Promise<AuthUser>;
   /** Emails a new code; resolves to the seconds until another may be asked. */
@@ -111,6 +116,7 @@ function mapBackendUser(user: BackendUser): AuthUser {
     name: user.full_name || `${user.first_name} ${user.last_name}`.trim(),
     firstName: user.first_name,
     email: user.email,
+    gender: user.gender ?? "",
     role: BACKEND_ROLE_TO_ROLE[user.role],
     accountStatus: user.account_status,
   };
@@ -261,10 +267,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function setGender(gender: Gender) {
+    const token = getAccessToken();
+    if (!token) throw new Error("Not signed in.");
+    try {
+      setCurrentUser(mapBackendUser(await updateCurrentUser(token, { gender })));
+    } catch (err) {
+      throw new Error(messageFrom(err));
+    }
+  }
+
   async function signup(input: {
     name: string;
     email: string;
     password: string;
+    gender?: Gender;
   }): Promise<PendingVerification> {
     const [firstName, ...rest] = input.name.trim().split(/\s+/);
     const lastName = rest.join(" ");
@@ -276,6 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // A single name has no last name; it is sent empty, never repeated.
         last_name: lastName,
         email: input.email,
+        ...(input.gender ? { gender: input.gender } : {}),
         password: input.password,
         password_confirm: input.password,
       });
@@ -312,6 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: tokenVersion >= 0 ? getAccessToken() : null,
         login,
         signup,
+        setGender,
         verifyEmail,
         resendCode,
         verifyLogin,

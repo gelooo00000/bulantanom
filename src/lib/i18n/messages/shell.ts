@@ -97,4 +97,14 @@ export const shell = defineMessages({
   "time.minutes": { en: "{n}m ago", fil: "{n} minuto na", bik: "{n} minuto na an naagi" },
   "time.hours": { en: "{n}h ago", fil: "{n} oras na", bik: "{n} oras na an naagi" },
   "time.days": { en: "{n}d ago", fil: "{n} araw na", bik: "{n} adlaw na an naagi" },
+  "gender.label": { en: "Gender", fil: "Kasarian", bik: "Kasarian" },
+  "gender.open": { en: "My gender", fil: "Aking kasarian", bik: "Kasarian ko" },
+  "gender.MALE": { en: "Male", fil: "Lalaki", bik: "Lalaki" },
+  "gender.FEMALE": { en: "Female", fil: "Babae", bik: "Babayi" },
+  "gender.UNDISCLOSED": { en: "Prefer not to say", fil: "Ayaw kong sabihin", bik: "Dai ko sasabihon" },
+  "gender.failed": {
+    en: "Could not save. Try again.",
+    fil: "Hindi ma-save. Subukan ulit.",
+    bik: "Dai na-save. Probaran giraray.",
+  },
 });
