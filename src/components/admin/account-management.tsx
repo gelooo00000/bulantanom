@@ -7,6 +7,8 @@ import {
   Clock,
   ExternalLink,
   LoaderCircle,
+  PieChart,
+  Radio,
   RotateCcw,
   Search,
   ShieldCheck,
@@ -19,12 +21,12 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { AdminHero, HeroStat } from "@/components/admin/admin-hero";
 import { CreateOfficerDialog } from "@/components/admin/create-officer-dialog";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { lastActiveLabel } from "@/components/lgu/farmer-directory";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import { EmptyState } from "@/components/shared/empty-state";
-import { PageHeader } from "@/components/shared/page-header";
 import { ActionsMenu, type ActionItem } from "@/components/ui/actions-menu";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -219,6 +221,7 @@ export function AccountManagement() {
 
   const farmers = users.filter((u) => u.role === "FARMER");
   const officers = users.filter((u) => u.role === "LGU_OFFICER");
+  const suspended = users.filter((u) => u.account_status === "SUSPENDED").length;
 
   const query = search.trim().toLowerCase();
   /** One set of controls narrows and orders every tab. */
@@ -343,16 +346,52 @@ export function AccountManagement() {
         />
       ) : null}
 
-      <PageHeader
+      <AdminHero
+        icon={Users}
+        eyebrow="Admin console"
         title="Account Management"
         description="Manage access and see who is using BulanTanom."
         action={
-          <Button size="sm" onClick={() => setCreatingOfficer(true)}>
-            <UserRoundPlus className="size-3.5" />
+          <Button onClick={() => setCreatingOfficer(true)}>
+            <UserRoundPlus className="size-4" />
             Create LGU Officer
           </Button>
         }
-      />
+      >
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <HeroStat
+            icon={Users}
+            label="All accounts"
+            value={users.length}
+            color="var(--muted-foreground)"
+            onClick={() => setTab("all")}
+            active={tab === "all"}
+          />
+          <HeroStat
+            icon={Sprout}
+            label="Farmers"
+            value={farmers.length}
+            color={ROLE_COLOR.FARMER}
+            onClick={() => setTab("farmers")}
+            active={tab === "farmers"}
+          />
+          <HeroStat
+            icon={ShieldCheck}
+            label="LGU Officers"
+            value={officers.length}
+            color={ROLE_COLOR.LGU_OFFICER}
+            onClick={() => setTab("officers")}
+            active={tab === "officers"}
+          />
+          <HeroStat
+            icon={Ban}
+            label="Suspended"
+            value={suspended}
+            color="var(--risk-high)"
+            hint={suspended === 0 ? "Everyone has access" : "Lost access"}
+          />
+        </div>
+      </AdminHero>
 
       {error && (
         <p className="text-destructive bg-destructive/10 rounded-lg px-3 py-2 text-sm">{error}</p>
@@ -367,8 +406,8 @@ export function AccountManagement() {
         <OnlineNow farmers={farmers} officers={officers} />
       </div>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)}>
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="gap-4">
+        <div className="border-border bg-card/80 sticky top-[3.25rem] z-[5] flex flex-col gap-2 rounded-2xl border p-2 shadow-sm backdrop-blur-md md:flex-row md:items-center md:justify-between">
           <TabsList className="max-w-full overflow-x-auto">
             {TABS.map((t) => (
               <TabsTab key={t.key} value={t.key}>
@@ -388,14 +427,14 @@ export function AccountManagement() {
                 onKeyDown={(e) => e.key === "Escape" && setSearch("")}
                 placeholder="Search name or email"
                 aria-label="Search accounts"
-                className="border-border bg-card focus-visible:ring-ring/50 h-9 w-full rounded-lg border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
+                className="border-border bg-background focus-visible:ring-ring/50 h-9 w-full rounded-xl border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
               />
             </div>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               aria-label="Sort accounts"
-              className="border-border bg-card h-9 rounded-lg border px-3 text-sm"
+              className="border-border bg-background h-9 rounded-xl border px-3 text-sm"
             >
               <option value="newest">Newest first</option>
               <option value="name">Name A–Z</option>
@@ -445,17 +484,24 @@ export function AccountManagement() {
 function Panel({
   title,
   description,
+  icon: Icon,
   children,
 }: {
   title: string;
   description: string;
+  icon: typeof Users;
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-border bg-card flex flex-col gap-4 rounded-2xl border p-5">
-      <header>
-        <h2 className="font-heading text-base font-medium">{title}</h2>
-        <p className="text-muted-foreground text-xs">{description}</p>
+    <section className="border-border bg-card flex flex-col gap-4 rounded-3xl border p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+      <header className="flex items-start gap-3">
+        <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
+          <Icon className="size-[18px]" aria-hidden="true" />
+        </span>
+        <div>
+          <h2 className="font-heading text-base font-medium">{title}</h2>
+          <p className="text-muted-foreground text-xs">{description}</p>
+        </div>
       </header>
       {children}
     </section>
@@ -477,7 +523,7 @@ function RoleBreakdown({
     { key: "officers", label: "LGU Officers", value: officers, color: ROLE_COLOR.LGU_OFFICER, icon: ShieldCheck },
   ];
   return (
-    <Panel title="Accounts by role" description="Select a role to see its accounts.">
+    <Panel icon={PieChart} title="Accounts by role" description="Select a role to see its accounts.">
       <div className="grid items-center gap-5 sm:grid-cols-[200px_1fr]">
         <DonutChart rows={rows} unit="account" name="Accounts by role" onSelectKey={onSelect} />
         <HorizontalBars rows={rows} unit="account" label="Accounts by role" onSelect={onSelect} />
@@ -496,7 +542,7 @@ function OnlineNow({ farmers, officers }: { farmers: AdminUser[]; officers: Admi
   ];
 
   return (
-    <Panel title="Online now" description="Signed in and active in the last few minutes.">
+    <Panel icon={Radio} title="Online now" description="Signed in and active in the last few minutes.">
       <div className="flex items-center gap-3">
         <span className="relative flex size-3">
           {online.length > 0 && (
@@ -608,10 +654,16 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
   return (
     <li
       className={cn(
-        "border-border bg-card group relative flex flex-col overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
+        "border-border bg-card group relative isolate flex flex-col overflow-hidden rounded-3xl border p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_30px_-14px_rgb(0_0_0/0.25)]",
         badge && "opacity-80",
       )}
     >
+      {/* The role's colour as a soft wash across the top of the card. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 -z-10 h-16"
+        style={{ background: `linear-gradient(180deg, ${tint(color, 14)}, transparent)` }}
+      />
       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} />
 
       <div className="flex items-start gap-3">
