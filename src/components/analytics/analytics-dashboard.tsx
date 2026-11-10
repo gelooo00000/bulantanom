@@ -55,8 +55,8 @@ export function AnalyticsDashboard() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <StatCard label="Total farmers" icon={Users} loading={!k} value={k?.farmers.value ?? 0} trend={k?.farmers.trend} />
-        <StatCard label="Total plants" icon={Sprout} loading={!k} value={k?.plants.value ?? 0} trend={k?.plants.trend} />
+        <StatCard label="Total farmers" icon={Users} loading={!k} value={k?.farmers.value ?? 0} />
+        <StatCard label="Total plants" icon={Sprout} loading={!k} value={k?.plants.value ?? 0} />
         <StatCard
           label="Most recommended crop"
           icon={Star}
