@@ -158,8 +158,8 @@ class LguOfficerCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "password"]
-        extra_kwargs = {"email": {"validators": []}}
+        fields = ["first_name", "last_name", "email", "gender", "password"]
+        extra_kwargs = {"email": {"validators": []}, "gender": {"required": False}}
 
     def validate_first_name(self, value):
         problem = name_problem(value, "First name")

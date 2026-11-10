@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import AccountStatus, User, UserRole
-from .tests import ADMIN_USERS_URL, ME_URL, SIGNUP_URL, VALID_SIGNUP, make_user
+from .tests import ADMIN_LGU_CREATE_URL, ADMIN_USERS_URL, ME_URL, SIGNUP_URL, VALID_SIGNUP, make_user
 
 
 class GenderTests(APITestCase):
@@ -64,3 +64,20 @@ class GenderTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         farmer.refresh_from_db()
         self.assertEqual(farmer.gender, "")
+
+    def test_admin_creates_an_officer_with_a_gender(self):
+        admin = make_user("admin@example.com", UserRole.ADMIN, AccountStatus.APPROVED)
+        self.client.force_authenticate(admin)
+        response = self.client.post(
+            ADMIN_LGU_CREATE_URL,
+            {
+                "first_name": "Ana",
+                "last_name": "Reyes",
+                "email": "ana@example.com",
+                "gender": "FEMALE",
+                "password": "SecurePassword123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(User.objects.get(email="ana@example.com").gender, "FEMALE")

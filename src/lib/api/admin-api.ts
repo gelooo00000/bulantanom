@@ -120,6 +120,7 @@ export function createLguOfficer(
     first_name: string;
     last_name: string;
     email: string;
+    gender?: "MALE" | "FEMALE" | "UNDISCLOSED";
     password: string;
   },
 ): Promise<BackendUser> {
