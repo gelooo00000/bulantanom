@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CircleHelp, Leaf, OctagonAlert, Sprout, Star, TriangleAlert, Users } from "lucide-react";
+import { ArrowRight, CircleHelp, Leaf, OctagonAlert, TriangleAlert } from "lucide-react";
 
 import {
   Breadcrumbs,
   CardState,
   ChartCard,
   LiveDataNote,
-  StatCard,
 } from "@/components/analytics/cards";
 import { CROP_PAGE_SIZE, HorizontalBars, WeeklyColumns, type BarRow } from "@/components/lgu/dashboard-charts";
 import { RiskPie } from "@/components/lgu/risk-pie";
@@ -17,7 +16,6 @@ import {
   analyticsQuery,
   EMPTY_FILTERS,
   fetchOverview,
-  fetchSummary,
   type AnalyticsFilters,
 } from "@/lib/api/analytics-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
@@ -29,7 +27,7 @@ export function useFiltered<T>(fetcher: (token: string, f: AnalyticsFilters) => 
 }
 
 /**
- * The Agricultural Analytics System: KPIs and the four farm cards, always
+ * The Agricultural Analytics System: the four farm cards, always
  * across every record. The dashboard has no
  * filter bar, so it deliberately ignores any filters left in the address.
  * All figures come from /api/analytics/*, counted at request time.
@@ -37,10 +35,8 @@ export function useFiltered<T>(fetcher: (token: string, f: AnalyticsFilters) => 
 export function AnalyticsDashboard() {
   const filters = EMPTY_FILTERS;
 
-  const summary = useFiltered(fetchSummary, filters);
   const overview = useFiltered(fetchOverview, filters);
 
-  const k = summary.data?.kpis;
   const highRisk = overview.data?.risk.HIGH ?? 0;
 
   return (
@@ -52,25 +48,6 @@ export function AnalyticsDashboard() {
           description="Soil, crop, and farm analytics for Layuan Nature Integrated Farm, Bulan, Sorsogon."
         />
       </div>
-
-      {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <StatCard label="Total farmers" icon={Users} loading={!k} value={k?.farmers.value ?? 0} />
-        <StatCard label="Total plants" icon={Sprout} loading={!k} value={k?.plants.value ?? 0} />
-        <StatCard
-          label="Most recommended crop"
-          icon={Star}
-          loading={!k}
-          value={k?.most_recommended.value ? `${k.most_recommended.value.emoji} ${k.most_recommended.value.name}` : "No data yet"}
-          hint={k?.most_recommended.value ? `In ${k.most_recommended.value.count} of ${k.most_recommended.value.of} analysed records` : "No analysed soil records"}
-        />
-      </div>
-      {summary.error && (
-        <p className="text-risk-high text-xs">
-          The figures could not load: {summary.error}{" "}
-          <button type="button" className="underline" onClick={summary.refetch}>Try again</button>
-        </p>
-      )}
 
       {highRisk > 0 && (
         <div role="alert" className="border-risk-high/40 bg-risk-high/10 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
