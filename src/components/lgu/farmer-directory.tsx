@@ -257,9 +257,10 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
 
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2">
-          <UsagePopover farmer={farmer}>
+          <span className="font-heading truncate font-medium">
             <Highlight text={farmer.full_name || farmer.email} query={query} />
-          </UsagePopover>
+          </span>
+          <UsagePopover farmer={farmer} />
           {/* Approved is the normal state, so only the exceptions get a badge. */}
           {farmer.account_status !== "APPROVED" && (
             <span
@@ -306,16 +307,10 @@ export function formatUsage(minutes: number): string {
 }
 
 /**
- * The farmer's name, which opens how long they use BulanTanom: today, the
- * last 7 days and the last 30, when pointed at, tapped or focused.
+ * The ⏱️ beside a farmer's name, which opens how long they use BulanTanom:
+ * today, the last 7 days and the last 30, when pointed at, tapped or focused.
  */
-function UsagePopover({
-  farmer,
-  children,
-}: {
-  farmer: LguFarmer;
-  children: React.ReactNode;
-}) {
+function UsagePopover({ farmer }: { farmer: LguFarmer }) {
   const usage = farmer.usage;
   const rows: {
     label: string;
@@ -352,10 +347,12 @@ function UsagePopover({
     <Popover.Root>
       <Popover.Trigger
         openOnHover
-        delay={200}
-        className="font-heading hover:text-primary focus-visible:ring-ring/50 decoration-primary/40 truncate rounded text-left font-medium underline decoration-dotted underline-offset-4 outline-none focus-visible:ring-3"
+        delay={150}
+        aria-label={`Time on BulanTanom: ${farmer.full_name || farmer.email}`}
+        title="Time on BulanTanom"
+        className="hover:bg-muted data-[popup-open]:bg-muted focus-visible:ring-ring/50 flex size-7 shrink-0 items-center justify-center rounded-lg text-base leading-none transition-transform outline-none hover:scale-110 focus-visible:ring-3"
       >
-        {children}
+        <span aria-hidden="true">⏱️</span>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner

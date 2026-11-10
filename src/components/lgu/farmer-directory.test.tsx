@@ -174,7 +174,7 @@ describe("suspended farmers and usage time", () => {
   it("shows how long a farmer used BulanTanom when the name is opened", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderOn([farmer({ usage: { today: 65, week: 300, month: 900, since: "2026-09-01" } })]);
-    await user.click(screen.getByRole("button", { name: "Juan Cruz" }));
+    await user.click(screen.getByRole("button", { name: "Time on BulanTanom: Juan Cruz" }));
     expect(await screen.findByText("Time on BulanTanom")).toBeInTheDocument();
     expect(screen.getByText("1 hr 5 min")).toBeInTheDocument();
     expect(screen.getByText("5 hr")).toBeInTheDocument();
