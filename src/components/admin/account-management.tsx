@@ -4,6 +4,7 @@ import {
   Ban,
   CalendarDays,
   CircleCheck,
+  ArrowDownUp,
   Clock,
   ExternalLink,
   Mars,
@@ -299,11 +300,15 @@ export function AccountManagement() {
     label: string;
     total: number;
     rows: AdminUser[];
+    icon: typeof Users;
+    swatch: Swatch;
     empty: { icon: typeof Users; title: string; description?: string };
   }[] = [
     {
       key: "farmers",
       label: "Farmers",
+      icon: Sprout,
+      swatch: PALETTE.forest,
       total: farmers.length,
       rows: narrow(farmers),
       empty: {
@@ -318,6 +323,8 @@ export function AccountManagement() {
     {
       key: "officers",
       label: "LGU Officers",
+      icon: ShieldCheck,
+      swatch: PALETTE.gold,
       total: officers.length,
       rows: narrow(officers),
       empty: {
@@ -332,6 +339,8 @@ export function AccountManagement() {
     {
       key: "all",
       label: "All accounts",
+      icon: Users,
+      swatch: PALETTE.violet,
       total: users.length,
       rows: narrow(users),
       empty: { icon: Users, title: users.length === 0 ? "No accounts yet" : "No accounts match this search" },
@@ -451,19 +460,51 @@ export function AccountManagement() {
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="gap-4">
-        <div className="border-border bg-card/80 sticky top-[3.25rem] z-[5] flex flex-col gap-2 rounded-2xl border p-2 shadow-sm backdrop-blur-md xl:flex-row xl:items-center xl:justify-between">
-          <TabsList className="max-w-full overflow-x-auto [scrollbar-width:none]">
-            {TABS.map((t) => (
-              <TabsTab key={t.key} value={t.key}>
-                {t.label}
-                <span className="text-muted-foreground ml-1.5 text-xs">{t.total}</span>
-              </TabsTab>
-            ))}
+        {/* Tabs, search and sort in one frosted bar that stays in view. */}
+        <div className="border-border bg-card/85 sticky top-[3.25rem] z-[5] flex flex-col gap-2.5 rounded-3xl border p-2.5 shadow-[0_10px_30px_-18px_rgb(6_95_70/0.45)] backdrop-blur-md xl:flex-row xl:items-center xl:justify-between">
+          <TabsList className="h-auto max-w-full gap-1.5 overflow-x-auto rounded-2xl bg-transparent p-0 [scrollbar-width:none]">
+            {TABS.map((t) => {
+              const TabIcon = t.icon;
+              const active = tab === t.key;
+              return (
+                <TabsTab
+                  key={t.key}
+                  value={t.key}
+                  className={cn(
+                    "flex items-center gap-2 rounded-2xl border px-3.5 py-2 transition-all",
+                    active
+                      ? "border-transparent text-white shadow-[0_10px_22px_-10px_var(--tab)] data-[active]:text-white"
+                      : "border-border bg-background hover:text-foreground hover:border-[var(--tab)]",
+                  )}
+                  style={
+                    {
+                      "--tab": t.swatch[1],
+                      ...(active ? { backgroundImage: gradient(t.swatch) } : {}),
+                    } as React.CSSProperties
+                  }
+                >
+                  <TabIcon className="size-4" style={active ? undefined : { color: t.swatch[1] }} />
+                  {t.label}
+                  <span
+                    className={cn(
+                      "min-w-5 rounded-full px-1.5 text-center text-[11px] font-semibold tabular-nums",
+                      active && "bg-white/25 text-white",
+                    )}
+                    style={active ? undefined : { backgroundColor: tint(t.swatch[1], 14), color: t.swatch[1] }}
+                  >
+                    {t.total}
+                  </span>
+                </TabsTab>
+              );
+            })}
           </TabsList>
 
           <div className="flex gap-2">
-            <div className="relative min-w-0 flex-1 xl:w-64 xl:flex-none">
-              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <div className="relative min-w-0 flex-1 xl:w-72 xl:flex-none">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+                style={{ color: PALETTE.forest[1] }}
+              />
               <input
                 type="search"
                 value={search}
@@ -471,19 +512,35 @@ export function AccountManagement() {
                 onKeyDown={(e) => e.key === "Escape" && setSearch("")}
                 placeholder="Search name or email"
                 aria-label="Search accounts"
-                className="border-border bg-background focus-visible:ring-ring/50 h-9 w-full rounded-xl border pr-3 pl-9 text-sm focus-visible:ring-[3px] focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
+                className="border-border bg-background h-10 w-full rounded-2xl border pr-9 pl-10 text-sm transition-shadow focus-visible:border-emerald-500/60 focus-visible:shadow-[0_0_0_4px_rgb(16_185_129/0.15)] focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
             </div>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              aria-label="Sort accounts"
-              className="border-border bg-background h-9 rounded-xl border px-3 text-sm"
-            >
-              <option value="newest">Newest first</option>
-              <option value="name">Name A–Z</option>
-              <option value="active">Recently active</option>
-            </select>
+            <div className="relative">
+              <ArrowDownUp
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                style={{ color: PALETTE.gold[1] }}
+              />
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                aria-label="Sort accounts"
+                className="border-border bg-background h-10 cursor-pointer rounded-2xl border pr-3 pl-9 text-sm focus-visible:shadow-[0_0_0_4px_rgb(245_158_11/0.18)] focus-visible:outline-none"
+              >
+                <option value="newest">Newest first</option>
+                <option value="name">Name A–Z</option>
+                <option value="active">Recently active</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -492,7 +549,7 @@ export function AccountManagement() {
             {t.rows.length === 0 ? (
               <EmptyState icon={t.empty.icon} title={t.empty.title} description={t.empty.description} />
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {t.rows.map((user) => (
                   <AccountCard key={user.id} user={user} actions={actionsFor(user)} />
                 ))}
@@ -672,7 +729,7 @@ function Avatar({
   showOnline,
 }: {
   user: AdminUser;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   title?: string;
   showOnline?: boolean;
 }) {
@@ -684,7 +741,7 @@ function Avatar({
       title={title}
       className={cn(
         "ring-card relative flex shrink-0 items-center justify-center rounded-full font-heading font-semibold text-white ring-2 shadow-[0_6px_14px_-6px_rgb(0_0_0/0.35)]",
-        size === "sm" ? "size-8 text-[11px]" : "size-12 text-sm",
+        size === "sm" ? "size-8 text-[11px]" : size === "lg" ? "size-16 text-lg ring-4" : "size-12 text-sm",
       )}
       style={{ backgroundImage: avatarGradient(user) }}
     >
@@ -705,84 +762,104 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
   const RoleIcon = ROLE_ICON[user.role];
   const badge = STATUS_BADGE[user.account_status];
   const gender = genderStyle(user);
+  const swatch = [gender.from, gender.to] as const;
   const joined = new Date(user.date_joined).toLocaleDateString("en-PH", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+  const lastActive = lastActiveLabel(user.last_seen_at).replace(/^Last active /, "");
 
   return (
     <li
       className={cn(
-        "border-border bg-card group relative isolate flex flex-col overflow-hidden rounded-3xl border p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all duration-200 hover:-translate-y-1 hover:border-[var(--accent-to)] hover:shadow-[0_18px_36px_-18px_var(--accent-to)]",
-        badge && "opacity-80",
+        "border-border bg-card group relative isolate flex flex-col overflow-hidden rounded-3xl border shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all duration-300",
+        "hover:-translate-y-1 hover:border-[var(--accent-to)] hover:shadow-[0_22px_40px_-22px_var(--accent-to)]",
+        badge && "saturate-[0.65]",
       )}
       style={{ "--accent-to": gender.to } as React.CSSProperties}
     >
-      {/* The person's colour as a wash across the top, with a glowing band. */}
-      <span
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 -z-10 h-20 opacity-25 transition-opacity group-hover:opacity-40"
-        style={{ backgroundImage: avatarGradient(user), maskImage: "linear-gradient(to bottom, black, transparent)" }}
-      />
-      <span
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-1.5"
-        style={{ backgroundImage: avatarGradient(user) }}
-      />
-
-      <div className="flex items-start gap-3">
-        <Avatar user={user} showOnline />
-        <div className="min-w-0 flex-1 pt-0.5">
-          <p className="font-heading truncate text-base leading-tight font-medium">
-            {user.full_name || user.email}
-          </p>
-          <p className="text-muted-foreground truncate text-xs">{user.email}</p>
-        </div>
-        {actions.length > 0 && (
-          <ActionsMenu items={actions} label={`Actions for ${user.full_name}`} />
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      {/* A coloured banner with a soft pattern; the avatar sits across its edge. */}
+      <div className="relative h-20 overflow-hidden" style={{ backgroundImage: gradient(swatch) }}>
         <span
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-          style={{ backgroundColor: tint(color), color }}
-        >
-          <RoleIcon className="size-3" />
-          {ROLE_LABEL[user.role]}
-        </span>
-        {gender.label && (
-          <span
-            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-            style={{ backgroundColor: tint(gender.to, 14), color: gender.to }}
-          >
-            {gender.label}
-          </span>
+          aria-hidden="true"
+          className="absolute inset-0 opacity-30 [background-image:radial-gradient(rgb(255_255_255/0.7)_1px,transparent_1px)] [background-size:14px_14px]"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute -top-10 -right-8 size-32 rounded-full bg-white/20 blur-2xl transition-transform duration-500 group-hover:scale-125"
+        />
+        <RoleIcon aria-hidden="true" className="absolute right-14 -bottom-3 size-16 text-white/15" />
+        {actions.length > 0 && (
+          <div className="absolute top-2.5 right-2.5 [&_button]:border-white/30 [&_button]:bg-white/20 [&_button]:text-white [&_button]:backdrop-blur-sm [&_button:hover]:bg-white/35 [&_button:hover]:text-white">
+            <ActionsMenu items={actions} label={`Actions for ${user.full_name}`} />
+          </div>
         )}
         {badge && (
-          <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", badge.className)}>
+          <span className="absolute top-3 left-3 rounded-full bg-black/25 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
             {badge.label}
           </span>
         )}
       </div>
 
-      <div className="border-border text-muted-foreground mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-dashed pt-3 text-xs">
-        <span className="flex items-center gap-1.5">
-          <CalendarDays className="size-3.5" style={{ color: gender.to }} />
-          Joined {joined}
-        </span>
-        {user.is_online ? (
-          <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            Online now
+      <div className="flex flex-1 flex-col px-4 pb-4">
+        <div className="-mt-8 flex items-end gap-3">
+          <Avatar user={user} showOnline size="lg" />
+          {user.is_online && (
+            <span className="mb-1 flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+              </span>
+              Online now
+            </span>
+          )}
+        </div>
+
+        <div className="mt-2.5 min-w-0">
+          <p className="font-heading truncate text-[17px] leading-tight font-semibold">
+            {user.full_name || user.email}
+          </p>
+          <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+            style={{ backgroundColor: tint(color, 14), color }}
+          >
+            <RoleIcon className="size-3" />
+            {ROLE_LABEL[user.role]}
           </span>
-        ) : (
-          <span className="flex items-center gap-1.5">
-            <Clock className="size-3.5" style={{ color: PALETTE.gold[1] }} />
-            {lastActiveLabel(user.last_seen_at).replace(/^Last active /, "Active ")}
-          </span>
-        )}
+          {gender.label && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+              style={{ backgroundColor: tint(gender.to, 14), color: gender.to }}
+            >
+              {user.gender === "MALE" ? <Mars className="size-3" /> : <Venus className="size-3" />}
+              {gender.label}
+            </span>
+          )}
+        </div>
+
+        <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(gender.to, 8) }}>
+            <dt className="text-muted-foreground flex items-center gap-1 text-[11px]">
+              <CalendarDays className="size-3" style={{ color: gender.to }} />
+              Joined
+            </dt>
+            <dd className="font-heading mt-0.5 font-semibold">{joined}</dd>
+          </div>
+          <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(PALETTE.gold[1], 9) }}>
+            <dt className="text-muted-foreground flex items-center gap-1 text-[11px]">
+              <Clock className="size-3" style={{ color: PALETTE.gold[1] }} />
+              Last active
+            </dt>
+            <dd className="font-heading mt-0.5 font-semibold first-letter:uppercase">
+              {user.is_online ? "Right now" : lastActive}
+            </dd>
+          </div>
+        </dl>
       </div>
     </li>
   );
