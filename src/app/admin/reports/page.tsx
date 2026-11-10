@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState, type ElementType } from "react";
 
+import { AdminShell } from "@/components/admin/admin-shell";
+import { RequireRole } from "@/components/auth/require-role";
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
 import { ReportPreview } from "@/components/lgu/report-preview";
 import { FadeIn } from "@/components/motion/fade-in";
@@ -83,7 +85,18 @@ function FilterSelect({
   );
 }
 
-export default function LguReportsPage() {
+/** Detailed Reports lives in the Admin console. */
+export default function AdminReportsPage() {
+  return (
+    <RequireRole role="admin">
+      <AdminShell>
+        <ReportsPage />
+      </AdminShell>
+    </RequireRole>
+  );
+}
+
+function ReportsPage() {
   const { accessToken } = useAuth();
 
   const [catalog, setCatalog] = useState<ReportCatalog | null>(null);
@@ -243,7 +256,7 @@ export default function LguReportsPage() {
   return (
     <div className="flex flex-col gap-5">
       <div className="print-hide flex flex-col gap-2">
-        <Breadcrumbs items={[{ label: "Agricultural Analytics", href: "/lgu/analytics" }, { label: t.pageTitle }]} />
+        <Breadcrumbs items={[{ label: "Admin console", href: "/admin" }, { label: t.pageTitle }]} />
         <PageHeader
           title={t.pageTitle}
           description={t.pageDescription}

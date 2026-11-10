@@ -2,7 +2,6 @@
 
 import {
   BarChart3,
-  FileText,
   MapPin,
   ShieldCheck,
   Sprout,
@@ -17,7 +16,6 @@ import { useAuth } from "@/lib/auth/auth-context";
 
 const ANALYTICS: NavItem = { label: "Agricultural Analytics", href: "/lgu/analytics", icon: BarChart3 };
 const HARVEST: NavItem = { label: "Harvest & Monitoring", href: "/lgu/harvest", icon: Wheat };
-const REPORTS: NavItem = { label: "Detailed Reports", href: "/lgu/reports", icon: FileText };
 const FARM: NavItem = { label: "Layuan Farm", href: "/lgu/farm", icon: MapPin };
 
 const LGU_NAV_ITEMS: NavItem[] = [
@@ -26,7 +24,6 @@ const LGU_NAV_ITEMS: NavItem[] = [
   { label: "Plants", href: "/lgu/plants", icon: Sprout },
   { label: "High-Risk Cases", href: "/lgu/high-risk", icon: TriangleAlert },
   HARVEST,
-  REPORTS,
   FARM,
 ];
 
@@ -38,7 +35,6 @@ const LGU_NAV_ITEMS: NavItem[] = [
 const ADMIN_NAV_ITEMS: NavItem[] = [
   ANALYTICS,
   HARVEST,
-  REPORTS,
   FARM,
   { label: "Admin Console", href: "/admin", icon: ShieldCheck },
 ];

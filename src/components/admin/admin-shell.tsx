@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCheck, Users } from "lucide-react";
+import { ClipboardCheck, FileText, Users } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { RoleShell, type NavItem } from "@/components/shared/role-shell";
@@ -10,6 +10,7 @@ import { RoleShell, type NavItem } from "@/components/shared/role-shell";
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: "Account Management", href: "/admin", icon: Users },
   { label: "Harvest Outcomes", href: "/admin/harvest-outcomes", icon: ClipboardCheck },
+  { label: "Detailed Reports", href: "/admin/reports", icon: FileText },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
