@@ -25,7 +25,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { AdminHero, HeroStat } from "@/components/admin/admin-hero";
-import { PALETTE, gradient, tint, type Swatch } from "@/components/admin/palette";
+import { INK, PALETTE, gradient, tint, type Swatch } from "@/components/admin/palette";
 import { CreateOfficerDialog } from "@/components/admin/create-officer-dialog";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { lastActiveLabel } from "@/components/lgu/farmer-directory";
@@ -68,9 +68,9 @@ const ROLE_LABEL = {
 
 /** One colour per role, shared by the charts and the account cards. */
 const ROLE_COLOR = {
-  FARMER: PALETTE.forest[1],
-  LGU_OFFICER: PALETTE.gold[1],
-  ADMIN: PALETTE.violet[1],
+  FARMER: INK.forest,
+  LGU_OFFICER: INK.gold,
+  ADMIN: INK.violet,
 } as const;
 
 const ROLE_ICON = {
@@ -85,9 +85,9 @@ const ROLE_ICON = {
  * the BulanTanom green for anyone who has not said or prefers not to.
  */
 const GENDER_STYLE = {
-  MALE: { from: PALETTE.sky[0], to: PALETTE.sky[1], label: "Male" },
-  FEMALE: { from: PALETTE.pink[0], to: PALETTE.pink[1], label: "Female" },
-  NONE: { from: PALETTE.forest[0], to: PALETTE.forest[1], label: null },
+  MALE: { from: PALETTE.sky[0], to: PALETTE.sky[1], ink: INK.sky, label: "Male" },
+  FEMALE: { from: PALETTE.pink[0], to: PALETTE.pink[1], ink: INK.pink, label: "Female" },
+  NONE: { from: PALETTE.forest[0], to: PALETTE.forest[1], ink: INK.forest, label: null },
 } as const;
 
 function genderStyle(user: AdminUser) {
@@ -302,6 +302,7 @@ export function AccountManagement() {
     rows: AdminUser[];
     icon: typeof Users;
     swatch: Swatch;
+    ink: string;
     empty: { icon: typeof Users; title: string; description?: string };
   }[] = [
     {
@@ -309,6 +310,7 @@ export function AccountManagement() {
       label: "Farmers",
       icon: Sprout,
       swatch: PALETTE.forest,
+      ink: INK.forest,
       total: farmers.length,
       rows: narrow(farmers),
       empty: {
@@ -325,6 +327,7 @@ export function AccountManagement() {
       label: "LGU Officers",
       icon: ShieldCheck,
       swatch: PALETTE.gold,
+      ink: INK.gold,
       total: officers.length,
       rows: narrow(officers),
       empty: {
@@ -341,6 +344,7 @@ export function AccountManagement() {
       label: "All accounts",
       icon: Users,
       swatch: PALETTE.violet,
+      ink: INK.violet,
       total: users.length,
       rows: narrow(users),
       empty: { icon: Users, title: users.length === 0 ? "No accounts yet" : "No accounts match this search" },
@@ -461,7 +465,7 @@ export function AccountManagement() {
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)} className="gap-4">
         {/* Tabs, search and sort in one frosted bar that stays in view. */}
-        <div className="border-border bg-card/85 sticky top-[3.25rem] z-[5] flex flex-col gap-2.5 rounded-3xl border p-2.5 shadow-[0_10px_30px_-18px_rgb(6_95_70/0.45)] backdrop-blur-md xl:flex-row xl:items-center xl:justify-between">
+        <div className="border-border bg-card/85 dark:border-white/10 sticky top-[3.25rem] z-[5] flex flex-col gap-2.5 rounded-3xl border p-2.5 shadow-[0_10px_30px_-18px_rgb(6_95_70/0.45)] backdrop-blur-md xl:flex-row xl:items-center xl:justify-between">
           <TabsList className="h-auto max-w-full gap-1.5 overflow-x-auto rounded-2xl bg-transparent p-0 [scrollbar-width:none]">
             {TABS.map((t) => {
               const TabIcon = t.icon;
@@ -474,23 +478,23 @@ export function AccountManagement() {
                     "flex items-center gap-2 rounded-2xl border px-3.5 py-2 transition-all",
                     active
                       ? "border-transparent text-white shadow-[0_10px_22px_-10px_var(--tab)] data-[active]:text-white"
-                      : "border-border bg-background hover:text-foreground hover:border-[var(--tab)]",
+                      : "border-border bg-background hover:text-foreground hover:border-[var(--tab)] dark:border-white/10 dark:bg-white/5",
                   )}
                   style={
                     {
-                      "--tab": t.swatch[1],
+                      "--tab": t.ink,
                       ...(active ? { backgroundImage: gradient(t.swatch) } : {}),
                     } as React.CSSProperties
                   }
                 >
-                  <TabIcon className="size-4" style={active ? undefined : { color: t.swatch[1] }} />
+                  <TabIcon className="size-4" style={active ? undefined : { color: t.ink }} />
                   {t.label}
                   <span
                     className={cn(
                       "min-w-5 rounded-full px-1.5 text-center text-[11px] font-semibold tabular-nums",
                       active && "bg-white/25 text-white",
                     )}
-                    style={active ? undefined : { backgroundColor: tint(t.swatch[1], 14), color: t.swatch[1] }}
+                    style={active ? undefined : { backgroundColor: tint(t.ink, 14), color: t.ink }}
                   >
                     {t.total}
                   </span>
@@ -503,7 +507,7 @@ export function AccountManagement() {
             <div className="relative min-w-0 flex-1 xl:w-72 xl:flex-none">
               <Search
                 className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
-                style={{ color: PALETTE.forest[1] }}
+                style={{ color: INK.forest }}
               />
               <input
                 type="search"
@@ -528,7 +532,7 @@ export function AccountManagement() {
             <div className="relative">
               <ArrowDownUp
                 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                style={{ color: PALETTE.gold[1] }}
+                style={{ color: INK.gold }}
               />
               <select
                 value={sort}
@@ -598,10 +602,11 @@ function Panel({
 }) {
   return (
     <section
-      className="border-border bg-card relative isolate flex flex-col gap-4 overflow-hidden rounded-3xl border p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)]"
+      className="border-border bg-card relative isolate flex flex-col gap-4 overflow-hidden rounded-3xl border p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:border-white/10 dark:shadow-[0_16px_40px_-24px_var(--panel)]"
       style={{
-        backgroundImage: `radial-gradient(120% 70% at 100% 0%, color-mix(in oklab, ${color[0]} 14%, transparent), transparent 60%)`,
-      }}
+        "--panel": color[1],
+        backgroundImage: `radial-gradient(120% 70% at 100% 0%, color-mix(in oklab, ${color[0]} 16%, transparent), transparent 60%)`,
+      } as React.CSSProperties}
     >
       <header className="flex items-start gap-3">
         <span
@@ -775,9 +780,12 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
       className={cn(
         "border-border bg-card group relative isolate flex flex-col overflow-hidden rounded-3xl border shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all duration-300",
         "hover:-translate-y-1 hover:border-[var(--accent-to)] hover:shadow-[0_22px_40px_-22px_var(--accent-to)]",
+        // On the dark theme the card lifts off the page with a faint wash of
+        // the person's colour and a lighter edge.
+        "dark:border-white/10 dark:bg-[linear-gradient(180deg,color-mix(in_oklab,var(--accent-ink)_9%,var(--card))_0%,var(--card)_70%)] dark:shadow-[0_12px_32px_-20px_var(--accent-to)]",
         badge && "saturate-[0.65]",
       )}
-      style={{ "--accent-to": gender.to } as React.CSSProperties}
+      style={{ "--accent-to": gender.to, "--accent-ink": gender.ink } as React.CSSProperties}
     >
       {/* A coloured banner with a soft pattern; the avatar sits across its edge. */}
       <div className="relative h-20 overflow-hidden" style={{ backgroundImage: gradient(swatch) }}>
@@ -834,7 +842,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
           {gender.label && (
             <span
               className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-              style={{ backgroundColor: tint(gender.to, 14), color: gender.to }}
+              style={{ backgroundColor: tint(gender.ink, 14), color: gender.ink }}
             >
               {user.gender === "MALE" ? <Mars className="size-3" /> : <Venus className="size-3" />}
               {gender.label}
@@ -843,16 +851,16 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(gender.to, 8) }}>
+          <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(gender.ink, 9) }}>
             <dt className="text-muted-foreground flex items-center gap-1 text-[11px]">
-              <CalendarDays className="size-3" style={{ color: gender.to }} />
+              <CalendarDays className="size-3" style={{ color: gender.ink }} />
               Joined
             </dt>
             <dd className="font-heading mt-0.5 font-semibold">{joined}</dd>
           </div>
-          <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(PALETTE.gold[1], 9) }}>
+          <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(INK.gold, 9) }}>
             <dt className="text-muted-foreground flex items-center gap-1 text-[11px]">
-              <Clock className="size-3" style={{ color: PALETTE.gold[1] }} />
+              <Clock className="size-3" style={{ color: INK.gold }} />
               Last active
             </dt>
             <dd className="font-heading mt-0.5 font-semibold first-letter:uppercase">

@@ -17,3 +17,17 @@ export const gradient = ([from, to]: Swatch, angle = 135) => `linear-gradient(${
 
 /** A colour at low strength, for tinted backgrounds. */
 export const tint = (color: string, percent = 12) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
+
+/**
+ * The same accents as readable "ink" for text, chips, icons and chart
+ * marks: CSS variables (globals.css) that are deep on the light theme and
+ * bright on the dark one.
+ */
+export const INK = {
+  forest: "var(--adm-forest)",
+  gold: "var(--adm-gold)",
+  sky: "var(--adm-sky)",
+  pink: "var(--adm-pink)",
+  violet: "var(--adm-violet)",
+  rose: "var(--adm-rose)",
+} as const;

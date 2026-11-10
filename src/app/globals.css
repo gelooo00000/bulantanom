@@ -600,3 +600,25 @@ html[data-splash-seen] .splash-screen {
     animation: none;
   }
 }
+
+/*
+ * Admin console accent "ink": the colour used for text, chips, icons and
+ * chart marks. Deep shades on the light theme, bright ones on the dark
+ * theme, so they stay readable on both. Gradients keep their own colours.
+ */
+:root {
+  --adm-forest: #047857;
+  --adm-gold: #b45309;
+  --adm-sky: #0369a1;
+  --adm-pink: #be185d;
+  --adm-violet: #6d28d9;
+  --adm-rose: #e11d48;
+}
+.dark {
+  --adm-forest: #34d399;
+  --adm-gold: #fbbf24;
+  --adm-sky: #7dd3fc;
+  --adm-pink: #f9a8d4;
+  --adm-violet: #c4b5fd;
+  --adm-rose: #fda4af;
+}
