@@ -488,14 +488,13 @@ function ReportsPage() {
                     "hover:-translate-y-0.5 hover:border-[var(--report)] hover:shadow-[0_16px_32px_-20px_var(--report)]",
                     active
                       ? "border-[var(--report)] shadow-[0_16px_32px_-18px_var(--report)]"
-                      : "border-border dark:border-white/10",
+                      : // The others glow faintly in their own colour too.
+                        "border-border shadow-[0_12px_28px_-22px_var(--report)] dark:border-white/10 dark:shadow-[0_12px_28px_-18px_var(--report)]",
                   )}
                   style={
                     {
                       "--report": swatch[1],
-                      backgroundImage: active
-                        ? `linear-gradient(110deg, color-mix(in oklab, ${swatch[0]} 16%, transparent), transparent 70%)`
-                        : undefined,
+                      backgroundImage: `linear-gradient(110deg, color-mix(in oklab, ${swatch[0]} ${active ? 16 : 7}%, transparent), transparent 70%)`,
                     } as React.CSSProperties
                   }
                 >
