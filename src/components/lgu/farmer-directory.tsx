@@ -210,7 +210,7 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
           )}
         </div>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="grid gap-3 md:grid-cols-2">
           {shown.map((farmer) => (
             <FarmerRow key={farmer.id} farmer={farmer} query={query} />
           ))}
@@ -270,7 +270,7 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
         </p>
       </div>
 
-      <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:w-auto sm:justify-end">
+      <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-xs xl:w-auto xl:justify-end">
         {/* "⏱️ Last active …" also opens the farmer's time on BulanTanom. */}
         <UsagePopover farmer={farmer}>
           <span aria-hidden="true" className="text-sm leading-none">
