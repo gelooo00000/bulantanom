@@ -40,15 +40,9 @@ const CROP_TYPE_COLOR: Record<string, string> = {
 };
 
 export function PlantsOverview({ plants }: { plants: LguPlant[] }) {
-  const farmerCount = useMemo(() => new Set(plants.map((p) => p.farmer.id)).size, [plants]);
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-muted-foreground -mt-2 text-sm">
-        {plants.length} plant{plants.length === 1 ? "" : "s"} from {farmerCount} farmer
-        {farmerCount === 1 ? "" : "s"} at Layuan Farm.
-      </p>
-
       <div className="grid gap-3 lg:grid-cols-2">
         <ChartCard
           title="Crops planted"
