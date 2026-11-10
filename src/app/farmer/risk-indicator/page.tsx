@@ -235,13 +235,21 @@ function Panel({
   );
 }
 
-/** Plants by their latest level: the donut for the share, labelled bars for the counts. */
+/**
+ * Plants by their latest level: the donut for the share, labelled bars for
+ * the counts. "Too early" is not a level, so the chart has no slice for it;
+ * those plants count as having no reading yet, as on the LGU charts.
+ */
 function RiskBreakdown({ entries }: { entries: Entry[] }) {
   const { t } = useLanguage();
-  const rows: BarRow[] = GROUPS.map((g) => ({
+  const chartGroup = (e: Entry): Group => {
+    const g = groupOf(e.latest);
+    return g === "early" ? "none" : g;
+  };
+  const rows: BarRow[] = GROUPS.filter((g) => g.key !== "early").map((g) => ({
     key: g.key,
     label: t(g.label),
-    value: entries.filter((e) => groupOf(e.latest) === g.key).length,
+    value: entries.filter((e) => chartGroup(e) === g.key).length,
     color: g.color,
     icon: g.icon,
   }));
