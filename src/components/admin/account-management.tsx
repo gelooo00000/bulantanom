@@ -24,6 +24,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { AdminHero, HeroStat } from "@/components/admin/admin-hero";
+import { PALETTE, gradient, tint, type Swatch } from "@/components/admin/palette";
 import { CreateOfficerDialog } from "@/components/admin/create-officer-dialog";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { lastActiveLabel } from "@/components/lgu/farmer-directory";
@@ -66,9 +67,9 @@ const ROLE_LABEL = {
 
 /** One colour per role, shared by the charts and the account cards. */
 const ROLE_COLOR = {
-  FARMER: "var(--primary)",
-  LGU_OFFICER: "var(--chart-series-1)",
-  ADMIN: "var(--muted-foreground)",
+  FARMER: PALETTE.forest[1],
+  LGU_OFFICER: PALETTE.gold[1],
+  ADMIN: PALETTE.violet[1],
 } as const;
 
 const ROLE_ICON = {
@@ -77,17 +78,15 @@ const ROLE_ICON = {
   ADMIN: Users,
 } as const;
 
-/** A role colour at low strength, for avatar and chip backgrounds. */
-const tint = (color: string, percent = 12) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
 
 /**
  * Card and avatar colours by gender: blue for male, pink for female, and
  * the BulanTanom green for anyone who has not said or prefers not to.
  */
 const GENDER_STYLE = {
-  MALE: { from: "#60a5fa", to: "#2563eb", label: "Male" },
-  FEMALE: { from: "#f472b6", to: "#db2777", label: "Female" },
-  NONE: { from: "#34d399", to: "#059669", label: null },
+  MALE: { from: PALETTE.sky[0], to: PALETTE.sky[1], label: "Male" },
+  FEMALE: { from: PALETTE.pink[0], to: PALETTE.pink[1], label: "Female" },
+  NONE: { from: PALETTE.forest[0], to: PALETTE.forest[1], label: null },
 } as const;
 
 function genderStyle(user: AdminUser) {
@@ -393,7 +392,11 @@ export function AccountManagement() {
         title="Account Management"
         description="Manage access and see who is using BulanTanom."
         action={
-          <Button onClick={() => setCreatingOfficer(true)}>
+          <Button
+            onClick={() => setCreatingOfficer(true)}
+            className="h-10 border-amber-200/60 px-4 text-amber-950 shadow-[0_10px_26px_-10px_#f59e0b] hover:brightness-105"
+            style={{ backgroundImage: gradient(PALETTE.gold) }}
+          >
             <UserRoundPlus className="size-4" />
             Create LGU Officer
           </Button>
@@ -401,38 +404,34 @@ export function AccountManagement() {
       >
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <HeroStat
-            filled
             icon={Users}
             label="All accounts"
             value={users.length}
-            color="#7c5cdb"
+            swatch={PALETTE.violet}
             onClick={() => setTab("all")}
             active={tab === "all"}
           />
           <HeroStat
-            filled
             icon={Sprout}
             label="Farmers"
             value={farmers.length}
-            color="#1f9d55"
+            swatch={PALETTE.forest}
             onClick={() => setTab("farmers")}
             active={tab === "farmers"}
           />
           <HeroStat
-            filled
             icon={ShieldCheck}
             label="LGU Officers"
             value={officers.length}
-            color="#2a78d6"
+            swatch={PALETTE.gold}
             onClick={() => setTab("officers")}
             active={tab === "officers"}
           />
           <HeroStat
-            filled
             icon={Ban}
             label="Suspended"
             value={suspended}
-            color="#e0533d"
+            swatch={PALETTE.rose}
             hint={suspended === 0 ? "Everyone has access" : "Lost access"}
           />
         </div>
@@ -537,7 +536,7 @@ function Panel({
   description: string;
   icon: typeof Users;
   /** Two colours for the icon tile and the panel's wash. */
-  color: readonly [string, string];
+  color: Swatch;
   children: React.ReactNode;
 }) {
   return (
@@ -553,7 +552,7 @@ function Panel({
           style={
             {
               "--panel": color[1],
-              backgroundImage: `linear-gradient(135deg, ${color[0]}, ${color[1]})`,
+              backgroundImage: gradient(color),
             } as React.CSSProperties
           }
         >
@@ -584,7 +583,7 @@ function RoleBreakdown({
     { key: "officers", label: "LGU Officers", value: officers, color: ROLE_COLOR.LGU_OFFICER, icon: ShieldCheck },
   ];
   return (
-    <Panel icon={PieChart} color={["#a78bfa", "#7c3aed"]} title="Accounts by role" description="Select a role to see its accounts.">
+    <Panel icon={PieChart} color={PALETTE.gold} title="Accounts by role" description="Select a role to see its accounts.">
       <div className="grid items-center gap-5 sm:grid-cols-[200px_1fr]">
         <DonutChart rows={rows} unit="account" name="Accounts by role" onSelectKey={onSelect} />
         <HorizontalBars rows={rows} unit="account" label="Accounts by role" onSelect={onSelect} />
@@ -603,7 +602,7 @@ function OnlineNow({ farmers, officers }: { farmers: AdminUser[]; officers: Admi
   ];
 
   return (
-    <Panel icon={Radio} color={["#34d399", "#059669"]} title="Online now" description="Signed in and active in the last few minutes.">
+    <Panel icon={Radio} color={PALETTE.forest} title="Online now" description="Signed in and active in the last few minutes.">
       <div className="flex items-center gap-3">
         <span className="relative flex size-3">
           {online.length > 0 && (
@@ -715,9 +714,10 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
   return (
     <li
       className={cn(
-        "border-border bg-card group relative isolate flex flex-col overflow-hidden rounded-3xl border p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_30px_-14px_rgb(0_0_0/0.25)]",
+        "border-border bg-card group relative isolate flex flex-col overflow-hidden rounded-3xl border p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all duration-200 hover:-translate-y-1 hover:border-[var(--accent-to)] hover:shadow-[0_18px_36px_-18px_var(--accent-to)]",
         badge && "opacity-80",
       )}
+      style={{ "--accent-to": gender.to } as React.CSSProperties}
     >
       {/* The person's colour as a wash across the top, with a glowing band. */}
       <span
@@ -769,7 +769,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
 
       <div className="border-border text-muted-foreground mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-dashed pt-3 text-xs">
         <span className="flex items-center gap-1.5">
-          <CalendarDays className="size-3.5 text-violet-500" />
+          <CalendarDays className="size-3.5" style={{ color: gender.to }} />
           Joined {joined}
         </span>
         {user.is_online ? (
@@ -779,7 +779,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
           </span>
         ) : (
           <span className="flex items-center gap-1.5">
-            <Clock className="size-3.5 text-amber-500" />
+            <Clock className="size-3.5" style={{ color: PALETTE.gold[1] }} />
             {lastActiveLabel(user.last_seen_at).replace(/^Last active /, "Active ")}
           </span>
         )}
