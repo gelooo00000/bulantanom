@@ -131,8 +131,6 @@ export function SignupView() {
             icon: Sprout,
             eyebrow: "New farmer account",
             title: "Create your Farmer account.",
-            description:
-              "Manage your plants, assessments, risk monitoring, crop recommendations, and harvest tracking — all in one place for Layuan Farm.",
           }}
         >
           {/* "new-password" lets the phone suggest a strong password and save

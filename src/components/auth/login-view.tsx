@@ -44,7 +44,8 @@ const ROLE_CARDS: {
   swatch: Swatch;
   ink: string;
   loginHeading: string;
-  loginSupporting: string;
+  /** A line under the heading; left out where the heading says enough. */
+  loginSupporting?: string;
   submitLabel: string;
 }[] = [
   {
@@ -55,8 +56,6 @@ const ROLE_CARDS: {
     swatch: PALETTE.forest,
     ink: INK.forest,
     loginHeading: "Welcome back, Farmer.",
-    loginSupporting:
-      "Continue monitoring your crops and making better decisions at Layuan Farm.",
     submitLabel: "Sign In",
   },
   {
@@ -67,8 +66,6 @@ const ROLE_CARDS: {
     swatch: PALETTE.gold,
     ink: INK.gold,
     loginHeading: "Welcome back, LGU Officer.",
-    loginSupporting:
-      "Monitor farmer activity, plant health, risk assessments, and agricultural data across Layuan Farm.",
     submitLabel: "Sign In",
   },
   {
