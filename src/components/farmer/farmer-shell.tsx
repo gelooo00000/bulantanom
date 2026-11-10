@@ -3,7 +3,6 @@
 import { FlaskConical, LayoutDashboard, Radar, Sprout, Wheat } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { GenderMenu } from "@/components/farmer/gender-menu";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { RoleShell, type NavItem } from "@/components/shared/role-shell";
 import { usePresenceHeartbeat } from "@/lib/auth/use-presence-heartbeat";
@@ -35,12 +34,7 @@ export function FarmerShell({ children }: { children: ReactNode }) {
       navItems={navItems}
       homeHref="/farmer/dashboard"
       notificationScope="farmer"
-      headerActions={
-        <>
-          <GenderMenu />
-          <LanguageSwitcher />
-        </>
-      }
+      headerActions={<LanguageSwitcher />}
       copy={{
         logOut: t("shell.logOut"),
         more: t("shell.more"),
