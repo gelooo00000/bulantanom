@@ -443,3 +443,17 @@ class OutcomesReportAccuracyTests(LguReportsTestBase):
         self.assertEqual(stats["Healthy at harvest"], "-")
         self.assertEqual(stats["Harvested on time"], "-")
         self.assertEqual(stats["Survival rate"], "-")
+
+
+class PdfBrandingTests(LguReportsTestBase):
+    def test_every_pdf_has_the_bulantanom_logo_at_the_top(self):
+        for slug in ("risk-assessment", "farmer-registration", "harvest-outcomes"):
+            response = self.client.get(f"/api/lgu/reports/{slug}/pdf/", **self.auth())
+            body = b"".join(response.streaming_content) if response.streaming else response.content
+            self.assertIn(b"/Subtype /Image", body, msg=slug)
+
+    def test_the_generated_time_is_local_not_utc(self):
+        from .report_pdf import _local_time
+
+        # 15:44 UTC is 23:44 in Manila.
+        self.assertEqual(_local_time("2026-11-11T15:44:00+00:00"), "2026-11-11 23:44")

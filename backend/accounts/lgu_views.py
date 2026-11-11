@@ -707,7 +707,9 @@ def lgu_report_csv(request, slug):
     out.writerow([report["title"]])
     out.writerow(["Farm", report["farm"]["name"], report["farm"]["location"]])
     out.writerow(["Period", report["period"]["label"], report["period"]["range"]])
-    out.writerow(["Generated", report["generated_at"][:19].replace("T", " ")])
+    from .report_pdf import _local_time
+
+    out.writerow(["Generated", _local_time(report["generated_at"])])
     out.writerow(["Prepared by", report.get("prepared_by", ""), report.get("prepared_by_role", "")])
     if report.get("findings"):
         out.writerow([])

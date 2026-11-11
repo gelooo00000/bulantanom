@@ -13,7 +13,11 @@ reading is unavailable, that is what the page says.
 from __future__ import annotations
 
 import io
+from datetime import datetime
+from pathlib import Path
 from xml.sax.saxutils import escape
+
+from django.utils import timezone
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
@@ -24,6 +28,7 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
+    Image,
     KeepTogether,
     Paragraph,
     Spacer,
@@ -35,6 +40,10 @@ from reportlab.platypus.doctemplate import PageTemplate
 # Pulled from the BulanTanom palette so the document is recognisably the
 # same product, but kept dark enough to stay legible in greyscale print.
 BRAND = colors.HexColor("#1F5A32")
+
+# The app's logo (the Layuan Nature mark beside the BulanTanom name), the
+# same file as public/layuan.jpg, printed at the top of every report.
+LOGO = Path(__file__).resolve().parent / "assets" / "layuan.jpg"
 BRAND_LIGHT = colors.HexColor("#F1F6F2")
 INK = colors.HexColor("#1A1A1A")
 MUTED = colors.HexColor("#5A5A5A")
@@ -229,12 +238,31 @@ def _table(spec, styles, avail_width):
 
 
 def _masthead(report, styles, width):
-    """Title on the left, farm and period on the right, over a brand rule."""
-    left = [
+    """
+    The BulanTanom logo and the title on the left, farm and period on the
+    right, over a brand rule.
+    """
+    text = [
         Paragraph("BULANTANOM", styles["kicker"]),
         Paragraph(report["title"], styles["title"]),
         Paragraph(report["category"], styles["meta"]),
     ]
+    if LOGO.exists():
+        logo = Image(str(LOGO), width=16 * mm, height=16 * mm)
+        left = Table([[logo, text]], colWidths=[19 * mm, width * 0.56 - 19 * mm])
+        left.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ]
+            )
+        )
+    else:
+        left = text
     right = [
         Paragraph(f"<b>{report['farm']['name']}</b>", styles["meta_r"]),
         Paragraph(report["farm"]["location"], styles["meta_r"]),
@@ -338,6 +366,17 @@ def _signatures(report, styles, width):
     return KeepTogether([Spacer(1, 16), table])
 
 
+def _local_time(iso: str) -> str:
+    """The generation time in the farm's time zone, not UTC."""
+    try:
+        moment = datetime.fromisoformat(iso)
+    except ValueError:
+        return iso[:16].replace("T", " ")
+    if timezone.is_naive(moment):
+        moment = timezone.make_aware(moment)
+    return timezone.localtime(moment).strftime("%Y-%m-%d %H:%M")
+
+
 def render(report: dict) -> bytes:
     """Builds the PDF and returns its bytes."""
     styles = _styles()
@@ -379,7 +418,7 @@ def render(report: dict) -> bytes:
     story.append(Spacer(1, 12))
     story.append(
         Paragraph(
-            f"Generated {report['generated_at'][:16].replace('T', ' ')} from BulanTanom "
+            f"Generated {_local_time(report['generated_at'])} from BulanTanom "
             "records. AI guidance is as stored at assessment time and does not replace "
             "an agricultural officer's judgement.",
             styles["fine"],
