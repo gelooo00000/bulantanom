@@ -178,30 +178,22 @@ class ReportDataAccuracyTests(LguReportsTestBase):
     def test_summary_counts_match_the_database(self):
         stats, _ = self._stats("agricultural-summary", period="all_time")
         # Two Farmer rows exist; only one is approved.
-        self.assertEqual(stats["Registered Farmers"], 2)
         self.assertEqual(stats["Approved Farmers"], 1)
         # The pending Farmer's plant must not be counted.
-        self.assertEqual(stats["Plants Under Monitoring"], 1)
+        self.assertEqual(stats["Plants Monitored"], 1)
         self.assertEqual(stats["Weekly Assessments"], 1)
-        self.assertEqual(stats["High-Risk Readings"], 1)
-        self.assertEqual(stats["Medium-Risk Readings"], 0)
+        self.assertEqual(stats["High Risk"], 1)
 
-    def test_summary_reads_like_an_executive_report(self):
-        _, data = self._stats("agricultural-summary", period="all_time")
-        findings = data["findings"]
-        self.assertIn("1 farmer of 2 registered holds an approved account.", findings)
-        self.assertIn("1 plant across 1 crop is under active monitoring.", findings)
-        self.assertIn(
-            "1 weekly assessment recorded; 1 (100%) rated High risk and 0 (0%) Medium risk.", findings
+    def test_summary_is_short(self):
+        stats, data = self._stats("agricultural-summary", period="all_time")
+        self.assertEqual(
+            data["findings"],
+            ["1 of 2 farmers approved.", "1 plant (1 crop) under monitoring.", "1 High-risk reading to follow up."],
         )
-        self.assertIn("1 High-risk reading requires field follow-up by an agricultural officer.", findings)
-        titles = [t["title"] for t in data["tables"]]
-        self.assertEqual(titles, ["Risk Distribution", "Latest Monitoring Activity", "Farmer Accounts"])
-        distribution = {r["level"]: r for r in data["tables"][0]["rows"]}
-        self.assertEqual(distribution["High"]["readings"], 1)
-        self.assertEqual(distribution["High"]["share"], "100%")
-        activity = data["tables"][1]["rows"][0]
-        self.assertEqual(set(activity), {"date", "farmer", "plant", "crop", "risk"})
+        self.assertEqual(len(stats), 4)
+        self.assertEqual([t["title"] for t in data["tables"]], ["Latest Checks"])
+        self.assertLessEqual(len(data["tables"][0]["rows"]), 5)
+        self.assertEqual(set(data["tables"][0]["rows"][0]), {"date", "farmer", "plant", "risk"})
         self.assertEqual(data["prepared_by_role"], "LGU Agricultural Officer")
 
     def test_report_excludes_non_approved_farmers(self):

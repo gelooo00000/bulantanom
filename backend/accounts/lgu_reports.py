@@ -295,17 +295,12 @@ def _plural(count: int, singular: str, plural: str | None = None) -> str:
     return f"{count} {singular if count == 1 else (plural or singular + 's')}"
 
 
-def _share(part: int, whole: int) -> str:
-    return f"{round(100 * part / whole)}%" if whole else "0%"
-
-
 def _build_summary(period: Period, filters: dict) -> dict:
     """
-    The executive overview: key findings in plain sentences, the headline
-    figures, how the period's risk readings split, the latest monitoring
-    activity and the farmer accounts.
+    The executive overview, kept short: three findings, four figures and the
+    latest five checks. The detail lives in the other reports.
     """
-    from plants.models import Assessment, Plant, PlantStatus, SoilRecommendation
+    from plants.models import Assessment, Plant, PlantStatus
 
     today = timezone.localdate()
     farmers = _apply_period(User.objects.filter(role=UserRole.FARMER), "date_joined__date", period)
@@ -331,119 +326,53 @@ def _build_summary(period: Period, filters: dict) -> dict:
     risk = assessments.aggregate(
         total=Count("id"),
         high=Count("id", filter=Q(risk__risk_level="HIGH")),
-        medium=Count("id", filter=Q(risk__risk_level="MEDIUM")),
-        low=Count("id", filter=Q(risk__risk_level="LOW")),
     )
-    readings = risk["total"]
-    unrated = readings - risk["high"] - risk["medium"] - risk["low"]
-
-    soil = _apply_period(
-        SoilRecommendation.objects.filter(farmer__account_status=AccountStatus.APPROVED),
-        "created_at__date",
-        period,
-    ).count()
 
     upcoming = plants.filter(
         expected_harvest_end__gte=today,
         expected_harvest_start__lte=today + timedelta(days=HARVEST_APPROACHING_DAYS),
     ).count()
 
-    # Key findings: what an officer would say about the period, in sentences.
     findings = [
-        f"{_plural(farmer_counts['approved'], 'farmer')} of {farmer_counts['total']} registered "
-        f"{'holds' if farmer_counts['approved'] == 1 else 'hold'} an approved account.",
-        f"{_plural(monitored, 'plant')} across {_plural(crops, 'crop')} "
-        f"{'is' if monitored == 1 else 'are'} under active monitoring.",
+        f"{farmer_counts['approved']} of {farmer_counts['total']} farmers approved.",
+        f"{_plural(monitored, 'plant')} ({_plural(crops, 'crop')}) under monitoring.",
+        f"{_plural(risk['high'], 'High-risk reading')} to follow up."
+        if risk["high"]
+        else "No High-risk readings.",
     ]
-    if readings:
-        findings.append(
-            f"{_plural(readings, 'weekly assessment')} recorded; "
-            f"{risk['high']} ({_share(risk['high'], readings)}) rated High risk and "
-            f"{risk['medium']} ({_share(risk['medium'], readings)}) Medium risk."
-        )
-        if risk["high"]:
-            findings.append(
-                f"{_plural(risk['high'], 'High-risk reading')} "
-                f"{'requires' if risk['high'] == 1 else 'require'} field follow-up by an agricultural officer."
-            )
-    else:
-        findings.append("No weekly assessments were recorded in this period.")
-    findings.append(
-        f"{_plural(upcoming, 'plant')} {'is' if upcoming == 1 else 'are'} due for harvest "
-        f"within the next {HARVEST_APPROACHING_DAYS} days."
-        if upcoming
-        else f"No plants are due for harvest within the next {HARVEST_APPROACHING_DAYS} days."
-    )
+    if upcoming:
+        findings.append(f"{_plural(upcoming, 'plant')} due for harvest this week.")
 
-    risk_rows = [
-        {"level": label, "readings": count, "share": _share(count, readings)}
-        for label, count in (
-            ("High", risk["high"]),
-            ("Medium", risk["medium"]),
-            ("Low", risk["low"]),
-            ("No reading yet", unrated),
-        )
-    ]
-
-    activity = [
+    latest = [
         {
             "date": a.assessment_date.isoformat(),
             "farmer": _display_name(a.plant.farmer),
             "plant": a.plant.display_name,
-            "crop": a.plant.crop.name,
             "risk": a.risk.get_risk_level_display()
             if getattr(a, "risk", None) and a.risk.risk_level
             else "No reading",
         }
         for a in assessments.select_related(
             "plant", "plant__crop", "plant__variant", "plant__farmer", "risk"
-        ).order_by("-assessment_date", "-created_at")[:10]
-    ]
-
-    accounts = [
-        {
-            "farmer": _display_name(u),
-            "status": u.get_account_status_display(),
-            "registered": u.date_joined.date().isoformat(),
-        }
-        for u in farmers.order_by("-date_joined")[:10]
+        ).order_by("-assessment_date", "-created_at")[:5]
     ]
 
     return {
         "findings": findings,
         "stats": [
-            {"label": "Registered Farmers", "value": farmer_counts["total"]},
             {"label": "Approved Farmers", "value": farmer_counts["approved"], "tone": "low"},
-            {"label": "Plants Under Monitoring", "value": monitored},
-            {"label": "Weekly Assessments", "value": readings},
-            {"label": "High-Risk Readings", "value": risk["high"], "tone": "high"},
-            {"label": "Medium-Risk Readings", "value": risk["medium"], "tone": "medium"},
-            {"label": "Soil Analyses", "value": soil},
-            {"label": f"Harvests Due ({HARVEST_APPROACHING_DAYS} days)", "value": upcoming},
+            {"label": "Plants Monitored", "value": monitored},
+            {"label": "Weekly Assessments", "value": risk["total"]},
+            {"label": "High Risk", "value": risk["high"], "tone": "high"},
         ],
         "tables": [
             {
-                "title": "Risk Distribution",
-                "columns": ["Risk Level", "Readings", "Share of Readings"],
-                "keys": ["level", "readings", "share"],
-                "tone_key": "level",
-                "widths": [3, 2, 2],
-                "rows": risk_rows,
-            },
-            {
-                "title": "Latest Monitoring Activity",
-                "columns": ["Date", "Farmer", "Plant", "Crop", "Risk Level"],
-                "keys": ["date", "farmer", "plant", "crop", "risk"],
+                "title": "Latest Checks",
+                "columns": ["Date", "Farmer", "Plant", "Risk"],
+                "keys": ["date", "farmer", "plant", "risk"],
                 "tone_key": "risk",
-                "widths": [2, 3, 3, 3, 2],
-                "rows": activity,
-            },
-            {
-                "title": "Farmer Accounts",
-                "columns": ["Farmer", "Account Status", "Date Registered"],
-                "keys": ["farmer", "status", "registered"],
-                "widths": [4, 2, 2],
-                "rows": accounts,
+                "widths": [2, 3, 4, 2],
+                "rows": latest,
             },
         ],
     }
@@ -633,7 +562,7 @@ REPORTS = {
     "agricultural-summary": {
         "title": "Agricultural Summary",
         "category": "Executive Overview",
-        "description": "An executive overview of farmer participation, crop monitoring and AI risk assessments at Layuan Nature Integrated Farm for the selected period.",
+        "description": "Farmers, plants and risk at a glance.",
         "icon": "chart",
         "builder": _build_summary,
         "supports": ["period"],
