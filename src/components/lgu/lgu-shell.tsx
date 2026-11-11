@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  HeartCrack,
   MapPin,
   ShieldCheck,
   Sprout,
@@ -23,6 +24,7 @@ const LGU_NAV_ITEMS: NavItem[] = [
   { label: "Farmers", href: "/lgu/farmers", icon: Users },
   { label: "Plants", href: "/lgu/plants", icon: Sprout },
   { label: "High-Risk Cases", href: "/lgu/high-risk", icon: TriangleAlert },
+  { label: "Plant Loss", href: "/lgu/plant-loss", icon: HeartCrack },
   HARVEST,
   FARM,
 ];

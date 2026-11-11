@@ -32,6 +32,7 @@ class NotificationType(models.TextChoices):
 
     PLANT_ADDED = "PLANT_ADDED", "Plant added"
     PLANT_UPDATED = "PLANT_UPDATED", "Plant updated"
+    PLANT_LOST = "PLANT_LOST", "Plant lost"
 
     ASSESSMENT_SUBMITTED = "ASSESSMENT_SUBMITTED", "Assessment submitted"
     ASSESSMENT_COMPLETED = "ASSESSMENT_COMPLETED", "Assessment completed"

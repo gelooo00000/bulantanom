@@ -199,3 +199,39 @@ export function fetchLguHarvestOutcomes(accessToken: string): Promise<HarvestOut
 export function fetchAdminHarvestOutcomes(accessToken: string): Promise<HarvestOutcomes> {
   return apiFetch("/admin/harvest-outcomes/", { accessToken });
 }
+
+export type LossCauseGroup = "calamity" | "pest_disease" | "other";
+
+/** One lost plant on the Plant Loss page. */
+export type PlantLoss = LossOutcomeReport & {
+  plant_id: number;
+  farmer_id: number;
+  planting_date: string;
+  cause_group: LossCauseGroup;
+  /** The Farmer said a flood, typhoon, drought or heat killed it. */
+  calamity: boolean;
+  /** BulanTanom had read it as High risk, and it died anyway. */
+  high_risk_not_saved: boolean;
+};
+
+/** Plants that died before harvest, from the Farmers' loss reports. */
+export type PlantLosses = {
+  total: number;
+  calamity: number;
+  high_risk_not_saved: number;
+  pest_disease: number;
+  other: number;
+  warned_before: number;
+  warned_before_rate: number | null;
+  harvested: number;
+  survival_rate: number | null;
+  causes: { value: string; label: string; count: number; calamity: boolean }[];
+  crops: { crop: string; emoji: string; count: number }[];
+  /** This month and the five before it, oldest first; `month` is YYYY-MM. */
+  months: { month: string; count: number }[];
+  losses: PlantLoss[];
+};
+
+export function fetchLguPlantLosses(accessToken: string): Promise<PlantLosses> {
+  return apiFetch("/lgu/plant-losses/", { accessToken });
+}

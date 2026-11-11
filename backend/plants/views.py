@@ -59,6 +59,7 @@ from .serializers import (
     HarvestReportSerializer,
     LossOutcomeReportSerializer,
     LossReportSerializer,
+    PlantLossSerializer,
     PlantSerializer,
     SoilRecommendationSerializer,
     validate_evidence_file,
@@ -1302,3 +1303,19 @@ def lgu_harvest_outcomes(request):
 def admin_harvest_outcomes(request):
     """GET /api/admin/harvest-outcomes/ - the same figures for the Admin."""
     return _outcomes_response(request)
+
+
+@api_view(["GET"])
+@permission_classes([IsLguOfficer])
+def lgu_plant_losses(request):
+    """
+    GET /api/lgu/plant-losses/ - plants that died before harvest: totals,
+    causes (calamities apart), High-risk plants that were not saved, and
+    every loss, newest first.
+    """
+    from . import loss_report
+
+    losses = list(harvest_report.losses_in_scope().order_by("-lost_at"))
+    data = loss_report.summary(losses, harvested=harvest_report.reports_in_scope().count())
+    data["losses"] = PlantLossSerializer(losses, many=True, context={"request": request}).data
+    return Response(data)

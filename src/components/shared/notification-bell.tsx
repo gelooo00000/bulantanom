@@ -22,6 +22,7 @@ import {
   Volume2,
   VolumeX,
   Wheat,
+  HeartCrack,
 } from "lucide-react";
 import {
   useCallback,
@@ -78,6 +79,7 @@ const ICONS: Partial<Record<NotificationType, ElementType>> = {
   RISK_CHANGED: TrendingUp,
   HARVEST_APPROACHING: Wheat,
   HARVEST_READY: Wheat,
+  PLANT_LOST: HeartCrack,
 };
 
 const SEVERITY_TONE: Record<string, string> = {

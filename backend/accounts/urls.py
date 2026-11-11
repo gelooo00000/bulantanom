@@ -97,6 +97,7 @@ lgu_urlpatterns = [
         plant_views.lgu_harvest_outcomes,
         name="lgu-harvest-outcomes",
     ),
+    path("plant-losses/", plant_views.lgu_plant_losses, name="lgu-plant-losses"),
     # Same views as the Farmer mount; the recipient is always request.user.
     path("reports/", lgu_views.lgu_report_catalog, name="lgu-reports"),
     path("reports/<slug:slug>/", lgu_views.lgu_report_detail, name="lgu-report-detail"),

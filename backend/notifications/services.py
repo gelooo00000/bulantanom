@@ -487,6 +487,62 @@ def notify_plant_updated(plant, *, harvested: bool = False):
     _on_commit(run)
 
 
+def notify_plant_lost(loss):
+    """
+    Tells every LGU Officer that a plant died, so a calamity or a High-risk
+    plant that was not saved reaches the Plant Loss page and the bell at once.
+
+    Critical when the cause was a calamity or BulanTanom had read High risk;
+    a warning otherwise. Keyed by the loss report, so a loss that is undone
+    and reported again is announced again.
+    """
+    from plants.loss_report import is_calamity, is_high_risk_not_saved
+
+    plant = loss.plant
+    farmer = plant.farmer
+    crop = _crop_name(plant)
+    calamity = is_calamity(loss)
+    not_saved = is_high_risk_not_saved(loss)
+
+    def run():
+        if calamity:
+            title = "Plant Lost to a Calamity"
+        elif not_saved:
+            title = "High-Risk Plant Lost"
+        else:
+            title = "Plant Lost"
+        message = (
+            f"{farmer.get_full_name()} reported that their {crop} "
+            f"({_plant_label(plant)}) died: {loss.get_cause_display().lower()}."
+        )
+        if not_saved:
+            message += " BulanTanom had read it as High risk."
+        notify_lgu_officers(
+            notification_type=NotificationType.PLANT_LOST,
+            title=title,
+            message=message,
+            severity=(
+                NotificationSeverity.CRITICAL
+                if calamity or not_saved
+                else NotificationSeverity.WARNING
+            ),
+            related_type=RelatedType.PLANT,
+            related_id=plant.pk,
+            metadata={
+                "farmer_name": farmer.get_full_name(),
+                "farmer_id": farmer.pk,
+                "crop_name": crop,
+                "plant_name": _plant_label(plant),
+                "cause": loss.cause,
+                "calamity": calamity,
+                "high_risk_not_saved": not_saved,
+            },
+            dedupe_key=f"plant_lost:{loss.pk}",
+        )
+
+    _on_commit(run)
+
+
 # --------------------------------------------------------------------------
 # Assessment + evidence events
 # --------------------------------------------------------------------------

@@ -26,6 +26,7 @@ export type NotificationType =
   | "RISK_CHANGED"
   | "HARVEST_APPROACHING"
   | "HARVEST_READY"
+  | "PLANT_LOST"
   | "SYSTEM";
 
 export type BackendNotification = {

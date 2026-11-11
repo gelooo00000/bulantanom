@@ -96,7 +96,12 @@ def record_loss(plant: Plant, answers: dict) -> LossReport:
     }
     plant.status = PlantStatus.LOST
     plant.save(update_fields=["status", "updated_at"])
-    return LossReport.objects.create(plant=plant, **answers, **facts)
+    loss = LossReport.objects.create(plant=plant, **answers, **facts)
+
+    from notifications.services import notify_plant_lost
+
+    notify_plant_lost(loss)
+    return loss
 
 
 def restore_problem(plant: Plant) -> str | None:

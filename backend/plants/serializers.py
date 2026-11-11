@@ -828,3 +828,39 @@ class LossOutcomeReportSerializer(LossReportSerializer):
             "crop_name",
             "crop_emoji",
         ]
+
+
+class PlantLossSerializer(LossOutcomeReportSerializer):
+    """A loss on the LGU Plant Loss page: which group it falls in, and when it was planted."""
+
+    plant_id = serializers.IntegerField(source="plant.pk", read_only=True)
+    farmer_id = serializers.IntegerField(source="plant.farmer_id", read_only=True)
+    planting_date = serializers.DateField(source="plant.planting_date", read_only=True)
+    cause_group = serializers.SerializerMethodField()
+    calamity = serializers.SerializerMethodField()
+    high_risk_not_saved = serializers.SerializerMethodField()
+
+    class Meta(LossOutcomeReportSerializer.Meta):
+        fields = LossOutcomeReportSerializer.Meta.fields + [
+            "plant_id",
+            "farmer_id",
+            "planting_date",
+            "cause_group",
+            "calamity",
+            "high_risk_not_saved",
+        ]
+
+    def get_cause_group(self, obj):
+        from .loss_report import cause_group
+
+        return cause_group(obj)
+
+    def get_calamity(self, obj):
+        from .loss_report import is_calamity
+
+        return is_calamity(obj)
+
+    def get_high_risk_not_saved(self, obj):
+        from .loss_report import is_high_risk_not_saved
+
+        return is_high_risk_not_saved(obj)
