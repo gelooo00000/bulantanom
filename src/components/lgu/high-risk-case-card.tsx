@@ -2,7 +2,7 @@
 
 import {
   CalendarDays,
-  ChevronRight,
+  ArrowRight,
   ClipboardCheck,
   ListChecks,
   Search,
@@ -15,7 +15,6 @@ import { Dialog } from "@base-ui/react/dialog";
 import { useState, type ElementType } from "react";
 
 import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
-import { Card } from "@/components/ui/card";
 import type { BackendAssessment } from "@/lib/api/risk-api";
 import { cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
@@ -35,6 +34,15 @@ const SEVERITY_COLOR: Record<string, string> = {
 
 const tint = (color: string, percent: number) =>
   `color-mix(in oklab, ${color} ${percent}%, transparent)`;
+
+/** Up to two initials for the farmer's avatar. */
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("");
 
 /** A small labelled fact on the closed row: farmer, age, date, reasons. */
 function Fact({
@@ -168,64 +176,94 @@ export function HighRiskCaseCard({
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Card
+      {/* The whole card opens the case in a pop-up, so the list keeps its shape. */}
+      <Dialog.Trigger
         className={cn(
-          "relative isolate gap-0 overflow-hidden py-0 transition-[border-color,box-shadow,transform] duration-200",
-          // A light in the crop's colour, as on the farmer's cards.
-          "hover:ring-3 hover:ring-(--crop)/30 focus-within:ring-3 focus-within:ring-(--crop)/30 hover:-translate-y-0.5",
+          "group/case bg-card relative isolate flex w-full flex-col overflow-hidden rounded-3xl border text-left outline-none",
+          "transition-[transform,box-shadow,border-color] duration-300 ease-out",
+          "hover:-translate-y-1 hover:border-(--level)/50 hover:shadow-[0_22px_45px_-22px_var(--level)]",
+          "focus-visible:border-(--level) focus-visible:ring-3 focus-visible:ring-(--level)/30",
         )}
         style={style}
       >
-        {/* The risk level as a band down the left edge and a soft wash. */}
+        {/* A cover in the crop's colour, warmed by the risk level. */}
         <span
-          aria-hidden="true"
-          className="absolute inset-y-0 left-0 w-1.5"
-          style={{ backgroundColor: color }}
-        />
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 -z-10"
+          className="relative block h-28 w-full overflow-hidden"
           style={{
-            backgroundImage: `linear-gradient(100deg, ${tint(color, 9)}, transparent 55%)`,
+            backgroundImage: `linear-gradient(135deg, color-mix(in oklab, var(--crop) 32%, transparent), ${tint(color, 22)} 70%, ${tint(color, 30)})`,
           }}
-        />
-
-        {/* The whole card opens the case in a pop-up, so the list keeps its shape. */}
-        {/* A squarish card: the crop on top, then the plant, its risk and
-            the farmer. The whole card opens the case. */}
-        <Dialog.Trigger className="hover:bg-muted/30 focus-visible:bg-muted/30 flex min-h-44 w-full flex-col items-start gap-3 py-5 pr-5 pl-6 text-left transition-colors outline-none">
-          <span className="flex w-full items-start justify-between gap-2">
-            <span
-              aria-hidden="true"
-              className="flex size-14 shrink-0 items-center justify-center rounded-2xl text-3xl"
-              style={{
-                backgroundColor:
-                  "color-mix(in oklab, var(--crop) 18%, transparent)",
-              }}
-            >
-              {assessment.crop_emoji}
-            </span>
-            <span className="border-border text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full border">
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </span>
+        >
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 opacity-50 [background-image:radial-gradient(color-mix(in_oklab,var(--foreground)_14%,transparent)_1px,transparent_1px)] [background-size:14px_14px] [mask-image:linear-gradient(to_bottom_left,black,transparent_75%)]"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute -right-6 -bottom-10 text-[7.5rem] leading-none opacity-20 blur-[1px] transition-transform duration-500 select-none group-hover/case:scale-110 group-hover/case:-rotate-6"
+          >
+            {assessment.crop_emoji}
           </span>
+
+          {/* The level, as a solid pill that pulses for high risk. */}
+          <span
+            className="font-heading absolute top-3.5 right-3.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm"
+            style={{ backgroundColor: color, color: "var(--risk-foreground)" }}
+          >
+            {level === "HIGH" ? (
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full rounded-full bg-current opacity-70 motion-safe:animate-ping" />
+                <span className="relative inline-flex size-2 rounded-full bg-current" />
+              </span>
+            ) : (
+              <span className="size-2 rounded-full bg-current" />
+            )}
+            {level ? `${level === "HIGH" ? "High" : level === "MEDIUM" ? "Medium" : "Low"} risk` : "No reading"}
+          </span>
+        </span>
+
+        {/* The crop's emoji in a disc that sits across the cover's edge. */}
+        <span
+          aria-hidden="true"
+          className="bg-card absolute top-[4.25rem] left-5 flex size-[4.5rem] items-center justify-center rounded-2xl border text-4xl shadow-md transition-transform duration-300 group-hover/case:-translate-y-1 group-hover/case:rotate-3"
+          style={{ boxShadow: "0 12px 24px -14px var(--crop)" }}
+        >
+          {assessment.crop_emoji}
+        </span>
+
+        <span className="flex flex-1 flex-col px-5 pt-10 pb-4">
           <span className="font-heading line-clamp-2 text-lg leading-tight font-semibold">
             {assessment.plant_display_name}
           </span>
-          <span className="mt-auto flex flex-wrap items-center gap-1.5">
-            {level ? (
-              <RiskBadge level={level.toLowerCase() as BadgeLevel} size="sm" />
-            ) : (
-              <span className="font-heading text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs font-medium">
-                No reading
+          <span className="text-muted-foreground mt-0.5 truncate text-xs">{assessment.crop_name}</span>
+        </span>
+
+        <span className="border-border/70 mt-auto flex w-full items-center justify-between gap-3 border-t px-5 py-3">
+          {assessment.farmer ? (
+            <span className="flex min-w-0 items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="font-heading flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
+              >
+                {initials(assessment.farmer.full_name)}
               </span>
-            )}
-            {assessment.farmer && (
-              <Fact icon={User}>{assessment.farmer.full_name}</Fact>
-            )}
+              <span className="truncate text-sm font-medium">{assessment.farmer.full_name}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-sm">No farmer</span>
+          )}
+          <span
+            className="font-heading inline-flex shrink-0 items-center gap-1 text-xs font-semibold"
+            style={{ color }}
+          >
+            Review
+            <ArrowRight
+              className="size-3.5 transition-transform duration-300 group-hover/case:translate-x-1"
+              aria-hidden="true"
+            />
           </span>
-        </Dialog.Trigger>
-      </Card>
+        </span>
+      </Dialog.Trigger>
 
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
@@ -239,7 +277,7 @@ export function HighRiskCaseCard({
           <div
             className="relative flex shrink-0 items-start gap-3.5 border-b py-4 pr-4 pl-6"
             style={{
-              backgroundImage: `linear-gradient(100deg, ${tint(color, 14)}, transparent 70%)`,
+              backgroundImage: `linear-gradient(110deg, color-mix(in oklab, var(--crop) 22%, transparent), ${tint(color, 14)} 45%, transparent 85%)`,
             }}
           >
             <span
