@@ -118,6 +118,21 @@ describe("LGU Plant Loss", () => {
     expect(screen.queryByRole("region", { name: "Pests & disease" })).not.toBeInTheDocument();
   });
 
+  it("shows four losses at a time, the rest on the next page, with no hint lines", () => {
+    const storm = Array.from({ length: 6 }, (_, i) =>
+      loss(10 + i, `Storm ${i + 1}`, { cause: "CALAMITY", cause_label: "Calamity", cause_group: "calamity", calamity: true }),
+    );
+    data = { ...full, total: 6, calamity: 6, losses: storm };
+    render(<LguPlantLossPage />);
+    const section = screen.getByRole("region", { name: "Lost to a calamity" });
+    expect(within(section).getByText("1–4 of 6")).toBeInTheDocument();
+    fireEvent.click(within(section).getByRole("button", { name: "Next page" }));
+    expect(within(section).getByText("5–6 of 6")).toBeInTheDocument();
+    expect(within(section).getByRole("button", { name: "Next page" })).toBeDisabled();
+    expect(screen.queryByText(/Typhoon, flood, drought or strong winds/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Check the farmer's other plants/)).not.toBeInTheDocument();
+  });
+
   it("narrows to calamities, and to High-risk plants that were not saved", () => {
     data = full;
     render(<LguPlantLossPage />);

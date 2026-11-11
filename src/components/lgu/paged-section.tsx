@@ -19,15 +19,19 @@ export function PagedSection<T>({
   color,
   items,
   perPage,
+  gridClassName = "lg:grid-cols-2",
   itemKey,
   renderItem,
 }: {
   title: string;
   icon: LucideIcon;
-  hint: string;
+  /** A short line beside the title, on wide screens. */
+  hint?: string;
   color: string;
   items: T[];
   perPage: number;
+  /** Columns of one page's grid. */
+  gridClassName?: string;
   itemKey: (item: T) => React.Key;
   renderItem: (item: T) => React.ReactNode;
 }) {
@@ -58,7 +62,7 @@ export function PagedSection<T>({
         >
           {items.length}
         </span>
-        <span className="text-muted-foreground hidden text-sm md:inline">· {hint}</span>
+        {hint && <span className="text-muted-foreground hidden text-sm md:inline">· {hint}</span>}
         <span
           className="h-px flex-1"
           style={{ backgroundImage: `linear-gradient(90deg, ${tint(color, 35)}, transparent)` }}
@@ -83,7 +87,8 @@ export function PagedSection<T>({
             <div
               key={index}
               className={cn(
-                "grid w-full shrink-0 gap-4 transition-opacity duration-500 lg:grid-cols-2",
+                "grid w-full shrink-0 gap-4 transition-opacity duration-500",
+                gridClassName,
                 index === current ? "opacity-100" : "opacity-0",
               )}
               inert={index !== current}
