@@ -12,16 +12,6 @@ export const shell = defineMessages({
   "nav.risk": { en: "Risk Indicator", fil: "Antas ng Panganib", bik: "Tanda san Peligro" },
   "nav.harvest": { en: "Harvest", fil: "Anihan", bik: "Pag-ani" },
   "nav.farm": { en: "Layuan Farm", fil: "Layuan Farm", bik: "Layuan Farm" },
-  "farm.badge": {
-    en: "BulanTanom pilot site",
-    fil: "Pilot na lugar ng BulanTanom",
-    bik: "Pilot na lugar kan BulanTanom",
-  },
-  "farm.intro": {
-    en: "Farmers here track their crops and submit weekly assessments that BulanTanom reads for plant risk, while agricultural officers follow the activity and step in on high-risk cases.",
-    fil: "Dito, sinusubaybayan ng mga magsasaka ang kanilang pananim at nagpapasa ng lingguhang pagsusuri na binabasa ng BulanTanom para sa panganib sa halaman, habang sinusundan ng mga agricultural officer ang aktibidad at tumutulong sa mga kasong mataas ang panganib.",
-    bik: "Digdi, sinusubaybayan kan mga parauma an saindang tanom asin nagpapasa nin semanal na pagsusi na binabasa kan BulanTanom para sa peligro kan tanom, mantang sinusundan kan mga agricultural officer an aktibidad asin nagtatabang sa mga kaso na hataas an peligro.",
-  },
   "farm.explore": { en: "Explore the farm", fil: "Libutin ang bukid", bik: "Libuton an uma" },
   "farm.exploreText": {
     en: "A 3D site map of every facility, field and water source. Drag to look around, zoom in, and hover or tap a pin to see what it is.",
