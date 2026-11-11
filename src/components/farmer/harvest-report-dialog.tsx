@@ -261,7 +261,14 @@ export function Choice<T extends string>({
         {legend}
         <span className="text-risk-high text-xs font-normal">{required}</span>
       </legend>
-      <div className={cn("grid gap-2", options.length > 3 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3")}>
+      {/* With hints, every box is one height (auto-rows-fr) so the rows line up. */}
+      <div
+        className={cn(
+          "grid gap-2",
+          options.length > 3 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3",
+          hint && "auto-rows-fr",
+        )}
+      >
         {options.map((option, index) => {
           const button = (
             <button
@@ -271,7 +278,7 @@ export function Choice<T extends string>({
               onClick={() => onChange(option)}
               className={cn(
                 "border-border min-h-11 w-full rounded-xl border px-2 py-2 text-sm font-medium transition-colors",
-                hint && "pr-9 pl-3 text-left",
+                hint && "flex h-full items-center pr-9 pl-3 text-left leading-tight",
                 value === option
                   ? neutral
                     ? "border-primary bg-primary/10"
@@ -284,7 +291,7 @@ export function Choice<T extends string>({
           );
           if (!hint) return button;
           return (
-            <div key={option} className="relative">
+            <div key={option} className="relative h-full">
               {button}
               <Popover.Root>
                 <Popover.Trigger
