@@ -1,6 +1,6 @@
 "use client";
 
-import { Wheat } from "lucide-react";
+import { AlarmClock, CalendarClock, Info, Leaf, Sprout, Wheat, type LucideIcon } from "lucide-react";
 
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
 import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
@@ -42,16 +42,16 @@ function phaseOf(plant: LguPlant): Phase {
 const PHASE_STYLE: Record<Phase, string> = {
   open: "bg-risk-low/15 text-risk-low border-risk-low/30",
   approaching: "bg-risk-medium/15 text-risk-medium border-risk-medium/30",
-  growing: "border-border text-muted-foreground",
+  growing: "bg-muted border-border text-muted-foreground",
   passed: "bg-risk-high/15 text-risk-high border-risk-high/30",
-  harvested: "border-border text-muted-foreground",
+  harvested: "bg-muted border-border text-muted-foreground",
 };
 
-/** Progress-bar fill: the phase's status hue, neutral while simply growing. */
+/** Progress fill: the phase's status hue, the app's green while simply growing. */
 const PHASE_FILL: Record<Phase, string> = {
   open: "var(--risk-low)",
   approaching: "var(--risk-medium)",
-  growing: "var(--muted-foreground)",
+  growing: "var(--primary)",
   passed: "var(--risk-high)",
   harvested: "var(--muted-foreground)",
 };
@@ -86,31 +86,159 @@ function progressToHarvest(plant: LguPlant): number {
   return Math.max(0, Math.min(100, Math.round((done / span) * 100)));
 }
 
+const tint = (color: string, percent: number) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
+
+/** Up to two initials for the farmer's avatar. */
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("");
+
+/** How far a point `daysFromToday` away sits between planting and harvest's end, 0–100. */
+function along(plant: LguPlant, daysFromToday: number): number {
+  const planted = daysUntil(plant.planting_date);
+  const total = daysUntil(plant.expected_harvest_end) - planted;
+  if (total <= 0) return 100;
+  return Math.max(0, Math.min(100, ((daysFromToday - planted) / total) * 100));
+}
+
+/**
+ * The plant's season as one track: grown so far in the phase's colour, the
+ * harvest period hatched in green, and a marker for today.
+ */
+function SeasonTrack({ plant, phase }: { plant: LguPlant; phase: Phase }) {
+  const start = along(plant, daysUntil(plant.expected_harvest_start));
+  const now = phase === "harvested" ? 100 : along(plant, 0);
+  const fill = PHASE_FILL[phase];
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="relative mx-1.5 h-6" aria-hidden="true">
+        <div className="bg-muted absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full">
+          <span
+            className="absolute inset-y-0 right-0"
+            style={{
+              left: `${start}%`,
+              backgroundImage: `repeating-linear-gradient(135deg, ${tint("var(--risk-low)", 32)} 0 5px, ${tint("var(--risk-low)", 14)} 5px 10px)`,
+            }}
+          />
+          <span
+            className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-700"
+            style={{ width: `${now}%`, backgroundImage: `linear-gradient(90deg, ${tint(fill, 45)}, ${fill})` }}
+          />
+        </div>
+        <span
+          className="bg-card absolute top-1/2 left-0 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+          style={{ borderColor: fill }}
+        />
+        <span
+          className="bg-card absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+          style={{ left: `${start}%`, borderColor: "var(--risk-low)" }}
+        />
+        <span
+          className="bg-card absolute top-1/2 left-full size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+          style={{ borderColor: "var(--risk-low)" }}
+        />
+        {phase !== "harvested" && (
+          <span
+            className="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+            style={{ left: `${now}%` }}
+          >
+            <span
+              className="absolute size-5 rounded-full opacity-40 motion-safe:animate-ping"
+              style={{ backgroundColor: fill }}
+            />
+            <span
+              className="border-card relative size-4 rounded-full border-[3px] shadow"
+              style={{ backgroundColor: fill }}
+            />
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <p className="text-muted-foreground">Planted</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium">{formatDisplayDate(plant.planting_date)}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-muted-foreground">Harvest starts</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium">
+            {formatDisplayDate(plant.expected_harvest_start)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-muted-foreground">Harvest ends</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium">
+            {formatDisplayDate(plant.expected_harvest_end)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlantCard({ plant }: { plant: LguPlant }) {
   const phase = phaseOf(plant);
   const progress = progressToHarvest(plant);
   const level = plant.latest_risk?.risk_level;
   const checkDue = inField(plant) && plant.assessment_eligibility?.can_assess;
+  const accent = PHASE_FILL[phase];
 
   return (
     // Outlined in the crop's colour when pointed at or tapped, as on the
     // farmer's cards.
     <Card
       tabIndex={0}
-      className={cn("gap-2 py-4 transition-[border-color,box-shadow]", CROP_OUTLINE)}
+      className={cn(
+        "relative isolate gap-0 overflow-hidden rounded-3xl py-0 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5",
+        CROP_OUTLINE,
+      )}
       style={cropVar(plant.crop.name)}
     >
-      <CardContent className="flex flex-col gap-3 px-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-heading font-medium">
-              <span aria-hidden="true">{plant.crop.emoji}</span> {plant.display_name}
-            </p>
-            <p className="text-muted-foreground truncate text-sm">{plant.farmer.full_name}</p>
+      {/* A wash in the crop's colour behind the header, the crop faded in the corner. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 -z-10 h-28"
+        style={{
+          backgroundImage: "linear-gradient(160deg, color-mix(in oklab, var(--crop) 20%, transparent), transparent 85%)",
+        }}
+      />
+      <span
+        aria-hidden="true"
+        className="absolute -top-3 -right-2 -z-10 text-8xl leading-none opacity-[0.12] select-none"
+      >
+        {plant.crop.emoji}
+      </span>
+
+      <CardContent className="flex flex-col gap-4 p-5">
+        <div className="flex items-start gap-3.5">
+          <span
+            aria-hidden="true"
+            className="bg-card flex size-14 shrink-0 items-center justify-center rounded-2xl border text-3xl"
+            style={{ boxShadow: "0 10px 22px -14px var(--crop)" }}
+          >
+            {plant.crop.emoji}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-heading truncate text-lg leading-tight font-semibold">{plant.display_name}</p>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="font-heading flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold"
+                style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
+              >
+                {initials(plant.farmer.full_name)}
+              </span>
+              <span className="text-muted-foreground truncate text-sm">{plant.farmer.full_name}</span>
+            </div>
           </div>
           <span
             className={cn(
-              "rounded-full border px-2.5 py-0.5 text-xs font-medium",
+              "font-heading shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold",
               PHASE_STYLE[phase],
             )}
           >
@@ -118,26 +246,13 @@ function PlantCard({ plant }: { plant: LguPlant }) {
           </span>
         </div>
 
-        {phase !== "harvested" && (
-          <div className="flex flex-col gap-1.5">
-            <div className="text-muted-foreground flex justify-between text-xs">
-              <span>Growth until harvest</span>
-              <span className="tabular-nums">{progress}%</span>
-            </div>
-            <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${progress}%`, background: PHASE_FILL[phase] }}
-              />
-            </div>
-          </div>
-        )}
+        <SeasonTrack plant={plant} phase={phase} />
 
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="border-border/70 flex flex-wrap items-center gap-2 border-t pt-3.5 text-xs">
           {level ? (
             <RiskBadge size="sm" level={level.toLowerCase() as BadgeLevel} />
           ) : (
-            <span className="text-muted-foreground">No risk reading yet</span>
+            <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5">No risk reading yet</span>
           )}
           {checkDue && (
             <span className="font-heading border-risk-medium/30 bg-risk-medium/10 text-risk-medium rounded-full border px-2 py-0.5 font-medium">
@@ -149,39 +264,59 @@ function PlantCard({ plant }: { plant: LguPlant }) {
               Last checked {formatDisplayDate(plant.latest_risk.assessment_date)}
             </span>
           )}
-        </div>
-
-        <div className="border-border grid grid-cols-2 gap-3 border-t pt-3 sm:grid-cols-4">
-          <div>
-            <p className="text-muted-foreground text-xs">Planted</p>
-            <p className="text-sm">{formatDisplayDate(plant.planting_date)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Harvest starts</p>
-            <p className="text-sm">{formatDisplayDate(plant.expected_harvest_start)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Harvest ends</p>
-            <p className="text-sm">{formatDisplayDate(plant.expected_harvest_end)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Age</p>
-            <p className="text-sm">{plant.age_days} days</p>
-          </div>
+          <span className="text-muted-foreground ml-auto inline-flex items-center gap-2">
+            <span className="tabular-nums">{plant.age_days} days old</span>
+            {phase !== "harvested" && (
+              <span
+                className="font-heading rounded-full px-2 py-0.5 font-semibold tabular-nums"
+                style={{ color: accent, backgroundColor: tint(accent, 14) }}
+              >
+                {progress}% grown
+              </span>
+            )}
+          </span>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function Section({ title, plants }: { title: string; plants: LguPlant[] }) {
+/** Each stage's heading: an icon and a short hint. */
+const SECTION_LOOK: Record<Phase, { icon: LucideIcon; hint: string }> = {
+  open: { icon: Sprout, hint: "Ready for picking now" },
+  approaching: { icon: CalendarClock, hint: "Get ready for harvest" },
+  passed: { icon: AlarmClock, hint: "Check in with the farmer" },
+  growing: { icon: Leaf, hint: "Still maturing in the field" },
+  harvested: { icon: Wheat, hint: "Done for this season" },
+};
+
+function Section({ title, phase, plants }: { title: string; phase: Phase; plants: LguPlant[] }) {
   if (plants.length === 0) return null;
+  const { icon: Icon, hint } = SECTION_LOOK[phase];
+  const color = phase === "harvested" ? "var(--primary)" : PHASE_FILL[phase];
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium">
-        {title} <span className="text-muted-foreground font-normal">({plants.length})</span>
-      </h2>
-      <div className="grid gap-3 lg:grid-cols-2">
+    <section className="flex flex-col gap-3.5">
+      <div className="flex items-center gap-3">
+        <span
+          className="flex size-8 shrink-0 items-center justify-center rounded-xl"
+          style={{ color, backgroundColor: tint(color, 15) }}
+        >
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
+        <h2 className="font-heading text-lg font-semibold">{title}</h2>
+        <span
+          className="font-heading rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums"
+          style={{ color, backgroundColor: tint(color, 14) }}
+        >
+          {plants.length}
+        </span>
+        <span className="text-muted-foreground hidden text-sm md:inline">· {hint}</span>
+        <span
+          className="h-px flex-1"
+          style={{ backgroundImage: `linear-gradient(90deg, ${tint(color, 35)}, transparent)` }}
+        />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
         {plants.map((plant) => (
           <PlantCard key={plant.id} plant={plant} />
         ))}
@@ -215,19 +350,24 @@ export default function LguHarvestPage() {
         />
       ) : (
         <>
-          <Section title="Ready to harvest" plants={shownIn("open")} />
-          <Section
-            title={`Harvest starts within ${APPROACHING_WINDOW_DAYS} days`}
-            plants={shownIn("approaching")}
-          />
-          <Section title="Harvest time passed" plants={shownIn("passed")} />
-          <Section title="Still growing" plants={shownIn("growing")} />
-          <Section title="Harvested" plants={shownIn("harvested")} />
+          <div className="flex flex-col gap-8">
+            <Section title="Ready to harvest" phase="open" plants={shownIn("open")} />
+            <Section
+              title={`Harvest starts within ${APPROACHING_WINDOW_DAYS} days`}
+              phase="approaching"
+              plants={shownIn("approaching")}
+            />
+            <Section title="Harvest time passed" phase="passed" plants={shownIn("passed")} />
+            <Section title="Still growing" phase="growing" plants={shownIn("growing")} />
+            <Section title="Harvested" phase="harvested" plants={shownIn("harvested")} />
+          </div>
 
-          <p className="text-muted-foreground text-xs">
-            Harvest dates are calculated by BulanTanom from each crop&apos;s typical
-            growing duration and the Farmer&apos;s planting date. They are estimates —
-            real timing shifts with weather, soil and variety.
+          <p className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-2xl px-4 py-3 text-xs">
+            <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              Harvest dates are calculated by BulanTanom from each crop&apos;s typical growing duration and the
+              Farmer&apos;s planting date. They are estimates — real timing shifts with weather, soil and variety.
+            </span>
           </p>
         </>
       )}
