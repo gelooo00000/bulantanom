@@ -85,7 +85,7 @@ export function AuthSplitLayout({
           />
         </header>
 
-        <main className="relative z-10 mx-auto grid w-full max-w-[110rem] flex-1 content-center items-center gap-5 px-4 py-5 sm:gap-8 sm:py-8 md:px-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-16 lg:py-10 lg:pr-16 lg:pl-24 xl:pr-28">
+        <main className="relative z-10 mx-auto grid w-full max-w-[110rem] flex-1 content-center items-center gap-5 px-4 py-5 sm:gap-8 sm:py-8 md:px-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-16 lg:py-10 lg:pr-24 lg:pl-24 xl:pr-40">
           {/* The pitch, carried over from the landing page. Beside the form on a
             wide screen; above it, and smaller, on a narrow one. */}
           <div className="mx-auto w-full max-w-sm text-white sm:max-w-md lg:mx-0 lg:max-w-none">
