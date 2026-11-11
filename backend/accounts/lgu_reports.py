@@ -291,63 +291,6 @@ def _build_risk(period: Period, filters: dict) -> dict:
     }
 
 
-def _analytics_filters(period: Period, filters: dict):
-    """The report's parameters as the analytics module's filters."""
-    from analytics.filters import Filters
-
-    return Filters(
-        date_from=period.start,
-        date_to=period.end,
-        soil_type=filters.get("soil_type") or None,
-        crop_id=filters.get("crop_id") or None,
-        farmer_id=filters.get("farmer_id"),
-    )
-
-
-def _build_harvest(period: Period, filters: dict) -> dict:
-    from analytics import services
-
-    data = services.harvest_trends(_analytics_filters(period, filters))
-    table = data["table"]
-    planted = sum(r["planted"] for r in table)
-    harvested = sum(r["harvested"] for r in table)
-    return {
-        "stats": [
-            {"label": "Harvests recorded", "value": data["total_harvests"], "tone": "low"},
-            {"label": "Plants planted", "value": planted},
-            {"label": "Ready for harvest", "value": sum(r["ready"] for r in table), "tone": "medium"},
-            {"label": "Harvest rate (%)", "value": round(100 * harvested / planted) if planted else 0},
-        ],
-        "tables": [
-            {
-                "title": "Productivity by crop",
-                "columns": ["Crop", "Planted", "Harvested", "Harvest rate", "Avg. days to harvest", "Expected days", "Ready now"],
-                "keys": ["name", "planted", "harvested", "rate", "days", "expected_days", "ready"],
-                "widths": [2, 1, 1, 1.1, 1.4, 1.2, 1],
-                "rows": [
-                    {
-                        **r,
-                        "rate": f"{r['harvest_rate']}%",
-                        "days": r["avg_days_to_harvest"] if r["avg_days_to_harvest"] is not None else "No harvest yet",
-                    }
-                    for r in table
-                ],
-            },
-            {
-                "title": "Planting and harvest by month",
-                "columns": ["Month", "Planted", "Harvested"],
-                "keys": ["month", "planted", "harvested"],
-                "widths": [2, 1, 1],
-                "rows": [
-                    {"month": m, "planted": pl, "harvested": hv}
-                    for m, pl, hv in zip(data["months"], data["planted"], data["harvested"])
-                    if pl or hv
-                ],
-            },
-        ],
-    }
-
-
 def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
     """
     How harvested plants turned out, from each Farmer's harvest report (the
@@ -488,14 +431,6 @@ REPORTS = {
         "builder": _build_farmer_registration,
         "supports": ["period", "area"],
     },
-    "harvest": {
-        "title": "Harvest Report",
-        "category": "Analytics",
-        "description": "Harvests recorded per crop and month, the harvest rate, and days from planting to harvest. Harvests are counted, not weighed.",
-        "icon": "sprout",
-        "builder": _build_harvest,
-        "supports": ["period", "area", "farmer", "crop"],
-    },
     "harvest-outcomes": {
         "title": "Harvest Outcomes Report",
         "category": "System Effectiveness",
@@ -517,14 +452,6 @@ def _latest_activity(slug: str):
     if slug == "farmer-registration":
         row = _approved_farmers().order_by("-date_joined").values_list("date_joined", flat=True).first()
         return row.date() if row else None
-    if slug == "harvest":
-        row = (
-            Plant.objects.filter(farmer__account_status=AccountStatus.APPROVED, harvested_at__isnull=False)
-            .order_by("-harvested_at")
-            .values_list("harvested_at", flat=True)
-            .first()
-        )
-        return timezone.localtime(row).date() if row else None
     if slug == "harvest-outcomes":
         from plants.harvest_report import reports_in_scope
 

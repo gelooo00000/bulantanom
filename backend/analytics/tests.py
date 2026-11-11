@@ -190,17 +190,17 @@ class FigureTests(AnalyticsBase):
         self.assertEqual(data["risk"]["unassessed"], 2)
 
     def test_new_report_types_build_and_export(self):
-        for slug in ("harvest", "harvest-outcomes"):
+        for slug in ("harvest-outcomes", "risk-assessment"):
             res = self.get(f"/api/lgu/reports/{slug}/", period="all_time")
             self.assertEqual(res.status_code, 200, slug)
             pdf = self.get(f"/api/lgu/reports/{slug}/pdf/", period="all_time")
             self.assertTrue(pdf.content.startswith(b"%PDF"))
-        csv = self.get("/api/lgu/reports/harvest/csv/", period="all_time", crop="corn")
+        csv = self.get("/api/lgu/reports/harvest-outcomes/csv/", period="all_time", crop="corn")
         self.assertEqual(csv["Content-Type"], "text/csv; charset=utf-8")
-        self.assertIn("Productivity by crop", csv.content.decode("utf-8-sig"))
+        self.assertIn("Harvest Outcomes Report", csv.content.decode("utf-8-sig"))
 
     def test_exports_are_logged_in_history(self):
-        self.get("/api/lgu/reports/harvest/csv/", period="this_year", crop="corn")
+        self.get("/api/lgu/reports/harvest-outcomes/csv/", period="this_year", crop="corn")
         self.get("/api/lgu/reports/risk-assessment/pdf/", period="all_time", user=self.admin)
         history = self.get("/api/reports/").data["results"]
         self.assertEqual(len(history), 2)
@@ -211,4 +211,6 @@ class FigureTests(AnalyticsBase):
 
     def test_report_parameters_are_validated(self):
         self.assertEqual(self.get("/api/lgu/reports/risk-assessment/", farmer="nobody").status_code, 400)
-        self.assertEqual(self.get("/api/lgu/reports/harvest/", area="mars").status_code, 400)
+        self.assertEqual(self.get("/api/lgu/reports/risk-assessment/", area="mars").status_code, 400)
+        # The Harvest Report was removed at the owner's request.
+        self.assertEqual(self.get("/api/lgu/reports/harvest/").status_code, 400)

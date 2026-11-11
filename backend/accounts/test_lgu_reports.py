@@ -158,12 +158,11 @@ class ReportPermissionTests(LguReportsTestBase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         slugs = {r["slug"] for r in response.data["reports"]}
         self.assertIn("risk-assessment", slugs)
-        self.assertIn("harvest", slugs)
         self.assertIn("harvest-outcomes", slugs)
         self.assertIn("farmer-registration", slugs)
-        self.assertEqual(len(slugs), 4)
+        self.assertEqual(len(slugs), 3)
         # Removed at the owner's request.
-        for gone in ("agricultural-summary", "crop-recommendation", "plant-crop", "farm-monitoring"):
+        for gone in ("agricultural-summary", "harvest", "crop-recommendation", "plant-crop", "farm-monitoring"):
             self.assertNotIn(gone, slugs)
         self.assertNotIn("soil-assessment", slugs)
 
@@ -274,7 +273,6 @@ class ReportPdfTests(LguReportsTestBase):
         for slug in (
             "risk-assessment",
             "farmer-registration",
-            "harvest",
             "harvest-outcomes",
         ):
             response = self._pdf(slug)
@@ -369,7 +367,7 @@ class ReportScaleTests(LguReportsTestBase):
 class RemovedReportsTests(LguReportsTestBase):
     def test_the_removed_reports_are_gone(self):
         auth = self.auth()
-        for slug in ("agricultural-summary", "crop-recommendation", "plant-crop", "farm-monitoring"):
+        for slug in ("agricultural-summary", "harvest", "crop-recommendation", "plant-crop", "farm-monitoring"):
             response = self.client.get(_summary_url(slug), **auth)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=slug)
 
