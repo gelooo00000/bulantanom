@@ -414,6 +414,8 @@ def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
 # Catalog
 # --------------------------------------------------------------------------
 
+# Every report filters by Period, and by Farmer where it lists farmers' records.
+# Crop, Area and Risk Level are not offered (removed at the owner's request).
 REPORTS = {
     "risk-assessment": {
         "title": "Risk Assessment Report",
@@ -421,7 +423,7 @@ REPORTS = {
         "description": "Weekly AI risk readings with what was found and the recommended action for each assessment.",
         "icon": "radar",
         "builder": _build_risk,
-        "supports": ["period", "area", "farmer", "crop", "risk_level"],
+        "supports": ["period", "farmer"],
     },
     "farmer-registration": {
         "title": "Farmer Registration Report",
@@ -429,7 +431,7 @@ REPORTS = {
         "description": "Farmer accounts by status with registration dates.",
         "icon": "users",
         "builder": _build_farmer_registration,
-        "supports": ["period", "area"],
+        "supports": ["period"],
     },
     "harvest-outcomes": {
         "title": "Harvest Outcomes Report",
@@ -437,7 +439,7 @@ REPORTS = {
         "description": "How monitored plants turned out, from each farmer's harvest and loss reports: health, quality, timing, recovery from High risk, survival, causes of loss, and whether the advice and warnings helped.",
         "icon": "sprout",
         "builder": _build_harvest_outcomes,
-        "supports": ["period", "farmer", "crop"],
+        "supports": ["period", "farmer"],
     },
 }
 

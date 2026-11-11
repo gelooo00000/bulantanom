@@ -161,6 +161,10 @@ class ReportPermissionTests(LguReportsTestBase):
         self.assertIn("harvest-outcomes", slugs)
         self.assertIn("farmer-registration", slugs)
         self.assertEqual(len(slugs), 3)
+        supports = {r["slug"]: r["supports"] for r in response.data["reports"]}
+        self.assertEqual(supports["risk-assessment"], ["period", "farmer"])
+        self.assertEqual(supports["harvest-outcomes"], ["period", "farmer"])
+        self.assertEqual(supports["farmer-registration"], ["period"])
         # Removed at the owner's request.
         for gone in ("agricultural-summary", "harvest", "crop-recommendation", "plant-crop", "farm-monitoring"):
             self.assertNotIn(gone, slugs)
