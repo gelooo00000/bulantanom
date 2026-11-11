@@ -166,6 +166,17 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
 
         <p className="text-muted-foreground -mt-2 text-sm">{report.description}</p>
 
+        {report.findings && report.findings.length > 0 && (
+          <section className="report-findings border-primary/60 bg-primary/5 rounded-xl border-l-4 px-4 py-3">
+            <h3 className="font-heading text-sm font-medium">{t.findings}</h3>
+            <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm">
+              {report.findings.map((finding) => (
+                <li key={finding}>{finding}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {report.stats.length > 0 && (
           <section>
             <h3 className="font-heading text-sm font-medium">{t.summary}</h3>
@@ -193,7 +204,7 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
             <p className="border-foreground/70 mt-8 border-b pb-1 font-semibold">
               {report.prepared_by || " "}
             </p>
-            <p className="text-muted-foreground mt-1">{t.preparedByRole}</p>
+            <p className="text-muted-foreground mt-1">{report.prepared_by_role || t.preparedByRole}</p>
           </div>
           <div>
             <p className="text-muted-foreground">{t.notedBy}</p>

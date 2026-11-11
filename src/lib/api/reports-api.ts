@@ -58,6 +58,10 @@ export type ReportDocument = {
   generated_at: string;
   /** The signed-in Officer, for the "Prepared by" line. */
   prepared_by?: string;
+  /** Their position under the signature line, e.g. "Administrator". */
+  prepared_by_role?: string;
+  /** Key findings in plain sentences, where the report has them. */
+  findings?: string[];
   stats: ReportStat[];
   tables: ReportTable[];
 };

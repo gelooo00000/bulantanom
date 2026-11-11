@@ -13,6 +13,7 @@ reading is unavailable, that is what the page says.
 from __future__ import annotations
 
 import io
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
@@ -314,7 +315,7 @@ def _signatures(report, styles, width):
     cells = [
         [Paragraph("Prepared by:", styles["muted"]), "", Paragraph("Noted by:", styles["muted"])],
         [Paragraph(f"<b>{name}</b>", styles["body"]), "", Paragraph("&nbsp;", styles["body"])],
-        [Paragraph("LGU Agricultural Officer", styles["muted"]), "",
+        [Paragraph(report.get("prepared_by_role") or "LGU Agricultural Officer", styles["muted"]), "",
          Paragraph("Municipal Agriculturist", styles["muted"])],
     ]
     table = Table(
@@ -355,6 +356,12 @@ def render(report: dict) -> bytes:
         Paragraph(report["description"], styles["muted"]),
         Spacer(1, 6),
     ]
+
+    findings = report.get("findings", [])
+    if findings:
+        story.append(Paragraph("Key Findings", styles["h2"]))
+        story += [Paragraph(f"&bull;&nbsp;&nbsp;{escape(f)}", styles["body"]) for f in findings]
+        story.append(Spacer(1, 2))
 
     stats = report.get("stats", [])
     if stats:

@@ -132,6 +132,22 @@ describe("ReportPreview", () => {
     expect(screen.getByText("Juan Dela Cruz")).toBeInTheDocument();
   });
 
+  it("lists the key findings and the preparer's own position", () => {
+    render(
+      <ReportPreview
+        report={makeReport({
+          findings: ["2 farmers of 3 registered hold an approved account."],
+          prepared_by: "Admin BulanTanom",
+          prepared_by_role: "Administrator",
+        })}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Key Findings" })).toBeInTheDocument();
+    expect(screen.getByText("2 farmers of 3 registered hold an approved account.")).toBeInTheDocument();
+    expect(screen.getByText("Administrator")).toBeInTheDocument();
+    expect(screen.queryByText("LGU Agricultural Officer")).not.toBeInTheDocument();
+  });
+
   it("keeps the printable sheet marked so the print stylesheet can find it", () => {
     const { container } = render(<ReportPreview report={makeReport()} />);
     // The print rules hang off this class; losing it silently breaks Print.

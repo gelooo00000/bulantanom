@@ -620,7 +620,8 @@ def _report_from_request(request, slug):
     )
     filters = lgu_reports.parse_filters(request.query_params)
     prepared_by = request.user.get_full_name() or request.user.email
-    return lgu_reports.build(slug, period, filters, prepared_by=prepared_by)
+    role = "Administrator" if request.user.role == UserRole.ADMIN else "LGU Agricultural Officer"
+    return lgu_reports.build(slug, period, filters, prepared_by=prepared_by, prepared_by_role=role)
 
 
 @api_view(["GET"])
@@ -707,7 +708,12 @@ def lgu_report_csv(request, slug):
     out.writerow(["Farm", report["farm"]["name"], report["farm"]["location"]])
     out.writerow(["Period", report["period"]["label"], report["period"]["range"]])
     out.writerow(["Generated", report["generated_at"][:19].replace("T", " ")])
-    out.writerow(["Prepared by", report.get("prepared_by", "")])
+    out.writerow(["Prepared by", report.get("prepared_by", ""), report.get("prepared_by_role", "")])
+    if report.get("findings"):
+        out.writerow([])
+        out.writerow(["Key Findings"])
+        for finding in report["findings"]:
+            out.writerow([finding])
     if report["stats"]:
         out.writerow([])
         out.writerow(["Summary"])

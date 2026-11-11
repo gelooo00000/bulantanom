@@ -178,12 +178,31 @@ class ReportDataAccuracyTests(LguReportsTestBase):
     def test_summary_counts_match_the_database(self):
         stats, _ = self._stats("agricultural-summary", period="all_time")
         # Two Farmer rows exist; only one is approved.
-        self.assertEqual(stats["Total Farmers"], 2)
-        self.assertEqual(stats["Active Farmers"], 1)
+        self.assertEqual(stats["Registered Farmers"], 2)
+        self.assertEqual(stats["Approved Farmers"], 1)
         # The pending Farmer's plant must not be counted.
-        self.assertEqual(stats["Active Plants"], 1)
-        self.assertEqual(stats["High Risk"], 1)
-        self.assertEqual(stats["Medium Risk"], 0)
+        self.assertEqual(stats["Plants Under Monitoring"], 1)
+        self.assertEqual(stats["Weekly Assessments"], 1)
+        self.assertEqual(stats["High-Risk Readings"], 1)
+        self.assertEqual(stats["Medium-Risk Readings"], 0)
+
+    def test_summary_reads_like_an_executive_report(self):
+        _, data = self._stats("agricultural-summary", period="all_time")
+        findings = data["findings"]
+        self.assertIn("1 farmer of 2 registered holds an approved account.", findings)
+        self.assertIn("1 plant across 1 crop is under active monitoring.", findings)
+        self.assertIn(
+            "1 weekly assessment recorded; 1 (100%) rated High risk and 0 (0%) Medium risk.", findings
+        )
+        self.assertIn("1 High-risk reading requires field follow-up by an agricultural officer.", findings)
+        titles = [t["title"] for t in data["tables"]]
+        self.assertEqual(titles, ["Risk Distribution", "Latest Monitoring Activity", "Farmer Accounts"])
+        distribution = {r["level"]: r for r in data["tables"][0]["rows"]}
+        self.assertEqual(distribution["High"]["readings"], 1)
+        self.assertEqual(distribution["High"]["share"], "100%")
+        activity = data["tables"][1]["rows"][0]
+        self.assertEqual(set(activity), {"date", "farmer", "plant", "crop", "risk"})
+        self.assertEqual(data["prepared_by_role"], "LGU Agricultural Officer")
 
     def test_report_excludes_non_approved_farmers(self):
         _, data = self._stats("risk-assessment", period="all_time")
@@ -384,3 +403,23 @@ class RemovedReportsTests(LguReportsTestBase):
         for slug in ("crop-recommendation", "plant-crop", "farm-monitoring"):
             response = self.client.get(_summary_url(slug), **auth)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=slug)
+
+
+class PreparedByTests(LguReportsTestBase):
+    def test_an_admin_report_is_prepared_by_an_administrator(self):
+        from django.contrib.auth import get_user_model
+
+        get_user_model().objects.create_user(
+            email="admin@example.com", password="Str0ng!Passw0rd", first_name="Ada", last_name="Admin",
+            role=UserRole.ADMIN, account_status=AccountStatus.APPROVED,
+        )
+        response = self.client.post(
+            "/api/auth/admin/login/", {"email": "admin@example.com", "password": "Str0ng!Passw0rd"}, format="json"
+        )
+        auth = {"HTTP_AUTHORIZATION": f"Bearer {response.data['access']}"}
+        data = self.client.get(_summary_url("agricultural-summary"), **auth).data
+        self.assertEqual(data["prepared_by_role"], "Administrator")
+        csv = self.client.get("/api/lgu/reports/agricultural-summary/csv/", **auth)
+        text = csv.content.decode("utf-8-sig")
+        self.assertIn("Key Findings", text)
+        self.assertIn("Administrator", text)

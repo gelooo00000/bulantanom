@@ -46,6 +46,7 @@ export const REPORT_STRINGS = {
   preparing: "Preparing…",
 
   summary: "Summary",
+  findings: "Key Findings",
   noRecords: "No records for this period.",
   farm: "Farm",
   generated: "Generated",
