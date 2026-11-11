@@ -24,6 +24,7 @@ export const REPORT_STRINGS = {
   allFarmers: "All Farmers",
   allCrops: "All Crops",
 
+  report: "Report",
   availableReports: "Available Reports",
   reportPreview: "Report Preview",
   latest: "Latest",
