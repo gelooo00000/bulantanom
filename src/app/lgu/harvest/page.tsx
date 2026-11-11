@@ -6,7 +6,6 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
-  Info,
   Leaf,
   Sprout,
   Wheat,
@@ -452,10 +451,7 @@ export default function LguHarvestPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Harvest & Monitoring"
-        description="Expected harvest dates and the latest risk readings across all farmers at Layuan Farm, read live from the database."
-      />
+      <PageHeader title="Harvest & Monitoring" />
 
       {!loading && !error && plants.length > 0 && (
         <div className="bg-muted/60 inline-flex self-start rounded-2xl p-1" role="tablist" aria-label="Plants to show">
@@ -538,14 +534,6 @@ export default function LguHarvestPage() {
           ) : (
             <Section title="Harvested" phase="harvested" plants={archived} perPage={6} />
           )}
-
-          <p className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-2xl px-4 py-3 text-xs">
-            <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-            <span>
-              Harvest dates are calculated by BulanTanom from each crop&apos;s typical growing duration and the
-              Farmer&apos;s planting date. They are estimates — real timing shifts with weather, soil and variety.
-            </span>
-          </p>
         </>
       )}
     </div>
