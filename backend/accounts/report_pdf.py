@@ -258,7 +258,7 @@ def _masthead(report, styles, width):
 
 def _stat_cards(stats, styles, width):
     """Summary figures as cards with a top strip: one row of up to five, else rows of four."""
-    per_row = len(stats) if len(stats) <= 5 else 4
+    per_row = len(stats) if len(stats) <= 6 else 4
     gap = 4 * mm
     card_w = (width - gap * (per_row - 1)) / per_row
 

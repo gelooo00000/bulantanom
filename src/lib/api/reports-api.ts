@@ -23,7 +23,8 @@ export type ReportSummaryItem = {
 
 export type ReportStat = {
   label: string;
-  value: number;
+  /** A count, or text such as "44%", "0 of 5" or "-" when there is nothing to measure. */
+  value: number | string;
   tone?: "low" | "medium" | "high";
 };
 

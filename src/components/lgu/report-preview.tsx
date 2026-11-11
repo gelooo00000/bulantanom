@@ -183,7 +183,11 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
             <div
               className={cn(
                 "report-stats mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-3",
-                report.stats.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4",
+                report.stats.length === 5
+                  ? "lg:grid-cols-5"
+                  : report.stats.length === 6
+                    ? "lg:grid-cols-6"
+                    : "lg:grid-cols-4",
               )}
             >
               {report.stats.map((s) => (

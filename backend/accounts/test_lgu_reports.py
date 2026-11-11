@@ -395,3 +395,51 @@ class PreparedByTests(LguReportsTestBase):
         csv = self.client.get("/api/lgu/reports/risk-assessment/csv/", **auth)
         text = csv.content.decode("utf-8-sig")
         self.assertIn("Administrator", text)
+
+
+class RiskReportAccuracyTests(LguReportsTestBase):
+    def _report(self):
+        response = self.client.get(_summary_url("risk-assessment", period="all_time"), **self.auth())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return {s["label"]: s["value"] for s in response.data["stats"]}, response.data["tables"][0]["rows"]
+
+    def _assessment(self, days_ago, level=None, status_="completed"):
+        from plants.models import Assessment, RiskAssessment
+
+        assessment = Assessment.objects.create(
+            plant=self.plant,
+            assessment_date=timezone.localdate() - timedelta(days=days_ago),
+            plant_age_days=20,
+            growth_condition="on_track",
+            health_condition="healthy",
+            leaf_condition="normal",
+            watering_frequency="daily",
+        )
+        if status_ is not None:
+            RiskAssessment.objects.create(assessment=assessment, risk_level=level, status=status_)
+
+    def test_every_assessment_is_counted_once_and_the_boxes_add_up(self):
+        self._assessment(8, "INCONCLUSIVE")
+        self._assessment(9, None, "failed")
+        self._assessment(10, None, "pending")
+        self._assessment(11, None, None)
+        stats, rows = self._report()
+        self.assertEqual(stats["Assessments"], len(rows))
+        self.assertEqual(stats["High Risk"], 1)
+        self.assertEqual(stats["Too Early to Tell"], 1)
+        self.assertEqual(stats["No AI Reading"], 3)
+        boxes = ("High Risk", "Medium Risk", "Low Risk", "Too Early to Tell", "No AI Reading")
+        self.assertEqual(sum(stats[b] for b in boxes), stats["Assessments"])
+        # Each row is labelled the way it is counted.
+        levels = sorted(r["level"] for r in rows)
+        self.assertEqual(levels, ["High", "No reading", "No reading", "No reading", "Too early to tell"])
+
+
+class OutcomesReportAccuracyTests(LguReportsTestBase):
+    def test_a_rate_with_nothing_to_measure_is_a_dash_not_zero(self):
+        response = self.client.get(_summary_url("harvest-outcomes", period="all_time"), **self.auth())
+        stats = {s["label"]: s["value"] for s in response.data["stats"]}
+        self.assertEqual(stats["Harvest reports"], 0)
+        self.assertEqual(stats["Healthy at harvest"], "-")
+        self.assertEqual(stats["Harvested on time"], "-")
+        self.assertEqual(stats["Survival rate"], "-")

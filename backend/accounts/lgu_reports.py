@@ -266,13 +266,19 @@ def _build_risk(period: Period, filters: dict) -> dict:
             }
         )
 
+    # Every assessment lands in exactly one box, so the five add up to the
+    # total: a completed reading by its level ("Too early to tell" included),
+    # and anything the AI did not finish - no reading, pending or failed - as
+    # No AI Reading. The rows above label them the same way.
+    done = Q(risk__status="completed")
     counts = queryset.aggregate(
         total=Count("id"),
-        high=Count("id", filter=Q(risk__risk_level="HIGH")),
-        medium=Count("id", filter=Q(risk__risk_level="MEDIUM")),
-        low=Count("id", filter=Q(risk__risk_level="LOW")),
-        unanalysed=Count("id", filter=Q(risk__isnull=True)),
+        high=Count("id", filter=done & Q(risk__risk_level="HIGH")),
+        medium=Count("id", filter=done & Q(risk__risk_level="MEDIUM")),
+        low=Count("id", filter=done & Q(risk__risk_level="LOW")),
+        early=Count("id", filter=done & Q(risk__risk_level="INCONCLUSIVE")),
     )
+    no_reading = counts["total"] - counts["high"] - counts["medium"] - counts["low"] - counts["early"]
 
     return {
         "stats": [
@@ -280,7 +286,8 @@ def _build_risk(period: Period, filters: dict) -> dict:
             {"label": "High Risk", "value": counts["high"], "tone": "high"},
             {"label": "Medium Risk", "value": counts["medium"], "tone": "medium"},
             {"label": "Low Risk", "value": counts["low"], "tone": "low"},
-            {"label": "No AI Reading", "value": counts["unanalysed"]},
+            {"label": "Too Early to Tell", "value": counts["early"]},
+            {"label": "No AI Reading", "value": no_reading},
         ],
         "tables": [
             {
@@ -327,16 +334,17 @@ def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
     return {
         "stats": [
             {"label": "Harvest reports", "value": data["total"], "tone": "low"},
-            {"label": "Healthy at harvest (%)", "value": data["healthy_rate"] or 0, "tone": "low"},
-            {"label": "Advice helped (%)", "value": data["advice_helped_rate"] or 0},
-            {"label": "Harvested on time (%)", "value": data["on_time_rate"] or 0},
+            # A rate with nothing to measure is "-", never a misleading 0%.
+            {"label": "Healthy at harvest", "value": pct(data["healthy_rate"]), "tone": "low"},
+            {"label": "Advice helped", "value": pct(data["advice_helped_rate"])},
+            {"label": "Harvested on time", "value": pct(data["on_time_rate"])},
             {
                 "label": "Recovered from High risk",
                 "value": f"{data['recovered_healthy']} of {data['reached_high_risk']}",
                 "tone": "medium",
             },
             {"label": "Plants lost", "value": data["lost_total"], "tone": "high"},
-            {"label": "Survival rate (%)", "value": data["survival_rate"] or 0},
+            {"label": "Survival rate", "value": pct(data["survival_rate"])},
             {
                 "label": "Warned before loss",
                 "value": f"{data['warned_before_loss']} of {data['lost_total']}",
