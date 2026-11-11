@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-body);
+  --font-sans: var(--font-lilita);
   --font-heading: var(--display-font);
   --font-brand: var(--font-lilita);
   --color-risk-low: var(--risk-low);
@@ -298,10 +298,9 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Nunito for running text, AI findings, tables, forms and labels; Lilita
-     One (below) for headings, buttons and the name. Lilita ships one weight,
-     so the browser must not fake bold or italic versions of it (they smear);
-     Nunito has real weights. */
+  /* Lilita One everywhere: running text, headings, buttons and numbers.
+     It ships one weight, so the browser must not fake bold or italic
+     versions of it (they smear). */
   html {
     @apply font-sans;
     font-synthesis: none;

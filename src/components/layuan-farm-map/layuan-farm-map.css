@@ -12,7 +12,7 @@
 .lfm {
   /* Interface */
   --lfm-font-heading: var(--display-font, var(--font-lilita, "Bricolage Grotesque")), "Bricolage Grotesque", system-ui, sans-serif;
-  --lfm-font-body: var(--font-body, "Nunito"), "Nunito", system-ui, sans-serif;
+  --lfm-font-body: var(--font-lilita, "Figtree"), "Figtree", system-ui, sans-serif;
   --lfm-panel: var(--card, #f8faf5);
   --lfm-ink: var(--foreground, #183326);
   --lfm-muted: var(--muted-foreground, #5b6e62);
