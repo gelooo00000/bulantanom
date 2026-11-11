@@ -585,11 +585,6 @@ export function LayuanFarmMap({
           </div>
         )}
       </div>
-
-      <p className="lfm-note">
-        Illustrative layout, not to scale. Items marked as future development are planned and not
-        yet built.
-      </p>
     </div>
   );
 }
