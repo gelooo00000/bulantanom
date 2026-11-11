@@ -177,7 +177,7 @@ class NotApplicableAnswersTests(RiskTestCase):
     def test_mushroom_submits_without_leaf_and_stores_skipped_answers_blank(self, _mock):
         farmer = make_user("farmer@example.com")
         auth = self.login("farmer@example.com")
-        plant = self.make_plant(farmer, crop_id="mushroom")
+        plant = self.make_plant(farmer, crop_id="mushroom", days_ago=10)
         payload = payload_with_image(
             plant_height_cm="12", flowering_status="flowering", mushroom_condition="healthy"
         )

@@ -95,6 +95,19 @@ def eligibility(plant, today=None) -> dict:
 
     latest = last_assessment_date(plant)
 
+    # Ready to harvest: from the first day of its harvest period the crop is
+    # grown, so there is nothing left to assess week by week - the farmer
+    # harvests it and files the harvest report instead.
+    if plant.expected_harvest_start and today >= plant.expected_harvest_start:
+        return {
+            "can_assess": False,
+            "ready_to_harvest": True,
+            "last_assessment_date": latest.isoformat() if latest else None,
+            "next_assessment_date": None,
+            "days_remaining": 0,
+            "interval_days": ASSESSMENT_INTERVAL_DAYS,
+        }
+
     if latest is None:
         # Too new to judge: the first assessment opens a week after planting.
         first_date = plant.planting_date + timedelta(days=FIRST_ASSESSMENT_AGE_DAYS)

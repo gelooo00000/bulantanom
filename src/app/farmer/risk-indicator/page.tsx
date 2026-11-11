@@ -21,6 +21,7 @@ import {
   TrendingDown,
   TrendingUp,
   TriangleAlert,
+  Wheat,
 } from "lucide-react";
 import { useState } from "react";
 import { LostPlantDialog } from "@/components/farmer/lost-plant-dialog";
@@ -540,7 +541,12 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
         : "down"
       : null;
   const overdue = overdueDays(plant);
-  const old = !!latest && daysSince(latest.assessment_date) > OLD_READING_DAYS;
+  // A plant ready to harvest is not checked again, so its last reading is
+  // never "old - check again".
+  const old =
+    !!latest &&
+    !plant.assessment_eligibility.ready_to_harvest &&
+    daysSince(latest.assessment_date) > OLD_READING_DAYS;
   const accent = failed ? "var(--risk-high)" : style.accent;
   const hasPill = failed || (level && level !== "inconclusive");
 
@@ -727,8 +733,20 @@ function RetryCheck({ assessmentId, onDone }: { assessmentId: number; onDone: ()
  */
 function WeeklyCheck({ plant }: { plant: BackendPlant }) {
   const { t } = useLanguage();
-  const { can_assess, days_remaining, early_recheck } = plant.assessment_eligibility;
+  const { can_assess, days_remaining, early_recheck, ready_to_harvest } = plant.assessment_eligibility;
 
+  if (ready_to_harvest) {
+    // Grown: no weekly check is asked for, the harvest is what is left.
+    return (
+      <Link
+        href="/farmer/harvest"
+        className="text-risk-low flex items-center gap-1.5 text-xs font-medium hover:underline"
+      >
+        <Wheat className="size-3.5" />
+        {t("ready.noCheck")}
+      </Link>
+    );
+  }
   if (can_assess) {
     return (
       <Button

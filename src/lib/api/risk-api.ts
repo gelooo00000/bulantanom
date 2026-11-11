@@ -67,6 +67,11 @@ export type AssessmentEligibility = {
    * yet, so the first assessment has not opened.
    */
   too_young?: boolean;
+  /**
+   * Ready to harvest (its harvest period has started): the crop is grown,
+   * so no more weekly assessments are asked for - the farmer harvests it.
+   */
+  ready_to_harvest?: boolean;
   /** Harvested: the plant is finished, with no more weekly assessments. */
   harvested?: boolean;
   /** Reported dead: finished, with no more weekly assessments. */

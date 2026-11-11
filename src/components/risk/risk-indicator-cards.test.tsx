@@ -82,6 +82,32 @@ describe("a risky plant's card", () => {
     expect(screen.getByText("Check again early")).toBeInTheDocument();
   });
 
+  it("asks for no weekly check once the plant is ready to harvest", () => {
+    plants = [
+      {
+        plant: plant(9, "Ripe Row", {
+          can_assess: false,
+          ready_to_harvest: true,
+          days_remaining: 0,
+          next_assessment_date: null,
+          last_assessment_date: isoDaysAgo(20),
+        }),
+        latest_assessment: {
+          id: 9,
+          assessment_date: isoDaysAgo(20),
+          risk: { status: "completed", risk_level: "LOW", recommended_actions: [] },
+        },
+        previous_risk_level: null,
+      },
+    ];
+    render(<RiskIndicatorPage />);
+    const link = screen.getByRole("link", { name: /Ready to harvest · no weekly check/ });
+    expect(link).toHaveAttribute("href", "/farmer/harvest");
+    expect(screen.queryByRole("link", { name: /Assess now/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Overdue/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Old reading – check again")).not.toBeInTheDocument();
+  });
+
   it("marks an overdue check and an old reading", () => {
     plants = [
       {

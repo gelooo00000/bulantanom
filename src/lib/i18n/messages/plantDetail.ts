@@ -17,6 +17,18 @@ export const plantDetail = defineMessages({
   "lock.today": { en: "today", fil: "ngayon", bik: "yana" },
   "lock.inOne": { en: "in 1 day", fil: "bukas", bik: "buwas" },
   "lock.inDays": { en: "in {n} days", fil: "sa loob ng {n} araw", bik: "sa sulod san {n} adlaw" },
+  "ready.title": { en: "Ready to harvest", fil: "Handa nang anihin", bik: "Pwede nang anihon" },
+  "ready.text": {
+    en: "{name} is ready to harvest, so it no longer needs weekly checks. Report the harvest when you pick it.",
+    fil: "Handa nang anihin ang {name}, kaya hindi na ito kailangang suriin linggo-linggo. Iulat ang ani kapag napitas mo na.",
+    bik: "Pwede nang anihon an {name}, kaya dai na kaipuhan na susihon kada semana. I-report an ani pag naani mo na.",
+  },
+  "ready.noCheck": {
+    en: "Ready to harvest · no weekly check",
+    fil: "Handa nang anihin · wala nang lingguhang pagsusuri",
+    bik: "Pwede nang anihon · mayo nang semanal na pagsusi",
+  },
+  "ready.openHarvest": { en: "Go to Harvest", fil: "Pumunta sa Ani", bik: "Magduman sa Ani" },
   "lock.harvestedTitle": {
     en: "Harvested",
     fil: "Naani na",

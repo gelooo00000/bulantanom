@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, Check, CircleCheck, ClipboardList } from "lucide-react";
+import { CalendarClock, Check, CircleCheck, ClipboardList, Wheat } from "lucide-react";
 
 import { CropTile, FarmCard } from "@/components/farmer/farm-card";
 import { CardContent } from "@/components/ui/card";
@@ -95,6 +95,12 @@ export function PlantCard({
             <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
               <CalendarClock className="size-3.5 shrink-0" />
               {t("card.plannedAssess", { date: date(plant.planting_date) })}
+            </span>
+          ) : plant.assessment_eligibility.ready_to_harvest ? (
+            // Grown: no more weekly checks, the harvest is what is left.
+            <span className="font-heading text-risk-low flex items-center gap-1.5 text-xs font-medium tracking-wide">
+              <Wheat className="size-3.5 shrink-0" />
+              {t("ready.noCheck")}
             </span>
           ) : plant.assessment_eligibility.too_young &&
             plant.assessment_eligibility.next_assessment_date ? (

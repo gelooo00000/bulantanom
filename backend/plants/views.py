@@ -648,7 +648,10 @@ class PlantAssessmentListCreateView(generics.ListCreateAPIView):
             return Response(
                 {
                     "detail": (
-                        "This plant is planned for "
+                        "This plant is ready to harvest, so it no longer needs weekly "
+                        "assessments. Report the harvest from the Harvest page."
+                        if schedule.get("ready_to_harvest")
+                        else "This plant is planned for "
                         f"{schedule['next_assessment_date']} and is not in the ground "
                         "yet. You can assess it from that day."
                         if schedule.get("planned")

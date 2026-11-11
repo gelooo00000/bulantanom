@@ -237,7 +237,7 @@ class AssessmentSubmissionTests(RiskTestCase):
     @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
     def test_questions_a_crop_is_not_asked_are_not_required(self, _mock):
         # Mushrooms are not asked about leaves or flowers (assessment_questions).
-        mushroom = self.make_plant(self.farmer, crop_id="mushroom")
+        mushroom = self.make_plant(self.farmer, crop_id="mushroom", days_ago=10)
         payload = payload_with_image(mushroom_condition="healthy")
         for field in ("leaf_condition", "flowering_status"):
             del payload[field]
@@ -247,7 +247,7 @@ class AssessmentSubmissionTests(RiskTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_mushrooms_must_give_their_condition(self):
-        mushroom = self.make_plant(self.farmer, crop_id="mushroom")
+        mushroom = self.make_plant(self.farmer, crop_id="mushroom", days_ago=10)
         response = self.client.post(
             f"/api/farmer/plants/{mushroom.id}/assessments/", payload_with_image(), **self.auth
         )
@@ -269,7 +269,7 @@ class AssessmentSubmissionTests(RiskTestCase):
 
     @patch("plants.risk_evaluation_service.evaluate_assessment", return_value=GEMINI_OK)
     def test_the_ai_reads_a_mushroom_condition(self, evaluate):
-        mushroom = self.make_plant(self.farmer, crop_id="mushroom")
+        mushroom = self.make_plant(self.farmer, crop_id="mushroom", days_ago=10)
         self.client.post(
             f"/api/farmer/plants/{mushroom.id}/assessments/",
             payload_with_image(mushroom_condition="mold"),

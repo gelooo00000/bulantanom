@@ -86,7 +86,9 @@ export default function AssessmentPage({
             ? eligibility.early_recheck
               ? `${t("asmt.intro", { name: plantLabel })} ${t("riskCard.earlyWhy")}`
               : t("asmt.intro", { name: plantLabel })
-            : eligibility.lost
+            : eligibility.ready_to_harvest
+              ? t("ready.text", { name: plantLabel })
+              : eligibility.lost
               ? t("lock.lostText", { name: plantLabel })
               : eligibility.harvested
               ? t("lock.harvestedText", { name: plantLabel })

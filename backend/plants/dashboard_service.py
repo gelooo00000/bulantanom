@@ -270,7 +270,12 @@ def alerts(farmer, today=None):
                 }
             )
 
-    never_assessed = [p for p in plants if not p.assessments.exists()]
+    # A plant already ready to harvest needs no first check: it is grown.
+    never_assessed = [
+        p
+        for p in plants
+        if not p.assessments.exists() and not eligibility(p, today).get("ready_to_harvest")
+    ]
     if never_assessed:
         n = len(never_assessed)
         out.append(

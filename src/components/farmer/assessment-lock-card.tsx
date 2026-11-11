@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, Sprout } from "lucide-react";
+import { ArrowRight, CalendarCheck, Sprout, Wheat } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,6 +52,13 @@ export function AssessmentLockCard({
                 <h2 className="font-medium">{t("lock.lostTitle")}</h2>
                 <p className="text-muted-foreground mt-1 text-sm">
                   {t("lock.lostText", { name: plantLabel })}
+                </p>
+              </>
+            ) : eligibility.ready_to_harvest ? (
+              <>
+                <h2 className="font-medium">{t("ready.title")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t("ready.text", { name: plantLabel })}
                 </p>
               </>
             ) : eligibility.harvested ? (
@@ -111,7 +118,7 @@ export function AssessmentLockCard({
           </div>
         </div>
 
-        {!eligibility.harvested && !eligibility.lost && (
+        {!eligibility.harvested && !eligibility.lost && !eligibility.ready_to_harvest && (
           <div className="border-border flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
             <span className="flex items-center gap-2 text-sm">
               <CalendarCheck
@@ -140,7 +147,14 @@ export function AssessmentLockCard({
         )}
 
         <div className="flex flex-wrap gap-2">
+          {eligibility.ready_to_harvest && (
+            <Button nativeButton={false} render={<Link href="/farmer/harvest" />}>
+              <Wheat className="size-4" />
+              {t("ready.openHarvest")}
+            </Button>
+          )}
           <Button
+            variant={eligibility.ready_to_harvest ? "outline" : "default"}
             nativeButton={false}
             render={<Link href="/farmer/risk-indicator" />}
           >
