@@ -48,9 +48,14 @@ class PlantLossTests(RiskTestCase):
         self.assertEqual(response.status_code, 201, response.data)
         return response
 
-    def test_only_officers_can_read_it(self):
+    def test_farmers_cannot_read_it(self):
         self.assertEqual(self.client.get(URL, **self.farmer_auth).status_code, 403)
         self.assertEqual(self.client.get(URL).status_code, 401)
+
+    def test_admins_read_it_for_agricultural_analytics(self):
+        make_user("admin@example.com", role=UserRole.ADMIN)
+        admin = self.login("admin@example.com", "/api/auth/admin/login/")
+        self.assertEqual(self.client.get(URL, **admin).status_code, 200)
 
     def test_empty_when_nothing_died(self):
         data = self.client.get(URL, **self.officer_auth).data

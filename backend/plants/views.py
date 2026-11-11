@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import AccountStatus, UserRole
-from accounts.permissions import IsAdmin, IsApproved, IsFarmer, IsLguOfficer
+from accounts.permissions import IsAdmin, IsApproved, IsFarmer, IsLguOfficer, IsLguOrAdmin
 from notifications.services import (
     notify_assessment_evaluated,
     notify_assessment_submitted,
@@ -1306,12 +1306,13 @@ def admin_harvest_outcomes(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsLguOfficer])
+@permission_classes([IsLguOrAdmin])
 def lgu_plant_losses(request):
     """
     GET /api/lgu/plant-losses/ - plants that died before harvest: totals,
     causes (calamities apart), High-risk plants that were not saved, and
-    every loss, newest first.
+    every loss, newest first. Officers read it on Plant Loss; Officers and
+    Admins both read it on Agricultural Analytics.
     """
     from . import loss_report
 

@@ -22,7 +22,7 @@ import { AuthedImage } from "@/components/shared/authed-image";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import { fetchLguPlantLosses, type PlantLoss, type PlantLosses } from "@/lib/api/lgu-api";
+import { fetchLguPlantLosses, type PlantLoss } from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
@@ -39,16 +39,6 @@ const COLOR = {
   pestDisease: "var(--risk-medium)",
   other: "var(--muted-foreground)",
   all: "var(--primary)",
-};
-
-/** Each cause's colour in the breakdown bar: its group's colour, the second of a pair lighter. */
-const CAUSE_COLOR: Record<string, string> = {
-  FLOOD_TYPHOON: COLOR.calamity,
-  DROUGHT_HEAT: tint(COLOR.calamity, 55),
-  PEST: COLOR.pestDisease,
-  DISEASE: tint(COLOR.pestDisease, 55),
-  ANIMALS: COLOR.other,
-  OTHER: tint(COLOR.other, 50),
 };
 
 /** Each group's section, as on Harvest & Monitoring: a title, an icon, a colour and a hint. */
@@ -152,8 +142,6 @@ export default function LguPlantLossPage() {
             ]}
           />
 
-          <Breakdown data={data} />
-
           {filter === "ALL" ? (
             <div className="flex flex-col gap-8">
               {ORDER.map((group) => (
@@ -196,97 +184,6 @@ function LossSection({ group, losses }: { group: Group; losses: PlantLoss[] }) {
       itemKey={(loss) => loss.id}
       renderItem={(loss) => <LossCard loss={loss} />}
     />
-  );
-}
-
-/**
- * One compact card: the headline count, what killed them as a single
- * stacked bar (only causes that took a plant), the last six months and the
- * crops lost.
- */
-function Breakdown({ data }: { data: PlantLosses }) {
-  const causes = data.causes.filter((cause) => cause.count > 0).sort((a, b) => b.count - a.count);
-  const most = Math.max(1, ...data.months.map((month) => month.count));
-
-  return (
-    <section className="bg-card flex flex-col gap-3 rounded-3xl border p-5 shadow-sm">
-      <p className="font-heading text-lg leading-tight font-semibold">
-        <span className="tabular-nums" style={{ color: COLOR.notSaved }}>
-          {data.total}
-        </span>{" "}
-        {data.total === 1 ? "plant lost" : "plants lost"} before harvest
-      </p>
-
-      <div
-        className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
-        role="img"
-        aria-label={causes.map((cause) => `${cause.label}: ${cause.count}`).join(", ")}
-      >
-        {causes.map((cause) => (
-          <span
-            key={cause.value}
-            className="h-full transition-[width] duration-700"
-            style={{ width: `${(cause.count / data.total) * 100}%`, backgroundColor: CAUSE_COLOR[cause.value] }}
-          />
-        ))}
-      </div>
-
-      <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
-        {causes.map((cause) => (
-          <li key={cause.value} className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className="size-2.5 rounded-full"
-              style={{ backgroundColor: CAUSE_COLOR[cause.value] }}
-            />
-            {cause.label}
-            {cause.calamity && (
-              <span
-                className="font-heading rounded-full px-1.5 text-[10px] font-semibold uppercase"
-                style={{ color: COLOR.calamity, backgroundColor: tint(COLOR.calamity, 14) }}
-              >
-                Calamity
-              </span>
-            )}
-            <span className="font-heading font-semibold tabular-nums">{cause.count}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="border-border/70 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-end gap-1.5" role="list" aria-label="Plants lost per month">
-          {data.months.map((month) => {
-            const label = new Date(`${month.month}-01T00:00:00`).toLocaleDateString("en", { month: "short" });
-            return (
-              <div key={month.month} role="listitem" className="flex w-9 flex-col items-center gap-1">
-                <span
-                  className="w-full rounded-md transition-[height] duration-700"
-                  style={{
-                    height: `${Math.max(3, (month.count / most) * 22)}px`,
-                    backgroundColor: month.count ? COLOR.notSaved : "var(--muted)",
-                  }}
-                  aria-label={`${label}: ${month.count}`}
-                  title={`${label}: ${month.count}`}
-                />
-                <span className="text-muted-foreground text-[10px]">{label}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {data.crops.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {data.crops.slice(0, 4).map((crop) => (
-              <span key={crop.crop} className="bg-muted/60 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs">
-                <span aria-hidden="true">{crop.emoji}</span>
-                {crop.crop}
-                <span className="font-heading font-semibold tabular-nums">{crop.count}</span>
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
   );
 }
 

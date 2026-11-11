@@ -8,6 +8,7 @@ import {
   CardState,
   ChartCard,
 } from "@/components/analytics/cards";
+import { PlantLossCard } from "@/components/analytics/plant-loss-card";
 import { CROP_PAGE_SIZE, HorizontalBars, WeeklyColumns } from "@/components/lgu/dashboard-charts";
 import { RiskOverview } from "@/components/lgu/risk-overview";
 import { PageHeader } from "@/components/shared/page-header";
@@ -74,7 +75,7 @@ export function AnalyticsDashboard() {
       )}
 
       {/* Weekly assessments and Crops planted side by side; the plant risk,
-          as on Risk Overview, across the full width below. */}
+          as on Risk Overview, and the plant losses across the full width below. */}
       <div className="grid gap-3 lg:grid-cols-2">
         <ChartCard title="Weekly assessments" description="Are farmers keeping up their weekly plant checks?">
           <CardState query={overview}>{(d) => <WeeklyColumns weeks={d.assessment_trend} />}</CardState>
@@ -100,6 +101,8 @@ export function AnalyticsDashboard() {
             {(list) => <RiskOverview plants={livePlants(list)} bare />}
           </CardState>
         </ChartCard>
+
+        <PlantLossCard className="lg:col-span-2" />
       </div>
     </div>
   );

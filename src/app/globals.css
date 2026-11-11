@@ -622,3 +622,19 @@ html[data-splash-seen] .splash-screen {
   --adm-violet: #c4b5fd;
   --adm-rose: #fda4af;
 }
+
+/*
+ * Plant-loss groups on Agricultural Analytics: calamity, pests & disease,
+ * other. Checked with the dataviz palette validator (lightness band,
+ * colour-blind separation, contrast) against each theme's surface.
+ */
+:root {
+  --loss-calamity: #0369a1;
+  --loss-pest: #b45309;
+  --loss-other: #6d28d9;
+}
+.dark {
+  --loss-calamity: #0891d1;
+  --loss-pest: #d97706;
+  --loss-other: #8b5cf6;
+}

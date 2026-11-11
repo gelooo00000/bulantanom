@@ -94,7 +94,7 @@ describe("LGU Plant Loss", () => {
   it("counts the losses and lists every lost plant", () => {
     data = full;
     render(<LguPlantLossPage />);
-    expect(screen.getByText(/plants lost before harvest/)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /All losses\s*3/ })).toBeInTheDocument();
     expect(screen.getByText("Typhoon Tomato")).toBeInTheDocument();
     expect(screen.getByText("Rotted Tomato")).toBeInTheDocument();
     expect(screen.getByText("Bitten Tomato")).toBeInTheDocument();
@@ -107,14 +107,6 @@ describe("LGU Plant Loss", () => {
     expect(within(screen.getByRole("region", { name: "High risk, not saved" })).getByText("Rotted Tomato")).toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "Other causes" })).getByText("Bitten Tomato")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Pests & disease" })).not.toBeInTheDocument();
-  });
-
-  it("lists only the causes that took a plant", () => {
-    data = full;
-    render(<LguPlantLossPage />);
-    expect(screen.getByRole("img", { name: /Flood or typhoon: 1/ })).toBeInTheDocument();
-    expect(screen.queryByText("Drought or too hot")).not.toBeInTheDocument();
-    expect(screen.queryByText("Other / not sure")).not.toBeInTheDocument();
   });
 
   it("narrows to calamities, and to High-risk plants that were not saved", () => {
