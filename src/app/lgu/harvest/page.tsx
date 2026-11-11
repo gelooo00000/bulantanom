@@ -8,8 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
-import { fetchLguHarvestOutcomes, fetchLguPlants, type LguPlant } from "@/lib/api/lgu-api";
-import { HarvestOutcomes } from "@/components/shared/harvest-outcomes";
+import { fetchLguPlants, type LguPlant } from "@/lib/api/lgu-api";
 import { useLguQuery } from "@/lib/api/use-authed-query";
 import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
@@ -193,7 +192,7 @@ function Section({ title, plants }: { title: string; plants: LguPlant[] }) {
 
 export default function LguHarvestPage() {
   const { data, loading, error, refetch } = useLguQuery(fetchLguPlants);
-  // Lost plants have no harvest coming; they are counted in Harvest Outcomes.
+  // Lost plants have no harvest coming.
   const plants = (data ?? []).filter((p) => p.status !== "LOST");
   const shownIn = (phase: Phase) => plants.filter((p) => phaseOf(p) === phase);
 
@@ -203,8 +202,6 @@ export default function LguHarvestPage() {
         title="Harvest & Monitoring"
         description="Expected harvest dates and the latest risk readings across all farmers at Layuan Farm, read live from the database."
       />
-
-      <HarvestOutcomes fetcher={fetchLguHarvestOutcomes} />
 
       {loading ? (
         <LguLoading label="Loading harvest dates…" />

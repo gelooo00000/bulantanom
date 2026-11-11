@@ -5,11 +5,8 @@ import LguHarvestPage from "@/app/lgu/harvest/page";
 import type { LguPlant } from "@/lib/api/lgu-api";
 
 let plants: LguPlant[] = [];
-let outcomes: unknown = { total: 0 };
 vi.mock("@/lib/api/use-authed-query", () => ({
   useLguQuery: () => ({ data: plants, loading: false, error: null, refetch: vi.fn() }),
-  // The Harvest Outcomes section.
-  useAuthedQuery: () => ({ data: outcomes, loading: false, error: null, refetch: vi.fn() }),
 }));
 
 // Today is fixed, so every harvest window below has a known stage.
@@ -90,41 +87,9 @@ describe("LGU Harvest & Monitoring", () => {
     expect(screen.getByText("Mango", { selector: "p *, p" })).toBeInTheDocument();
   });
 
-  it("shows how harvested plants turned out", () => {
-    const breakdown = (rows: [string, string, number][]) =>
-      rows.map(([value, label, count]) => ({ value, label, count }));
-    outcomes = {
-      total: 4,
-      healthy_rate: 75,
-      advice_helped_rate: 100,
-      on_time_rate: 50,
-      monitored_rate: 100,
-      reached_high_risk: 2,
-      recovered_healthy: 1,
-      quality: breakdown([["GOOD", "Good", 3], ["FAIR", "Fair", 1], ["POOR", "Poor", 0]]),
-      final_health: breakdown([["HEALTHY", "Healthy", 3], ["MINOR_PROBLEMS", "Minor problems", 1], ["DAMAGED", "Badly damaged", 0]]),
-      advice_helped: breakdown([["YES", "Yes", 4], ["A_LITTLE", "A little", 0], ["NO", "No", 0]]),
-      timing: [],
-      by_crop: [
-        {
-          crop: "Corn",
-          emoji: "🌽",
-          harvests: 4,
-          healthy_rate: 75,
-          good_quality_rate: 75,
-          on_time_rate: 50,
-          average_yield: [{ unit: "KG", unit_label: "kg", average: 12.5, reports: 4 }],
-          average_days: 88,
-        },
-      ],
-      recent: [],
-    };
+  it("has no Harvest Outcomes section", () => {
     render(<LguHarvestPage />);
-    expect(screen.getByRole("heading", { name: "Harvest Outcomes" })).toBeInTheDocument();
-    expect(screen.getAllByText("75%").length).toBeGreaterThan(0);
-    expect(screen.getByText("Healthy at harvest")).toBeInTheDocument();
-    expect(screen.getByText("1 of 2")).toBeInTheDocument();
-    expect(screen.getByText("12.5 kg")).toBeInTheDocument();
-    outcomes = { total: 0 };
+    expect(screen.queryByRole("heading", { name: "Harvest Outcomes" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Healthy at harvest")).not.toBeInTheDocument();
   });
 });
