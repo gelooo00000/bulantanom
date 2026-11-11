@@ -12,7 +12,7 @@ export const REPORT_STRINGS = {
   brand: "BulanTanom",
   pageTitle: "Detailed Reports",
   pageDescription:
-    "Generate reports on crop recommendations, harvests, risk and farmers, and export them as PDF or CSV.",
+    "Generate reports on risk, harvests and farmers, and export them as PDF or CSV.",
 
   filters: "Filters",
   period: "Period",
