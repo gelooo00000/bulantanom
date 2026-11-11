@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import LguPlantLossPage from "@/app/lgu/plant-loss/page";
@@ -100,6 +100,15 @@ describe("LGU Plant Loss", () => {
     expect(screen.getByText("Bitten Tomato")).toBeInTheDocument();
   });
 
+  it("puts each loss in its group's section, as on Harvest & Monitoring", () => {
+    data = full;
+    render(<LguPlantLossPage />);
+    expect(within(screen.getByRole("region", { name: "Lost to a calamity" })).getByText("Typhoon Tomato")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "High risk, not saved" })).getByText("Rotted Tomato")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Other causes" })).getByText("Bitten Tomato")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Pests & disease" })).not.toBeInTheDocument();
+  });
+
   it("lists only the causes that took a plant", () => {
     data = full;
     render(<LguPlantLossPage />);
@@ -111,11 +120,11 @@ describe("LGU Plant Loss", () => {
   it("narrows to calamities, and to High-risk plants that were not saved", () => {
     data = full;
     render(<LguPlantLossPage />);
-    fireEvent.click(screen.getByRole("button", { name: /^Calamity/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /^Calamity/ }));
     expect(screen.getByText("Typhoon Tomato")).toBeInTheDocument();
     expect(screen.queryByText("Rotted Tomato")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /High risk, not saved/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /High risk, not saved/ }));
     expect(screen.getByText("Rotted Tomato")).toBeInTheDocument();
     expect(screen.queryByText("Typhoon Tomato")).not.toBeInTheDocument();
   });

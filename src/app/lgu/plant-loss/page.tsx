@@ -4,8 +4,6 @@ import { Dialog } from "@base-ui/react/dialog";
 import {
   BellRing,
   Bug,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   CloudLightning,
   HeartCrack,
@@ -18,16 +16,19 @@ import {
 import { useState } from "react";
 
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
+import { PagedSection, SegmentTabs } from "@/components/lgu/paged-section";
+import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { AuthedImage } from "@/components/shared/authed-image";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import { fetchLguPlantLosses, type PlantLoss, type PlantLosses } from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
-import { cropVar } from "@/lib/crop-colors";
+import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
-type Filter = "ALL" | "CALAMITY" | "NOT_SAVED" | "PEST_DISEASE" | "OTHER";
+type Group = "CALAMITY" | "NOT_SAVED" | "PEST_DISEASE" | "OTHER";
+type Filter = "ALL" | Group;
 
 const tint = (color: string, percent: number) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
 
@@ -50,16 +51,44 @@ const CAUSE_COLOR: Record<string, string> = {
   OTHER: tint(COLOR.other, 50),
 };
 
-const PAGE_SIZE = 8;
+/** Each group's section, as on Harvest & Monitoring: a title, an icon, a colour and a hint. */
+const GROUPS: Record<Group, { title: string; tab: string; icon: LucideIcon; color: string; hint: string }> = {
+  CALAMITY: {
+    title: "Lost to a calamity",
+    tab: "Calamity",
+    icon: CloudLightning,
+    color: COLOR.calamity,
+    hint: "Flood, typhoon, drought or heat",
+  },
+  NOT_SAVED: {
+    title: "High risk, not saved",
+    tab: "High risk, not saved",
+    icon: OctagonAlert,
+    color: COLOR.notSaved,
+    hint: "Read as High risk, and died anyway",
+  },
+  PEST_DISEASE: {
+    title: "Pests & disease",
+    tab: "Pests & disease",
+    icon: Bug,
+    color: COLOR.pestDisease,
+    hint: "Check the farmer's other plants",
+  },
+  OTHER: { title: "Other causes", tab: "Other", icon: HeartCrack, color: COLOR.other, hint: "Animals and the rest" },
+};
 
-/** A loss's colour: a calamity first, then a High-risk plant not saved, then its cause. */
-function lossColor(loss: PlantLoss): string {
-  if (loss.calamity) return COLOR.calamity;
-  if (loss.high_risk_not_saved) return COLOR.notSaved;
-  return loss.cause_group === "pest_disease" ? COLOR.pestDisease : COLOR.other;
+const ORDER: Group[] = ["CALAMITY", "NOT_SAVED", "PEST_DISEASE", "OTHER"];
+const PER_PAGE = 4;
+
+/** The one section a loss sits in: a calamity first, then a High-risk plant not saved, then its cause. */
+function groupOf(loss: PlantLoss): Group {
+  if (loss.calamity) return "CALAMITY";
+  if (loss.high_risk_not_saved) return "NOT_SAVED";
+  return loss.cause_group === "pest_disease" ? "PEST_DISEASE" : "OTHER";
 }
 
-function matches(loss: PlantLoss, filter: Filter): boolean {
+/** Whether a loss belongs under a tab; a loss can count under two. */
+function matches(loss: PlantLoss, filter: Group): boolean {
   switch (filter) {
     case "CALAMITY":
       return loss.calamity;
@@ -67,30 +96,32 @@ function matches(loss: PlantLoss, filter: Filter): boolean {
       return loss.high_risk_not_saved;
     case "PEST_DISEASE":
       return loss.cause_group === "pest_disease";
-    case "OTHER":
-      return loss.cause_group === "other";
     default:
-      return true;
+      return loss.cause_group === "other";
   }
 }
 
 /**
  * Plants that died before harvest, from the report each Farmer files when
- * they mark a plant as died. Calamities and High-risk plants that were not
- * saved are counted apart, since those are what an officer acts on.
+ * they mark a plant as died, laid out like Harvest & Monitoring: tabs, then
+ * a section per group with sliding pages of cards.
  */
 export default function LguPlantLossPage() {
   const { data, loading, error, refetch } = useAuthedQuery(fetchLguPlantLosses);
   const [filter, setFilter] = useState<Filter>("ALL");
-  const [page, setPage] = useState(0);
 
-  const choose = (next: Filter) => {
-    setFilter(next);
-    setPage(0);
-  };
+  const count: Record<Filter, number> = data
+    ? {
+        ALL: data.total,
+        CALAMITY: data.calamity,
+        NOT_SAVED: data.high_risk_not_saved,
+        PEST_DISEASE: data.pest_disease,
+        OTHER: data.other,
+      }
+    : { ALL: 0, CALAMITY: 0, NOT_SAVED: 0, PEST_DISEASE: 0, OTHER: 0 };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <PageHeader title="Plant Loss" />
 
       {loading ? (
@@ -105,101 +136,86 @@ export default function LguPlantLossPage() {
         />
       ) : (
         <>
-          <LossBanner data={data} filter={filter} onFilter={choose} />
+          <SegmentTabs
+            label="Losses to show"
+            value={filter}
+            onChange={setFilter}
+            tabs={[
+              { value: "ALL", label: "All losses", count: count.ALL, icon: Layers },
+              ...ORDER.map((group) => ({
+                value: group,
+                label: GROUPS[group].tab,
+                count: count[group],
+                icon: GROUPS[group].icon,
+                color: GROUPS[group].color,
+              })),
+            ]}
+          />
+
           <Breakdown data={data} />
-          <LossList losses={data.losses.filter((loss) => matches(loss, filter))} page={page} onPage={setPage} />
+
+          {filter === "ALL" ? (
+            <div className="flex flex-col gap-8">
+              {ORDER.map((group) => (
+                <LossSection
+                  key={group}
+                  group={group}
+                  losses={data.losses.filter((loss) => groupOf(loss) === group)}
+                />
+              ))}
+            </div>
+          ) : count[filter] === 0 ? (
+            <EmptyState
+              icon={GROUPS[filter].icon}
+              title="No losses here"
+              description="No lost plant falls under this group."
+            />
+          ) : (
+            <LossSection
+              key={filter}
+              group={filter}
+              losses={data.losses.filter((loss) => matches(loss, filter))}
+            />
+          )}
         </>
       )}
     </div>
   );
 }
 
-/** The headline count and the filters, one per group, with their counts. */
-function LossBanner({
-  data,
-  filter,
-  onFilter,
-}: {
-  data: PlantLosses;
-  filter: Filter;
-  onFilter: (filter: Filter) => void;
-}) {
-  const options: { value: Filter; label: string; count: number; color: string; icon: LucideIcon }[] = [
-    { value: "ALL", label: "All losses", count: data.total, color: COLOR.all, icon: Layers },
-    { value: "CALAMITY", label: "Calamity", count: data.calamity, color: COLOR.calamity, icon: CloudLightning },
-    {
-      value: "NOT_SAVED",
-      label: "High risk, not saved",
-      count: data.high_risk_not_saved,
-      color: COLOR.notSaved,
-      icon: OctagonAlert,
-    },
-    { value: "PEST_DISEASE", label: "Pests & disease", count: data.pest_disease, color: COLOR.pestDisease, icon: Bug },
-    { value: "OTHER", label: "Other", count: data.other, color: COLOR.other, icon: HeartCrack },
-  ];
-
+function LossSection({ group, losses }: { group: Group; losses: PlantLoss[] }) {
+  const look = GROUPS[group];
   return (
-    <section className="flex flex-col gap-3">
-      <p className="font-heading text-lg leading-tight font-semibold sm:text-xl">
-        <span className="tabular-nums" style={{ color: COLOR.notSaved }}>
-          {data.total}
-        </span>{" "}
-        {data.total === 1 ? "plant lost" : "plants lost"} before harvest
-      </p>
-
-      <div
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
-        role="group"
-        aria-label="Show losses"
-      >
-        {options.map((option) => {
-          const active = filter === option.value;
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onFilter(option.value)}
-              className={cn(
-                "font-heading flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all",
-                active
-                  ? "bg-card text-foreground shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:text-foreground border-transparent",
-              )}
-              style={active ? { borderColor: tint(option.color, 45) } : undefined}
-            >
-              <Icon className="size-3.5" style={{ color: option.color }} aria-hidden="true" />
-              {option.label}
-              <span
-                className="rounded-full px-1.5 text-xs tabular-nums"
-                style={
-                  active
-                    ? { color: option.color, backgroundColor: tint(option.color, 15) }
-                    : { backgroundColor: "var(--border)" }
-                }
-              >
-                {option.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
+    <PagedSection
+      title={look.title}
+      icon={look.icon}
+      hint={look.hint}
+      color={look.color}
+      items={losses}
+      perPage={PER_PAGE}
+      itemKey={(loss) => loss.id}
+      renderItem={(loss) => <LossCard loss={loss} />}
+    />
   );
 }
 
 /**
- * One compact card: what killed them as a single stacked bar (only causes
- * that took a plant are listed), then the last six months and the crops lost.
+ * One compact card: the headline count, what killed them as a single
+ * stacked bar (only causes that took a plant), the last six months and the
+ * crops lost.
  */
 function Breakdown({ data }: { data: PlantLosses }) {
   const causes = data.causes.filter((cause) => cause.count > 0).sort((a, b) => b.count - a.count);
   const most = Math.max(1, ...data.months.map((month) => month.count));
 
   return (
-    <section className="bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-sm">
-      <h2 className="font-heading text-sm font-semibold">What killed them</h2>
+    <section className="bg-card flex flex-col gap-3 rounded-3xl border p-5 shadow-sm">
+      <p className="font-heading text-lg leading-tight font-semibold">
+        <span className="tabular-nums" style={{ color: COLOR.notSaved }}>
+          {data.total}
+        </span>{" "}
+        {data.total === 1 ? "plant lost" : "plants lost"} before harvest
+      </p>
 
       <div
         className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
@@ -274,66 +290,14 @@ function Breakdown({ data }: { data: PlantLosses }) {
   );
 }
 
-/** The losses themselves, newest first, eight a page, one compact row each. */
-function LossList({
-  losses,
-  page,
-  onPage,
-}: {
-  losses: PlantLoss[];
-  page: number;
-  onPage: (page: number) => void;
-}) {
-  if (losses.length === 0) {
-    return (
-      <p className="border-border text-muted-foreground rounded-2xl border border-dashed px-4 py-6 text-center text-sm">
-        No losses in this group.
-      </p>
-    );
-  }
-  const pages = Math.ceil(losses.length / PAGE_SIZE);
-  const current = Math.min(page, pages - 1);
-  const shown = losses.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
-
-  return (
-    <section className="flex flex-col gap-3" aria-label="Lost plants">
-      <ul className="bg-card divide-border/70 divide-y overflow-hidden rounded-2xl border shadow-sm">
-        {shown.map((loss) => (
-          <li key={loss.id}>
-            <LossRow loss={loss} />
-          </li>
-        ))}
-      </ul>
-      {pages > 1 && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
-            {current * PAGE_SIZE + 1}–{Math.min(losses.length, (current + 1) * PAGE_SIZE)} of {losses.length}
-          </p>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              aria-label="Previous page"
-              disabled={current === 0}
-              onClick={() => onPage(current - 1)}
-              className="border-border bg-card hover:bg-muted flex size-9 items-center justify-center rounded-full border shadow-sm disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              aria-label="Next page"
-              disabled={current === pages - 1}
-              onClick={() => onPage(current + 1)}
-              className="border-border bg-card hover:bg-muted flex size-9 items-center justify-center rounded-full border shadow-sm disabled:opacity-40"
-            >
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
+/** Up to two initials for the farmer's avatar. */
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("");
 
 function Tag({ color, icon: Icon, children }: { color: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
@@ -348,9 +312,10 @@ function Tag({ color, icon: Icon, children }: { color: string; icon: LucideIcon;
 }
 
 function LossTags({ loss }: { loss: PlantLoss }) {
+  const look = GROUPS[groupOf(loss)];
   return (
     <>
-      <Tag color={loss.calamity ? COLOR.calamity : lossColor(loss)} icon={loss.calamity ? CloudLightning : HeartCrack}>
+      <Tag color={loss.calamity ? COLOR.calamity : look.color} icon={loss.calamity ? CloudLightning : HeartCrack}>
         {loss.cause_label}
       </Tag>
       {loss.high_risk_not_saved && (
@@ -362,46 +327,126 @@ function LossTags({ loss }: { loss: PlantLoss }) {
   );
 }
 
-/** A lost plant as one row: opens its full report in a pop-up. */
-function LossRow({ loss }: { loss: PlantLoss }) {
-  const color = lossColor(loss);
+/**
+ * The plant's life as one track, like the season track on Harvest &
+ * Monitoring: from planting to the day it was lost, in its group's colour,
+ * ending in a broken heart.
+ */
+function LifeTrack({ loss, color }: { loss: PlantLoss; color: string }) {
+  const lostOn = formatDisplayDate(loss.lost_at.slice(0, 10));
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="relative mx-2.5 h-7" aria-hidden="true">
+        <div className="bg-muted absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full">
+          <span
+            className="absolute inset-0 rounded-full"
+            style={{ backgroundImage: `linear-gradient(90deg, ${tint("var(--primary)", 45)}, ${color})` }}
+          />
+        </div>
+        <span
+          className="bg-card absolute top-1/2 left-0 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+          style={{ borderColor: "var(--primary)" }}
+        />
+        <span
+          className="border-card absolute top-1/2 left-full flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] shadow"
+          style={{ backgroundColor: color, color: "var(--risk-foreground)" }}
+        >
+          <HeartCrack className="size-3" />
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <p className="text-muted-foreground">Planted</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium">{formatDisplayDate(loss.planting_date)}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-muted-foreground">Lived</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium tabular-nums">{loss.age_days} days</p>
+        </div>
+        <div className="text-right">
+          <p className="text-muted-foreground">Lost</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium">{lostOn}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A lost plant, in the same card as Harvest & Monitoring: opens its full report in a pop-up. */
+function LossCard({ loss }: { loss: PlantLoss }) {
+  const color = GROUPS[groupOf(loss)].color;
   const style = { ...cropVar(loss.crop_name), "--level": color } as React.CSSProperties;
   const lostOn = formatDisplayDate(loss.lost_at.slice(0, 10));
+  const highest = loss.highest_risk ? (loss.highest_risk.toLowerCase() as BadgeLevel) : null;
 
   return (
     <Dialog.Root>
       <Dialog.Trigger
         className={cn(
-          "relative flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-colors",
-          "hover:bg-muted/50 focus-visible:bg-muted/60 focus-visible:ring-3 focus-visible:ring-(--level)/30 focus-visible:ring-inset",
+          "bg-card text-card-foreground relative isolate flex w-full flex-col overflow-hidden rounded-3xl border text-left shadow-sm",
+          "transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5",
+          CROP_OUTLINE,
         )}
         style={style}
       >
-        <span aria-hidden="true" className="absolute inset-y-2 left-0 w-1 rounded-r-full" style={{ backgroundColor: color }} />
+        {/* A wash in the crop's colour behind the header, the crop faded in the corner. */}
         <span
           aria-hidden="true"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl text-xl grayscale-[60%]"
-          style={{ backgroundColor: "color-mix(in oklab, var(--crop) 18%, transparent)" }}
+          className="absolute inset-x-0 top-0 -z-10 h-28"
+          style={{
+            backgroundImage: "linear-gradient(160deg, color-mix(in oklab, var(--crop) 20%, transparent), transparent 85%)",
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute -top-3 -right-2 -z-10 text-8xl leading-none opacity-[0.12] grayscale select-none"
         >
           {loss.crop_emoji}
         </span>
 
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="flex min-w-0 items-baseline gap-2">
-            <span className="font-heading truncate text-sm font-semibold">{loss.plant_name}</span>
-            <span className="text-muted-foreground ml-auto shrink-0 text-[11px] tabular-nums">{lostOn}</span>
-          </span>
-          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-muted-foreground truncate text-xs">
-              {loss.crop_name} · {loss.farmer_name} · Day {loss.age_days}
+        <span className="flex w-full flex-col gap-4 p-5">
+          <span className="flex items-start gap-3.5">
+            <span
+              aria-hidden="true"
+              className="bg-card flex size-14 shrink-0 items-center justify-center rounded-2xl border text-3xl grayscale-[50%]"
+              style={{ boxShadow: "0 10px 22px -14px var(--crop)" }}
+            >
+              {loss.crop_emoji}
             </span>
-            <span className="flex flex-wrap gap-1">
+            <span className="min-w-0 flex-1">
+              <span className="font-heading block truncate text-lg leading-tight font-semibold">{loss.plant_name}</span>
+              <span className="mt-1.5 flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="font-heading flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold"
+                  style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
+                >
+                  {initials(loss.farmer_name)}
+                </span>
+                <span className="text-muted-foreground truncate text-sm">{loss.farmer_name}</span>
+              </span>
+            </span>
+            <span
+              className="font-heading shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold"
+              style={{ color, backgroundColor: tint(color, 15), borderColor: tint(color, 30) }}
+            >
+              Lost {lostOn}
+            </span>
+          </span>
+
+          <LifeTrack loss={loss} color={color} />
+
+          <span className="border-border/70 flex flex-wrap items-center gap-2 border-t pt-3.5 text-xs">
+            {highest && <RiskBadge size="sm" level={highest} />}
+            <span className="text-muted-foreground">
+              {loss.assessments_count === 1 ? "1 weekly check" : `${loss.assessments_count} weekly checks`}
+            </span>
+            <span className="ml-auto flex flex-wrap justify-end gap-1.5">
               <LossTags loss={loss} />
             </span>
           </span>
         </span>
-
-        <ChevronRight className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
       </Dialog.Trigger>
 
       <Dialog.Portal>
