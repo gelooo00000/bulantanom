@@ -6,10 +6,12 @@ import {
   Bluetooth,
   Cable,
   Cpu,
+  Download,
   Laptop,
   LoaderCircle,
   Power,
   RotateCw,
+  SlidersHorizontal,
   Smartphone,
   Sprout,
   TriangleAlert,
@@ -174,6 +176,8 @@ export function ArduinoSensorWizard({
 
   const steps = onPhone
     ? [
+        { icon: Download, text: t("arduino.phoneApp") },
+        { icon: SlidersHorizontal, text: t("arduino.phoneBaud") },
         { icon: Smartphone, text: t("arduino.phoneHow1") },
         { icon: Sprout, text: t("arduino.how1") },
         { icon: Power, text: t("arduino.phoneHow2") },

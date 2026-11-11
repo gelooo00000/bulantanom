@@ -467,6 +467,8 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     await userEvent.click(screen.getByRole("button", { name: /^phone/i }));
     await userEvent.click(await screen.findByRole("button", { name: /next/i }));
     expect(await screen.findByText(/turn on bluetooth/i)).toBeInTheDocument();
+    expect(screen.getByText(/download the app named serial usb terminal/i)).toBeInTheDocument();
+    expect(screen.getByText(/baud rate to 115200/i)).toBeInTheDocument();
     expect(screen.queryByText(/usb cable/i)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/iphones cannot connect/i);

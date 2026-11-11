@@ -76,6 +76,16 @@ export const soil = defineMessages({
     fil: "Hindi makakonekta sa sensor ang iPhone at iPad. Gumamit ng Android na telepono o laptop, o i-type na lang ang mga sukat.",
     bik: "Dili makakonekta sa sensor an iPhone asin iPad. Maggamit nin Android na telepono o laptop, o i-type na sana an mga sukat.",
   },
+  "arduino.phoneApp": {
+    en: "Download the app named Serial USB Terminal from the Google Play Store.",
+    fil: "I-download ang app na Serial USB Terminal mula sa Google Play Store.",
+    bik: "I-download an app na Serial USB Terminal hali sa Google Play Store.",
+  },
+  "arduino.phoneBaud": {
+    en: "Open Serial USB Terminal, go to Settings, and change the Baud rate to 115200.",
+    fil: "Buksan ang Serial USB Terminal, pumunta sa Settings, at palitan ang Baud rate sa 115200.",
+    bik: "Buksan an Serial USB Terminal, magduman sa Settings, asin ribayan an Baud rate sa 115200.",
+  },
   "arduino.phoneHow1": {
     en: "Open BulanTanom in Chrome on your Android phone and turn on Bluetooth (and Location, on older phones).",
     fil: "Buksan ang BulanTanom sa Chrome sa iyong Android na telepono at buksan ang Bluetooth (at ang Location, sa mas lumang telepono).",
