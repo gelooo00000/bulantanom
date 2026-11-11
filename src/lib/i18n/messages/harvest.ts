@@ -335,6 +335,11 @@ export const harvest = defineMessages({
     fil: "Iba pa, o hindi ka sigurado",
     bik: "Iba pa, o dai ka sigurado",
   },
+  "lost.hintAbout": {
+    en: "What does {name} mean?",
+    fil: "Ano ang ibig sabihin ng {name}?",
+    bik: "Ano an boot sabihon kan {name}?",
+  },
   "lost.total": {
     en: "A plant that died or can no longer be saved is recorded as a Total Crop Loss.",
     fil: "Ang tanim na namatay o hindi na maililigtas ay itinatala bilang Total Crop Loss.",

@@ -105,6 +105,7 @@ export function LostPlantDialog({
               onChange={setCause}
               label={(value) => t(`lost.cause.${value}` as MessageKey)}
               hint={(value) => t(`lost.cause.${value}.hint` as MessageKey)}
+              hintLabel={(value) => t("lost.hintAbout", { name: t(`lost.cause.${value}` as MessageKey) })}
               neutral
             />
             <Choice

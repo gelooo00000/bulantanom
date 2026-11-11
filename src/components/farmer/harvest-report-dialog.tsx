@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
+import { Popover } from "@base-ui/react/popover";
 import { ClipboardCheck, LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
@@ -227,6 +228,9 @@ export function HarvestReportDialog({
 /**
  * One required question answered by tapping a big button. Three options are
  * coloured good / middling / bad; `neutral` keeps them all one colour.
+ *
+ * With `hint`, each option gets a 💡 beside it: pointing at it or tapping it
+ * shows what the option covers, without choosing it.
  */
 export function Choice<T extends string>({
   legend,
@@ -236,6 +240,7 @@ export function Choice<T extends string>({
   onChange,
   label,
   hint,
+  hintLabel,
   neutral = false,
 }: {
   legend: string;
@@ -244,8 +249,10 @@ export function Choice<T extends string>({
   value: T | null;
   onChange: (value: T) => void;
   label: (value: T) => string;
-  /** A short line under each option's label, e.g. what a cause covers. */
+  /** What an option covers, shown from its 💡. */
   hint?: (value: T) => string;
+  /** The 💡 button's accessible name, e.g. "What does Calamity mean?". */
+  hintLabel?: (value: T) => string;
   neutral?: boolean;
 }) {
   return (
@@ -255,26 +262,54 @@ export function Choice<T extends string>({
         <span className="text-risk-high text-xs font-normal">{required}</span>
       </legend>
       <div className={cn("grid gap-2", options.length > 3 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3")}>
-        {options.map((option, index) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={value === option}
-            onClick={() => onChange(option)}
-            className={cn(
-              "border-border min-h-11 rounded-xl border px-2 py-2 text-sm font-medium transition-colors",
-              hint && "flex flex-col items-start gap-0.5 px-3 text-left",
-              value === option
-                ? neutral
-                  ? "border-primary bg-primary/10"
-                  : TONE[index]
-                : "hover:bg-muted",
-            )}
-          >
-            {label(option)}
-            {hint && <span className="text-muted-foreground text-xs leading-snug font-normal">{hint(option)}</span>}
-          </button>
-        ))}
+        {options.map((option, index) => {
+          const button = (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={value === option}
+              onClick={() => onChange(option)}
+              className={cn(
+                "border-border min-h-11 w-full rounded-xl border px-2 py-2 text-sm font-medium transition-colors",
+                hint && "pr-9 pl-3 text-left",
+                value === option
+                  ? neutral
+                    ? "border-primary bg-primary/10"
+                    : TONE[index]
+                  : "hover:bg-muted",
+              )}
+            >
+              {label(option)}
+            </button>
+          );
+          if (!hint) return button;
+          return (
+            <div key={option} className="relative">
+              {button}
+              <Popover.Root>
+                <Popover.Trigger
+                  openOnHover
+                  delay={100}
+                  aria-label={hintLabel ? hintLabel(option) : label(option)}
+                  className={cn(
+                    "absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-base",
+                    "hover:bg-muted data-[popup-open]:bg-muted focus-visible:ring-ring/50 outline-none focus-visible:ring-3",
+                  )}
+                >
+                  <span aria-hidden="true">💡</span>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Positioner side="top" sideOffset={6} className="z-[60]">
+                    <Popover.Popup className="bg-popover text-popover-foreground border-border max-w-56 rounded-xl border px-3 py-2 text-xs leading-snug shadow-lg">
+                      <span className="font-heading block font-medium">{label(option)}</span>
+                      <span className="text-muted-foreground">{hint(option)}</span>
+                    </Popover.Popup>
+                  </Popover.Positioner>
+                </Popover.Portal>
+              </Popover.Root>
+            </div>
+          );
+        })}
       </div>
     </fieldset>
   );

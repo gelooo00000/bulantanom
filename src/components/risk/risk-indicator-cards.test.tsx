@@ -148,7 +148,13 @@ describe("a risky plant's card", () => {
     for (const cause of causes) {
       expect(within(form).getByRole("button", { name: new RegExp(`^${cause}`) })).toBeInTheDocument();
     }
-    expect(within(form).getByText("Typhoon, flood, drought or strong winds")).toBeInTheDocument();
+    // The hint hides behind the 💡 until it is pointed at or tapped.
+    expect(screen.queryByText("Typhoon, flood, drought or strong winds")).not.toBeInTheDocument();
+    await userEvent.click(within(form).getByRole("button", { name: "What does Calamity mean?" }));
+    expect(await screen.findByText("Typhoon, flood, drought or strong winds")).toBeInTheDocument();
+    // Reading the hint does not choose the cause.
+    expect(within(form).getByRole("button", { name: /^Calamity/ })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.keyboard("{Escape}");
     expect(within(form).getByText(/Total Crop Loss/)).toBeInTheDocument();
     await userEvent.click(within(form).getByRole("button", { name: /^Calamity/ }));
     await userEvent.click(within(form).getByRole("button", { name: "Today" }));
