@@ -11,7 +11,6 @@ import {
   Info,
   LoaderCircle,
   Minus,
-  ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
 
@@ -42,15 +41,6 @@ export function Breadcrumbs({ items }: { items: { label: string; href?: string }
         </span>
       ))}
     </nav>
-  );
-}
-
-export function LiveDataNote() {
-  return (
-    <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-      <ShieldCheck className="size-3.5" aria-hidden="true" />
-      Every figure is read live from the BulanTanom database. Nothing here is estimated.
-    </div>
   );
 }
 

@@ -7,7 +7,6 @@ import {
   Breadcrumbs,
   CardState,
   ChartCard,
-  LiveDataNote,
 } from "@/components/analytics/cards";
 import { CROP_PAGE_SIZE, HorizontalBars, WeeklyColumns } from "@/components/lgu/dashboard-charts";
 import { RiskOverview } from "@/components/lgu/risk-overview";
@@ -102,8 +101,6 @@ export function AnalyticsDashboard() {
           </CardState>
         </ChartCard>
       </div>
-
-      <LiveDataNote />
     </div>
   );
 }
