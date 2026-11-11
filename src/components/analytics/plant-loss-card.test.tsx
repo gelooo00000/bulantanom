@@ -51,15 +51,18 @@ describe("Plant losses on Agricultural Analytics", () => {
     expect(screen.getByText("No plants lost")).toBeInTheDocument();
   });
 
-  it("shows the totals, only the causes that took a plant, and the months", () => {
+  it("is one sentence and one bar per cause that took a plant", () => {
     data = full;
     render(<PlantLossCard />);
-    expect(screen.getByText("Lost before harvest")).toBeInTheDocument();
-    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(
+      screen.getByText("3 plants lost before harvest, 2 to a calamity. 75% of finished plants were harvested."),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Calamity: 2 plants, 67%/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Pest infestation: 1 plant, 33%/)).toBeInTheDocument();
     expect(screen.queryByText("Lack of water")).not.toBeInTheDocument();
-    expect(screen.getByText("3 plants lost in the last 6 months.")).toBeInTheDocument();
+    // No tiles, legend or monthly chart any more.
+    expect(screen.queryByText("Lost before harvest")).not.toBeInTheDocument();
+    expect(screen.queryByText(/lost in the last 6 months/)).not.toBeInTheDocument();
   });
 
   it("links Officers to the Plant Loss page, not Admins", () => {
