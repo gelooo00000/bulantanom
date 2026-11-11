@@ -1,37 +1,52 @@
 "use client";
 
-import { Biohazard, Bug, CircleHelp, CloudRain, PawPrint, Sun, type LucideIcon } from "lucide-react";
+import {
+  Biohazard,
+  Bug,
+  CircleHelp,
+  CloudLightning,
+  Droplets,
+  FlaskConical,
+  Mountain,
+  Thermometer,
+  UserX,
+  type LucideIcon,
+} from "lucide-react";
 
 import { CardState, ChartCard } from "@/components/analytics/cards";
 import { ColumnChart, HorizontalBars } from "@/components/lgu/dashboard-charts";
-import { fetchLguPlantLosses, type PlantLosses } from "@/lib/api/lgu-api";
+import { fetchLguPlantLosses, type LossCauseGroup, type PlantLosses } from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { useAuth } from "@/lib/auth/auth-context";
 
-type Group = "calamity" | "pest_disease" | "other";
+type Group = LossCauseGroup;
 
 /**
- * The three loss groups, in a fixed order with their own validated colours
+ * The four loss groups, in a fixed order with their own validated colours
  * (--loss-* in globals.css). Each cause takes its group's colour, and every
  * bar is labelled with its name and an icon, so colour is never the only cue.
  */
 const GROUPS: { value: Group; label: string; color: string }[] = [
   { value: "calamity", label: "Calamity", color: "var(--loss-calamity)" },
   { value: "pest_disease", label: "Pests & disease", color: "var(--loss-pest)" },
-  { value: "other", label: "Other", color: "var(--loss-other)" },
+  { value: "conditions", label: "Growing conditions", color: "var(--loss-conditions)" },
+  { value: "other", label: "Practice & other", color: "var(--loss-other)" },
 ];
 const COLOR: Record<Group, string> = Object.fromEntries(GROUPS.map((g) => [g.value, g.color])) as Record<
   Group,
   string
 >;
 
-const CAUSE: Record<string, { group: Group; icon: LucideIcon }> = {
-  FLOOD_TYPHOON: { group: "calamity", icon: CloudRain },
-  DROUGHT_HEAT: { group: "calamity", icon: Sun },
-  PEST: { group: "pest_disease", icon: Bug },
-  DISEASE: { group: "pest_disease", icon: Biohazard },
-  ANIMALS: { group: "other", icon: PawPrint },
-  OTHER: { group: "other", icon: CircleHelp },
+const ICON: Record<string, LucideIcon> = {
+  CALAMITY: CloudLightning,
+  PEST: Bug,
+  DISEASE: Biohazard,
+  NUTRIENTS: FlaskConical,
+  POOR_SOIL: Mountain,
+  WATER: Droplets,
+  HUMAN_ERROR: UserX,
+  EXTREME_TEMP: Thermometer,
+  OTHER: CircleHelp,
 };
 
 const monthName = (month: string, style: "short" | "long") =>
@@ -68,6 +83,7 @@ export function PlantLossChart({ data }: { data: PlantLosses }) {
   const groupCount: Record<Group, number> = {
     calamity: data.calamity,
     pest_disease: data.pest_disease,
+    conditions: data.conditions,
     other: data.other,
   };
 
@@ -78,15 +94,15 @@ export function PlantLossChart({ data }: { data: PlantLosses }) {
       key: cause.value,
       label: cause.label,
       value: cause.count,
-      color: COLOR[CAUSE[cause.value]?.group ?? "other"],
-      icon: CAUSE[cause.value]?.icon ?? CircleHelp,
+      color: COLOR[cause.group] ?? COLOR.other,
+      icon: ICON[cause.value] ?? CircleHelp,
     }));
 
   // Each month's losses split by group, from the losses themselves.
   const perMonth = new Map<string, Record<Group, number>>();
   for (const loss of data.losses) {
     const month = loss.lost_at.slice(0, 7);
-    const row = perMonth.get(month) ?? { calamity: 0, pest_disease: 0, other: 0 };
+    const row = perMonth.get(month) ?? { calamity: 0, pest_disease: 0, conditions: 0, other: 0 };
     row[loss.cause_group as Group] += 1;
     perMonth.set(month, row);
   }

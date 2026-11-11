@@ -72,7 +72,7 @@ class PlantLossTests(RiskTestCase):
         pests = self.make_plant(self.farmer, days_ago=40)
         self.reading(pests, "MEDIUM")
 
-        self.lose(typhoon, "FLOOD_TYPHOON")
+        self.lose(typhoon, "CALAMITY")
         self.lose(not_saved, "DISEASE")
         self.lose(pests, "PEST")
 
@@ -81,12 +81,13 @@ class PlantLossTests(RiskTestCase):
         self.assertEqual(data["calamity"], 1)
         self.assertEqual(data["high_risk_not_saved"], 1)
         self.assertEqual(data["pest_disease"], 2)
+        self.assertEqual(data["conditions"], 0)
         self.assertEqual(data["other"], 0)
         self.assertEqual(data["warned_before"], 2)
         self.assertEqual(data["survival_rate"], 0)
         causes = {row["value"]: row for row in data["causes"]}
-        self.assertEqual(causes["FLOOD_TYPHOON"]["count"], 1)
-        self.assertTrue(causes["FLOOD_TYPHOON"]["calamity"])
+        self.assertEqual(causes["CALAMITY"]["count"], 1)
+        self.assertTrue(causes["CALAMITY"]["calamity"])
         self.assertFalse(causes["PEST"]["calamity"])
         self.assertEqual(data["crops"][0]["count"], 3)
         self.assertEqual(data["months"][-1]["count"], 3)
@@ -102,7 +103,7 @@ class PlantLossTests(RiskTestCase):
 
     def test_officers_are_alerted_and_sent_to_the_page(self):
         typhoon = self.make_plant(self.farmer, days_ago=40)
-        self.lose(typhoon, "FLOOD_TYPHOON")
+        self.lose(typhoon, "CALAMITY")
         alert = Notification.objects.get(recipient=self.officer, notification_type="PLANT_LOST")
         self.assertEqual(alert.severity, "critical")
         self.assertEqual(alert.title, "Plant Lost to a Calamity")
@@ -114,7 +115,31 @@ class PlantLossTests(RiskTestCase):
 
     def test_an_ordinary_loss_is_a_warning(self):
         plant = self.make_plant(self.farmer, days_ago=40)
-        self.lose(plant, "ANIMALS")
+        self.lose(plant, "HUMAN_ERROR")
         alert = Notification.objects.get(recipient=self.officer, notification_type="PLANT_LOST")
         self.assertEqual(alert.severity, "warning")
         self.assertEqual(alert.title, "Plant Lost")
+
+    def test_growing_conditions_and_farming_practice_are_groups_of_their_own(self):
+        dry = self.make_plant(self.farmer, days_ago=40)
+        burned = self.make_plant(self.farmer, days_ago=40)
+        self.lose(dry, "WATER")
+        self.lose(burned, "HUMAN_ERROR")
+
+        data = self.client.get(URL, **self.officer_auth).data
+        self.assertEqual(data["conditions"], 1)
+        self.assertEqual(data["other"], 1)
+        self.assertEqual(data["calamity"], 0)
+        causes = {row["value"]: row for row in data["causes"]}
+        self.assertEqual(causes["WATER"]["group"], "conditions")
+        self.assertEqual(causes["HUMAN_ERROR"]["group"], "other")
+        self.assertEqual(causes["CALAMITY"]["group"], "calamity")
+        by_plant = {row["plant_id"]: row for row in data["losses"]}
+        self.assertEqual(by_plant[dry.pk]["cause_group"], "conditions")
+        self.assertEqual(by_plant[dry.pk]["cause_label"], "Lack of water")
+
+    def test_every_cause_has_a_group(self):
+        from .loss_report import _GROUP_OF
+        from .models import LossReport
+
+        self.assertEqual(set(_GROUP_OF), set(LossReport.Cause.values))

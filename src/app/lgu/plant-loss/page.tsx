@@ -6,6 +6,7 @@ import {
   Bug,
   ClipboardList,
   CloudLightning,
+  Droplets,
   HeartCrack,
   Layers,
   OctagonAlert,
@@ -27,17 +28,21 @@ import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
 import { cn } from "@/lib/utils";
 
-type Group = "CALAMITY" | "NOT_SAVED" | "PEST_DISEASE" | "OTHER";
+type Group = "CALAMITY" | "NOT_SAVED" | "PEST_DISEASE" | "CONDITIONS" | "OTHER";
 type Filter = "ALL" | Group;
 
 const tint = (color: string, percent: number) => `color-mix(in oklab, ${color} ${percent}%, transparent)`;
 
-/** Each group's colour: storms in blue, a lost High-risk plant in red. */
+/**
+ * Each group's colour: the cause groups share Agricultural Analytics'
+ * validated --loss-* colours; a lost High-risk plant is the risk red.
+ */
 const COLOR = {
-  calamity: "var(--risk-early)",
+  calamity: "var(--loss-calamity)",
   notSaved: "var(--risk-high)",
-  pestDisease: "var(--risk-medium)",
-  other: "var(--muted-foreground)",
+  pestDisease: "var(--loss-pest)",
+  conditions: "var(--loss-conditions)",
+  other: "var(--loss-other)",
   all: "var(--primary)",
 };
 
@@ -48,7 +53,7 @@ const GROUPS: Record<Group, { title: string; tab: string; icon: LucideIcon; colo
     tab: "Calamity",
     icon: CloudLightning,
     color: COLOR.calamity,
-    hint: "Flood, typhoon, drought or heat",
+    hint: "Typhoon, flood, drought or strong winds",
   },
   NOT_SAVED: {
     title: "High risk, not saved",
@@ -64,17 +69,31 @@ const GROUPS: Record<Group, { title: string; tab: string; icon: LucideIcon; colo
     color: COLOR.pestDisease,
     hint: "Check the farmer's other plants",
   },
-  OTHER: { title: "Other causes", tab: "Other", icon: HeartCrack, color: COLOR.other, hint: "Animals and the rest" },
+  CONDITIONS: {
+    title: "Growing conditions",
+    tab: "Growing conditions",
+    icon: Droplets,
+    color: COLOR.conditions,
+    hint: "Nutrients, soil, water or temperature",
+  },
+  OTHER: {
+    title: "Farming practice & other",
+    tab: "Practice & other",
+    icon: HeartCrack,
+    color: COLOR.other,
+    hint: "Human error, or another cause",
+  },
 };
 
-const ORDER: Group[] = ["CALAMITY", "NOT_SAVED", "PEST_DISEASE", "OTHER"];
+const ORDER: Group[] = ["CALAMITY", "NOT_SAVED", "PEST_DISEASE", "CONDITIONS", "OTHER"];
 const PER_PAGE = 4;
 
 /** The one section a loss sits in: a calamity first, then a High-risk plant not saved, then its cause. */
 function groupOf(loss: PlantLoss): Group {
   if (loss.calamity) return "CALAMITY";
   if (loss.high_risk_not_saved) return "NOT_SAVED";
-  return loss.cause_group === "pest_disease" ? "PEST_DISEASE" : "OTHER";
+  if (loss.cause_group === "pest_disease") return "PEST_DISEASE";
+  return loss.cause_group === "conditions" ? "CONDITIONS" : "OTHER";
 }
 
 /** Whether a loss belongs under a tab; a loss can count under two. */
@@ -86,6 +105,8 @@ function matches(loss: PlantLoss, filter: Group): boolean {
       return loss.high_risk_not_saved;
     case "PEST_DISEASE":
       return loss.cause_group === "pest_disease";
+    case "CONDITIONS":
+      return loss.cause_group === "conditions";
     default:
       return loss.cause_group === "other";
   }
@@ -106,9 +127,10 @@ export default function LguPlantLossPage() {
         CALAMITY: data.calamity,
         NOT_SAVED: data.high_risk_not_saved,
         PEST_DISEASE: data.pest_disease,
+        CONDITIONS: data.conditions,
         OTHER: data.other,
       }
-    : { ALL: 0, CALAMITY: 0, NOT_SAVED: 0, PEST_DISEASE: 0, OTHER: 0 };
+    : { ALL: 0, CALAMITY: 0, NOT_SAVED: 0, PEST_DISEASE: 0, CONDITIONS: 0, OTHER: 0 };
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,7 +144,7 @@ export default function LguPlantLossPage() {
         <EmptyState
           icon={Sprout}
           title="No plants lost"
-          description="When a Farmer reports that a plant died — to a calamity, pests, disease or anything else — it appears here."
+          description="When a Farmer reports that a plant died — to a calamity, pests, disease, poor growing conditions, human error or anything else — it appears here."
         />
       ) : (
         <>
@@ -370,6 +392,9 @@ function LossCard({ loss }: { loss: PlantLoss }) {
               </Dialog.Title>
               <div className="flex flex-wrap gap-1.5">
                 <LossTags loss={loss} />
+                <Tag color={COLOR.notSaved} icon={HeartCrack}>
+                  Total crop loss
+                </Tag>
               </div>
             </div>
             <Dialog.Close

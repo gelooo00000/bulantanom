@@ -13,7 +13,18 @@ import type { BackendPlant, LossAnswers, LossCause, LossNoticed } from "@/lib/ap
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const CAUSES: LossCause[] = ["PEST", "DISEASE", "FLOOD_TYPHOON", "DROUGHT_HEAT", "ANIMALS", "OTHER"];
+/** Plants die from far more than calamities, so every common cause is offered. */
+const CAUSES: LossCause[] = [
+  "CALAMITY",
+  "PEST",
+  "DISEASE",
+  "NUTRIENTS",
+  "POOR_SOIL",
+  "WATER",
+  "HUMAN_ERROR",
+  "EXTREME_TEMP",
+  "OTHER",
+];
 const NOTICED: LossNoticed[] = ["TODAY", "THIS_WEEK", "EARLIER"];
 
 /**
@@ -80,7 +91,7 @@ export function LostPlantDialog({
                 {t("lost.title")}
               </Dialog.Title>
               <Dialog.Description className="text-muted-foreground mt-0.5 text-sm">
-                {t("lost.intro", { name: plant.display_name })}
+                {t("lost.intro", { name: plant.display_name })} {t("lost.total")}
               </Dialog.Description>
             </div>
           </div>
@@ -93,6 +104,7 @@ export function LostPlantDialog({
               value={cause}
               onChange={setCause}
               label={(value) => t(`lost.cause.${value}` as MessageKey)}
+              hint={(value) => t(`lost.cause.${value}.hint` as MessageKey)}
               neutral
             />
             <Choice

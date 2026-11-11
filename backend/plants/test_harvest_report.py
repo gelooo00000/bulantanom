@@ -342,7 +342,7 @@ class LossReportTests(RiskTestCase):
         self.assertEqual(data["warned_before_loss"], 1)
         pest = next(c for c in data["causes"] if c["value"] == "PEST")
         self.assertEqual(pest["count"], 1)
-        self.assertEqual(data["recent_losses"][0]["cause_label"], "Pests")
+        self.assertEqual(data["recent_losses"][0]["cause_label"], "Pest infestation")
         report = self.client.get("/api/lgu/reports/harvest-outcomes/", **officer)
         self.assertEqual(report.status_code, 200)
 

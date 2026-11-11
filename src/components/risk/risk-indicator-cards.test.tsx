@@ -135,13 +135,28 @@ describe("a risky plant's card", () => {
     expect(within(form).getByRole("alert")).toHaveTextContent(/what happened and when/);
     expect(reportPlantLost).not.toHaveBeenCalled();
 
-    await userEvent.click(within(form).getByRole("button", { name: "Flood or typhoon" }));
+    // Plants die from far more than calamities: every cause is offered, with a hint.
+    const causes = [
+      "Pest infestation",
+      "Plant disease",
+      "Lack of nutrients",
+      "Poor soil condition",
+      "Lack of water",
+      "Human error",
+      "Extreme temperature",
+    ];
+    for (const cause of causes) {
+      expect(within(form).getByRole("button", { name: new RegExp(`^${cause}`) })).toBeInTheDocument();
+    }
+    expect(within(form).getByText("Typhoon, flood, drought or strong winds")).toBeInTheDocument();
+    expect(within(form).getByText(/Total Crop Loss/)).toBeInTheDocument();
+    await userEvent.click(within(form).getByRole("button", { name: /^Calamity/ }));
     await userEvent.click(within(form).getByRole("button", { name: "Today" }));
     await userEvent.click(within(form).getByRole("button", { name: "Report lost plant" }));
     expect(reportPlantLost).toHaveBeenCalledWith(
       "token",
       4,
-      expect.objectContaining({ cause: "FLOOD_TYPHOON", noticed: "TODAY" }),
+      expect.objectContaining({ cause: "CALAMITY", noticed: "TODAY" }),
     );
     expect(await screen.findByText(/Typhoon Row was recorded as lost/)).toBeInTheDocument();
     expect(refetch).toHaveBeenCalled();

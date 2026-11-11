@@ -807,18 +807,24 @@ def loss_photo_upload_path(instance, filename):
 
 class LossReport(models.Model):
     """
-    Written when a Farmer reports that a plant died before harvest. Instead of
+    Written when a Farmer reports that a plant died before harvest - a Total
+    Crop Loss, a plant destroyed beyond saving. Instead of
     deleting the plant (and its history), the loss is recorded, so the LGU sees
     survival rates, the causes of loss, and whether BulanTanom had warned
     before the plant died.
     """
 
     class Cause(models.TextChoices):
-        PEST = "PEST", "Pests"
-        DISEASE = "DISEASE", "Disease"
-        FLOOD_TYPHOON = "FLOOD_TYPHOON", "Flood or typhoon"
-        DROUGHT_HEAT = "DROUGHT_HEAT", "Drought or too hot"
-        ANIMALS = "ANIMALS", "Animals"
+        # Plants die from far more than calamities: pests, disease, the
+        # growing conditions and the way they are cared for all count.
+        CALAMITY = "CALAMITY", "Calamity"  # typhoon, flood, drought, strong winds
+        PEST = "PEST", "Pest infestation"  # caterpillars, aphids, locusts
+        DISEASE = "DISEASE", "Plant disease"  # fungal, bacterial or viral
+        NUTRIENTS = "NUTRIENTS", "Lack of nutrients"  # nitrogen and the rest
+        POOR_SOIL = "POOR_SOIL", "Poor soil condition"
+        WATER = "WATER", "Lack of water"  # too little, or too much, watering
+        HUMAN_ERROR = "HUMAN_ERROR", "Human error"  # fertilizer, pesticide, care
+        EXTREME_TEMP = "EXTREME_TEMP", "Extreme temperature"  # too hot or too cold
         OTHER = "OTHER", "Other / not sure"
 
     class Noticed(models.TextChoices):

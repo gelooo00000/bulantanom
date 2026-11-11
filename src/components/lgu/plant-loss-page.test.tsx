@@ -41,45 +41,50 @@ function loss(id: number, name: string, extra: Partial<PlantLoss>): PlantLoss {
 
 const losses = [
   loss(1, "Typhoon Tomato", {
-    cause: "FLOOD_TYPHOON",
-    cause_label: "Flood or typhoon",
+    cause: "CALAMITY",
+    cause_label: "Calamity",
     cause_group: "calamity",
     calamity: true,
   }),
   loss(2, "Rotted Tomato", {
     cause: "DISEASE",
-    cause_label: "Disease",
+    cause_label: "Plant disease",
     highest_risk: "HIGH",
     last_risk: "HIGH",
     high_risk_count: 2,
     warned_before: true,
     high_risk_not_saved: true,
   }),
-  loss(3, "Bitten Tomato", { cause: "ANIMALS", cause_label: "Animals", cause_group: "other" }),
+  loss(3, "Burned Tomato", { cause: "HUMAN_ERROR", cause_label: "Human error", cause_group: "other" }),
+  loss(4, "Dry Tomato", { cause: "WATER", cause_label: "Lack of water", cause_group: "conditions" }),
 ];
 
 const full: PlantLosses = {
-  total: 3,
+  total: 4,
   calamity: 1,
   high_risk_not_saved: 1,
   pest_disease: 1,
+  conditions: 1,
   other: 1,
   warned_before: 1,
   warned_before_rate: 33,
   harvested: 1,
   survival_rate: 25,
   causes: [
-    { value: "PEST", label: "Pests", count: 0, calamity: false },
-    { value: "DISEASE", label: "Disease", count: 1, calamity: false },
-    { value: "FLOOD_TYPHOON", label: "Flood or typhoon", count: 1, calamity: true },
-    { value: "DROUGHT_HEAT", label: "Drought or too hot", count: 0, calamity: true },
-    { value: "ANIMALS", label: "Animals", count: 1, calamity: false },
-    { value: "OTHER", label: "Other / not sure", count: 0, calamity: false },
+    { value: "CALAMITY", label: "Calamity", count: 1, calamity: true, group: "calamity" },
+    { value: "PEST", label: "Pest infestation", count: 0, calamity: false, group: "pest_disease" },
+    { value: "DISEASE", label: "Plant disease", count: 1, calamity: false, group: "pest_disease" },
+    { value: "NUTRIENTS", label: "Lack of nutrients", count: 0, calamity: false, group: "conditions" },
+    { value: "POOR_SOIL", label: "Poor soil condition", count: 0, calamity: false, group: "conditions" },
+    { value: "WATER", label: "Lack of water", count: 1, calamity: false, group: "conditions" },
+    { value: "HUMAN_ERROR", label: "Human error", count: 1, calamity: false, group: "other" },
+    { value: "EXTREME_TEMP", label: "Extreme temperature", count: 0, calamity: false, group: "conditions" },
+    { value: "OTHER", label: "Other / not sure", count: 0, calamity: false, group: "other" },
   ],
-  crops: [{ crop: "Tomato", emoji: "🍅", count: 3 }],
+  crops: [{ crop: "Tomato", emoji: "🍅", count: 4 }],
   months: ["2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"].map((month) => ({
     month,
-    count: month === "2026-11" ? 3 : 0,
+    count: month === "2026-11" ? 4 : 0,
   })),
   losses,
 };
@@ -94,10 +99,11 @@ describe("LGU Plant Loss", () => {
   it("counts the losses and lists every lost plant", () => {
     data = full;
     render(<LguPlantLossPage />);
-    expect(screen.getByRole("tab", { name: /All losses\s*3/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /All losses\s*4/ })).toBeInTheDocument();
     expect(screen.getByText("Typhoon Tomato")).toBeInTheDocument();
     expect(screen.getByText("Rotted Tomato")).toBeInTheDocument();
-    expect(screen.getByText("Bitten Tomato")).toBeInTheDocument();
+    expect(screen.getByText("Burned Tomato")).toBeInTheDocument();
+    expect(screen.getByText("Dry Tomato")).toBeInTheDocument();
   });
 
   it("puts each loss in its group's section, as on Harvest & Monitoring", () => {
@@ -105,7 +111,10 @@ describe("LGU Plant Loss", () => {
     render(<LguPlantLossPage />);
     expect(within(screen.getByRole("region", { name: "Lost to a calamity" })).getByText("Typhoon Tomato")).toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "High risk, not saved" })).getByText("Rotted Tomato")).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Other causes" })).getByText("Bitten Tomato")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Growing conditions" })).getByText("Dry Tomato")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Farming practice & other" })).getByText("Burned Tomato"),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Pests & disease" })).not.toBeInTheDocument();
   });
 

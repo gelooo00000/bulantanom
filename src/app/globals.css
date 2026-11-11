@@ -624,17 +624,19 @@ html[data-splash-seen] .splash-screen {
 }
 
 /*
- * Plant-loss groups on Agricultural Analytics: calamity, pests & disease,
- * other. Checked with the dataviz palette validator (lightness band,
+ * Plant-loss groups on Agricultural Analytics and Plant Loss: calamity,
+ * pests & disease, growing conditions, farming practice & other. Checked with the dataviz palette validator (lightness band,
  * colour-blind separation, contrast) against each theme's surface.
  */
 :root {
   --loss-calamity: #0369a1;
   --loss-pest: #b45309;
-  --loss-other: #6d28d9;
+  --loss-conditions: #6d28d9;
+  --loss-other: #047857;
 }
 .dark {
   --loss-calamity: #0891d1;
   --loss-pest: #d97706;
-  --loss-other: #8b5cf6;
+  --loss-conditions: #8b5cf6;
+  --loss-other: #059669;
 }

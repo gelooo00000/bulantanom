@@ -131,12 +131,16 @@ export type HarvestReport = {
   created_at: string;
 };
 
+/** Why a plant died: far more than calamities (see LossReport.Cause). */
 export type LossCause =
+  | "CALAMITY"
   | "PEST"
   | "DISEASE"
-  | "FLOOD_TYPHOON"
-  | "DROUGHT_HEAT"
-  | "ANIMALS"
+  | "NUTRIENTS"
+  | "POOR_SOIL"
+  | "WATER"
+  | "HUMAN_ERROR"
+  | "EXTREME_TEMP"
   | "OTHER";
 export type LossNoticed = "TODAY" | "THIS_WEEK" | "EARLIER";
 

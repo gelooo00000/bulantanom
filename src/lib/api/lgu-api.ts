@@ -200,7 +200,11 @@ export function fetchAdminHarvestOutcomes(accessToken: string): Promise<HarvestO
   return apiFetch("/admin/harvest-outcomes/", { accessToken });
 }
 
-export type LossCauseGroup = "calamity" | "pest_disease" | "other";
+/**
+ * The four cause groups: calamity; pests and disease; growing conditions
+ * (nutrients, soil, water, temperature); farming practice and other.
+ */
+export type LossCauseGroup = "calamity" | "pest_disease" | "conditions" | "other";
 
 /** One lost plant on the Plant Loss page. */
 export type PlantLoss = LossOutcomeReport & {
@@ -208,7 +212,7 @@ export type PlantLoss = LossOutcomeReport & {
   farmer_id: number;
   planting_date: string;
   cause_group: LossCauseGroup;
-  /** The Farmer said a flood, typhoon, drought or heat killed it. */
+  /** The Farmer said a calamity (typhoon, flood, drought, strong winds) killed it. */
   calamity: boolean;
   /** BulanTanom had read it as High risk, and it died anyway. */
   high_risk_not_saved: boolean;
@@ -220,12 +224,13 @@ export type PlantLosses = {
   calamity: number;
   high_risk_not_saved: number;
   pest_disease: number;
+  conditions: number;
   other: number;
   warned_before: number;
   warned_before_rate: number | null;
   harvested: number;
   survival_rate: number | null;
-  causes: { value: string; label: string; count: number; calamity: boolean }[];
+  causes: { value: string; label: string; count: number; calamity: boolean; group: LossCauseGroup }[];
   crops: { crop: string; emoji: string; count: number }[];
   /** This month and the five before it, oldest first; `month` is YYYY-MM. */
   months: { month: string; count: number }[];

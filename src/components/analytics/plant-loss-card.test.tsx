@@ -19,25 +19,29 @@ const full: PlantLosses = {
   calamity: 2,
   high_risk_not_saved: 1,
   pest_disease: 1,
+  conditions: 0,
   other: 0,
   warned_before: 1,
   warned_before_rate: 33,
   harvested: 9,
   survival_rate: 75,
   causes: [
-    { value: "PEST", label: "Pests", count: 1, calamity: false },
-    { value: "DISEASE", label: "Disease", count: 0, calamity: false },
-    { value: "FLOOD_TYPHOON", label: "Flood or typhoon", count: 2, calamity: true },
-    { value: "DROUGHT_HEAT", label: "Drought or too hot", count: 0, calamity: true },
-    { value: "ANIMALS", label: "Animals", count: 0, calamity: false },
-    { value: "OTHER", label: "Other / not sure", count: 0, calamity: false },
+    { value: "CALAMITY", label: "Calamity", count: 2, calamity: true, group: "calamity" },
+    { value: "PEST", label: "Pest infestation", count: 1, calamity: false, group: "pest_disease" },
+    { value: "DISEASE", label: "Plant disease", count: 0, calamity: false, group: "pest_disease" },
+    { value: "NUTRIENTS", label: "Lack of nutrients", count: 0, calamity: false, group: "conditions" },
+    { value: "POOR_SOIL", label: "Poor soil condition", count: 0, calamity: false, group: "conditions" },
+    { value: "WATER", label: "Lack of water", count: 0, calamity: false, group: "conditions" },
+    { value: "HUMAN_ERROR", label: "Human error", count: 0, calamity: false, group: "other" },
+    { value: "EXTREME_TEMP", label: "Extreme temperature", count: 0, calamity: false, group: "conditions" },
+    { value: "OTHER", label: "Other / not sure", count: 0, calamity: false, group: "other" },
   ],
   crops: [],
   months: ["2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"].map((month) => ({
     month,
     count: month === "2026-11" ? 3 : 0,
   })),
-  losses: [loss(1, "FLOOD_TYPHOON", "calamity"), loss(2, "FLOOD_TYPHOON", "calamity"), loss(3, "PEST", "pest_disease")],
+  losses: [loss(1, "CALAMITY", "calamity"), loss(2, "CALAMITY", "calamity"), loss(3, "PEST", "pest_disease")],
 };
 
 describe("Plant losses on Agricultural Analytics", () => {
@@ -52,9 +56,9 @@ describe("Plant losses on Agricultural Analytics", () => {
     render(<PlantLossCard />);
     expect(screen.getByText("Lost before harvest")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Flood or typhoon: 2 plants, 67%/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Pests: 1 plant, 33%/)).toBeInTheDocument();
-    expect(screen.queryByText("Drought or too hot")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Calamity: 2 plants, 67%/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Pest infestation: 1 plant, 33%/)).toBeInTheDocument();
+    expect(screen.queryByText("Lack of water")).not.toBeInTheDocument();
     expect(screen.getByText("3 plants lost in the last 6 months.")).toBeInTheDocument();
   });
 

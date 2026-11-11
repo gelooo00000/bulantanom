@@ -235,6 +235,7 @@ export function Choice<T extends string>({
   value,
   onChange,
   label,
+  hint,
   neutral = false,
 }: {
   legend: string;
@@ -243,6 +244,8 @@ export function Choice<T extends string>({
   value: T | null;
   onChange: (value: T) => void;
   label: (value: T) => string;
+  /** A short line under each option's label, e.g. what a cause covers. */
+  hint?: (value: T) => string;
   neutral?: boolean;
 }) {
   return (
@@ -260,6 +263,7 @@ export function Choice<T extends string>({
             onClick={() => onChange(option)}
             className={cn(
               "border-border min-h-11 rounded-xl border px-2 py-2 text-sm font-medium transition-colors",
+              hint && "flex flex-col items-start gap-0.5 px-3 text-left",
               value === option
                 ? neutral
                   ? "border-primary bg-primary/10"
@@ -268,6 +272,7 @@ export function Choice<T extends string>({
             )}
           >
             {label(option)}
+            {hint && <span className="text-muted-foreground text-xs leading-snug font-normal">{hint(option)}</span>}
           </button>
         ))}
       </div>
