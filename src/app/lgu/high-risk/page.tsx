@@ -1,6 +1,6 @@
 "use client";
 
-import { OctagonAlert, ShieldCheck, Stethoscope, TriangleAlert, type LucideIcon } from "lucide-react";
+import { OctagonAlert, ShieldCheck, TriangleAlert, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 
 import { HighRiskCaseCard } from "@/components/lgu/high-risk-case-card";
@@ -58,7 +58,7 @@ export default function LguHighRiskPage() {
             {filter !== "MEDIUM" && (
               <CaseGroup
                 title="High risk"
-                hint="Contact the farmer first"
+                hint="Visit the farmer first"
                 icon={OctagonAlert}
                 color="var(--risk-high)"
                 cases={high}
@@ -81,8 +81,8 @@ export default function LguHighRiskPage() {
 }
 
 /**
- * The page's headline: how many plants need a look, a bar splitting them by
- * level, and a segmented control that narrows the list.
+ * The page's headline: how many plants need a look, and a segmented
+ * control that narrows the list.
  */
 function TriageBanner({
   total,
@@ -127,12 +127,6 @@ function TriageBanner({
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex items-start gap-4">
-          <span
-            className="flex size-14 shrink-0 items-center justify-center rounded-2xl shadow-sm"
-            style={{ color: accent, backgroundColor: tint(accent, 15), boxShadow: `0 10px 30px -12px ${accent}` }}
-          >
-            <Stethoscope className="size-7" aria-hidden="true" />
-          </span>
           <div className="min-w-0">
             <p className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">Triage</p>
             <p className="font-heading mt-1 text-2xl leading-tight font-semibold sm:text-3xl">
@@ -140,11 +134,6 @@ function TriageBanner({
                 {total}
               </span>{" "}
               {total === 1 ? "plant needs" : "plants need"} a closer look
-            </p>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              {high > 0
-                ? `${high} at high risk${medium > 0 ? `, ${medium} at medium` : ""}. Open a case to see why and what to do.`
-                : `${medium} at medium risk. Open a case to see why and what to do.`}
             </p>
           </div>
         </div>
@@ -186,45 +175,7 @@ function TriageBanner({
           })}
         </div>
       </div>
-
-      {/* The split between levels, as one bar. */}
-      <div className="mt-6">
-        <div className="bg-muted flex h-2.5 overflow-hidden rounded-full" aria-hidden="true">
-          {high > 0 && (
-            <span
-              className="h-full transition-[width] duration-700"
-              style={{
-                width: `${(high / total) * 100}%`,
-                backgroundImage: `linear-gradient(90deg, var(--risk-high), ${tint("var(--risk-high)", 75)})`,
-              }}
-            />
-          )}
-          {medium > 0 && (
-            <span
-              className="h-full transition-[width] duration-700"
-              style={{
-                width: `${(medium / total) * 100}%`,
-                backgroundImage: `linear-gradient(90deg, var(--risk-medium), ${tint("var(--risk-medium)", 75)})`,
-              }}
-            />
-          )}
-        </div>
-        <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <Legend color="var(--risk-high)" label="High risk" count={high} />
-          <Legend color="var(--risk-medium)" label="Medium risk" count={medium} />
-        </div>
-      </div>
     </section>
-  );
-}
-
-function Legend({ color, label, count }: { color: string; label: string; count: number }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
-      {label}
-      <span className="text-foreground font-semibold tabular-nums">{count}</span>
-    </span>
   );
 }
 
