@@ -85,11 +85,6 @@ function phaseLabel(plant: LguPlant, phase: Phase): string {
   }
 }
 
-/** Still in the ground and being monitored: not harvested, not yet planted. */
-function inField(plant: LguPlant): boolean {
-  return phaseOf(plant) !== "harvested" && !plant.is_planned;
-}
-
 /** How far from planting to the start of harvest, 0–100. */
 function progressToHarvest(plant: LguPlant): number {
   const span = daysUntil(plant.expected_harvest_start) - daysUntil(plant.planting_date);
@@ -197,7 +192,6 @@ function PlantCard({ plant }: { plant: LguPlant }) {
   const phase = phaseOf(plant);
   const progress = progressToHarvest(plant);
   const level = plant.latest_risk?.risk_level;
-  const checkDue = inField(plant) && plant.assessment_eligibility?.can_assess;
   const accent = PHASE_FILL[phase];
 
   return (
@@ -261,16 +255,7 @@ function PlantCard({ plant }: { plant: LguPlant }) {
         <SeasonTrack plant={plant} phase={phase} />
 
         <div className="border-border/70 flex flex-wrap items-center gap-2 border-t pt-3.5 text-xs">
-          {level ? (
-            <RiskBadge size="sm" level={level.toLowerCase() as BadgeLevel} />
-          ) : (
-            <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5">No risk reading yet</span>
-          )}
-          {checkDue && (
-            <span className="font-heading border-risk-medium/30 bg-risk-medium/10 text-risk-medium rounded-full border px-2 py-0.5 font-medium">
-              Weekly check due
-            </span>
-          )}
+          {level && <RiskBadge size="sm" level={level.toLowerCase() as BadgeLevel} />}
           {plant.latest_risk && (
             <span className="text-muted-foreground">
               Last checked {formatDisplayDate(plant.latest_risk.assessment_date)}
