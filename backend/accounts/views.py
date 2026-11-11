@@ -408,9 +408,13 @@ CHALLENGE_EXPIRED = "This sign-in has expired. Please sign in again."
 def _finish_login(request, user):
     """
     Signs in a user whose password, role and status all checked out - unless
-    this browser is new to the account, in which case a code is emailed and
-    the answer is a challenge for LoginCodeVerifyView (see accounts.devices).
+    this browser is new to a Farmer's or LGU Officer's account, in which case
+    a code is emailed and the answer is a challenge for LoginCodeVerifyView
+    (see accounts.devices). Admins are never asked for the code: the owner
+    chose to keep it to Farmers and Officers.
     """
+    if user.role == UserRole.ADMIN:
+        return _tokens_response(user)
     if not settings.NEW_DEVICE_CHECK or is_trusted(request, user):
         return _tokens_response(user)
     try:

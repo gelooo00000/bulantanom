@@ -162,16 +162,28 @@ class NewDeviceTests(APITestCase):
         self.assertNotIn("access", getattr(response, "data", {}) or {})
         self.assertIn(response.status_code, (401, 403))
 
-    def test_lgu_and_admin_are_checked_too(self):
+    def test_lgu_officers_are_checked_too(self):
         make_user(email="officer@example.com", role=UserRole.LGU_OFFICER)
-        make_user(email="admin@example.com", role=UserRole.ADMIN)
         lgu = self.login(LGU_LOGIN_URL, "officer@example.com")
-        admin = self.login(ADMIN_LOGIN_URL, "admin@example.com")
         self.assertEqual(lgu.data["code"], "new_device")
-        self.assertEqual(admin.data["code"], "new_device")
-        response = self.verify(admin.data["challenge"], last_code(), email="admin@example.com")
+        response = self.verify(lgu.data["challenge"], last_code(), email="officer@example.com")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"]["role"], "LGU_OFFICER")
+
+    def test_admins_sign_in_without_a_code(self):
+        make_user(email="admin@example.com", role=UserRole.ADMIN)
+        sent = len(mail.outbox)
+        response = self.login(ADMIN_LOGIN_URL, "admin@example.com")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
         self.assertEqual(response.data["user"]["role"], "ADMIN")
+        self.assertEqual(len(mail.outbox), sent)
+
+    def test_an_admin_with_a_wrong_password_is_still_refused(self):
+        make_user(email="admin@example.com", role=UserRole.ADMIN)
+        response = self.login(ADMIN_LOGIN_URL, "admin@example.com", password="wrong-password")
+        self.assertNotIn("access", getattr(response, "data", {}) or {})
+        self.assertIn(response.status_code, (400, 401, 403))
 
     def test_a_password_reset_forgets_devices_and_cancels_waiting_sign_ins(self):
         challenge = self.login().data["challenge"]
