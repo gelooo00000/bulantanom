@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { HarvestOutcomes } from "@/components/shared/harvest-outcomes";
-import type { HarvestOutcomes as Outcomes, LossOutcomeReport } from "@/lib/api/lgu-api";
+import type { HarvestOutcomeReport, HarvestOutcomes as Outcomes, LossOutcomeReport } from "@/lib/api/lgu-api";
 
 let data: Outcomes | null = null;
 vi.mock("@/lib/api/use-authed-query", () => ({
@@ -78,5 +78,31 @@ describe("Admin Lost plants", () => {
     fireEvent.click(nextButtons[1]!);
     expect(screen.getByText("Lost plant 5")).toBeInTheDocument();
     expect(screen.getByText("Lost plant 6")).toBeInTheDocument();
+  });
+});
+
+describe("Admin harvest reports", () => {
+  it("shows four harvest reports at a time, the rest on the next page", () => {
+    const report = (id: number) =>
+      ({
+        id,
+        plant_name: `Harvested plant ${id}`,
+        farmer_name: "Angelo",
+        crop_name: "Calamansi",
+        crop_emoji: "🍊",
+        harvested_on: "2026-11-01",
+        created_at: "2026-11-01T08:00:00+08:00",
+        photo_url: null,
+        notes: "",
+      }) as unknown as HarvestOutcomeReport;
+    data = { ...outcomes, total: 6, recent: [1, 2, 3, 4, 5, 6].map(report) };
+    render(<HarvestOutcomes fetcher={vi.fn()} showHeading={false} compact />);
+
+    const reports = screen.getByRole("list", { name: "Harvest reports" });
+    expect(within(reports).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(reports).queryByText("Harvested plant 5")).not.toBeInTheDocument();
+    const next = screen.getAllByRole("button", { name: /next/i });
+    fireEvent.click(next[next.length - 1]!);
+    expect(screen.getByText("Harvested plant 5")).toBeInTheDocument();
   });
 });

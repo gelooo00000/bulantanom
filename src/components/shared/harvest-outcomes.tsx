@@ -437,11 +437,16 @@ function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
             No harvest reports yet.
           </p>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
-            {data.recent.map((report) => (
-              <ReportCard key={report.id} report={report} />
-            ))}
-          </div>
+          // Four reports at a time; the rest slide in from the next page.
+          <SlidePager
+            items={data.recent}
+            pageSize={REPORT_PAGE_SIZE}
+            getKey={(report) => report.id}
+            renderItem={(report) => <ReportCard report={report} />}
+            listLabel="Harvest reports"
+            listClassName="grid gap-3 lg:grid-cols-2"
+            itemClassName=""
+          />
         )}
       </Section>
     </>
@@ -683,6 +688,8 @@ function MiniBar({ value, color }: { value: number | null; color: string }) {
 
 /** How many causes, and how many lost plants, the Lost plants section shows at a time. */
 const LOSS_PAGE_SIZE = 4;
+/** How many harvest reports the Latest harvest reports section shows at a time. */
+const REPORT_PAGE_SIZE = 4;
 
 function BreakdownCard({
   title,

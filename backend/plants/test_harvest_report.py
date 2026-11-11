@@ -359,6 +359,18 @@ class LossReportTests(RiskTestCase):
         self.assertEqual(data["lost_total"], 12)
         self.assertEqual(len(data["recent_losses"]), 12)
 
+    def test_every_harvest_report_is_sent_not_just_the_latest_ten(self):
+        for _ in range(12):
+            plant = self.make_plant(self.farmer, days_ago=400)
+            self.client.post(
+                f"/api/farmer/plants/{plant.pk}/harvest/", ANSWERS, format="json", **self.auth
+            )
+        make_user("admin@example.com", role=UserRole.ADMIN)
+        admin = self.login("admin@example.com", "/api/auth/admin/login/")
+        data = self.client.get("/api/admin/harvest-outcomes/", **admin).data
+        self.assertEqual(data["total"], 12)
+        self.assertEqual(len(data["recent"]), 12)
+
 
 class EarlyRecheckTests(RiskTestCase):
     def setUp(self):
