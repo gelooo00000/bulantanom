@@ -426,13 +426,13 @@ class RiskReportAccuracyTests(LguReportsTestBase):
         stats, rows = self._report()
         self.assertEqual(stats["Assessments"], len(rows))
         self.assertEqual(stats["High Risk"], 1)
-        self.assertEqual(stats["Too Early to Tell"], 1)
         self.assertEqual(stats["No AI Reading"], 3)
-        boxes = ("High Risk", "Medium Risk", "Low Risk", "Too Early to Tell", "No AI Reading")
+        boxes = ("High Risk", "Medium Risk", "Low Risk", "No AI Reading")
         self.assertEqual(sum(stats[b] for b in boxes), stats["Assessments"])
-        # Each row is labelled the way it is counted.
+        # Each row is labelled the way it is counted; "Too early to tell" is left out.
+        self.assertNotIn("Too Early to Tell", stats)
         levels = sorted(r["level"] for r in rows)
-        self.assertEqual(levels, ["High", "No reading", "No reading", "No reading", "Too early to tell"])
+        self.assertEqual(levels, ["High", "No reading", "No reading", "No reading"])
 
 
 class OutcomesReportAccuracyTests(LguReportsTestBase):

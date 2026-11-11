@@ -233,7 +233,11 @@ def _first_or_blank(items, key=None):
 
 
 def _build_risk(period: Period, filters: dict) -> dict:
-    queryset = _assessment_queryset(period, filters)
+    # "Too early to tell" readings are left out: a young plant with no
+    # growth history yet has no risk to report (removed at the owner's request).
+    queryset = _assessment_queryset(period, filters).exclude(
+        risk__status="completed", risk__risk_level="INCONCLUSIVE"
+    )
 
     level = (filters.get("risk_level") or "").upper()
     if level in ("LOW", "MEDIUM", "HIGH"):
@@ -266,19 +270,18 @@ def _build_risk(period: Period, filters: dict) -> dict:
             }
         )
 
-    # Every assessment lands in exactly one box, so the five add up to the
-    # total: a completed reading by its level ("Too early to tell" included),
-    # and anything the AI did not finish - no reading, pending or failed - as
-    # No AI Reading. The rows above label them the same way.
+    # Every assessment lands in exactly one box, so the boxes add up to the
+    # total: a completed reading by its level, and anything the AI did not
+    # finish - no reading, pending or failed - as No AI Reading. The rows
+    # above label them the same way.
     done = Q(risk__status="completed")
     counts = queryset.aggregate(
         total=Count("id"),
         high=Count("id", filter=done & Q(risk__risk_level="HIGH")),
         medium=Count("id", filter=done & Q(risk__risk_level="MEDIUM")),
         low=Count("id", filter=done & Q(risk__risk_level="LOW")),
-        early=Count("id", filter=done & Q(risk__risk_level="INCONCLUSIVE")),
     )
-    no_reading = counts["total"] - counts["high"] - counts["medium"] - counts["low"] - counts["early"]
+    no_reading = counts["total"] - counts["high"] - counts["medium"] - counts["low"]
 
     return {
         "stats": [
@@ -286,7 +289,6 @@ def _build_risk(period: Period, filters: dict) -> dict:
             {"label": "High Risk", "value": counts["high"], "tone": "high"},
             {"label": "Medium Risk", "value": counts["medium"], "tone": "medium"},
             {"label": "Low Risk", "value": counts["low"], "tone": "low"},
-            {"label": "Too Early to Tell", "value": counts["early"]},
             {"label": "No AI Reading", "value": no_reading},
         ],
         "tables": [
