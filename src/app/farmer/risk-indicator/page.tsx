@@ -27,7 +27,6 @@ import { LostPlantDialog } from "@/components/farmer/lost-plant-dialog";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import type { BadgeLevel } from "@/components/risk/risk-badge";
-import { RiskInfoNote } from "@/components/risk/risk-result-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { SlidePager } from "@/components/shared/slide-pager";
@@ -207,8 +206,6 @@ export default function RiskIndicatorPage() {
             pageSize={PAGE_SIZE.none}
             entries={entries.filter((e) => groupOf(e.latest) === "none")}
           />
-
-          <RiskInfoNote />
         </>
       )}
     </div>

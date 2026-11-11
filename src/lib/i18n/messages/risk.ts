@@ -127,11 +127,6 @@ export const risk = defineMessages({
     fil: "Nasa Ingles ang isinulat na resulta ng AI.",
     bik: "Nasa Ingles an sinurat na resulta san AI.",
   },
-  "result.infoNote": {
-    en: "Risk readings compare your report against the crop's expected development for its current age. They are estimates, not guarantees.",
-    fil: "Inihahambing ng resulta ang iyong ulat sa inaasahang paglaki ng pananim sa kasalukuyang edad nito. Tantya lamang ito, hindi garantiya.",
-    bik: "Ikinukumpara san resulta an imo report sa inaasahan na pagdakula san tanom sa edad kaini yana. Tantya sana ini, dili garantiya.",
-  },
 
   "trend.title": {
     en: "Assessment activity",

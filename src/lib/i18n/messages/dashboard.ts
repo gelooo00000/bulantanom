@@ -12,11 +12,6 @@ export const dashboard = defineMessages({
     fil: "Hindi makakonekta sa BulanTanom.",
     bik: "Dili makakonekta sa BulanTanom.",
   },
-  "dash.eyebrow": {
-    en: "Layuan Farm · AI Farm Intelligence",
-    fil: "Layuan Farm · AI para sa Bukid",
-    bik: "Layuan Farm · AI para sa Uma",
-  },
   "dash.welcome": {
     en: "Welcome, {name}.",
     fil: "Maligayang pagdating, {name}.",

@@ -31,11 +31,6 @@ export const harvest = defineMessages({
     bik: "Naglihis na an pag-ani",
   },
   "harvestPage.harvested": { en: "Harvested", fil: "Naani na", bik: "Naani na" },
-  "harvestPage.note": {
-    en: "Windows are calculated by BulanTanom from each crop's typical growing duration and your planting date. They are estimates — real timing shifts with weather, soil and variety, so check the plant before harvesting.",
-    fil: "Kinakalkula ng BulanTanom ang panahon ng ani mula sa karaniwang tagal ng paglaki ng bawat pananim at sa iyong petsa ng pagtatanim. Tantya lamang ito — nagbabago ang aktwal na panahon depende sa panahon, lupa at uri, kaya tingnan muna ang tanim bago anihin.",
-    bik: "Kinukwenta san BulanTanom an panahon san ani hali sa normal na kaluwagan san pagdakula san kada tanom asin sa imo petsa san pagtanom. Tantya sana ini — nagbabago an totoo na panahon segun sa klima, daga asin klase, kaya hilingon anay an tanom bago anihon.",
-  },
 
   "phase.lastDay": {
     en: "Last day of window",

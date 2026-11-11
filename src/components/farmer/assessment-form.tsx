@@ -25,7 +25,7 @@ import {
 } from "@/components/farmer/assessment-choices";
 import { EvidenceVerdict } from "@/components/farmer/evidence-verdict";
 import { FarmTodayWeather } from "@/components/farmer/farm-today-weather";
-import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
+import { RiskResultCard } from "@/components/risk/risk-result-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -526,7 +526,6 @@ function AssessmentFormBody({
     return (
       <div className="flex flex-col gap-4">
         <RiskResultCard assessment={result} />
-        <RiskInfoNote />
         <div>
           <Button nativeButton={false} render={<Link href="/farmer/risk-indicator" />}>
             {t("asmt.backToRisk")}

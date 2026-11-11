@@ -555,8 +555,6 @@ export default function HarvestPage() {
           <Section phase="passed" title={t("harvestPage.passed")} plants={passed} onStatusChange={changeStatus} />
           <Section phase="growing" title={t("harvestPage.growing")} plants={growing} onStatusChange={changeStatus} />
           {/* Harvested plants live in the Archive (button above), not here. */}
-
-          <p className="text-muted-foreground text-xs">{t("harvestPage.note")}</p>
         </>
       )}
     </div>

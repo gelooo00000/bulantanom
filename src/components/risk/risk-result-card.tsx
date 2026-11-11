@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ClipboardCheck,
   Sprout,
-  Info,
   LoaderCircle,
   RotateCw,
   Sparkles,
@@ -349,15 +348,5 @@ function FertilizerAdvice({ fertilizer }: { fertilizer?: Fertilizer }) {
         <p className="text-muted-foreground/70 mt-2 text-[11px]">{t("result.fertLabel")}</p>
       )}
     </div>
-  );
-}
-
-export function RiskInfoNote() {
-  const { t } = useFarmerLanguage();
-  return (
-    <p className="text-muted-foreground/70 flex items-start gap-1.5 text-xs">
-      <Info className="mt-0.5 size-3 shrink-0" />
-      {t("result.infoNote")}
-    </p>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use } from "react";
 import { ArrowLeft, LoaderCircle, TriangleAlert } from "lucide-react";
 
-import { RiskInfoNote, RiskResultCard } from "@/components/risk/risk-result-card";
+import { RiskResultCard } from "@/components/risk/risk-result-card";
 import { Button } from "@/components/ui/button";
 import { fetchAssessment } from "@/lib/api/risk-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
@@ -66,7 +66,6 @@ export default function AssessmentDetailPage({
       </Link>
 
       <RiskResultCard assessment={assessment} />
-      <RiskInfoNote />
     </div>
   );
 }

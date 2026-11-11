@@ -84,13 +84,7 @@ export default function FarmerDashboardPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p
-          className="text-xs font-medium tracking-[0.2em] uppercase"
-          style={{ color: "var(--landing-accent)" }}
-        >
-          {t("dash.eyebrow")}
-        </p>
-        <h1 className="mt-1 text-2xl font-medium tracking-tight">
+        <h1 className="text-2xl font-medium tracking-tight">
           {t("dash.welcome", { name: firstName })}
         </h1>
       </div>
