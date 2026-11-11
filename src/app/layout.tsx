@@ -1,25 +1,17 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
+import { Lilita_One } from "next/font/google";
 import "./globals.css";
 
 import { SPLASH_INIT_SCRIPT, SplashScreen } from "@/components/shared/splash-screen";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/lib/theme/theme-context";
 
-// Two faces for the whole system:
-// - Bricolage Grotesque: the BulanTanom name, headings and buttons - warm,
-//   slightly organic, with character for a farm brand;
-// - Plus Jakarta Sans: running text, numbers, tables and forms - clean and
-//   friendly, designed in Southeast Asia, easy to read in English, Filipino
-//   and Bikol.
-// Both are variable fonts, so every weight from 200 to 800 is real.
-const display = Bricolage_Grotesque({
-  variable: "--font-display",
+// Lilita One is the one face of the whole system: the BulanTanom name,
+// headings, buttons, navigation, numbers and running text.
+const lilita = Lilita_One({
+  variable: "--font-lilita",
   subsets: ["latin"],
-});
-const body = Plus_Jakarta_Sans({
-  variable: "--font-body",
-  subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -37,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // this markup starts in the same state the script will confirm.
     <html
       lang="en"
-      className={`dark landing-dark ${display.variable} ${body.variable} h-full antialiased`}
+      className={`dark landing-dark ${lilita.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
