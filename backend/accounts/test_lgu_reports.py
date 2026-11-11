@@ -161,6 +161,8 @@ class ReportPermissionTests(LguReportsTestBase):
         self.assertIn("harvest-outcomes", slugs)
         self.assertIn("farmer-registration", slugs)
         self.assertEqual(len(slugs), 3)
+        periods = [p["label"] for p in response.data["filters"]["periods"]]
+        self.assertEqual(periods, ["This Week", "This Month", "This Year", "All Time"])
         supports = {r["slug"]: r["supports"] for r in response.data["reports"]}
         self.assertEqual(supports["risk-assessment"], ["period", "farmer"])
         self.assertEqual(supports["harvest-outcomes"], ["period", "farmer"])

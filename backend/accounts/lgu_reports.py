@@ -49,6 +49,10 @@ PERIOD_LABELS = {
     "custom": "Custom Range",
 }
 
+# The choices the Period dropdown offers. The others still resolve, so an
+# older export in Report history can be downloaded again.
+OFFERED_PERIODS = ("this_week", "this_month", "this_year", "all_time")
+
 
 @dataclass(frozen=True)
 class Period:
@@ -537,7 +541,7 @@ def filter_options() -> dict:
             {"id": c.id, "name": c.name}
             for c in Crop.objects.filter(is_active=True).order_by("name")
         ],
-        "periods": [{"key": k, "label": v} for k, v in PERIOD_LABELS.items()],
+        "periods": [{"key": k, "label": PERIOD_LABELS[k]} for k in OFFERED_PERIODS],
         # One farm today; kept as a parameter so a report states its area.
         "areas": [{"key": "layuan", "label": FARM_NAME}],
         "soil_types": _soil_type_options(),
