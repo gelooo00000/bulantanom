@@ -190,7 +190,7 @@ class FigureTests(AnalyticsBase):
         self.assertEqual(data["risk"]["unassessed"], 2)
 
     def test_new_report_types_build_and_export(self):
-        for slug in ("crop-recommendation", "harvest"):
+        for slug in ("harvest", "harvest-outcomes"):
             res = self.get(f"/api/lgu/reports/{slug}/", period="all_time")
             self.assertEqual(res.status_code, 200, slug)
             pdf = self.get(f"/api/lgu/reports/{slug}/pdf/", period="all_time")
@@ -200,15 +200,15 @@ class FigureTests(AnalyticsBase):
         self.assertIn("Productivity by crop", csv.content.decode("utf-8-sig"))
 
     def test_exports_are_logged_in_history(self):
-        self.get("/api/lgu/reports/crop-recommendation/csv/", period="this_year", soil_type="clay")
+        self.get("/api/lgu/reports/harvest/csv/", period="this_year", crop="corn")
         self.get("/api/lgu/reports/risk-assessment/pdf/", period="all_time", user=self.admin)
         history = self.get("/api/reports/").data["results"]
         self.assertEqual(len(history), 2)
         self.assertEqual(ReportLog.objects.count(), 2)
         csv_log = next(h for h in history if h["format"] == "csv")
-        self.assertEqual(csv_log["params"]["soil_type"], "clay")
+        self.assertEqual(csv_log["params"]["crop"], "corn")
         self.assertEqual(csv_log["by"], "Ofelia Reyes")
 
     def test_report_parameters_are_validated(self):
-        self.assertEqual(self.get("/api/lgu/reports/crop-recommendation/", soil_type="lava").status_code, 400)
+        self.assertEqual(self.get("/api/lgu/reports/risk-assessment/", farmer="nobody").status_code, 400)
         self.assertEqual(self.get("/api/lgu/reports/harvest/", area="mars").status_code, 400)

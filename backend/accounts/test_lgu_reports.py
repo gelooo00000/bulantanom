@@ -159,10 +159,13 @@ class ReportPermissionTests(LguReportsTestBase):
         slugs = {r["slug"] for r in response.data["reports"]}
         self.assertIn("agricultural-summary", slugs)
         self.assertIn("risk-assessment", slugs)
-        self.assertIn("crop-recommendation", slugs)
         self.assertIn("harvest", slugs)
         self.assertIn("harvest-outcomes", slugs)
-        self.assertEqual(len(slugs), 8)
+        self.assertIn("farmer-registration", slugs)
+        self.assertEqual(len(slugs), 5)
+        # Removed at the owner's request.
+        for gone in ("crop-recommendation", "plant-crop", "farm-monitoring"):
+            self.assertNotIn(gone, slugs)
         self.assertNotIn("soil-assessment", slugs)
 
 
@@ -183,7 +186,7 @@ class ReportDataAccuracyTests(LguReportsTestBase):
         self.assertEqual(stats["Medium Risk"], 0)
 
     def test_report_excludes_non_approved_farmers(self):
-        _, data = self._stats("plant-crop", period="all_time")
+        _, data = self._stats("risk-assessment", period="all_time")
         farmers = {row["farmer"] for row in data["tables"][0]["rows"]}
         self.assertIn("Juan Dela Cruz", farmers)
         self.assertNotIn("Pending Person", farmers)
@@ -243,20 +246,20 @@ class ReportFilterTests(LguReportsTestBase):
         self.assertEqual(len(self._rows("risk-assessment", risk_level="LOW")), 0)
 
     def test_farmer_filter(self):
-        self.assertEqual(len(self._rows("plant-crop", farmer=self.farmer.id)), 1)
+        self.assertEqual(len(self._rows("risk-assessment", farmer=self.farmer.id)), 1)
         # Filtering to a Farmer outside the approved scope yields nothing
         # rather than leaking their rows.
-        self.assertEqual(len(self._rows("plant-crop", farmer=self.pending_farmer.id)), 0)
+        self.assertEqual(len(self._rows("risk-assessment", farmer=self.pending_farmer.id)), 0)
 
     def test_crop_filter(self):
-        self.assertEqual(len(self._rows("plant-crop", crop=self.crop.id)), 1)
+        self.assertEqual(len(self._rows("risk-assessment", crop=self.crop.id)), 1)
 
     def test_invalid_inputs_are_rejected(self):
         auth = self.auth()
         for url in (
             _summary_url("agricultural-summary", period="last_century"),
             _summary_url("risk-assessment", risk_level="CATASTROPHIC"),
-            _summary_url("plant-crop", farmer="not-a-number"),
+            _summary_url("risk-assessment", farmer="not-a-number"),
             _summary_url(
                 "agricultural-summary", period="custom", date_from="2026-05-01", date_to="2026-01-01"
             ),
@@ -282,9 +285,9 @@ class ReportPdfTests(LguReportsTestBase):
         for slug in (
             "agricultural-summary",
             "risk-assessment",
-            "plant-crop",
-            "farm-monitoring",
             "farmer-registration",
+            "harvest",
+            "harvest-outcomes",
         ):
             response = self._pdf(slug)
             self.assertEqual(response["Content-Type"], "application/pdf")
@@ -343,7 +346,7 @@ class ReportScaleTests(LguReportsTestBase):
 
         def query_count():
             with CaptureQueriesContext(connection) as ctx:
-                response = self.client.get(_summary_url("farm-monitoring"), **auth)
+                response = self.client.get(_summary_url("risk-assessment"), **auth)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             return len(ctx.captured_queries), len(response.data["tables"][0]["rows"])
 
@@ -373,3 +376,11 @@ class ReportScaleTests(LguReportsTestBase):
         # all. A missing select_related would show up here immediately.
         self.assertGreater(after_rows, before_rows)
         self.assertEqual(after_queries, before_queries)
+
+
+class RemovedReportsTests(LguReportsTestBase):
+    def test_the_removed_reports_are_gone(self):
+        auth = self.auth()
+        for slug in ("crop-recommendation", "plant-crop", "farm-monitoring"):
+            response = self.client.get(_summary_url(slug), **auth)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=slug)

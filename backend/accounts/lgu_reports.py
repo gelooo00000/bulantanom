@@ -201,77 +201,6 @@ def _build_farmer_registration(period: Period, filters: dict) -> dict:
     }
 
 
-def _build_plants(period: Period, filters: dict) -> dict:
-    from plants.models import Plant, PlantStatus
-
-    today = timezone.localdate()
-    queryset = (
-        Plant.objects.filter(
-            farmer__role=UserRole.FARMER,
-            farmer__account_status=AccountStatus.APPROVED,
-        )
-        # Without these the row loop below would issue two extra queries per
-        # plant for the farmer and the crop.
-        .select_related("farmer", "crop")
-    )
-    queryset = _apply_period(queryset, "planting_date", period)
-    if filters.get("farmer_id"):
-        queryset = queryset.filter(farmer_id=filters["farmer_id"])
-    if filters.get("crop_id"):
-        queryset = queryset.filter(crop_id=filters["crop_id"])
-
-    rows = []
-    for p in queryset.order_by("-planting_date")[:500]:
-        age = (today - p.planting_date).days
-        if p.expected_harvest_end < today:
-            harvest = "Window closed"
-        elif p.expected_harvest_start <= today:
-            harvest = "Window open"
-        elif (p.expected_harvest_start - today).days <= HARVEST_APPROACHING_DAYS:
-            harvest = "Approaching"
-        else:
-            harvest = "Not yet due"
-        rows.append(
-            {
-                "farmer": _display_name(p.farmer),
-                "crop": p.crop.name,
-                "plant": p.display_name,
-                "crop_plant": f"{p.crop.name} - {p.display_name}",
-                "planted": p.planting_date.isoformat(),
-                "harvest_start": p.expected_harvest_start.isoformat(),
-                "age": f"{age} days ({age // 7} wk)",
-                "status": p.get_status_display(),
-                "harvest_status": harvest,
-                "harvest": f"{p.expected_harvest_start.isoformat()} ({harvest})",
-            }
-        )
-
-    counts = queryset.aggregate(
-        total=Count("id"),
-        growing=Count("id", filter=Q(status=PlantStatus.GROWING)),
-        ready=Count("id", filter=Q(status=PlantStatus.READY_FOR_HARVEST)),
-        harvested=Count("id", filter=Q(status=PlantStatus.HARVESTED)),
-    )
-
-    return {
-        "stats": [
-            {"label": "Plants", "value": counts["total"]},
-            {"label": "Growing", "value": counts["growing"], "tone": "low"},
-            {"label": "Ready for Harvest", "value": counts["ready"], "tone": "medium"},
-            {"label": "Harvested", "value": counts["harvested"]},
-        ],
-        "tables": [
-            {
-                "title": "Plant Records",
-                "columns": ["Farmer", "Plant", "Planted", "Harvest From", "Status"],
-                "keys": ["farmer", "crop_plant", "planted", "harvest", "status"],
-                "widths": [2, 2.2, 1.3, 2.3, 1.5],
-                "rows": rows,
-            }
-        ],
-    }
-
-
 def _assessment_queryset(period: Period, filters: dict):
     from plants.models import Assessment
 
@@ -356,60 +285,6 @@ def _build_risk(period: Period, filters: dict) -> dict:
                 "keys": ["farmer", "plant", "date", "level", "summary", "action"],
                 "widths": [1.4, 1.7, 1.3, 1.3, 3, 2.6],
                 "tone_key": "level",
-                "rows": rows,
-            }
-        ],
-    }
-
-
-def _build_monitoring(period: Period, filters: dict) -> dict:
-    """
-    Field monitoring has no table of its own. Everything an Officer would
-    want from a monitoring log - condition, watering, observations, notes -
-    is recorded on the weekly Assessment, so this reports those columns
-    rather than inventing a second source of truth.
-    """
-    queryset = _assessment_queryset(period, filters)
-
-    rows = []
-    for a in queryset.order_by("-assessment_date", "-created_at")[:500]:
-        risk = getattr(a, "risk", None)
-        observations = " / ".join(
-            part
-            for part in (
-                a.pest_observation.strip(),
-                a.disease_observation.strip(),
-                a.environmental_observations.strip(),
-            )
-            if part
-        )
-        rows.append(
-            {
-                "farmer": _display_name(a.plant.farmer),
-                "crop": a.plant.crop.name,
-                "date": a.assessment_date.isoformat(),
-                "condition": f"{a.get_health_condition_display()} / {a.get_growth_condition_display()}",
-                "watering": a.get_watering_frequency_display(),
-                "moisture": a.get_soil_moisture_display() if a.soil_moisture else "Not recorded",
-                "observations": observations or "None reported",
-                "risk": risk.get_risk_level_display() if risk and risk.risk_level else "No reading",
-                "notes": a.notes.strip() or "No notes",
-            }
-        )
-
-    return {
-        "stats": [
-            {"label": "Monitoring Entries", "value": queryset.count()},
-            {"label": "Plants Covered", "value": queryset.values("plant_id").distinct().count()},
-            {"label": "Farmers Reporting", "value": queryset.values("plant__farmer_id").distinct().count()},
-        ],
-        "tables": [
-            {
-                "title": "Field Monitoring Log",
-                "columns": ["Farmer", "Crop", "Date", "Condition", "Observations", "Risk"],
-                "keys": ["farmer", "crop", "date", "condition", "observations", "risk"],
-                "widths": [1.5, 1.2, 1.3, 2.1, 3.2, 1.3],
-                "tone_key": "risk",
                 "rows": rows,
             }
         ],
@@ -518,46 +393,6 @@ def _analytics_filters(period: Period, filters: dict):
         crop_id=filters.get("crop_id") or None,
         farmer_id=filters.get("farmer_id"),
     )
-
-
-def _build_crop_recommendations(period: Period, filters: dict) -> dict:
-    from analytics import services
-
-    data = services.crop_recommendations(_analytics_filters(period, filters))
-    crops = data["crops"]
-    return {
-        "stats": [
-            {"label": "Analysed soil records", "value": data["analysed_records"]},
-            {"label": "Crops recommended", "value": len(crops)},
-            {"label": "Recommendations made", "value": data["row_count"], "tone": "low"},
-        ],
-        "tables": [
-            {
-                "title": "Most recommended crops",
-                "columns": ["Crop", "Times recommended", "Recommendation rate", "Wet season", "Dry season", "Soil types"],
-                "keys": ["crop", "count", "rate", "wet", "dry", "soil"],
-                "widths": [2, 1.3, 1.4, 1, 1, 2.4],
-                "rows": [
-                    {
-                        "crop": c["name"],
-                        "count": c["count"],
-                        "rate": f"{c['rate']}%",
-                        "wet": c["by_season"]["wet"],
-                        "dry": c["by_season"]["dry"],
-                        "soil": ", ".join(f"{x['label']} ({x['count']})" for x in c["by_soil"]),
-                    }
-                    for c in crops
-                ],
-            },
-            {
-                "title": "Recommendations",
-                "columns": ["Date", "Farmer", "Crop", "Soil type", "Season"],
-                "keys": ["date", "farmer", "crop", "soil_type", "season"],
-                "widths": [1.2, 2, 1.8, 1.4, 1.8],
-                "rows": data["rows"],
-            },
-        ],
-    }
 
 
 def _build_harvest(period: Period, filters: dict) -> dict:
@@ -744,22 +579,6 @@ REPORTS = {
         "builder": _build_risk,
         "supports": ["period", "area", "farmer", "crop", "risk_level"],
     },
-    "plant-crop": {
-        "title": "Plant & Crop Report",
-        "category": "Performance Report",
-        "description": "Every registered plant with its planting date, harvest window and status.",
-        "icon": "sprout",
-        "builder": _build_plants,
-        "supports": ["period", "farmer", "crop"],
-    },
-    "farm-monitoring": {
-        "title": "Farm Monitoring Report",
-        "category": "Field Records",
-        "description": "Plant condition and field observations recorded in each weekly assessment.",
-        "icon": "activity",
-        "builder": _build_monitoring,
-        "supports": ["period", "farmer", "crop"],
-    },
     "farmer-registration": {
         "title": "Farmer Registration Report",
         "category": "Administrative",
@@ -767,14 +586,6 @@ REPORTS = {
         "icon": "users",
         "builder": _build_farmer_registration,
         "supports": ["period", "area"],
-    },
-    "crop-recommendation": {
-        "title": "Crop Recommendation Report",
-        "category": "Analytics",
-        "description": "Crops recommended from soil records: how often, in which season and on which soil types. Advisory, based on farmer-provided soil inputs.",
-        "icon": "flask",
-        "builder": _build_crop_recommendations,
-        "supports": ["period", "area", "farmer", "crop", "soil_type"],
     },
     "harvest": {
         "title": "Harvest Report",
@@ -805,16 +616,6 @@ def _latest_activity(slug: str):
     if slug == "farmer-registration":
         row = _approved_farmers().order_by("-date_joined").values_list("date_joined", flat=True).first()
         return row.date() if row else None
-    if slug == "crop-recommendation":
-        from plants.models import SoilRecommendation
-
-        row = (
-            SoilRecommendation.objects.filter(farmer__account_status=AccountStatus.APPROVED, ai_generated=True)
-            .order_by("-created_at")
-            .values_list("created_at", flat=True)
-            .first()
-        )
-        return timezone.localtime(row).date() if row else None
     if slug == "harvest":
         row = (
             Plant.objects.filter(farmer__account_status=AccountStatus.APPROVED, harvested_at__isnull=False)
@@ -827,14 +628,7 @@ def _latest_activity(slug: str):
         from plants.harvest_report import reports_in_scope
 
         return reports_in_scope().order_by("-harvested_on").values_list("harvested_on", flat=True).first()
-    if slug == "plant-crop":
-        return (
-            Plant.objects.filter(farmer__account_status=AccountStatus.APPROVED)
-            .order_by("-planting_date")
-            .values_list("planting_date", flat=True)
-            .first()
-        )
-    # risk, monitoring and the summary all track the assessment table.
+    # risk and the summary both track the assessment table.
     return (
         Assessment.objects.filter(plant__farmer__account_status=AccountStatus.APPROVED)
         .order_by("-assessment_date")
