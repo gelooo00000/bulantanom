@@ -21,7 +21,8 @@ import { plantTitle } from "@/lib/plant-summary";
  * reach it would squash the months that matter into nothing. Those are
  * counted once, underneath, rather than drawn.
  *
- * Pointing at a month reveals its plants in a fixed-height panel — the same
+ * The panel opens on the current month's plants. Pointing at another month
+ * reveals its plants in the same fixed-height panel — the same
  * pattern, and the same fixed height, as the LGU charts, so revealing a
  * month cannot resize the page under the pointer.
  */
@@ -49,7 +50,8 @@ export function HarvestCalendar({
 }) {
   const { t, dateLocale } = useLanguage();
   const [hovered, setHovered] = useState<number | null>(null);
-  const [pinned, setPinned] = useState<number | null>(null);
+  // Opens on this month, so its plants show without pointing at anything.
+  const [pinned, setPinned] = useState<number | null>(0);
   const shownIndex = hovered ?? pinned;
 
   const { buckets, total, later, readyNow, peak } = useMemo(() => {

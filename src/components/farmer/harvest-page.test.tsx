@@ -90,10 +90,15 @@ describe("the harvest calendar", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens on the current month's plants", () => {
+    render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
+    expect(screen.getByText(/Ready in September 2026 · 0 plants/)).toBeInTheDocument();
+    expect(screen.queryByText(/Point at a month/)).not.toBeInTheDocument();
+  });
+
   it("names the plants ready in a month when that month is pointed at", async () => {
     const user = userEvent.setup();
     render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
-    expect(screen.getByText(/Point at a month/)).toBeInTheDocument();
 
     await user.hover(screen.getByRole("button", { name: /December 2026/ }));
     expect(screen.getByText(/Ready in December 2026 · 1 plant/)).toBeInTheDocument();
