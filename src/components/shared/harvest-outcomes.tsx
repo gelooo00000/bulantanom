@@ -22,6 +22,7 @@ import { useEffect, useState, type ElementType, type ReactNode } from "react";
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
 import { AuthedImage } from "@/components/shared/authed-image";
 import { EmptyState } from "@/components/shared/empty-state";
+import { SlidePager } from "@/components/shared/slide-pager";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type {
   HarvestOutcomeReport,
@@ -408,12 +409,19 @@ function OutcomeBody({ data, compact }: { data: Outcomes; compact: boolean }) {
               rows={(data.causes ?? []).filter((c) => c.count > 0)}
               total={lost}
               neutral
+              pageSize={LOSS_PAGE_SIZE}
             />
-            <div className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
-              {(data.recent_losses ?? []).map((loss) => (
-                <LossCard key={loss.id} loss={loss} />
-              ))}
-            </div>
+            {/* Four lost plants at a time; the rest slide in from the next page. */}
+            <SlidePager
+              className="lg:col-span-2"
+              items={data.recent_losses ?? []}
+              pageSize={LOSS_PAGE_SIZE}
+              getKey={(loss) => loss.id}
+              renderItem={(loss) => <LossCard loss={loss} />}
+              listLabel="Lost plants"
+              listClassName="grid gap-3 sm:grid-cols-2"
+              itemClassName=""
+            />
           </div>
         </Section>
       )}
@@ -673,6 +681,9 @@ function MiniBar({ value, color }: { value: number | null; color: string }) {
   );
 }
 
+/** How many causes, and how many lost plants, the Lost plants section shows at a time. */
+const LOSS_PAGE_SIZE = 4;
+
 function BreakdownCard({
   title,
   icon,
@@ -680,6 +691,7 @@ function BreakdownCard({
   rows,
   total,
   neutral = false,
+  pageSize,
 }: {
   title: string;
   icon: ElementType;
@@ -688,7 +700,33 @@ function BreakdownCard({
   total: number;
   /** One colour for every row, for answers that are not good or bad. */
   neutral?: boolean;
+  /** Show this many rows at a time, the rest a slide away. */
+  pageSize?: number;
 }) {
+  const renderRow = (row: Outcomes["quality"][number]) => {
+    const share = total ? Math.round((100 * row.count) / total) : 0;
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex justify-between text-xs">
+          <span className={cn("font-medium", neutral ? "" : TONE[row.value])}>{row.label}</span>
+          <span className="text-muted-foreground tabular-nums">
+            {row.count}
+            <span className="ml-1 opacity-70">· {share}%</span>
+          </span>
+        </div>
+        <div className="bg-muted h-2 overflow-hidden rounded-full">
+          <div
+            className={cn(
+              "h-full rounded-full bg-current transition-[width] duration-500",
+              neutral ? "text-primary" : TONE[row.value],
+            )}
+            style={{ width: `${share}%` }}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className={cn(SURFACE, GLOW, "flex flex-col gap-3 p-4")}
@@ -698,33 +736,19 @@ function BreakdownCard({
         <IconTile icon={icon} swatch={swatch} size="sm" />
         {title}
       </p>
-      {rows.map((row) => {
-        const share = total ? Math.round((100 * row.count) / total) : 0;
-        return (
-          <div key={row.value} className="flex flex-col gap-1">
-            <div className="flex justify-between text-xs">
-              <span
-                className={cn("font-medium", neutral ? "" : TONE[row.value])}
-              >
-                {row.label}
-              </span>
-              <span className="text-muted-foreground tabular-nums">
-                {row.count}
-                <span className="ml-1 opacity-70">· {share}%</span>
-              </span>
-            </div>
-            <div className="bg-muted h-2 overflow-hidden rounded-full">
-              <div
-                className={cn(
-                  "h-full rounded-full bg-current transition-[width] duration-500",
-                  neutral ? "text-primary" : TONE[row.value],
-                )}
-                style={{ width: `${share}%` }}
-              />
-            </div>
-          </div>
-        );
-      })}
+      {pageSize && rows.length > pageSize ? (
+        <SlidePager
+          items={rows}
+          pageSize={pageSize}
+          getKey={(row) => row.value}
+          renderItem={renderRow}
+          listLabel={title}
+          listClassName="flex flex-col gap-3"
+          itemClassName=""
+        />
+      ) : (
+        rows.map((row) => <div key={row.value}>{renderRow(row)}</div>)
+      )}
     </div>
   );
 }

@@ -168,7 +168,7 @@ def loss_outcomes(losses, harvested: int, *, recent: int = 10) -> dict:
     }
 
 
-def outcomes(reports=None, *, recent: int = 10, losses=None) -> dict:
+def outcomes(reports=None, *, recent: int = 10, losses=None, recent_losses: int | None = None) -> dict:
     """
     The figures that show how monitored plants turned out:
     healthy at harvest, recovered from High risk, harvested on time, and
@@ -244,6 +244,8 @@ def outcomes(reports=None, *, recent: int = 10, losses=None) -> dict:
         "by_crop": crops,
         "recent": reports[:recent],
         **loss_outcomes(
-            losses if losses is not None else losses_in_scope(), total, recent=recent
+            losses if losses is not None else losses_in_scope(),
+            total,
+            recent=recent if recent_losses is None else recent_losses,
         ),
     }

@@ -346,6 +346,19 @@ class LossReportTests(RiskTestCase):
         report = self.client.get("/api/lgu/reports/harvest-outcomes/", **officer)
         self.assertEqual(report.status_code, 200)
 
+    def test_every_loss_is_sent_not_just_the_latest_ten(self):
+        # The Admin page pages through lost plants four at a time.
+        for _ in range(12):
+            plant = self.make_plant(self.farmer, days_ago=40)
+            self.client.post(
+                f"/api/farmer/plants/{plant.pk}/lost/", LOSS, format="json", **self.auth
+            )
+        make_user("admin@example.com", role=UserRole.ADMIN)
+        admin = self.login("admin@example.com", "/api/auth/admin/login/")
+        data = self.client.get("/api/admin/harvest-outcomes/", **admin).data
+        self.assertEqual(data["lost_total"], 12)
+        self.assertEqual(len(data["recent_losses"]), 12)
+
 
 class EarlyRecheckTests(RiskTestCase):
     def setUp(self):

@@ -1280,8 +1280,13 @@ class LossPhotoView(HarvestPhotoView):
     model = LossReport
 
 
+# The Admin page pages through lost plants four at a time, so it gets them
+# all (up to this many), not just the latest ten.
+RECENT_LOSSES = 200
+
+
 def _outcomes_response(request):
-    data = harvest_report.outcomes()
+    data = harvest_report.outcomes(recent_losses=RECENT_LOSSES)
     data["recent"] = HarvestOutcomeReportSerializer(
         data["recent"], many=True, context={"request": request}
     ).data
