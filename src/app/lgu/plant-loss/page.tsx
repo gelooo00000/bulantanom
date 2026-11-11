@@ -22,7 +22,7 @@ import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
 import { AuthedImage } from "@/components/shared/authed-image";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
-import { formatDisplayDate, formatShortDate } from "@/components/ui/date-picker";
+import { formatDisplayDate } from "@/components/ui/date-picker";
 import { fetchLguPlantLosses, type PlantLoss } from "@/lib/api/lgu-api";
 import { useAuthedQuery } from "@/lib/api/use-authed-query";
 import { CROP_OUTLINE, cropVar } from "@/lib/crop-colors";
@@ -197,7 +197,6 @@ function LossSection({ group, losses }: { group: Group; losses: PlantLoss[] }) {
       color={look.color}
       items={losses}
       perPage={PER_PAGE}
-      gridClassName="sm:grid-cols-2 xl:grid-cols-4"
       itemKey={(loss) => loss.id}
       renderItem={(loss) => <LossCard loss={loss} />}
     />
@@ -242,38 +241,52 @@ function LossTags({ loss }: { loss: PlantLoss }) {
 }
 
 /**
- * The plant's life as one thin track, like the season track on Harvest &
- * Monitoring: from planting to the day it was lost, ending in a broken heart.
+ * The plant's life as one track, like the season track on Harvest &
+ * Monitoring: from planting to the day it was lost, in its group's colour,
+ * ending in a broken heart.
  */
 function LifeTrack({ loss, color }: { loss: PlantLoss; color: string }) {
+  const lostOn = formatDisplayDate(loss.lost_at.slice(0, 10));
   return (
-    <span className="flex flex-col gap-1.5">
-      <span className="relative mx-2 block h-4" aria-hidden="true">
+    <div className="flex flex-col gap-2.5">
+      <div className="relative mx-2.5 h-7" aria-hidden="true">
+        <div className="bg-muted absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full">
+          <span
+            className="absolute inset-0 rounded-full"
+            style={{ backgroundImage: `linear-gradient(90deg, ${tint("var(--primary)", 45)}, ${color})` }}
+          />
+        </div>
         <span
-          className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full"
-          style={{ backgroundImage: `linear-gradient(90deg, ${tint("var(--primary)", 45)}, ${color})` }}
-        />
-        <span
-          className="bg-card absolute top-1/2 left-0 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+          className="bg-card absolute top-1/2 left-0 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
           style={{ borderColor: "var(--primary)" }}
         />
         <span
-          className="border-card absolute top-1/2 left-full flex size-4.5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 shadow-sm"
+          className="border-card absolute top-1/2 left-full flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] shadow"
           style={{ backgroundColor: color, color: "var(--risk-foreground)" }}
         >
-          <HeartCrack className="size-2.5" />
+          <HeartCrack className="size-3" />
         </span>
-      </span>
-      <span className="text-muted-foreground flex items-center justify-between gap-2 text-[11px] tabular-nums">
-        <span>{formatShortDate(loss.planting_date)}</span>
-        <span className="text-foreground font-heading font-medium">{loss.age_days} days</span>
-        <span>{formatShortDate(loss.lost_at.slice(0, 10))}</span>
-      </span>
-    </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <p className="text-muted-foreground">Planted</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium">{formatDisplayDate(loss.planting_date)}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-muted-foreground">Lived</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium tabular-nums">{loss.age_days} days</p>
+        </div>
+        <div className="text-right">
+          <p className="text-muted-foreground">Lost</p>
+          <p className="font-heading mt-0.5 text-[13px] font-medium">{lostOn}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
-/** A lost plant as a small card: opens its full report in a pop-up. */
+/** A lost plant, in the same card as Harvest & Monitoring: opens its full report in a pop-up. */
 function LossCard({ loss }: { loss: PlantLoss }) {
   const color = GROUPS[groupOf(loss)].color;
   const style = { ...cropVar(loss.crop_name), "--level": color } as React.CSSProperties;
@@ -284,48 +297,68 @@ function LossCard({ loss }: { loss: PlantLoss }) {
     <Dialog.Root>
       <Dialog.Trigger
         className={cn(
-          "bg-card text-card-foreground relative isolate flex w-full flex-col gap-3 overflow-hidden rounded-2xl border p-3.5 text-left shadow-sm",
+          "bg-card text-card-foreground relative isolate flex w-full flex-col overflow-hidden rounded-3xl border text-left shadow-sm",
           "transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5",
           CROP_OUTLINE,
         )}
         style={style}
       >
-        {/* A wash in the crop's colour behind the header. */}
+        {/* A wash in the crop's colour behind the header, the crop faded in the corner. */}
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 top-0 -z-10 h-16"
+          className="absolute inset-x-0 top-0 -z-10 h-28"
           style={{
-            backgroundImage: "linear-gradient(160deg, color-mix(in oklab, var(--crop) 18%, transparent), transparent 85%)",
+            backgroundImage: "linear-gradient(160deg, color-mix(in oklab, var(--crop) 20%, transparent), transparent 85%)",
           }}
         />
-
-        <span className="flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="bg-card flex size-10 shrink-0 items-center justify-center rounded-xl border text-xl grayscale-[50%]"
-          >
-            {loss.crop_emoji}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="font-heading block truncate text-sm leading-tight font-semibold">{loss.plant_name}</span>
-            <span className="mt-1 flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="font-heading flex size-4 shrink-0 items-center justify-center rounded-full text-[8px] font-semibold"
-                style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
-              >
-                {initials(loss.farmer_name)}
-              </span>
-              <span className="text-muted-foreground truncate text-xs">{loss.farmer_name}</span>
-            </span>
-          </span>
+        <span
+          aria-hidden="true"
+          className="absolute -top-3 -right-2 -z-10 text-8xl leading-none opacity-[0.12] grayscale select-none"
+        >
+          {loss.crop_emoji}
         </span>
 
-        <LifeTrack loss={loss} color={color} />
+        <span className="flex w-full flex-col gap-4 p-5">
+          <span className="flex items-start gap-3.5">
+            <span
+              aria-hidden="true"
+              className="bg-card flex size-14 shrink-0 items-center justify-center rounded-2xl border text-3xl grayscale-[50%]"
+              style={{ boxShadow: "0 10px 22px -14px var(--crop)" }}
+            >
+              {loss.crop_emoji}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-heading block truncate text-lg leading-tight font-semibold">{loss.plant_name}</span>
+              <span className="mt-1.5 flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="font-heading flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold"
+                  style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
+                >
+                  {initials(loss.farmer_name)}
+                </span>
+                <span className="text-muted-foreground truncate text-sm">{loss.farmer_name}</span>
+              </span>
+            </span>
+            <span
+              className="font-heading shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold"
+              style={{ color, backgroundColor: tint(color, 15), borderColor: tint(color, 30) }}
+            >
+              Lost {lostOn}
+            </span>
+          </span>
 
-        <span className="flex flex-wrap items-center gap-1.5">
-          <LossTags loss={loss} />
-          {highest && <RiskBadge size="sm" level={highest} />}
+          <LifeTrack loss={loss} color={color} />
+
+          <span className="border-border/70 flex flex-wrap items-center gap-2 border-t pt-3.5 text-xs">
+            {highest && <RiskBadge size="sm" level={highest} />}
+            <span className="text-muted-foreground">
+              {loss.assessments_count === 1 ? "1 weekly check" : `${loss.assessments_count} weekly checks`}
+            </span>
+            <span className="ml-auto flex flex-wrap justify-end gap-1.5">
+              <LossTags loss={loss} />
+            </span>
+          </span>
         </span>
       </Dialog.Trigger>
 
