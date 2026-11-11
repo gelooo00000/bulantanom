@@ -1,6 +1,18 @@
 "use client";
 
-import { AlarmClock, CalendarClock, Info, Leaf, Sprout, Wheat, type LucideIcon } from "lucide-react";
+import {
+  AlarmClock,
+  Archive,
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Leaf,
+  Sprout,
+  Wheat,
+  type LucideIcon,
+} from "lucide-react";
+import { useRef, useState } from "react";
 
 import { LguError, LguLoading } from "@/components/lgu/lgu-states";
 import { RiskBadge, type BadgeLevel } from "@/components/risk/risk-badge";
@@ -290,12 +302,36 @@ const SECTION_LOOK: Record<Phase, { icon: LucideIcon; hint: string }> = {
   harvested: { icon: Wheat, hint: "Done for this season" },
 };
 
-function Section({ title, phase, plants }: { title: string; phase: Phase; plants: LguPlant[] }) {
+/**
+ * A stage's plants, `perPage` at a time. Pages sit side by side in one strip
+ * that slides when the officer moves between them (or swipes, on a phone).
+ */
+function Section({
+  title,
+  phase,
+  plants,
+  perPage,
+}: {
+  title: string;
+  phase: Phase;
+  plants: LguPlant[];
+  perPage: number;
+}) {
+  const [page, setPage] = useState(0);
+  const touchX = useRef<number | null>(null);
   if (plants.length === 0) return null;
   const { icon: Icon, hint } = SECTION_LOOK[phase];
   const color = phase === "harvested" ? "var(--primary)" : PHASE_FILL[phase];
+  const pages: LguPlant[][] = [];
+  for (let i = 0; i < plants.length; i += perPage) pages.push(plants.slice(i, i + perPage));
+  // The list can shrink under the current page after a refetch.
+  const current = Math.min(page, pages.length - 1);
+  const go = (to: number) => setPage(Math.max(0, Math.min(pages.length - 1, to)));
+  const first = current * perPage + 1;
+  const last = Math.min(plants.length, first + perPage - 1);
+
   return (
-    <section className="flex flex-col gap-3.5">
+    <section className="flex flex-col gap-3.5" aria-label={title}>
       <div className="flex items-center gap-3">
         <span
           className="flex size-8 shrink-0 items-center justify-center rounded-xl"
@@ -316,12 +352,107 @@ function Section({ title, phase, plants }: { title: string; phase: Phase; plants
           style={{ backgroundImage: `linear-gradient(90deg, ${tint(color, 35)}, transparent)` }}
         />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {plants.map((plant) => (
-          <PlantCard key={plant.id} plant={plant} />
-        ))}
+      {/* Room for the cards' hover lift and outline inside the clipped strip. */}
+      <div
+        className="-m-2 overflow-hidden p-2"
+        onTouchStart={(e) => (touchX.current = e.touches[0]!.clientX)}
+        onTouchEnd={(e) => {
+          if (touchX.current === null) return;
+          const moved = e.changedTouches[0]!.clientX - touchX.current;
+          touchX.current = null;
+          if (Math.abs(moved) > 50) go(current + (moved < 0 ? 1 : -1));
+        }}
+      >
+        <div
+          className="flex items-start transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          style={{ transform: `translateX(calc(-${current * 100}% - ${current} * 1rem))`, gap: "1rem" }}
+        >
+          {pages.map((group, index) => (
+            <div
+              key={index}
+              className={cn(
+                "grid w-full shrink-0 gap-4 transition-opacity duration-500 lg:grid-cols-2",
+                index === current ? "opacity-100" : "opacity-0",
+              )}
+              inert={index !== current}
+              aria-hidden={index !== current}
+            >
+              {group.map((plant) => (
+                <PlantCard key={plant.id} plant={plant} />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
+
+      {pages.length > 1 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
+            {first}–{last} of {plants.length}
+          </p>
+          <div className="flex items-center gap-1.5">
+            {pages.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                aria-label={`Page ${index + 1}`}
+                aria-current={index === current ? "page" : undefined}
+                onClick={() => go(index)}
+                className="flex h-6 items-center"
+              >
+                <span
+                  className={cn(
+                    "block h-2 rounded-full transition-all duration-300",
+                    index === current ? "w-6" : "bg-border hover:bg-muted-foreground/40 w-2",
+                  )}
+                  style={index === current ? { backgroundColor: color } : undefined}
+                />
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <PageButton label="Previous page" disabled={current === 0} onClick={() => go(current - 1)}>
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </PageButton>
+            <PageButton
+              label="Next page"
+              disabled={current === pages.length - 1}
+              onClick={() => go(current + 1)}
+              color={color}
+            >
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </PageButton>
+          </div>
+        </div>
+      )}
     </section>
+  );
+}
+
+function PageButton({
+  label,
+  disabled,
+  onClick,
+  color,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  color?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="border-border bg-card hover:bg-muted flex size-9 items-center justify-center rounded-full border shadow-sm transition-all hover:-translate-y-px disabled:pointer-events-none disabled:opacity-40"
+      style={color && !disabled ? { color, borderColor: tint(color, 40) } : undefined}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -330,6 +461,9 @@ export default function LguHarvestPage() {
   // Lost plants have no harvest coming.
   const plants = (data ?? []).filter((p) => p.status !== "LOST");
   const shownIn = (phase: Phase) => plants.filter((p) => phaseOf(p) === phase);
+  const [view, setView] = useState<"field" | "archive">("field");
+  const archived = shownIn("harvested");
+  const inFieldCount = plants.length - archived.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -337,6 +471,46 @@ export default function LguHarvestPage() {
         title="Harvest & Monitoring"
         description="Expected harvest dates and the latest risk readings across all farmers at Layuan Farm, read live from the database."
       />
+
+      {!loading && !error && plants.length > 0 && (
+        <div className="bg-muted/60 inline-flex self-start rounded-2xl p-1" role="tablist" aria-label="Plants to show">
+          {(
+            [
+              { value: "field", label: "In the field", count: inFieldCount, icon: Sprout },
+              { value: "archive", label: "Archive", count: archived.length, icon: Archive },
+            ] as const
+          ).map((tab) => {
+            const active = view === tab.value;
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setView(tab.value)}
+                className={cn(
+                  "font-heading flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all",
+                  active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <TabIcon className="size-4" aria-hidden="true" />
+                {tab.label}
+                <span
+                  className="rounded-full px-1.5 py-px text-xs tabular-nums"
+                  style={
+                    active
+                      ? { color: "var(--primary)", backgroundColor: tint("var(--primary)", 15) }
+                      : { backgroundColor: "var(--border)" }
+                  }
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {loading ? (
         <LguLoading label="Loading harvest dates…" />
@@ -350,17 +524,35 @@ export default function LguHarvestPage() {
         />
       ) : (
         <>
-          <div className="flex flex-col gap-8">
-            <Section title="Ready to harvest" phase="open" plants={shownIn("open")} />
-            <Section
-              title={`Harvest starts within ${APPROACHING_WINDOW_DAYS} days`}
-              phase="approaching"
-              plants={shownIn("approaching")}
+          {view === "field" ? (
+            inFieldCount === 0 ? (
+              <EmptyState
+                icon={Sprout}
+                title="Nothing in the field"
+                description="Every plant has been harvested. Past harvests are in the Archive."
+              />
+            ) : (
+              <div className="flex flex-col gap-8">
+                <Section title="Ready to harvest" phase="open" plants={shownIn("open")} perPage={4} />
+                <Section
+                  title={`Harvest starts within ${APPROACHING_WINDOW_DAYS} days`}
+                  phase="approaching"
+                  plants={shownIn("approaching")}
+                  perPage={4}
+                />
+                <Section title="Harvest time passed" phase="passed" plants={shownIn("passed")} perPage={4} />
+                <Section title="Still growing" phase="growing" plants={shownIn("growing")} perPage={6} />
+              </div>
+            )
+          ) : archived.length === 0 ? (
+            <EmptyState
+              icon={Archive}
+              title="The archive is empty"
+              description="Plants move here once their Farmer marks them harvested."
             />
-            <Section title="Harvest time passed" phase="passed" plants={shownIn("passed")} />
-            <Section title="Still growing" phase="growing" plants={shownIn("growing")} />
-            <Section title="Harvested" phase="harvested" plants={shownIn("harvested")} />
-          </div>
+          ) : (
+            <Section title="Harvested" phase="harvested" plants={archived} perPage={6} />
+          )}
 
           <p className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-2xl px-4 py-3 text-xs">
             <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />

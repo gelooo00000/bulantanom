@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import LguHarvestPage from "@/app/lgu/harvest/page";
@@ -85,6 +85,27 @@ describe("LGU Harvest & Monitoring", () => {
     expect(screen.queryByText("Monitoring")).not.toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Plants in the field by latest risk" })).not.toBeInTheDocument();
     expect(screen.getByText("Mango", { selector: "p *, p" })).toBeInTheDocument();
+  });
+
+  it("keeps harvested plants in the Archive tab", () => {
+    render(<LguHarvestPage />);
+    expect(screen.queryByRole("region", { name: "Harvested" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Archive/ }));
+    expect(screen.getByRole("region", { name: "Harvested" })).toBeInTheDocument();
+    expect(screen.getByText("Corn", { selector: "p" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Still growing" })).not.toBeInTheDocument();
+  });
+
+  it("shows six growing plants a page and slides to the next", () => {
+    plants = Array.from({ length: 8 }, (_, i) => plant(10 + i, `Crop ${i + 1}`, "2027-08-20", "2027-09-19"));
+    render(<LguHarvestPage />);
+    const growing = screen.getByRole("region", { name: "Still growing" });
+    expect(within(growing).getByText("1–6 of 8")).toBeInTheDocument();
+    expect(within(growing).getByText("Crop 7").closest("[inert]")).not.toBeNull();
+    fireEvent.click(within(growing).getByRole("button", { name: "Next page" }));
+    expect(within(growing).getByText("7–8 of 8")).toBeInTheDocument();
+    expect(within(growing).getByText("Crop 7").closest("[inert]")).toBeNull();
+    expect(within(growing).getByRole("button", { name: "Next page" })).toBeDisabled();
   });
 
   it("has no Harvest Outcomes section", () => {
