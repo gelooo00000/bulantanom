@@ -23,7 +23,7 @@ CATALOG_URL = "/api/lgu/reports/"
 PW = "TestPass!2345"
 
 
-def _summary_url(slug="agricultural-summary", **params):
+def _summary_url(slug="risk-assessment", **params):
     query = "&".join(f"{k}={v}" for k, v in params.items())
     return f"/api/lgu/reports/{slug}/" + (f"?{query}" if query else "")
 
@@ -127,7 +127,7 @@ class ReportPermissionTests(LguReportsTestBase):
         )
 
     def test_anonymous_cannot_download_a_pdf(self):
-        response = self.client.get("/api/lgu/reports/agricultural-summary/pdf/")
+        response = self.client.get("/api/lgu/reports/risk-assessment/pdf/")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_farmer_is_rejected(self):
@@ -138,7 +138,7 @@ class ReportPermissionTests(LguReportsTestBase):
             format="json",
         ).data["access"]
         auth = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
-        for url in (CATALOG_URL, _summary_url(), "/api/lgu/reports/agricultural-summary/pdf/"):
+        for url in (CATALOG_URL, _summary_url(), "/api/lgu/reports/risk-assessment/pdf/"):
             self.assertEqual(
                 self.client.get(url, **auth).status_code,
                 status.HTTP_403_FORBIDDEN,
@@ -157,14 +157,13 @@ class ReportPermissionTests(LguReportsTestBase):
         response = self.client.get(CATALOG_URL, **self.auth())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         slugs = {r["slug"] for r in response.data["reports"]}
-        self.assertIn("agricultural-summary", slugs)
         self.assertIn("risk-assessment", slugs)
         self.assertIn("harvest", slugs)
         self.assertIn("harvest-outcomes", slugs)
         self.assertIn("farmer-registration", slugs)
-        self.assertEqual(len(slugs), 5)
+        self.assertEqual(len(slugs), 4)
         # Removed at the owner's request.
-        for gone in ("crop-recommendation", "plant-crop", "farm-monitoring"):
+        for gone in ("agricultural-summary", "crop-recommendation", "plant-crop", "farm-monitoring"):
             self.assertNotIn(gone, slugs)
         self.assertNotIn("soil-assessment", slugs)
 
@@ -174,27 +173,6 @@ class ReportDataAccuracyTests(LguReportsTestBase):
         response = self.client.get(_summary_url(slug, **params), **self.auth())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         return {s["label"]: s["value"] for s in response.data["stats"]}, response.data
-
-    def test_summary_counts_match_the_database(self):
-        stats, _ = self._stats("agricultural-summary", period="all_time")
-        # Two Farmer rows exist; only one is approved.
-        self.assertEqual(stats["Approved Farmers"], 1)
-        # The pending Farmer's plant must not be counted.
-        self.assertEqual(stats["Plants Monitored"], 1)
-        self.assertEqual(stats["Weekly Assessments"], 1)
-        self.assertEqual(stats["High Risk"], 1)
-
-    def test_summary_is_short(self):
-        stats, data = self._stats("agricultural-summary", period="all_time")
-        self.assertEqual(
-            data["findings"],
-            ["1 of 2 farmers approved.", "1 plant (1 crop) under monitoring.", "1 High-risk reading to follow up."],
-        )
-        self.assertEqual(len(stats), 4)
-        self.assertEqual([t["title"] for t in data["tables"]], ["Latest Checks"])
-        self.assertLessEqual(len(data["tables"][0]["rows"]), 5)
-        self.assertEqual(set(data["tables"][0]["rows"][0]), {"date", "farmer", "plant", "risk"})
-        self.assertEqual(data["prepared_by_role"], "LGU Agricultural Officer")
 
     def test_report_excludes_non_approved_farmers(self):
         _, data = self._stats("risk-assessment", period="all_time")
@@ -268,11 +246,11 @@ class ReportFilterTests(LguReportsTestBase):
     def test_invalid_inputs_are_rejected(self):
         auth = self.auth()
         for url in (
-            _summary_url("agricultural-summary", period="last_century"),
+            _summary_url("risk-assessment", period="last_century"),
             _summary_url("risk-assessment", risk_level="CATASTROPHIC"),
             _summary_url("risk-assessment", farmer="not-a-number"),
             _summary_url(
-                "agricultural-summary", period="custom", date_from="2026-05-01", date_to="2026-01-01"
+                "risk-assessment", period="custom", date_from="2026-05-01", date_to="2026-01-01"
             ),
         ):
             self.assertEqual(
@@ -294,7 +272,6 @@ class ReportPdfTests(LguReportsTestBase):
 
     def test_every_report_renders_a_pdf(self):
         for slug in (
-            "agricultural-summary",
             "risk-assessment",
             "farmer-registration",
             "harvest",
@@ -308,12 +285,12 @@ class ReportPdfTests(LguReportsTestBase):
             self.assertGreater(len(body), 1000, msg=slug)
 
     def test_pdf_is_sent_as_a_download(self):
-        response = self._pdf("agricultural-summary")
+        response = self._pdf("risk-assessment")
         self.assertIn("attachment", response["Content-Disposition"])
         self.assertIn(".pdf", response["Content-Disposition"])
 
     def test_pdf_is_not_cached_by_shared_caches(self):
-        self.assertIn("no-store", self._pdf("agricultural-summary")["Cache-Control"])
+        self.assertIn("no-store", self._pdf("risk-assessment")["Cache-Control"])
 
     def test_pdf_respects_filters(self):
         empty = self.client.get(
@@ -392,7 +369,7 @@ class ReportScaleTests(LguReportsTestBase):
 class RemovedReportsTests(LguReportsTestBase):
     def test_the_removed_reports_are_gone(self):
         auth = self.auth()
-        for slug in ("crop-recommendation", "plant-crop", "farm-monitoring"):
+        for slug in ("agricultural-summary", "crop-recommendation", "plant-crop", "farm-monitoring"):
             response = self.client.get(_summary_url(slug), **auth)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=slug)
 
@@ -409,9 +386,8 @@ class PreparedByTests(LguReportsTestBase):
             "/api/auth/admin/login/", {"email": "admin@example.com", "password": "Str0ng!Passw0rd"}, format="json"
         )
         auth = {"HTTP_AUTHORIZATION": f"Bearer {response.data['access']}"}
-        data = self.client.get(_summary_url("agricultural-summary"), **auth).data
+        data = self.client.get(_summary_url("risk-assessment"), **auth).data
         self.assertEqual(data["prepared_by_role"], "Administrator")
-        csv = self.client.get("/api/lgu/reports/agricultural-summary/csv/", **auth)
+        csv = self.client.get("/api/lgu/reports/risk-assessment/csv/", **auth)
         text = csv.content.decode("utf-8-sig")
-        self.assertIn("Key Findings", text)
         self.assertIn("Administrator", text)

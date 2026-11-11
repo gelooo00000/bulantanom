@@ -291,93 +291,6 @@ def _build_risk(period: Period, filters: dict) -> dict:
     }
 
 
-def _plural(count: int, singular: str, plural: str | None = None) -> str:
-    return f"{count} {singular if count == 1 else (plural or singular + 's')}"
-
-
-def _build_summary(period: Period, filters: dict) -> dict:
-    """
-    The executive overview, kept short: three findings, four figures and the
-    latest five checks. The detail lives in the other reports.
-    """
-    from plants.models import Assessment, Plant, PlantStatus
-
-    today = timezone.localdate()
-    farmers = _apply_period(User.objects.filter(role=UserRole.FARMER), "date_joined__date", period)
-    farmer_counts = farmers.aggregate(
-        total=Count("id"),
-        approved=Count("id", filter=Q(account_status=AccountStatus.APPROVED)),
-    )
-
-    plants = Plant.objects.filter(
-        farmer__role=UserRole.FARMER, farmer__account_status=AccountStatus.APPROVED
-    ).exclude(status__in=[PlantStatus.HARVESTED, PlantStatus.ARCHIVED, PlantStatus.LOST])
-    monitored = plants.count()
-    crops = plants.values("crop").distinct().count()
-
-    assessments = _apply_period(
-        Assessment.objects.filter(
-            plant__farmer__role=UserRole.FARMER,
-            plant__farmer__account_status=AccountStatus.APPROVED,
-        ),
-        "assessment_date",
-        period,
-    )
-    risk = assessments.aggregate(
-        total=Count("id"),
-        high=Count("id", filter=Q(risk__risk_level="HIGH")),
-    )
-
-    upcoming = plants.filter(
-        expected_harvest_end__gte=today,
-        expected_harvest_start__lte=today + timedelta(days=HARVEST_APPROACHING_DAYS),
-    ).count()
-
-    findings = [
-        f"{farmer_counts['approved']} of {farmer_counts['total']} farmers approved.",
-        f"{_plural(monitored, 'plant')} ({_plural(crops, 'crop')}) under monitoring.",
-        f"{_plural(risk['high'], 'High-risk reading')} to follow up."
-        if risk["high"]
-        else "No High-risk readings.",
-    ]
-    if upcoming:
-        findings.append(f"{_plural(upcoming, 'plant')} due for harvest this week.")
-
-    latest = [
-        {
-            "date": a.assessment_date.isoformat(),
-            "farmer": _display_name(a.plant.farmer),
-            "plant": a.plant.display_name,
-            "risk": a.risk.get_risk_level_display()
-            if getattr(a, "risk", None) and a.risk.risk_level
-            else "No reading",
-        }
-        for a in assessments.select_related(
-            "plant", "plant__crop", "plant__variant", "plant__farmer", "risk"
-        ).order_by("-assessment_date", "-created_at")[:5]
-    ]
-
-    return {
-        "findings": findings,
-        "stats": [
-            {"label": "Approved Farmers", "value": farmer_counts["approved"], "tone": "low"},
-            {"label": "Plants Monitored", "value": monitored},
-            {"label": "Weekly Assessments", "value": risk["total"]},
-            {"label": "High Risk", "value": risk["high"], "tone": "high"},
-        ],
-        "tables": [
-            {
-                "title": "Latest Checks",
-                "columns": ["Date", "Farmer", "Plant", "Risk"],
-                "keys": ["date", "farmer", "plant", "risk"],
-                "tone_key": "risk",
-                "widths": [2, 3, 4, 2],
-                "rows": latest,
-            },
-        ],
-    }
-
-
 def _analytics_filters(period: Period, filters: dict):
     """The report's parameters as the analytics module's filters."""
     from analytics.filters import Filters
@@ -559,14 +472,6 @@ def _build_harvest_outcomes(period: Period, filters: dict) -> dict:
 # --------------------------------------------------------------------------
 
 REPORTS = {
-    "agricultural-summary": {
-        "title": "Agricultural Summary",
-        "category": "Executive Overview",
-        "description": "Farmers, plants and risk at a glance.",
-        "icon": "chart",
-        "builder": _build_summary,
-        "supports": ["period"],
-    },
     "risk-assessment": {
         "title": "Risk Assessment Report",
         "category": "Technical Report",
@@ -624,7 +529,7 @@ def _latest_activity(slug: str):
         from plants.harvest_report import reports_in_scope
 
         return reports_in_scope().order_by("-harvested_on").values_list("harvested_on", flat=True).first()
-    # risk and the summary both track the assessment table.
+    # The risk report tracks the assessment table.
     return (
         Assessment.objects.filter(plant__farmer__account_status=AccountStatus.APPROVED)
         .order_by("-assessment_date")
