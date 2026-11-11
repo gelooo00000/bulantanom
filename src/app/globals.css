@@ -640,3 +640,13 @@ html[data-splash-seen] .splash-screen {
   --loss-conditions: #8b5cf6;
   --loss-other: #059669;
 }
+
+/*
+ * Password boxes have their own show / hide eye (PasswordInput). Edge adds
+ * a built-in "reveal" eye too once something is typed, which showed two
+ * eyes side by side; hide the browser's own.
+ */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
