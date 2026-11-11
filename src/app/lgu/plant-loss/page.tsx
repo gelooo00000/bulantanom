@@ -4,7 +4,6 @@ import { Dialog } from "@base-ui/react/dialog";
 import {
   BellRing,
   Bug,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -41,15 +40,17 @@ const COLOR = {
   all: "var(--primary)",
 };
 
-const PAGE_SIZE = 6;
+/** Each cause's colour in the breakdown bar: its group's colour, the second of a pair lighter. */
+const CAUSE_COLOR: Record<string, string> = {
+  FLOOD_TYPHOON: COLOR.calamity,
+  DROUGHT_HEAT: tint(COLOR.calamity, 55),
+  PEST: COLOR.pestDisease,
+  DISEASE: tint(COLOR.pestDisease, 55),
+  ANIMALS: COLOR.other,
+  OTHER: tint(COLOR.other, 50),
+};
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join("");
+const PAGE_SIZE = 8;
 
 /** A loss's colour: a calamity first, then a High-risk plant not saved, then its cause. */
 function lossColor(loss: PlantLoss): string {
@@ -89,7 +90,7 @@ export default function LguPlantLossPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageHeader title="Plant Loss" />
 
       {loading ? (
@@ -105,43 +106,11 @@ export default function LguPlantLossPage() {
       ) : (
         <>
           <LossBanner data={data} filter={filter} onFilter={choose} />
-
-          <div className="grid gap-4 lg:grid-cols-5">
-            <CausesPanel data={data} />
-            <MonthsPanel data={data} />
-          </div>
-
+          <Breakdown data={data} />
           <LossList losses={data.losses.filter((loss) => matches(loss, filter))} page={page} onPage={setPage} />
         </>
       )}
     </div>
-  );
-}
-
-function Panel({
-  title,
-  icon: Icon,
-  className,
-  children,
-}: {
-  title: string;
-  icon: LucideIcon;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={cn("bg-card flex flex-col gap-4 rounded-3xl border p-5 shadow-sm", className)}>
-      <h2 className="font-heading flex items-center gap-2.5 text-base font-semibold">
-        <span
-          className="flex size-8 items-center justify-center rounded-xl"
-          style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
-        >
-          <Icon className="size-4" aria-hidden="true" />
-        </span>
-        {title}
-      </h2>
-      {children}
-    </section>
   );
 }
 
@@ -170,34 +139,19 @@ function LossBanner({
   ];
 
   return (
-    <section
-      className="bg-card relative isolate overflow-hidden rounded-3xl border p-5 shadow-sm sm:p-7"
-      style={{ borderColor: tint(COLOR.notSaved, 22) }}
-    >
-      <span
-        aria-hidden="true"
-        className="absolute -top-24 -right-16 -z-10 size-72 rounded-full blur-3xl"
-        style={{ backgroundColor: tint(COLOR.notSaved, 14) }}
-      />
-      <span
-        aria-hidden="true"
-        className="absolute -bottom-28 left-1/4 -z-10 size-72 rounded-full blur-3xl"
-        style={{ backgroundColor: tint(COLOR.calamity, 14) }}
-      />
-      <span
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 opacity-[0.35] [background-image:radial-gradient(var(--border)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:linear-gradient(110deg,black,transparent_65%)]"
-      />
-
-      <p className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">Losses</p>
-      <p className="font-heading mt-1 text-2xl leading-tight font-semibold sm:text-3xl">
+    <section className="flex flex-col gap-3">
+      <p className="font-heading text-lg leading-tight font-semibold sm:text-xl">
         <span className="tabular-nums" style={{ color: COLOR.notSaved }}>
           {data.total}
         </span>{" "}
         {data.total === 1 ? "plant lost" : "plants lost"} before harvest
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Show losses">
+      <div
+        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
+        role="group"
+        aria-label="Show losses"
+      >
         {options.map((option) => {
           const active = filter === option.value;
           const Icon = option.icon;
@@ -208,17 +162,17 @@ function LossBanner({
               aria-pressed={active}
               onClick={() => onFilter(option.value)}
               className={cn(
-                "font-heading flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all",
+                "font-heading flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all",
                 active
                   ? "bg-card text-foreground shadow-sm"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground border-transparent",
               )}
               style={active ? { borderColor: tint(option.color, 45) } : undefined}
             >
-              <Icon className="size-4" style={{ color: option.color }} aria-hidden="true" />
+              <Icon className="size-3.5" style={{ color: option.color }} aria-hidden="true" />
               {option.label}
               <span
-                className="rounded-full px-1.5 py-px text-xs tabular-nums"
+                className="rounded-full px-1.5 text-xs tabular-nums"
                 style={
                   active
                     ? { color: option.color, backgroundColor: tint(option.color, 15) }
@@ -235,100 +189,92 @@ function LossBanner({
   );
 }
 
-/** How many plants each cause took, calamities marked. */
-function CausesPanel({ data }: { data: PlantLosses }) {
-  const most = Math.max(1, ...data.causes.map((cause) => cause.count));
-  return (
-    <Panel title="What killed them" icon={HeartCrack} className="lg:col-span-3">
-      <ul className="flex flex-col gap-3">
-        {[...data.causes]
-          .sort((a, b) => b.count - a.count)
-          .map((cause) => {
-            const color = cause.calamity
-              ? COLOR.calamity
-              : cause.value === "PEST" || cause.value === "DISEASE"
-                ? COLOR.pestDisease
-                : COLOR.other;
-            return (
-              <li key={cause.value} className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="flex items-center gap-2">
-                    {cause.label}
-                    {cause.calamity && (
-                      <span
-                        className="font-heading rounded-full px-1.5 py-px text-[10px] font-semibold uppercase"
-                        style={{ color: COLOR.calamity, backgroundColor: tint(COLOR.calamity, 14) }}
-                      >
-                        Calamity
-                      </span>
-                    )}
-                  </span>
-                  <span className="font-heading font-semibold tabular-nums">{cause.count}</span>
-                </div>
-                <div className="bg-muted h-2 overflow-hidden rounded-full">
-                  <span
-                    className="block h-full rounded-full transition-[width] duration-700"
-                    style={{
-                      width: `${(cause.count / most) * 100}%`,
-                      backgroundImage: `linear-gradient(90deg, ${tint(color, 55)}, ${color})`,
-                    }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-      </ul>
-    </Panel>
-  );
-}
-
-/** Losses in each of the last six months, plus the crops lost most. */
-function MonthsPanel({ data }: { data: PlantLosses }) {
+/**
+ * One compact card: what killed them as a single stacked bar (only causes
+ * that took a plant are listed), then the last six months and the crops lost.
+ */
+function Breakdown({ data }: { data: PlantLosses }) {
+  const causes = data.causes.filter((cause) => cause.count > 0).sort((a, b) => b.count - a.count);
   const most = Math.max(1, ...data.months.map((month) => month.count));
+
   return (
-    <Panel title="When and what" icon={CalendarDays} className="lg:col-span-2">
-      <div className="flex h-32 items-end gap-2" role="list" aria-label="Plants lost per month">
-        {data.months.map((month) => {
-          const label = new Date(`${month.month}-01T00:00:00`).toLocaleDateString("en", { month: "short" });
-          return (
-            <div key={month.month} role="listitem" className="flex flex-1 flex-col items-center gap-1.5">
-              <span className="font-heading text-xs font-semibold tabular-nums">{month.count || ""}</span>
-              <span
-                className="w-full max-w-10 rounded-t-lg transition-[height] duration-700"
-                style={{
-                  height: `${Math.max(4, (month.count / most) * 80)}px`,
-                  backgroundImage: month.count
-                    ? `linear-gradient(180deg, ${COLOR.notSaved}, ${tint(COLOR.notSaved, 45)})`
-                    : undefined,
-                  backgroundColor: month.count ? undefined : "var(--muted)",
-                }}
-                aria-label={`${label}: ${month.count}`}
-              />
-              <span className="text-muted-foreground text-[11px]">{label}</span>
-            </div>
-          );
-        })}
+    <section className="bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-sm">
+      <h2 className="font-heading text-sm font-semibold">What killed them</h2>
+
+      <div
+        className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
+        role="img"
+        aria-label={causes.map((cause) => `${cause.label}: ${cause.count}`).join(", ")}
+      >
+        {causes.map((cause) => (
+          <span
+            key={cause.value}
+            className="h-full transition-[width] duration-700"
+            style={{ width: `${(cause.count / data.total) * 100}%`, backgroundColor: CAUSE_COLOR[cause.value] }}
+          />
+        ))}
       </div>
 
-      {data.crops.length > 0 && (
-        <div className="border-border/70 flex flex-wrap gap-1.5 border-t pt-3.5">
-          {data.crops.slice(0, 6).map((crop) => (
+      <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+        {causes.map((cause) => (
+          <li key={cause.value} className="flex items-center gap-1.5">
             <span
-              key={crop.crop}
-              className="bg-muted/60 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
-            >
-              <span aria-hidden="true">{crop.emoji}</span>
-              {crop.crop}
-              <span className="font-heading font-semibold tabular-nums">{crop.count}</span>
-            </span>
-          ))}
+              aria-hidden="true"
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: CAUSE_COLOR[cause.value] }}
+            />
+            {cause.label}
+            {cause.calamity && (
+              <span
+                className="font-heading rounded-full px-1.5 text-[10px] font-semibold uppercase"
+                style={{ color: COLOR.calamity, backgroundColor: tint(COLOR.calamity, 14) }}
+              >
+                Calamity
+              </span>
+            )}
+            <span className="font-heading font-semibold tabular-nums">{cause.count}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="border-border/70 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-end gap-1.5" role="list" aria-label="Plants lost per month">
+          {data.months.map((month) => {
+            const label = new Date(`${month.month}-01T00:00:00`).toLocaleDateString("en", { month: "short" });
+            return (
+              <div key={month.month} role="listitem" className="flex w-9 flex-col items-center gap-1">
+                <span
+                  className="w-full rounded-md transition-[height] duration-700"
+                  style={{
+                    height: `${Math.max(3, (month.count / most) * 22)}px`,
+                    backgroundColor: month.count ? COLOR.notSaved : "var(--muted)",
+                  }}
+                  aria-label={`${label}: ${month.count}`}
+                  title={`${label}: ${month.count}`}
+                />
+                <span className="text-muted-foreground text-[10px]">{label}</span>
+              </div>
+            );
+          })}
         </div>
-      )}
-    </Panel>
+
+        {data.crops.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {data.crops.slice(0, 4).map((crop) => (
+              <span key={crop.crop} className="bg-muted/60 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs">
+                <span aria-hidden="true">{crop.emoji}</span>
+                {crop.crop}
+                <span className="font-heading font-semibold tabular-nums">{crop.count}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
-/** The losses themselves, newest first, six a page. */
+/** The losses themselves, newest first, eight a page, one compact row each. */
 function LossList({
   losses,
   page,
@@ -340,7 +286,7 @@ function LossList({
 }) {
   if (losses.length === 0) {
     return (
-      <p className="border-border text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+      <p className="border-border text-muted-foreground rounded-2xl border border-dashed px-4 py-6 text-center text-sm">
         No losses in this group.
       </p>
     );
@@ -350,12 +296,14 @@ function LossList({
   const shown = losses.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
   return (
-    <section className="flex flex-col gap-3.5" aria-label="Lost plants">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section className="flex flex-col gap-3" aria-label="Lost plants">
+      <ul className="bg-card divide-border/70 divide-y overflow-hidden rounded-2xl border shadow-sm">
         {shown.map((loss) => (
-          <LossCard key={loss.id} loss={loss} />
+          <li key={loss.id}>
+            <LossRow loss={loss} />
+          </li>
         ))}
-      </div>
+      </ul>
       {pages > 1 && (
         <div className="flex items-center justify-between gap-3">
           <p className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
@@ -390,7 +338,7 @@ function LossList({
 function Tag({ color, icon: Icon, children }: { color: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
     <span
-      className="font-heading inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      className="font-heading inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
       style={{ color, backgroundColor: tint(color, 14) }}
     >
       <Icon className="size-3" aria-hidden="true" />
@@ -414,8 +362,8 @@ function LossTags({ loss }: { loss: PlantLoss }) {
   );
 }
 
-/** A lost plant: opens its full report in a pop-up. */
-function LossCard({ loss }: { loss: PlantLoss }) {
+/** A lost plant as one row: opens its full report in a pop-up. */
+function LossRow({ loss }: { loss: PlantLoss }) {
   const color = lossColor(loss);
   const style = { ...cropVar(loss.crop_name), "--level": color } as React.CSSProperties;
   const lostOn = formatDisplayDate(loss.lost_at.slice(0, 10));
@@ -424,63 +372,36 @@ function LossCard({ loss }: { loss: PlantLoss }) {
     <Dialog.Root>
       <Dialog.Trigger
         className={cn(
-          "group/loss bg-card relative isolate flex w-full flex-col overflow-hidden rounded-3xl border text-left outline-none",
-          "transition-[transform,box-shadow,border-color] duration-300",
-          "hover:-translate-y-1 hover:border-(--level)/50 hover:shadow-[0_22px_45px_-22px_var(--level)]",
-          "focus-visible:border-(--level) focus-visible:ring-3 focus-visible:ring-(--level)/30",
+          "relative flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-colors",
+          "hover:bg-muted/50 focus-visible:bg-muted/60 focus-visible:ring-3 focus-visible:ring-(--level)/30 focus-visible:ring-inset",
         )}
         style={style}
       >
-        <span
-          className="relative block h-24 w-full overflow-hidden"
-          style={{
-            backgroundImage: `linear-gradient(135deg, color-mix(in oklab, var(--crop) 22%, transparent), ${tint(color, 24)})`,
-          }}
-        >
-          <span
-            aria-hidden="true"
-            className="absolute -right-5 -bottom-9 text-[7rem] leading-none opacity-20 grayscale select-none"
-          >
-            {loss.crop_emoji}
-          </span>
-          <span
-            className="font-heading absolute top-3 right-3 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm"
-            style={{ backgroundColor: color, color: "var(--risk-foreground)" }}
-          >
-            Lost {lostOn}
-          </span>
-        </span>
-
+        <span aria-hidden="true" className="absolute inset-y-2 left-0 w-1 rounded-r-full" style={{ backgroundColor: color }} />
         <span
           aria-hidden="true"
-          className="bg-card absolute top-14 left-5 flex size-16 items-center justify-center rounded-2xl border text-3xl shadow-md grayscale-[60%]"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl text-xl grayscale-[60%]"
+          style={{ backgroundColor: "color-mix(in oklab, var(--crop) 18%, transparent)" }}
         >
           {loss.crop_emoji}
         </span>
 
-        <span className="flex flex-1 flex-col gap-2.5 px-5 pt-9 pb-4">
-          <span>
-            <span className="font-heading block truncate text-lg leading-tight font-semibold">{loss.plant_name}</span>
-            <span className="text-muted-foreground block truncate text-xs">{loss.crop_name}</span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="flex min-w-0 items-baseline gap-2">
+            <span className="font-heading truncate text-sm font-semibold">{loss.plant_name}</span>
+            <span className="text-muted-foreground ml-auto shrink-0 text-[11px] tabular-nums">{lostOn}</span>
           </span>
-          <span className="flex flex-wrap gap-1.5">
-            <LossTags loss={loss} />
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-muted-foreground truncate text-xs">
+              {loss.crop_name} · {loss.farmer_name} · Day {loss.age_days}
+            </span>
+            <span className="flex flex-wrap gap-1">
+              <LossTags loss={loss} />
+            </span>
           </span>
         </span>
 
-        <span className="border-border/70 mt-auto flex w-full items-center justify-between gap-3 border-t px-5 py-3">
-          <span className="flex min-w-0 items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="font-heading flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-              style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
-            >
-              {initials(loss.farmer_name)}
-            </span>
-            <span className="truncate text-sm font-medium">{loss.farmer_name}</span>
-          </span>
-          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">Day {loss.age_days}</span>
-        </span>
+        <ChevronRight className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
       </Dialog.Trigger>
 
       <Dialog.Portal>

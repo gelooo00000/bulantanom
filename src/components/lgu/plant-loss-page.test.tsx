@@ -100,6 +100,14 @@ describe("LGU Plant Loss", () => {
     expect(screen.getByText("Bitten Tomato")).toBeInTheDocument();
   });
 
+  it("lists only the causes that took a plant", () => {
+    data = full;
+    render(<LguPlantLossPage />);
+    expect(screen.getByRole("img", { name: /Flood or typhoon: 1/ })).toBeInTheDocument();
+    expect(screen.queryByText("Drought or too hot")).not.toBeInTheDocument();
+    expect(screen.queryByText("Other / not sure")).not.toBeInTheDocument();
+  });
+
   it("narrows to calamities, and to High-risk plants that were not saved", () => {
     data = full;
     render(<LguPlantLossPage />);
