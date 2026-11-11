@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-lilita);
+  --font-sans: var(--font-body);
   --font-heading: var(--display-font);
-  --font-brand: var(--font-lilita);
+  --font-brand: var(--font-display);
   --color-risk-low: var(--risk-low);
   --color-risk-low-foreground: var(--risk-foreground);
   --color-risk-medium: var(--risk-medium);
@@ -298,20 +298,19 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Lilita One everywhere: running text, headings, buttons and numbers.
-     It ships one weight, so the browser must not fake bold or italic
-     versions of it (they smear). */
+  /* Plus Jakarta Sans for running text, numbers, tables and forms. Both
+     faces have real weights, so the browser never needs to fake a style. */
   html {
     @apply font-sans;
     font-synthesis: none;
   }
-  /* Display text is Lilita One too. Defined as a variable so dialogs and
-     menus — portalled to <body>, outside any shell — still get it. */
+  /* Bricolage Grotesque for display text. Defined as a variable so dialogs
+     and menus — portalled to <body>, outside any shell — still get it. */
   :root {
-    --display-font: var(--font-lilita);
+    --display-font: var(--font-display);
   }
   .brand-type {
-    --display-font: var(--font-lilita);
+    --display-font: var(--font-display);
   }
   h1,
   h2,
@@ -324,16 +323,17 @@
   .font-heading {
     font-family: var(--display-font);
     font-synthesis: none;
-    letter-spacing: 0.01em;
+    letter-spacing: -0.01em;
   }
-  /* Lilita ships one weight and ignores this; kept so a face with real
-     weights would give headings a confident semibold. */
+  /* Headings in a confident semibold. */
   h1, h2, h3, h4, h5, h6, [data-slot="card-title"], .font-heading {
     font-weight: 600;
   }
   .font-brand {
-    font-family: var(--font-lilita);
+    font-family: var(--font-display);
+    font-weight: 700;
     font-synthesis: none;
+    letter-spacing: -0.02em;
   }
 }
 
