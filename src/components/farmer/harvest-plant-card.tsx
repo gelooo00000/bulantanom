@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CalendarClock,
   CircleCheck,
+  Hourglass,
   Lightbulb,
   LoaderCircle,
   Sprout,
@@ -22,6 +23,9 @@ import type { BackendPlant, HarvestReport } from "@/lib/api/plants-api";
 import { humanDuration } from "@/lib/duration";
 import {
   daysUntil,
+  growingDays,
+  growthPercent,
+  harvestWindowDays,
   phaseOf,
   timeline,
   type HarvestPhase,
@@ -143,10 +147,14 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
 
 /**
  * The card's time status ("about 4 weeks to go", "Ready now · 2 weeks left"),
+ * with how far the plant has grown and how long it can be harvested for,
  * behind a light bulb so it takes no room on the card: it pops up when
  * pointed at, or when tapped on a phone.
  */
-function StatusTip({ label }: { label: string }) {
+function StatusTip({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }) {
+  const { t } = useLanguage();
+  const label = phaseLabel(plant, phase, t);
+  const fullyGrown = phase === "open" || phase === "passed" || phase === "harvested";
   return (
     <Popover.Root>
       <Popover.Trigger
@@ -159,11 +167,27 @@ function StatusTip({ label }: { label: string }) {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner side="top" align="end" sideOffset={6} className="z-50">
-          <Popover.Popup className="bg-popover text-popover-foreground border-border max-w-64 rounded-lg border px-3 py-2.5 text-[0.8125rem] shadow-lg">
+          <Popover.Popup className="bg-popover text-popover-foreground border-border flex max-w-64 flex-col gap-1.5 rounded-lg border px-3 py-2.5 text-[0.8125rem] shadow-lg">
             <p className="flex items-center gap-1.5 font-medium">
-              <Lightbulb className="text-risk-medium size-3.5" aria-hidden="true" />
+              <Lightbulb className="text-risk-medium size-3.5 shrink-0" aria-hidden="true" />
               {label}
             </p>
+            <p className="text-muted-foreground flex items-center gap-1.5">
+              <Sprout className="size-3.5 shrink-0" aria-hidden="true" />
+              {fullyGrown
+                ? t("harvestCard.fullyGrown")
+                : `${t("harvestCard.grown", {
+                    done: humanDuration(plant.age_days, t),
+                    total: humanDuration(growingDays(plant), t),
+                  })} · ${growthPercent(plant)}%`}
+            </p>
+            {/* Not once the harvest time is over. */}
+            {phase !== "harvested" && phase !== "passed" && (
+              <p className="text-muted-foreground flex items-center gap-1.5">
+                <Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
+                {t("harvestCard.lasts")} {humanDuration(harvestWindowDays(plant), t)}
+              </p>
+            )}
           </Popover.Popup>
         </Popover.Positioner>
       </Popover.Portal>
@@ -238,7 +262,7 @@ export function HarvestPlantCard({
             </div>
           </div>
           <div className="flex max-w-[55%] shrink-0 items-start gap-1.5">
-            <StatusTip label={phaseLabel(plant, phase, t)} />
+            <StatusTip plant={plant} phase={phase} />
           </div>
         </div>
 

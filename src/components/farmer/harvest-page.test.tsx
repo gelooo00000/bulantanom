@@ -152,6 +152,7 @@ describe("the harvest card", () => {
     render(<HarvestPlantCard plant={ready} />);
     await userEvent.hover(screen.getByRole("button", { name: /Ready now · / }));
     expect(await screen.findByText(/Ready now · /)).toBeInTheDocument();
+    expect(screen.getByText("Fully grown")).toBeInTheDocument();
     expect(screen.queryByText("How to tell it is ready")).not.toBeInTheDocument();
     expect(screen.queryByText(/creamy yellow/)).not.toBeInTheDocument();
   });
@@ -161,6 +162,9 @@ describe("the harvest card", () => {
     render(<HarvestPlantCard plant={young} />);
     await userEvent.hover(screen.getByRole("button", { name: /about 4 weeks to go/ }));
     expect(await screen.findByText("about 4 weeks to go")).toBeInTheDocument();
+    // More than the time: how far it has grown, and how long it can be harvested.
+    expect(screen.getByText(/0 days of about 4 weeks grown · 0%/)).toBeInTheDocument();
+    expect(screen.getByText(/You can harvest for/)).toBeInTheDocument();
   });
 
   it("marks a ready plant as harvested", async () => {
