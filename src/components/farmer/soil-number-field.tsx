@@ -19,11 +19,14 @@ export function SoilNumberField({
   value,
   error,
   onChange,
+  readOnly = false,
 }: {
   field: SensorField;
   value: string;
   error?: string;
   onChange: (value: string) => void;
+  /** Filled in by the Arduino sensor: shown, but not typed over. */
+  readOnly?: boolean;
 }) {
   const { t } = useLanguage();
   const id = `soil-${field.key.replace(/_/g, "-")}`;
@@ -43,9 +46,14 @@ export function SoilNumberField({
           placeholder={field.placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          readOnly={readOnly}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className={cn("pr-16", error && "border-destructive")}
+          className={cn(
+            "pr-16",
+            readOnly && "bg-muted/50 cursor-default focus-visible:ring-0",
+            error && "border-destructive",
+          )}
         />
         {/* Not a <label>: it names the unit, not the control, and a second
             label would compete with the real one for the field's name. */}

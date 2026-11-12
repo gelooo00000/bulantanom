@@ -10,7 +10,11 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
-import { ArduinoSensorSign, ArduinoSensorWizard } from "@/components/farmer/arduino-sensor-wizard";
+import {
+  ArduinoSensorSign,
+  ArduinoSensorWizard,
+  type Device,
+} from "@/components/farmer/arduino-sensor-wizard";
 import { SoilNumberField } from "@/components/farmer/soil-number-field";
 import { SoilCheckPanel } from "@/components/farmer/soil-check-panel";
 import { SoilResultCard } from "@/components/farmer/soil-result-card";
@@ -71,6 +75,11 @@ export function SoilRecommendationForm() {
   // The optional Arduino flow replaces the readings section while it is open.
   const [usingSensor, setUsingSensor] = useState(false);
   const [sensorNotice, setSensorNotice] = useState<string | null>(null);
+  // Set once the sensor filled the fields: they are then read-only, even a
+  // 0, and Back returns to that device's Connect page to read again.
+  const [sensorDevice, setSensorDevice] = useState<Device | null>(null);
+  // Which device Back reopens the Arduino steps on.
+  const [resumeDevice, setResumeDevice] = useState<Device | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function setReading(key: string, value: string) {
@@ -118,10 +127,11 @@ export function SoilRecommendationForm() {
 
   /**
    * The sensor's seven readings arrive - every field the form has. They go
-   * into the text fields so the farmer sees them; Get Recommendation sends
-   * them. A reading outside the device's range is flagged beside its field.
+   * into the text fields, read-only, so the farmer sees them; "Use these
+   * readings" sends them. A reading outside the device's range is flagged beside its field.
    */
-  function handleSensorReadings(values: Record<MeasuredField, string>) {
+  function handleSensorReadings(values: Record<MeasuredField, string>, device: Device) {
+    setSensorDevice(device);
     setReadings((prev) => ({ ...prev, ...values }));
     const errors: Record<string, string> = {};
     for (const field of SENSOR_FIELDS) {
@@ -131,6 +141,16 @@ export function SoilRecommendationForm() {
     setFieldErrors(errors);
     setUsingSensor(false);
     setSensorNotice(translate("arduino.filledNotice"));
+  }
+
+  /** Back from the filled-in readings: the Connect page, to read again. */
+  function backToSensor() {
+    setResumeDevice(sensorDevice);
+    setSensorDevice(null);
+    setSensorNotice(null);
+    setFieldErrors({});
+    setReadings({});
+    setUsingSensor(true);
   }
 
   async function analyze(values: Record<string, string>) {
@@ -253,6 +273,8 @@ export function SoilRecommendationForm() {
     setError(null);
     setRetryError(null);
     setSensorNotice(null);
+    setSensorDevice(null);
+    setResumeDevice(null);
     setUsingSensor(false);
     setStatus("idle");
   }
@@ -448,12 +470,23 @@ export function SoilRecommendationForm() {
         {usingSensor ? (
           <ArduinoSensorWizard
             onReadings={handleSensorReadings}
-            onCancel={() => setUsingSensor(false)}
+            onCancel={() => {
+              setResumeDevice(null);
+              setUsingSensor(false);
+            }}
+            startDevice={resumeDevice}
           />
         ) : (
           <>
             <ArduinoSensorSign
               onStart={() => {
+                // A new read replaces what the sensor filled in before.
+                if (sensorDevice !== null) {
+                  setReadings({});
+                  setFieldErrors({});
+                }
+                setSensorDevice(null);
+                setResumeDevice(null);
                 setSensorNotice(null);
                 setUsingSensor(true);
               }}
@@ -481,6 +514,7 @@ export function SoilRecommendationForm() {
                   value={readings[field.key] ?? ""}
                   error={fieldErrors[field.key]}
                   onChange={(value) => setReading(field.key, value)}
+                  readOnly={sensorDevice !== null}
                 />
               ))}
             </div>
@@ -494,10 +528,18 @@ export function SoilRecommendationForm() {
         {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 
         {!usingSensor && (
-          <Button type="submit" size="lg" className="self-start">
-            {t.submit}
-            <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {sensorDevice !== null && (
+              <Button type="button" size="lg" variant="ghost" onClick={backToSensor}>
+                <ArrowLeft className="size-4" />
+                {translate("arduino.back")}
+              </Button>
+            )}
+            <Button type="submit" size="lg">
+              {sensorDevice !== null ? translate("arduino.useReadings") : t.submit}
+              <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
+            </Button>
+          </div>
         )}
       </form>
     </>

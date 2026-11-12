@@ -61,7 +61,7 @@ type Step = 1 | 2 | 3;
 /** How the browser reaches the sensor: the USB cable, or Bluetooth. */
 type Method = "usb" | "bluetooth";
 /** What the farmer reads with: a laptop (USB cable) or a phone (Bluetooth). */
-type Device = "laptop" | "phone";
+export type Device = "laptop" | "phone";
 type ReadState =
   | { kind: "ready" }
   | { kind: "reading" }
@@ -77,13 +77,16 @@ type ReadState =
 export function ArduinoSensorWizard({
   onReadings,
   onCancel,
+  startDevice = null,
 }: {
-  onReadings: (values: Record<MeasuredField, string>) => void;
+  onReadings: (values: Record<MeasuredField, string>, device: Device) => void;
   onCancel: () => void;
+  /** Coming Back from filled-in readings: open on that device's Connect page. */
+  startDevice?: Device | null;
 }) {
   const { t } = useLanguage();
-  const [device, setDevice] = useState<Device | null>(null);
-  const [step, setStep] = useState<Step>(1);
+  const [device, setDevice] = useState<Device | null>(startDevice);
+  const [step, setStep] = useState<Step>(startDevice ? 3 : 1);
   // Which way the pages slide: forward from the right, back from the left.
   const [direction, setDirection] = useState(1);
   const [state, setState] = useState<ReadState>({ kind: "ready" });
@@ -117,7 +120,7 @@ export function ArduinoSensorWizard({
         await (how === "bluetooth" ? readSoilSensorBluetooth() : readSoilSensor()),
       );
       setState({ kind: "ready" });
-      onReadings(readings as Record<MeasuredField, string>);
+      onReadings(readings as Record<MeasuredField, string>, device ?? (how === "bluetooth" ? "phone" : "laptop"));
     } catch (err) {
       const code =
         err instanceof SensorError ? err.code : how === "bluetooth" ? "ble_disconnected" : "disconnected";

@@ -385,8 +385,9 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(screen.getByLabelText("Soil pH")).toHaveValue(6.5);
     expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(120);
     expect(create).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /get recommendation/i })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /get recommendation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0][0]).toMatchObject({
       soil_temperature: 28.5,
@@ -404,6 +405,28 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(screen.queryByText(/probe may not be in the soil/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(0);
     expect(screen.getByLabelText("Soil Conductivity")).toHaveValue(0);
+  });
+
+  it("does not let the farmer type over the sensor's readings, even a 0", async () => {
+    readSoilSensor.mockResolvedValue({ ...SENSOR_READING, nitrogen: 0 });
+    render(<SoilRecommendationForm />);
+    await readWithSensor();
+
+    const nitrogen = screen.getByLabelText("Nitrogen (N)");
+    expect(nitrogen).toHaveAttribute("readonly");
+    await userEvent.type(nitrogen, "55");
+    expect(nitrogen).toHaveValue(0);
+  });
+
+  it("goes Back to the Connect page to read again", async () => {
+    render(<SoilRecommendationForm />);
+    await readWithSensor();
+
+    await userEvent.click(screen.getByRole("button", { name: /^back$/i }));
+    expect(await screen.findByRole("button", { name: /connect by usb/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /connect by usb/i }));
+    expect(await screen.findByText(/filled in from the sensor/i)).toBeInTheDocument();
+    expect(readSoilSensor).toHaveBeenCalledTimes(2);
   });
 
   it("flags a reading outside the sensor's range beside its field", async () => {
@@ -430,7 +453,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     render(<SoilRecommendationForm />);
     await readWithSensor();
     await userEvent.type(screen.getByLabelText(/additional soil information/i), "Dries out fast");
-    await userEvent.click(screen.getByRole("button", { name: /get recommendation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
 
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0][0]).toMatchObject({ notes: "Dries out fast" });

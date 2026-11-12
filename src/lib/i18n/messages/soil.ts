@@ -104,6 +104,11 @@ export const soil = defineMessages({
   "arduino.stepOf": { en: "Step {step} of 3", fil: "Hakbang {step} sa 3", bik: "Lakdang {step} sa 3" },
   "arduino.next": { en: "Next", fil: "Susunod", bik: "Sunod" },
   "arduino.back": { en: "Back", fil: "Bumalik", bik: "Balik" },
+  "arduino.useReadings": {
+    en: "Use these readings",
+    fil: "Gamitin ang mga sukat na ito",
+    bik: "Gamiton an mga sukat na ini",
+  },
   "arduino.introBody": {
     en: "The sensor measures soil temperature, moisture, conductivity, pH, nitrogen, phosphorus and potassium - every reading the form needs.",
     fil: "Sinusukat ng sensor ang temperatura, basa, conductivity, pH, nitrogen, phosphorus at potassium ng lupa - lahat ng sukat na kailangan ng form.",
