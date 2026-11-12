@@ -363,6 +363,27 @@ async function readWithSensor() {
   expect(await screen.findByRole("button", { name: /read again/i })).toBeInTheDocument();
 }
 
+describe("SoilRecommendationForm typed readings", () => {
+  beforeEach(() => {
+    fetchHistory.mockResolvedValue([]);
+  });
+
+  it("refuses a typed 0, because it cannot give a crop recommendation", async () => {
+    render(<SoilRecommendationForm />);
+    await fillReadings();
+    const nitrogen = screen.getByLabelText("Nitrogen (N)");
+    await userEvent.clear(nitrogen);
+    await userEvent.type(nitrogen, "0");
+    await userEvent.click(screen.getByRole("button", { name: /get recommendation/i }));
+
+    expect(
+      await screen.findByText("Invalid reading: 0 cannot give a crop recommendation."),
+    ).toBeInTheDocument();
+    expect(nitrogen).toHaveAttribute("aria-invalid", "true");
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
 describe("SoilRecommendationForm with the Arduino sensor", () => {
   beforeEach(() => {
     fetchHistory.mockResolvedValue([]);

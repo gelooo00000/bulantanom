@@ -467,6 +467,11 @@ export const soil = defineMessages({
     fil: "Dapat numero ang {label}.",
     bik: "Dapat numero an {label}.",
   },
+  "sensor.zeroTyped": {
+    en: "Invalid reading: 0 cannot give a crop recommendation.",
+    fil: "Hindi wastong sukat: hindi makapagbibigay ng rekomendasyon ng pananim ang 0.",
+    bik: "Bakong tamang sukat: dai makakatao nin rekomendasyon nin tanom an 0.",
+  },
   "sensor.zeroInvalid": {
     en: "Invalid reading: the sensor returned 0.",
     fil: "Hindi wastong sukat: 0 ang ibinigay ng sensor.",

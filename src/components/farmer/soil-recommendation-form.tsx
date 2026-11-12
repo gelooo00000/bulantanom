@@ -142,23 +142,24 @@ export function SoilRecommendationForm() {
   function handleSensorReadings(values: Record<MeasuredField, string>, device: Device) {
     setSensorDevice(device);
     setReadings((prev) => ({ ...prev, ...values }));
-    setFieldErrors(sensorProblems(values));
+    setFieldErrors(readingProblems(values, true));
     setRereadError(null);
     setUsingSensor(false);
     setSensorNotice(translate("arduino.filledNotice"));
   }
 
   /**
-   * What is wrong with each sensor reading. A 0 (or a blank / non-number) is
-   * invalid: no recommendation can be made from a field with no real value.
-   * A value outside the device's range is invalid too.
+   * What is wrong with each reading, typed or from the sensor. A 0 (or a
+   * blank / non-number) is invalid: no crop recommendation can be made from a
+   * field with no real value. A value outside the device's range is invalid
+   * too.
    */
-  function sensorProblems(values: Record<string, string>) {
+  function readingProblems(values: Record<string, string>, fromSensor: boolean) {
     const problems: Record<string, string> = {};
     for (const field of SENSOR_FIELDS) {
       const raw = (values[field.key] ?? "").trim();
       if (raw !== "" && Number(raw) === 0) {
-        problems[field.key] = translate("sensor.zeroInvalid");
+        problems[field.key] = translate(fromSensor ? "sensor.zeroInvalid" : "sensor.zeroTyped");
         continue;
       }
       const message = validateReading(field, raw, translate);
@@ -205,16 +206,8 @@ export function SoilRecommendationForm() {
     // Check every reading before the request. Django validates these again -
     // this pass exists so an out-of-range number is caught beside the field
     // that caused it, rather than after a round trip.
-    // Sensor readings are held to more: a 0 is invalid there.
-    const errors: Record<string, string> = {};
-    if (sensorDevice !== null) {
-      Object.assign(errors, sensorProblems(values));
-    } else {
-      for (const field of SENSOR_FIELDS) {
-        const message = validateReading(field, values[field.key] ?? "", translate);
-        if (message) errors[field.key] = message;
-      }
-    }
+    // A 0 is invalid whether it was typed or came from the sensor.
+    const errors: Record<string, string> = readingProblems(values, sensorDevice !== null);
     const notesError = notesProblem(
       notes,
       translate("text.soilNotesLabel"),
@@ -516,7 +509,7 @@ export function SoilRecommendationForm() {
 
   // Sensor readings that are 0 or out of range: named in the warning, and
   // they hold back the recommendation until a Read Again fixes them.
-  const sensorInvalid = sensorDevice !== null ? sensorProblems(readings) : {};
+  const sensorInvalid = sensorDevice !== null ? readingProblems(readings, true) : {};
   const invalidSensorFields = SENSOR_FIELDS.filter((field) => sensorInvalid[field.key]);
   const sensorBlocked = invalidSensorFields.length > 0;
 

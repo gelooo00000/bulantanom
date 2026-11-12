@@ -514,8 +514,9 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
         "soil_moisture": (Decimal("0"), Decimal("100"), "%"),
         "soil_conductivity": (0, 20000, "µS/cm"),
         "soil_ph": (Decimal("3"), Decimal("10"), "pH"),
-        # 0 is a real reading: the Arduino sends 0 when the probe is not in
-        # the soil, and the farmer cannot type over a sensor reading.
+        # A 0 is inside the range but is still refused below: it is what the
+        # Arduino sends when the probe is not in the soil, and no crop
+        # recommendation can be made from it.
         "nitrogen": (0, 1999, "mg/kg"),
         "phosphorus": (0, 1999, "mg/kg"),
         "potassium": (0, 1999, "mg/kg"),
@@ -615,6 +616,12 @@ class SoilRecommendationSerializer(serializers.ModelSerializer):
             if value is None:
                 if creating:
                     errors[field] = "This reading is required."
+                continue
+
+            # Only a value being written now: older rows that hold a 0 can
+            # still be opened and re-analysed.
+            if field in attrs and value == 0:
+                errors[field] = "Invalid reading: 0 cannot give a crop recommendation."
                 continue
 
             if not (low <= value <= high):
