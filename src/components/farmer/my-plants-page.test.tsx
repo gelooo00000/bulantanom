@@ -211,4 +211,14 @@ describe("My Plants pages", () => {
     expect(screen.getByText("Okra")).toBeInTheDocument();
     expect(screen.queryByText("Banana")).not.toBeInTheDocument();
   });
+
+  it("counts plants only, not the Add another plant tile", async () => {
+    plants = Array.from({ length: 10 }, (_, i) => plant(i + 1, `Crop${i + 1}`));
+    const user = userEvent.setup();
+    render(<MyPlantsPage />);
+    expect(screen.getByText("1–9 of 10")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(await screen.findByText("10–10 of 10")).toBeInTheDocument();
+    expect(screen.queryByText(/of 11/)).toBeNull();
+  });
 });

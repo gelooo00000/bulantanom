@@ -27,6 +27,7 @@ export function SlidePager<T>({
   frameClassName,
   onPageChange,
   startAt = 0,
+  counts,
 }: {
   items: T[];
   pageSize?: number;
@@ -48,6 +49,11 @@ export function SlidePager<T>({
    * Read once, so remount (a `key`) to jump to another.
    */
   startAt?: number;
+  /**
+   * Which items the "1–9 of 20" count includes. All of them unless given:
+   * My Plants leaves out its "Add another plant" tile, which is not a plant.
+   */
+  counts?: (item: T) => boolean;
 }) {
   const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
@@ -59,6 +65,13 @@ export function SlidePager<T>({
   // Clamped, in case the list shrank while a later page was showing.
   const page = Math.min(state.page, pages - 1);
   const shown = items.slice(page * pageSize, page * pageSize + pageSize);
+
+  // The count only covers items `counts` accepts; the range is the counted
+  // items on this page, numbered among all counted items.
+  const counted = (list: T[]) => (counts ? list.filter(counts).length : list.length);
+  const total = counted(items);
+  const before = counted(items.slice(0, page * pageSize));
+  const onPage = counted(shown);
 
   const go = (direction: 1 | -1) => {
     setState({ page: Math.min(pages - 1, Math.max(0, page + direction)), direction });
@@ -120,11 +133,9 @@ export function SlidePager<T>({
       {pages > 1 && (
         <div className="border-border/60 mt-1 flex items-center justify-between gap-2 border-t pt-2">
           <span className="text-muted-foreground text-xs" aria-live="polite">
-            {t("pager.range", {
-              from: page * pageSize + 1,
-              to: page * pageSize + shown.length,
-              total: items.length,
-            })}
+            {/* Blank on a page holding only uncounted items (the Add tile). */}
+            {onPage > 0 &&
+              t("pager.range", { from: before + 1, to: before + onPage, total })}
           </span>
           <div className="flex items-center gap-1">
             <PagerButton

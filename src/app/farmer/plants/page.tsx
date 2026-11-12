@@ -340,6 +340,8 @@ export default function MyPlantsPage() {
               pageSize={PLANTS_PER_PAGE}
               startAt={targetIndex}
               getKey={(tile) => (tile === ADD_TILE ? "add" : tile.id)}
+              // "19–19 of 19", not "19–20 of 20": the Add tile is no plant.
+              counts={(tile) => tile !== ADD_TILE}
               listLabel={t("myPlants.title")}
               listClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
               // Every cell stretches its card to the row's height, in and out
