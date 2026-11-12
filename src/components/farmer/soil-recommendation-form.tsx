@@ -354,8 +354,8 @@ export function SoilRecommendationForm() {
   }
 
   let headerAction: ReactNode = null;
-  // Not during the Arduino steps: they lead to the result themselves.
-  if (status === "idle" && history.length > 0 && !usingSensor) {
+  // Not during the Arduino steps, nor beside the sensor's readings.
+  if (status === "idle" && history.length > 0 && !usingSensor && sensorDevice === null) {
     headerAction = (
       <Button variant="outline" onClick={showResult}>
         {t.seeResult}
@@ -528,19 +528,17 @@ export function SoilRecommendationForm() {
           />
         ) : (
           <>
-            <ArduinoSensorSign
-              onStart={() => {
-                // A new read replaces what the sensor filled in before.
-                if (sensorDevice !== null) {
-                  setReadings({});
-                  setFieldErrors({});
-                }
-                setSensorDevice(null);
-                setResumeDevice(null);
-                setSensorNotice(null);
-                setUsingSensor(true);
-              }}
-            />
+            {/* Hidden once the sensor filled the fields: Back and Read
+                Again are the way to the sensor from there. */}
+            {sensorDevice === null && (
+              <ArduinoSensorSign
+                onStart={() => {
+                  setResumeDevice(null);
+                  setSensorNotice(null);
+                  setUsingSensor(true);
+                }}
+              />
+            )}
 
             <div>
               <h2 className="text-sm font-medium">{t.sensorSectionTitle}</h2>

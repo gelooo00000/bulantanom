@@ -398,14 +398,19 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
   });
 
   it("fills the seven text fields, and Get Recommendation sends them", async () => {
+    fetchHistory.mockResolvedValue([analyzed]);
     create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
     render(<SoilRecommendationForm />);
+    expect(await screen.findByRole("button", { name: /see result/i })).toBeInTheDocument();
     await readWithSensor();
 
     expect(screen.getByLabelText("Soil Temperature")).toHaveValue(28.5);
     expect(screen.getByLabelText("Soil pH")).toHaveValue(6.5);
     expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(120);
     expect(create).not.toHaveBeenCalled();
+    // Neither the Arduino sign nor See Result beside the sensor's readings.
+    expect(screen.queryByText("This feature can be used with the Arduino hardware")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /see result/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^get recommendation$/i })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /get crop recommendation/i }));
