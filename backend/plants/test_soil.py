@@ -200,16 +200,29 @@ class SoilSubmissionTests(SoilTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(SoilRecommendation.objects.count(), 0)
 
-    def test_zero_npk_is_rejected(self):
-        """A probe that reads no nutrient reports 0, which is not a reading."""
+    def test_zero_npk_is_accepted_as_a_reading(self):
+        """
+        The Arduino reads 0 N, P and K when the probe is not in the soil, and
+        the farmer cannot type over a sensor reading, so 0 is saved as it is.
+        """
         payload = dict(VALID_SOIL, nitrogen=0, phosphorus=0, potassium=0)
+        with patch("plants.views.generate_soil_recommendation", return_value=None):
+            response = self.client.post(
+                LIST_URL, payload, format="json", **self.auth("farmer@example.com")
+            )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        row = SoilRecommendation.objects.get(pk=response.data["id"])
+        self.assertEqual((row.nitrogen, row.phosphorus, row.potassium), (0, 0, 0))
+        # Still measured (not missing), so the advice can use the numbers.
+        self.assertTrue(row.has_npk)
+
+    def test_negative_npk_is_still_rejected(self):
+        payload = dict(VALID_SOIL, nitrogen=-1)
         response = self.client.post(
             LIST_URL, payload, format="json", **self.auth("farmer@example.com")
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        for field in ("nitrogen", "phosphorus", "potassium"):
-            self.assertIn(field, response.data)
-        self.assertEqual(SoilRecommendation.objects.count(), 0)
+        self.assertIn("nitrogen", response.data)
 
     def test_ai_fields_cannot_be_injected_by_the_client(self):
         """Every AI field is read-only — a client cannot fabricate advice."""

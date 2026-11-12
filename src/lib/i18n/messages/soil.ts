@@ -181,6 +181,16 @@ export const soil = defineMessages({
     bik: "Gamiton an mga sukat na ini",
   },
   "arduino.readAgain": { en: "Read again", fil: "Sukatin muli", bik: "Sukaton giraray" },
+  "arduino.badReading": {
+    en: "Some readings are out of range. Check that the probe is firmly in the soil, then press Read again.",
+    fil: "May mga sukat na wala sa tamang saklaw. Tiyaking nakabaon nang mabuti ang probe sa lupa, saka pindutin ang Sukatin muli.",
+    bik: "May mga sukat na luwas sa tamang saklaw. Siguraduhon na nakabaon nin marhay an probe sa daga, dangan pindota an Sukaton giraray.",
+  },
+  "arduino.readOnlyHint": {
+    en: "These readings come straight from the sensor and can't be typed over. For new ones, press Read again.",
+    fil: "Diretso mula sa sensor ang mga sukat na ito at hindi mapapalitan sa pag-type. Para sa bago, pindutin ang Sukatin muli.",
+    bik: "Diretso hali sa sensor an mga sukat na ini asin dai mariribayan sa pag-type. Para sa bago, pindota an Sukaton giraray.",
+  },
   "arduino.unsupported": {
     en: "This browser cannot connect to the Arduino. Open BulanTanom in Chrome on an Android phone or in Chrome or Edge on a computer, or type the readings instead.",
     fil: "Hindi makakonekta ang browser na ito sa Arduino. Buksan ang BulanTanom sa Chrome sa Android na telepono o sa Chrome o Edge sa computer, o i-type na lang ang mga sukat.",

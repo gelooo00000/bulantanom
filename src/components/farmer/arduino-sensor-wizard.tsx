@@ -20,7 +20,6 @@ import {
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { useState, type ReactNode } from "react";
 
-import { SoilNumberField } from "@/components/farmer/soil-number-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +32,8 @@ import {
   type MeasuredField,
 } from "@/lib/arduino/soil-sensor";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
-import { SENSOR_FIELDS, validateReading } from "@/lib/soil-options";
+import { SENSOR_FIELDS, sensorLabel, validateReading } from "@/lib/soil-options";
+import { cn } from "@/lib/utils";
 
 /** The sign above the form: the feature works with the Arduino sensor. */
 export function ArduinoSensorSign({ onStart }: { onStart: () => void }) {
@@ -96,10 +96,12 @@ export function ArduinoSensorWizard({
   // Which way the pages slide: forward from the right, back from the left.
   const [direction, setDirection] = useState(1);
   const [state, setState] = useState<ReadState>({ kind: "ready" });
-  // What the sensor sent, as editable text, so a bad reading can be fixed
-  // here instead of sending the farmer back to the typed form.
+  // What the sensor sent. Shown read-only: the readings come from the
+  // Arduino, so the farmer cannot type over them. A 0 N, P or K (the probe
+  // not in the soil) is a valid reading and is sent as it is.
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const readingOk = Object.keys(errors).length === 0;
   const usbSupported = isSerialSupported();
   const bluetoothSupported = isBluetoothSupported();
   const onPhone = device === "phone";
@@ -154,16 +156,6 @@ export function ArduinoSensorWizard({
       if (message) found[field.key] = message;
     }
     return found;
-  }
-
-  function setValue(key: string, value: string) {
-    setValues((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => {
-      if (!prev[key]) return prev;
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
   }
 
   function submitReadings() {
@@ -290,18 +282,38 @@ export function ArduinoSensorWizard({
           </p>
         ) : state.kind === "done" ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {SENSOR_FIELDS.map((field) => (
-                <SoilNumberField
-                  key={field.key}
-                  field={field}
-                  value={values[field.key] ?? ""}
-                  error={errors[field.key]}
-                  onChange={(value) => setValue(field.key, value)}
-                />
-              ))}
-            </div>
-            {afterReadings}
+            {!readingOk && (
+              <div
+                className="border-risk-high/40 bg-risk-high/5 flex items-start gap-2.5 rounded-lg border px-3 py-2.5"
+                role="alert"
+              >
+                <TriangleAlert className="text-risk-high mt-0.5 size-4 shrink-0" />
+                <p className="text-sm">{t("arduino.badReading")}</p>
+              </div>
+            )}
+            {/* Read-only: straight from the sensor. */}
+            <dl className="grid gap-2.5 sm:grid-cols-2">
+              {SENSOR_FIELDS.map((field) => {
+                const bad = Boolean(errors[field.key]);
+                return (
+                  <div
+                    key={field.key}
+                    className={cn(
+                      "flex items-baseline justify-between gap-3 rounded-lg border px-3 py-2.5",
+                      bad ? "border-risk-high/50 bg-risk-high/5" : "border-border bg-muted/30",
+                    )}
+                  >
+                    <dt className="text-muted-foreground text-sm">{sensorLabel(field, t)}</dt>
+                    <dd className={cn("font-heading text-base tabular-nums", bad && "text-risk-high")}>
+                      {values[field.key] ?? "-"}{" "}
+                      <span className="text-muted-foreground text-xs">{field.unit}</span>
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+            <p className="text-muted-foreground text-xs">{t("arduino.readOnlyHint")}</p>
+            {readingOk && afterReadings}
           </>
         ) : state.kind === "reading" ? (
           <p className="text-muted-foreground flex items-center gap-2 text-sm" role="status">
@@ -407,11 +419,15 @@ export function ArduinoSensorWizard({
             </Button>
           ) : state.kind === "done" ? (
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={() => read(method)}>
+              <Button
+                type="button"
+                variant={readingOk ? "outline" : "default"}
+                onClick={() => read(method)}
+              >
                 <RotateCw className="size-4" />
                 {t("arduino.readAgain")}
               </Button>
-              <Button type="button" onClick={submitReadings}>
+              <Button type="button" onClick={submitReadings} disabled={!readingOk}>
                 {t("arduino.useReadings")}
                 <ArrowRight className="size-4" />
               </Button>

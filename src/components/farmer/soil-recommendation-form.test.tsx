@@ -390,30 +390,40 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(create.mock.calls[0][0]).not.toHaveProperty("soil_fertility");
   });
 
-  it("flags a 0 N, P or K reading on the sensor page and sends once it is fixed", async () => {
+  it("sends a 0 N, P or K reading as it is, with no boxes to type over", async () => {
     readSoilSensor.mockResolvedValue({ ...SENSOR_READING, nitrogen: 0, phosphorus: 0, potassium: 0 });
     create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
     render(<SoilRecommendationForm />);
-    await readWithSensor();
+    await userEvent.click(screen.getByRole("button", { name: "Use the Arduino sensor" }));
+    await userEvent.click(await screen.findByRole("button", { name: /laptop/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
 
-    expect(await screen.findByText(/nitrogen \(n\) must be between 1 and 1999/i)).toBeInTheDocument();
-    expect(screen.getByText(/potassium \(k\) must be between 1 and 1999/i)).toBeInTheDocument();
-    expect(screen.getByText("Step 3 of 3")).toBeInTheDocument();
-    expect(create).not.toHaveBeenCalled();
+    // The sensor's readings are shown, not editable, and a 0 is not an error.
+    expect(await screen.findByText("Your sensor readings")).toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Nitrogen (N)")).not.toBeInTheDocument();
+    expect(screen.queryByText(/must be between/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/can't be typed over/i)).toBeInTheDocument();
 
-    for (const [label, value] of [
-      ["Nitrogen (N)", "40"],
-      ["Phosphorus (P)", "30"],
-      ["Potassium (K)", "50"],
-    ]) {
-      const input = screen.getByLabelText(label);
-      await userEvent.clear(input);
-      await userEvent.type(input, value);
-    }
     await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
-
     await waitFor(() => expect(create).toHaveBeenCalled());
-    expect(create.mock.calls[0][0]).toMatchObject({ nitrogen: 40, phosphorus: 30, potassium: 50 });
+    expect(create.mock.calls[0][0]).toMatchObject({ nitrogen: 0, phosphorus: 0, potassium: 0 });
+  });
+
+  it("holds back a reading the sensor got wrong and asks to read again", async () => {
+    readSoilSensor.mockResolvedValue({ ...SENSOR_READING, soil_ph: 0 });
+    render(<SoilRecommendationForm />);
+    await userEvent.click(screen.getByRole("button", { name: "Use the Arduino sensor" }));
+    await userEvent.click(await screen.findByRole("button", { name: /laptop/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/press read again/i);
+    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("hides See Result while the Arduino steps are open", async () => {
