@@ -483,12 +483,12 @@ function RiskTodoButton({ entries }: { entries: Entry[] }) {
 /** Per group: the pill, the headline colour and the card's accent, as on the Harvest cards. */
 const GROUP_STYLE: Record<
   Group,
-  { pill: string; text: string; headline: MessageKey; accent: string }
+  { pill: string; text: string; headline: MessageKey | null; accent: string }
 > = {
   high: {
     pill: "bg-risk-high/15 text-risk-high border-risk-high/30",
     text: "text-risk-high",
-    headline: "riskCard.headline.high",
+    headline: null,
     accent: "var(--risk-high)",
   },
   medium: {
@@ -500,7 +500,7 @@ const GROUP_STYLE: Record<
   low: {
     pill: "bg-risk-low/15 text-risk-low border-risk-low/30",
     text: "text-risk-low",
-    headline: "riskCard.headline.low",
+    headline: null,
     accent: "var(--risk-low)",
   },
   early: {
@@ -512,7 +512,7 @@ const GROUP_STYLE: Record<
   none: {
     pill: "border-dashed border-border text-muted-foreground",
     text: "text-muted-foreground",
-    headline: "riskCard.headline.noneNext",
+    headline: null,
     accent: "var(--primary)",
   },
 };
@@ -548,6 +548,12 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
     !plant.assessment_eligibility.ready_to_harvest &&
     daysSince(latest.assessment_date) > OLD_READING_DAYS;
   const accent = failed ? "var(--risk-high)" : style.accent;
+  // High, Low and not-yet-checked cards carry no sentence: the pill already says it.
+  const headline: MessageKey | null = failed
+    ? "riskCard.headline.failed"
+    : group === "early" && overdue > 0
+      ? "riskCard.headline.earlyDue"
+      : style.headline;
   const hasPill = failed || (level && level !== "inconclusive");
 
   return (
@@ -609,25 +615,21 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
 
         {/* The answer first, in one plain sentence; then what changed. */}
         <div className="flex flex-col gap-1">
-          <p
-            className={cn(
-              "font-heading flex items-center gap-1.5 text-[0.9375rem] font-medium",
-              failed ? "text-risk-high" : style.text,
-            )}
-          >
-            {failed ? (
-              <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
-              <Icon className="size-4 shrink-0" aria-hidden="true" />
-            )}
-            {t(
-              failed
-                ? "riskCard.headline.failed"
-                : group === "early" && overdue > 0
-                  ? "riskCard.headline.earlyDue"
-                  : style.headline,
-            )}
-          </p>
+          {headline && (
+            <p
+              className={cn(
+                "font-heading flex items-center gap-1.5 text-[0.9375rem] font-medium",
+                failed ? "text-risk-high" : style.text,
+              )}
+            >
+              {failed ? (
+                <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <Icon className="size-4 shrink-0" aria-hidden="true" />
+              )}
+              {t(headline)}
+            </p>
+          )}
           {trend && previous && (
             <p
               className={cn(

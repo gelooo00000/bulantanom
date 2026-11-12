@@ -77,7 +77,7 @@ describe("a risky plant's card", () => {
     // The arrow opens the full reading; no second "See what to do" link.
     expect(screen.queryByText("See what to do")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back Row/ })).toHaveAttribute("href", "/farmer/assessments/9");
-    expect(screen.getByText("High risk – act now")).toBeInTheDocument();
+    expect(screen.queryByText("High risk – act now")).not.toBeInTheDocument();
     expect(screen.getByText("Was Low Risk")).toBeInTheDocument();
     expect(screen.getByText("Check again early")).toBeInTheDocument();
   });
