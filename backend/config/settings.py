@@ -33,6 +33,13 @@ DEBUG = _env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
+# Where Django Admin is served. The repository is public, so the default
+# "admin/" is the first address anyone scanning for it tries. Production sets
+# DJANGO_ADMIN_PATH to something unguessable (kept only in Render's
+# Environment, never committed). Login lockout (django-axes) still protects
+# it either way; this only keeps it out of automated scans.
+DJANGO_ADMIN_PATH = os.environ.get("DJANGO_ADMIN_PATH", "admin").strip().strip("/") or "admin"
+
 # Django needs the scheme-qualified origin to accept an admin POST over
 # HTTPS. Without it, signing in to Django Admin in production fails CSRF
 # verification - and Admin is where LGU Officers are provisioned.
@@ -52,12 +59,11 @@ SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", not DEBUG)
 SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", not DEBUG)
 
-# Deliberately an hour rather than the usual year. HSTS is not something a
-# browser lets you take back: once sent, that domain is HTTPS-only for the
-# full duration even if the certificate later breaks. An hour satisfies the
-# security check and keeps a bad deploy recoverable. Raise it to 31536000
-# once the certificate has proven itself.
-SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
+# A year, the usual value. HSTS cannot be taken back once a browser has it:
+# the domain stays HTTPS-only for the full duration. It started at an hour
+# while the certificate was new; Render's certificate has served the site
+# without a problem since 2026-10-01, so it now gets the full year.
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
 SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", False)
 

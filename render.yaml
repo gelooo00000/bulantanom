@@ -22,6 +22,9 @@ services:
         generateValue: true
       - key: DJANGO_DEBUG
         value: "False"
+      # Django Admin's path: unguessable, set by hand, never committed.
+      - key: DJANGO_ADMIN_PATH
+        sync: false
       # RENDER_EXTERNAL_HOSTNAME is added to both automatically in settings.
       - key: DJANGO_ALLOWED_HOSTS
         value: localhost

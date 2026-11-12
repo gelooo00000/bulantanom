@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
@@ -8,7 +9,8 @@ from plants.urls import farmer_urlpatterns
 from plants.views import farm_weather
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # Not at the well-known /admin/ in production: see DJANGO_ADMIN_PATH.
+    path(f"{settings.DJANGO_ADMIN_PATH}/", admin.site.urls),
     path("api/auth/", include((auth_urlpatterns, "auth"))),
     path("api/admin/", include((admin_urlpatterns, "api-admin"))),
     path("api/lgu/", include((lgu_urlpatterns, "api-lgu"))),
