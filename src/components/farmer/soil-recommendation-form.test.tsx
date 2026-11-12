@@ -385,9 +385,9 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(screen.getByLabelText("Soil pH")).toHaveValue(6.5);
     expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(120);
     expect(create).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: /get recommendation/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^get recommendation$/i })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
+    await userEvent.click(screen.getByRole("button", { name: /get crop recommendation/i }));
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0][0]).toMatchObject({
       soil_temperature: 28.5,
@@ -414,7 +414,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
       "Some readings are invalid (Soil Conductivity, Nitrogen (N), Phosphorus (P), Potassium (K)). Please check the sensor connection and read again.",
     );
     expect(screen.getByText("A crop recommendation needs all seven valid readings.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /get crop recommendation/i })).toBeDisabled();
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -425,7 +425,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
       .mockResolvedValueOnce(SENSOR_READING);
     render(<SoilRecommendationForm />);
     await readWithSensor();
-    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /get crop recommendation/i })).toBeDisabled();
 
     await userEvent.click(screen.getByRole("button", { name: /read again/i }));
     expect(await screen.findByText(/filled in from the sensor/i)).toBeInTheDocument();
@@ -433,7 +433,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(120);
     expect(screen.queryByText(/needs all seven valid readings/i)).not.toBeInTheDocument();
 
-    const submit = screen.getByRole("button", { name: /use these readings/i });
+    const submit = screen.getByRole("button", { name: /get crop recommendation/i });
     expect(submit).toBeEnabled();
     await userEvent.click(submit);
     await waitFor(() => expect(create).toHaveBeenCalled());
@@ -468,7 +468,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
 
     expect(screen.getByText(/soil ph must be between 3 and 10/i)).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(/invalid \(soil ph\)/i);
-    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /get crop recommendation/i })).toBeDisabled();
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -487,7 +487,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     render(<SoilRecommendationForm />);
     await readWithSensor();
     await userEvent.type(screen.getByLabelText(/additional soil information/i), "Dries out fast");
-    await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
+    await userEvent.click(screen.getByRole("button", { name: /get crop recommendation/i }));
 
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0][0]).toMatchObject({ notes: "Dries out fast" });

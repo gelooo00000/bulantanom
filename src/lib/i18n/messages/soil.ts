@@ -116,9 +116,9 @@ export const soil = defineMessages({
     bik: "Kaipuhan an pito na tamang sukat para sa rekomendasyon nin tanom.",
   },
   "arduino.useReadings": {
-    en: "Use these readings",
-    fil: "Gamitin ang mga sukat na ito",
-    bik: "Gamiton an mga sukat na ini",
+    en: "Get Crop Recommendation",
+    fil: "Kunin ang Rekomendasyon ng Pananim",
+    bik: "Kuaon an Rekomendasyon nin Tanom",
   },
   "arduino.introBody": {
     en: "The sensor measures soil temperature, moisture, conductivity, pH, nitrogen, phosphorus and potassium - every reading the form needs.",
