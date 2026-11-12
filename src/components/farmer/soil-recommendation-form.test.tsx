@@ -335,10 +335,12 @@ describe("SoilRecommendationForm outdated advice", () => {
 });
 
 const readSoilSensor = vi.fn();
+const readSoilSensorBluetooth = vi.fn();
 vi.mock("@/lib/arduino/soil-sensor", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   isSerialSupported: () => true,
   readSoilSensor: (...args: unknown[]) => readSoilSensor(...args),
+  readSoilSensorBluetooth: (...args: unknown[]) => readSoilSensorBluetooth(...args),
 }));
 
 const SENSOR_READING = {
@@ -548,6 +550,37 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/iphones cannot connect/i);
     expect(screen.queryByRole("button", { name: /connect by usb/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /connect by bluetooth/i })).not.toBeInTheDocument();
+  });
+
+  it("works the same on a phone: invalid 0s, no sign or See Result, Read Again by Bluetooth", async () => {
+    Object.defineProperty(navigator, "bluetooth", { value: {}, configurable: true });
+    try {
+      fetchHistory.mockResolvedValue([analyzed]);
+      readSoilSensorBluetooth
+        .mockReset()
+        .mockResolvedValueOnce({ ...SENSOR_READING, nitrogen: 0 })
+        .mockResolvedValueOnce(SENSOR_READING);
+      render(<SoilRecommendationForm />);
+      await userEvent.click(await screen.findByRole("button", { name: "Use the Arduino sensor" }));
+      await userEvent.click(await screen.findByRole("button", { name: /^phone/i }));
+      await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+      await userEvent.click(await screen.findByRole("button", { name: /next/i }));
+      await userEvent.click(await screen.findByRole("button", { name: /connect by bluetooth/i }));
+
+      expect(await screen.findByText("Invalid reading: the sensor returned 0.")).toBeInTheDocument();
+      expect(screen.getByLabelText("Nitrogen (N)")).toHaveAttribute("readonly");
+      expect(screen.getByRole("button", { name: /get crop recommendation/i })).toBeDisabled();
+      expect(screen.queryByText("This feature can be used with the Arduino hardware")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /see result/i })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: /read again/i }));
+      expect(await screen.findByText(/filled in from the sensor/i)).toBeInTheDocument();
+      expect(readSoilSensorBluetooth).toHaveBeenCalledTimes(2);
+      expect(readSoilSensor).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: /get crop recommendation/i })).toBeEnabled();
+    } finally {
+      delete (navigator as { bluetooth?: unknown }).bluetooth;
+    }
   });
 
   it("offers only Connect by USB on a laptop, even when Bluetooth exists", async () => {
