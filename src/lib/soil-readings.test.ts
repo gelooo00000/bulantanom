@@ -32,9 +32,9 @@ describe("sensor field definitions", () => {
       soil_moisture: [0, 100],
       soil_conductivity: [0, 20000],
       soil_ph: [3, 10],
-      nitrogen: [1, 1999],
-      phosphorus: [1, 1999],
-      potassium: [1, 1999],
+      nitrogen: [0, 1999],
+      phosphorus: [0, 1999],
+      potassium: [0, 1999],
     };
     for (const field of SENSOR_FIELDS) {
       expect([field.min, field.max]).toEqual(expected[field.key]);
@@ -81,7 +81,9 @@ describe("validateReading", () => {
   it("rejects readings below the sensor's range", () => {
     expect(validateReading(byKey.soil_ph, "2.9")).toMatch(/between 3 and 10/);
     expect(validateReading(byKey.soil_temperature, "-41")).toMatch(/-40/);
-    expect(validateReading(byKey.nitrogen, "0")).toMatch(/between 1 and 1999/);
+    expect(validateReading(byKey.nitrogen, "-1")).toMatch(/between 0 and 1999/);
+    // 0 N, P or K is a real sensor reading.
+    expect(validateReading(byKey.nitrogen, "0")).toBeNull();
   });
 
   it("accepts a negative temperature, which is in range", () => {
