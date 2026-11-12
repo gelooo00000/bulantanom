@@ -76,6 +76,6 @@ describe("a plant already in the ground", () => {
     expect(screen.getByText("Growing")).toBeInTheDocument();
     expect(screen.getByText(/^Planted /)).toBeInTheDocument();
     expect(screen.queryByText(/days old|Expected harvest/)).toBeNull();
-    expect(screen.getByText("Ready to assess")).toBeInTheDocument();
+    expect(screen.queryByText("Ready to assess")).toBeNull();
   });
 });

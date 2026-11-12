@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, Check, CircleCheck, ClipboardList, Wheat } from "lucide-react";
+import { CalendarClock, Check, Wheat } from "lucide-react";
 
 import { CropTile, FarmCard } from "@/components/farmer/farm-card";
 import { CardContent } from "@/components/ui/card";
@@ -88,9 +88,8 @@ export function PlantCard({
             })}
           </span>
 
-          {/* The weekly assessment is the Farmer's recurring job, and the lock
-              state was already on every plant - it just was not shown, so the
-              only way to find an assessable plant was to open each one. */}
+          {/* No weekly-check line ("First check", "Ready to assess",
+              "Assessed · next"): the Risk Indicator page says when to assess. */}
           {plant.is_planned ? (
             <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
               <CalendarClock className="size-3.5 shrink-0" />
@@ -101,27 +100,6 @@ export function PlantCard({
             <span className="font-heading text-risk-low flex items-center gap-1.5 text-xs font-medium tracking-wide">
               <Wheat className="size-3.5 shrink-0" />
               {t("ready.noCheck")}
-            </span>
-          ) : plant.assessment_eligibility.too_young &&
-            plant.assessment_eligibility.next_assessment_date ? (
-            // Planted, but not yet worth judging: the first check has a date.
-            <span className="font-heading text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide">
-              <CalendarClock className="size-3.5 shrink-0" />
-              {t("young.first", {
-                date: date(plant.assessment_eligibility.next_assessment_date),
-              })}
-            </span>
-          ) : plant.assessment_eligibility.can_assess ? (
-            <span className="font-heading text-primary flex items-center gap-1.5 text-xs font-medium tracking-wide">
-              <ClipboardList className="size-3.5 shrink-0" />
-              {t("card.ready")}
-            </span>
-          ) : plant.assessment_eligibility.next_assessment_date ? (
-            <span className="font-heading text-muted-foreground/70 flex items-center gap-1.5 text-xs font-medium tracking-wide">
-              <CircleCheck className="size-3.5 shrink-0" />
-              {t("card.assessedNext", {
-                date: date(plant.assessment_eligibility.next_assessment_date),
-              })}
             </span>
           ) : null}
         </div>

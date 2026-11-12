@@ -164,9 +164,9 @@ export const plants = defineMessages({
   },
   "plantsGuide.cardTitle": { en: "Read the plant card", fil: "Basahin ang card ng tanim", bik: "Basahon an card san tanom" },
   "plantsGuide.cardBody": {
-    en: "Each card shows the expected harvest date and when the next check is due: “First check”, “Ready to assess”, or “Assessed · next”.",
-    fil: "Ipinapakita ng bawat card ang inaasahang petsa ng ani at kung kailan ang susunod na suri: “Unang suri”, “Handa nang suriin”, o “Nasuri na · susunod”.",
-    bik: "Ipinapahiling san kada card an inaasahan na petsa san ani asin kun nuarin an sunod na susi: “Enot na susi”, “Pwede na susihon”, o “Nasusi na · masunod”.",
+    en: "Each card shows the crop, its variety, whether it is growing or planned, and the day it was planted.",
+    fil: "Ipinapakita ng bawat card ang pananim, ang uri nito, kung lumalaki o nakaplano, at ang araw ng pagtatanim.",
+    bik: "Ipinapahiling san kada card an tanom, an klase kaini, kun nagdadakula o nakaplano, asin an adlaw san pagtanom.",
   },
   "plantsGuide.assessTitle": { en: "Check it every week", fil: "Suriin linggo-linggo", bik: "Susihon kada semana" },
   "plantsGuide.assessBody": {

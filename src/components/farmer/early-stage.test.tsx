@@ -68,9 +68,9 @@ function assessment(risk: Partial<BackendAssessment["risk"]>): BackendAssessment
 }
 
 describe("a newly planted crop", () => {
-  it("shows when its first check opens instead of offering one now", () => {
+  it("shows no check line on its card", () => {
     render(<PlantCard plant={JUST_PLANTED} />);
-    expect(screen.getByText("First check September 30, 2026")).toBeInTheDocument();
+    expect(screen.queryByText(/First check/)).toBeNull();
     expect(screen.queryByText("Ready to assess")).toBeNull();
   });
 
