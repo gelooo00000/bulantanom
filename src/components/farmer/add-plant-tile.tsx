@@ -20,19 +20,22 @@ import { cn } from "@/lib/utils";
 export function AddPlantTile({ className }: { className?: string }) {
   const { t } = useLanguage();
   return (
+    // Laid out like a plant card (chip on the left, text beside it) and no
+    // taller than one: a tall tile stretched the plant card next to it,
+    // leaving an empty block under its three lines.
     <Link
       href="/farmer/plants/new"
       className={cn(
-        "group border-border hover:border-primary/60 hover:bg-accent/30 flex min-h-44 flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-5 py-8 text-center transition-colors",
+        "group border-border hover:border-primary/60 hover:bg-accent/30 flex items-center gap-3 rounded-xl border border-dashed px-4 py-4 transition-colors",
         className,
       )}
     >
-      <span className="border-primary/40 text-primary group-hover:bg-primary/10 flex size-10 items-center justify-center rounded-full border transition-colors">
+      <span className="border-primary/40 text-primary group-hover:bg-primary/10 flex size-12 shrink-0 items-center justify-center rounded-full border transition-colors">
         <Plus className="size-5" />
       </span>
-      <span className="font-heading mt-1 text-base">{t("addTile.title")}</span>
-      <span className="text-muted-foreground max-w-[22ch] text-xs">
-        {t("addTile.hint")}
+      <span className="flex min-w-0 flex-col gap-1">
+        <span className="font-heading text-base leading-tight">{t("addTile.title")}</span>
+        <span className="text-muted-foreground text-xs">{t("addTile.hint")}</span>
       </span>
     </Link>
   );
