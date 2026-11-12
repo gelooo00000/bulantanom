@@ -193,7 +193,7 @@ export function InSeasonCrops({
           </div>
         )}
 
-        <p className="text-muted-foreground/70 mt-3 text-[11px]">
+        <p className="text-muted-foreground/70 mt-3 text-[0.6875rem]">
           {t("inSeason.note")}
         </p>
       </CardContent>

@@ -59,7 +59,7 @@ export function AuthCard({ children, header }: { children: ReactNode; header?: A
             <Icon className="size-5 sm:size-6" />
           </span>
           <div className="min-w-0">
-            <p className="font-heading text-[11px] font-semibold tracking-[0.16em] text-amber-300 uppercase">
+            <p className="font-heading text-[0.6875rem] font-semibold tracking-[0.16em] text-amber-300 uppercase">
               {header.eyebrow}
             </p>
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{header.title}</h1>

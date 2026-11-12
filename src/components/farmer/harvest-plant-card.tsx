@@ -119,7 +119,7 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="text-foreground/75 flex items-baseline justify-between gap-2 text-[13px]">
+      <div className="text-foreground/75 flex items-baseline justify-between gap-2 text-[0.8125rem]">
         <span>
           {fullyGrown
             ? t("harvestCard.fullyGrown")
@@ -144,7 +144,7 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
         />
       </TimelineBar>
 
-      <div className="text-muted-foreground grid grid-cols-3 gap-2 text-[11px] leading-tight">
+      <div className="text-muted-foreground grid grid-cols-3 gap-2 text-[0.6875rem] leading-tight">
         <div>
           <p>{t("harvestCard.planted")}</p>
           <p className="text-foreground font-medium">{date(plant.planting_date)}</p>
@@ -180,7 +180,7 @@ function ReadyTip({ tip }: { tip: string }) {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner side="top" align="end" sideOffset={6} className="z-50">
-          <Popover.Popup className="bg-popover text-popover-foreground border-border max-w-64 rounded-lg border px-3 py-2.5 text-[13px] shadow-lg">
+          <Popover.Popup className="bg-popover text-popover-foreground border-border max-w-64 rounded-lg border px-3 py-2.5 text-[0.8125rem] shadow-lg">
             <p className="flex items-center gap-1.5 font-medium">
               <Lightbulb className="text-risk-medium size-3.5" aria-hidden="true" />
               {t("harvestCard.tipTitle")}
@@ -249,7 +249,7 @@ export function HarvestPlantCard({
               pulse={phase === "open" || phase === "passed"}
             />
             <div className="min-w-0">
-              <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
+              <p className="font-heading line-clamp-2 text-[1.0625rem] leading-snug break-words">
                 {plant.display_name}
               </p>
               <p className="text-muted-foreground mt-0.5 text-sm">
@@ -273,7 +273,7 @@ export function HarvestPlantCard({
         {/* The answer first, in one plain sentence. */}
         <div className="flex flex-col gap-0.5">
           {/* One colour on every card, red, so the date stands out. */}
-          <p className="font-heading text-risk-high flex items-center gap-1.5 text-[15px] font-medium">
+          <p className="font-heading text-risk-high flex items-center gap-1.5 text-[0.9375rem] font-medium">
             <Icon className="size-4 shrink-0" aria-hidden="true" />
             {headline(plant, phase, t, date)}
           </p>

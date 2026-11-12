@@ -215,7 +215,7 @@ const initials = (name: string) =>
 function Tag({ color, icon: Icon, children }: { color: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
     <span
-      className="font-heading inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+      className="font-heading inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold whitespace-nowrap"
       style={{ color, backgroundColor: tint(color, 14) }}
     >
       <Icon className="size-3" aria-hidden="true" />
@@ -271,15 +271,15 @@ function LifeTrack({ loss, color }: { loss: PlantLoss; color: string }) {
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
           <p className="text-muted-foreground">Planted</p>
-          <p className="font-heading mt-0.5 text-[13px] font-medium">{formatDisplayDate(loss.planting_date)}</p>
+          <p className="font-heading mt-0.5 text-[0.8125rem] font-medium">{formatDisplayDate(loss.planting_date)}</p>
         </div>
         <div className="text-center">
           <p className="text-muted-foreground">Lived</p>
-          <p className="font-heading mt-0.5 text-[13px] font-medium tabular-nums">{loss.age_days} days</p>
+          <p className="font-heading mt-0.5 text-[0.8125rem] font-medium tabular-nums">{loss.age_days} days</p>
         </div>
         <div className="text-right">
           <p className="text-muted-foreground">Lost</p>
-          <p className="font-heading mt-0.5 text-[13px] font-medium">{lostOn}</p>
+          <p className="font-heading mt-0.5 text-[0.8125rem] font-medium">{lostOn}</p>
         </div>
       </div>
     </div>
@@ -332,7 +332,7 @@ function LossCard({ loss }: { loss: PlantLoss }) {
               <span className="mt-1.5 flex items-center gap-1.5">
                 <span
                   aria-hidden="true"
-                  className="font-heading flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold"
+                  className="font-heading flex size-5 shrink-0 items-center justify-center rounded-full text-[0.5625rem] font-semibold"
                   style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
                 >
                   {initials(loss.farmer_name)}
@@ -461,7 +461,7 @@ function LossCard({ loss }: { loss: PlantLoss }) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-muted/40 rounded-xl px-3 py-2.5">
-      <dt className="text-muted-foreground text-[11px]">{label}</dt>
+      <dt className="text-muted-foreground text-[0.6875rem]">{label}</dt>
       <dd className="font-heading mt-0.5 truncate text-sm font-medium">{value}</dd>
     </div>
   );

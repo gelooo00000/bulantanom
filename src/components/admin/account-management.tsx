@@ -491,7 +491,7 @@ export function AccountManagement() {
                   {t.label}
                   <span
                     className={cn(
-                      "min-w-5 rounded-full px-1.5 text-center text-[11px] font-semibold tabular-nums",
+                      "min-w-5 rounded-full px-1.5 text-center text-[0.6875rem] font-semibold tabular-nums",
                       active && "bg-white/25 text-white",
                     )}
                     style={active ? undefined : { backgroundColor: tint(t.ink, 14), color: t.ink }}
@@ -746,7 +746,7 @@ function Avatar({
       title={title}
       className={cn(
         "ring-card relative flex shrink-0 items-center justify-center rounded-full font-heading font-semibold text-white ring-2 shadow-[0_6px_14px_-6px_rgb(0_0_0/0.35)]",
-        size === "sm" ? "size-8 text-[11px]" : size === "lg" ? "size-16 text-lg ring-4" : "size-12 text-sm",
+        size === "sm" ? "size-8 text-[0.6875rem]" : size === "lg" ? "size-16 text-lg ring-4" : "size-12 text-sm",
       )}
       style={{ backgroundImage: avatarGradient(user) }}
     >
@@ -804,7 +804,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
           </div>
         )}
         {badge && (
-          <span className="absolute top-3 left-3 rounded-full bg-black/25 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+          <span className="absolute top-3 left-3 rounded-full bg-black/25 px-2 py-0.5 text-[0.6875rem] font-semibold text-white backdrop-blur-sm">
             {badge.label}
           </span>
         )}
@@ -814,7 +814,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
         <div className="-mt-8 flex items-end gap-3">
           <Avatar user={user} showOnline size="lg" />
           {user.is_online && (
-            <span className="mb-1 flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+            <span className="mb-1 flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[0.6875rem] font-semibold text-emerald-700 dark:text-emerald-400">
               <span className="relative flex size-1.5">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" />
                 <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
@@ -825,7 +825,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
         </div>
 
         <div className="mt-2.5 min-w-0">
-          <p className="font-heading truncate text-[17px] leading-tight font-semibold">
+          <p className="font-heading truncate text-[1.0625rem] leading-tight font-semibold">
             {user.full_name || user.email}
           </p>
           <p className="text-muted-foreground truncate text-xs">{user.email}</p>
@@ -833,7 +833,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           <span
-            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold"
             style={{ backgroundColor: tint(color, 14), color }}
           >
             <RoleIcon className="size-3" />
@@ -841,7 +841,7 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
           </span>
           {gender.label && (
             <span
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold"
               style={{ backgroundColor: tint(gender.ink, 14), color: gender.ink }}
             >
               {user.gender === "MALE" ? <Mars className="size-3" /> : <Venus className="size-3" />}
@@ -852,14 +852,14 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
 
         <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
           <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(gender.ink, 9) }}>
-            <dt className="text-muted-foreground flex items-center gap-1 text-[11px]">
+            <dt className="text-muted-foreground flex items-center gap-1 text-[0.6875rem]">
               <CalendarDays className="size-3" style={{ color: gender.ink }} />
               Joined
             </dt>
             <dd className="font-heading mt-0.5 font-semibold">{joined}</dd>
           </div>
           <div className="rounded-2xl px-3 py-2" style={{ backgroundColor: tint(INK.gold, 9) }}>
-            <dt className="text-muted-foreground flex items-center gap-1 text-[11px]">
+            <dt className="text-muted-foreground flex items-center gap-1 text-[0.6875rem]">
               <Clock className="size-3" style={{ color: INK.gold }} />
               Last active
             </dt>

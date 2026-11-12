@@ -76,13 +76,13 @@ export function PlantCard({
           cropName={plant.crop.name}
           emoji={plant.crop.emoji}
           accent={accent}
-          className="size-12 text-[28px]"
+          className="size-12 text-[1.75rem]"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="font-heading truncate text-lg leading-tight font-medium">{plantTitle(plant)}</p>
           <p className="text-muted-foreground truncate text-sm">{plantSubtitle(plant, t)}</p>
           {/* Only the planting date: the harvest date is on the Harvest page. */}
-          <span className="text-foreground/75 mt-1 text-[13px]">
+          <span className="text-foreground/75 mt-1 text-[0.8125rem]">
             {t(plant.is_planned ? "card.plantingOn" : "card.planted", {
               date: date(plant.planting_date),
             })}

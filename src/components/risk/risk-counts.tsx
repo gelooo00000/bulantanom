@@ -57,7 +57,7 @@ export function RiskCountsRow({
             <span className="font-heading text-lg leading-none tabular-nums">{counts[tile.key]}</span>
             <span
               className={cn(
-                "flex items-center gap-1 text-[11px] leading-tight font-medium sm:text-xs",
+                "flex items-center gap-1 text-[0.6875rem] leading-tight font-medium sm:text-xs",
                 tile.className,
               )}
             >

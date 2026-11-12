@@ -170,7 +170,7 @@ export function RoleShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] transition-colors",
+                  "font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[0.6875rem] transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
@@ -184,7 +184,7 @@ export function RoleShell({
             <MenuPrimitive.Root>
               <MenuPrimitive.Trigger
                 className={cn(
-                  "font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px]",
+                  "font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[0.6875rem]",
                   // Lit when the page belongs to one of the items inside it.
                   overflowTabs.some((item) => isActive(item.href))
                     ? "text-primary"
@@ -232,7 +232,7 @@ export function RoleShell({
             <button
               type="button"
               onClick={logout}
-              className="text-muted-foreground hover:text-foreground font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[11px] transition-colors"
+              className="text-muted-foreground hover:text-foreground font-heading flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[0.6875rem] transition-colors"
             >
               <LogOut className="size-5" />
               {copy.logOut}

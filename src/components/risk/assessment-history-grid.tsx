@@ -157,7 +157,7 @@ function AssessmentTile({
 
       <div className="mt-auto flex flex-col items-start gap-1.5">
         {level && level !== "inconclusive" && <RiskBadge size="sm" level={level} />}
-        <span className="text-muted-foreground flex items-center gap-1 text-[11px] sm:text-xs">
+        <span className="text-muted-foreground flex items-center gap-1 text-[0.6875rem] sm:text-xs">
           <CalendarDays className="size-3 shrink-0" />
           {new Date(`${assessment.assessment_date}T00:00:00`).toLocaleDateString(dateLocale, {
             month: "short",

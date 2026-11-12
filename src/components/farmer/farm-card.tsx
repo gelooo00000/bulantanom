@@ -190,7 +190,7 @@ export function CheckTimeline({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="text-foreground/75 flex items-baseline justify-between gap-2 text-[13px]">
+      <div className="text-foreground/75 flex items-baseline justify-between gap-2 text-[0.8125rem]">
         <span>{t("riskTimeline.title")}</span>
         <span
           className={cn(
@@ -208,7 +208,7 @@ export function CheckTimeline({
 
       <TimelineBar todayAt={todayAt} fill={fill} />
 
-      <div className="text-muted-foreground grid grid-cols-2 gap-2 text-[11px] leading-tight">
+      <div className="text-muted-foreground grid grid-cols-2 gap-2 text-[0.6875rem] leading-tight">
         <div>
           <p>{checked ? t("riskTimeline.lastCheck") : t("harvestCard.planted")}</p>
           <p className="text-foreground font-medium">{short(start)}</p>
@@ -254,7 +254,7 @@ export function TimelineBar({
         className="absolute -top-5 flex -translate-x-1/2 flex-col items-center"
         style={{ left: `${Math.min(96, Math.max(4, todayAt))}%` }}
       >
-        <span className="text-foreground text-[10px] leading-none font-medium">{t("harvestCard.today")}</span>
+        <span className="text-foreground text-[0.625rem] leading-none font-medium">{t("harvestCard.today")}</span>
         <span className="bg-foreground mt-0.5 h-5 w-0.5 rounded-full" />
       </div>
     </div>

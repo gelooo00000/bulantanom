@@ -287,7 +287,7 @@ export default function AddPlantPage() {
                   </span>
                   <div>
                     <h2 className="text-lg leading-tight">{t("add.intel")}</h2>
-                    <p className="text-foreground/85 mt-1.5 text-[15px] leading-relaxed">
+                    <p className="text-foreground/85 mt-1.5 text-[0.9375rem] leading-relaxed">
                       {ai.crop_overview}
                     </p>
                   </div>
@@ -337,7 +337,7 @@ export default function AddPlantPage() {
                   </button>
                 )}
 
-                <p className="text-muted-foreground/60 border-border border-t pt-3 text-[11px]">
+                <p className="text-muted-foreground/60 border-border border-t pt-3 text-[0.6875rem]">
                   {/* Gemini writes this in the farmer's language now, so the
                       "the AI's findings are in English" caveat is gone. */}
                   {t("add.aiNote")}

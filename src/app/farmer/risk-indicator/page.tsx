@@ -573,7 +573,7 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
               pulse={group === "high" || failed}
             />
             <div className="min-w-0">
-              <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
+              <p className="font-heading line-clamp-2 text-[1.0625rem] leading-snug break-words">
                 {plant.display_name}
               </p>
               <p className="text-muted-foreground mt-0.5 text-sm">
@@ -611,7 +611,7 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
         <div className="flex flex-col gap-1">
           <p
             className={cn(
-              "font-heading flex items-center gap-1.5 text-[15px] font-medium",
+              "font-heading flex items-center gap-1.5 text-[0.9375rem] font-medium",
               failed ? "text-risk-high" : style.text,
             )}
           >

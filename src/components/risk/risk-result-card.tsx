@@ -33,7 +33,7 @@ function Section({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
       <h3 className="font-heading text-base">{title}</h3>
-      <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-[15px] leading-snug">
+      <ul className="text-muted-foreground mt-1.5 space-y-1.5 text-[0.9375rem] leading-snug">
         {items.map((item) => (
           <li key={item} className="flex gap-2">
             <span className="bg-muted-foreground/50 mt-2 size-1 shrink-0 rounded-full" />
@@ -112,7 +112,7 @@ export function RiskResultCard({
             className="overflow-hidden rounded-xl border"
             style={{ borderColor: "var(--landing-border)" }}
           >
-            <p className="text-muted-foreground border-border border-b px-3 py-1.5 text-[11px] tracking-wide uppercase">
+            <p className="text-muted-foreground border-border border-b px-3 py-1.5 text-[0.6875rem] tracking-wide uppercase">
               {t("result.evidence")}
             </p>
             {/* Served by an authorized endpoint, not a public media path, so
@@ -179,7 +179,7 @@ export function RiskResultCard({
               </div>
             )}
 
-            <p className="text-foreground text-[15px] leading-relaxed">{risk.summary}</p>
+            <p className="text-foreground text-[0.9375rem] leading-relaxed">{risk.summary}</p>
 
             {/* What to do comes first; it is what the farmer acts on. */}
             {risk.recommended_actions.length > 0 && (
@@ -188,10 +188,10 @@ export function RiskResultCard({
                   <ClipboardCheck className="text-primary size-4" />
                   {t("result.whatToDo")}
                 </h3>
-                <ol className="mt-2 space-y-2 text-[15px] leading-snug">
+                <ol className="mt-2 space-y-2 text-[0.9375rem] leading-snug">
                   {risk.recommended_actions.map((item, i) => (
                     <li key={item} className="flex gap-2">
-                      <span className="bg-primary/15 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
+                      <span className="bg-primary/15 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold">
                         {i + 1}
                       </span>
                       {item}
@@ -249,7 +249,7 @@ export function RiskResultCard({
                     className="overflow-hidden rounded-xl border"
                     style={{ borderColor: "var(--landing-border)" }}
                   >
-                    <p className="text-muted-foreground border-border border-b px-3 py-1.5 text-[11px] tracking-wide uppercase">
+                    <p className="text-muted-foreground border-border border-b px-3 py-1.5 text-[0.6875rem] tracking-wide uppercase">
                       {t("result.evidence")}
                     </p>
                     <AuthedImage
@@ -272,7 +272,7 @@ export function RiskResultCard({
                   {t("result.reassess", { n: risk.next_assessment_days })}
                 </p>
               )}
-              <p className="text-muted-foreground/60 flex items-center gap-1.5 text-[11px]">
+              <p className="text-muted-foreground/60 flex items-center gap-1.5 text-[0.6875rem]">
                 <Sparkles className="size-3" />
                 {t(risk.image_analyzed ? "result.aiNotePhoto" : "result.aiNote")}
                 {/* Only for findings written before results followed the app
@@ -320,7 +320,7 @@ function FertilizerAdvice({ fertilizer }: { fertilizer?: Fertilizer }) {
                 <span className="text-muted-foreground font-normal">({product.grade})</span>
               </p>
               {product.why && <p className="text-muted-foreground mt-0.5">{product.why}</p>}
-              <dl className="mt-2 grid gap-1 text-[13px]">
+              <dl className="mt-2 grid gap-1 text-[0.8125rem]">
                 <div className="flex gap-1.5">
                   <dt className="font-medium">{t("result.fertAmount")}:</dt>
                   <dd className="text-muted-foreground">{product.amount}</dd>
@@ -339,13 +339,13 @@ function FertilizerAdvice({ fertilizer }: { fertilizer?: Fertilizer }) {
         </ul>
       )}
       {products.length > 0 && fertilizer.where_to_buy && (
-        <p className="mt-3 text-[13px]">
+        <p className="mt-3 text-[0.8125rem]">
           <span className="font-medium">{t("result.fertWhere")}:</span>{" "}
           <span className="text-muted-foreground">{fertilizer.where_to_buy}</span>
         </p>
       )}
       {products.length > 0 && (
-        <p className="text-muted-foreground/70 mt-2 text-[11px]">{t("result.fertLabel")}</p>
+        <p className="text-muted-foreground/70 mt-2 text-[0.6875rem]">{t("result.fertLabel")}</p>
       )}
     </div>
   );

@@ -167,17 +167,17 @@ function SeasonTrack({ plant, phase }: { plant: LguPlant; phase: Phase }) {
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
           <p className="text-muted-foreground">Planted</p>
-          <p className="font-heading mt-0.5 text-[13px] font-medium">{formatDisplayDate(plant.planting_date)}</p>
+          <p className="font-heading mt-0.5 text-[0.8125rem] font-medium">{formatDisplayDate(plant.planting_date)}</p>
         </div>
         <div className="text-center">
           <p className="text-muted-foreground">Harvest starts</p>
-          <p className="font-heading mt-0.5 text-[13px] font-medium">
+          <p className="font-heading mt-0.5 text-[0.8125rem] font-medium">
             {formatDisplayDate(plant.expected_harvest_start)}
           </p>
         </div>
         <div className="text-right">
           <p className="text-muted-foreground">Harvest ends</p>
-          <p className="font-heading mt-0.5 text-[13px] font-medium">
+          <p className="font-heading mt-0.5 text-[0.8125rem] font-medium">
             {formatDisplayDate(plant.expected_harvest_end)}
           </p>
         </div>
@@ -232,7 +232,7 @@ function PlantCard({ plant }: { plant: LguPlant }) {
             <div className="mt-1.5 flex items-center gap-1.5">
               <span
                 aria-hidden="true"
-                className="font-heading flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold"
+                className="font-heading flex size-5 shrink-0 items-center justify-center rounded-full text-[0.5625rem] font-semibold"
                 style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
               >
                 {initials(plant.farmer.full_name)}

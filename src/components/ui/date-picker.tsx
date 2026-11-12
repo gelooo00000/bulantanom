@@ -266,7 +266,7 @@ export function DatePicker({
             {WEEKDAYS.map((day) => (
               <div
                 key={day}
-                className="text-muted-foreground py-1 text-center text-[11px] font-medium"
+                className="text-muted-foreground py-1 text-center text-[0.6875rem] font-medium"
               >
                 {t(day)}
               </div>

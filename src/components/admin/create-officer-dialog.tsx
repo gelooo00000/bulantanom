@@ -202,7 +202,7 @@ export function CreateOfficerDialog({
                 <UserRoundPlus className="size-6" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-heading text-[11px] font-semibold tracking-[0.16em] text-amber-300 uppercase">
+                <p className="font-heading text-[0.6875rem] font-semibold tracking-[0.16em] text-amber-300 uppercase">
                   New account
                 </p>
                 <Dialog.Title className="text-xl font-semibold tracking-tight">Create LGU Officer</Dialog.Title>

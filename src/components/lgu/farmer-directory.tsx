@@ -136,7 +136,7 @@ export function FarmerDirectory({ farmers }: { farmers: LguFarmer[] }) {
               <X className="size-4" />
             </button>
           ) : (
-            <kbd className="text-muted-foreground border-border pointer-events-none absolute top-1/2 right-2.5 hidden -translate-y-1/2 rounded border px-1.5 text-[11px] sm:block">
+            <kbd className="text-muted-foreground border-border pointer-events-none absolute top-1/2 right-2.5 hidden -translate-y-1/2 rounded border px-1.5 text-[0.6875rem] sm:block">
               /
             </kbd>
           )}
@@ -257,7 +257,7 @@ function FarmerRow({ farmer, query }: { farmer: LguFarmer; query: string }) {
           {farmer.account_status !== "APPROVED" && (
             <span
               className={cn(
-                "rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                "rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium",
                 STATUS_STYLE[farmer.account_status],
               )}
             >
@@ -373,7 +373,7 @@ function UsagePopover({
                 className="absolute -top-10 -right-8 -z-10 size-28 rounded-full opacity-40 blur-2xl"
                 style={{ backgroundColor: PALETTE.gold[0] }}
               />
-              <p className="font-heading text-[10px] font-semibold tracking-[0.16em] text-amber-300 uppercase">
+              <p className="font-heading text-[0.625rem] font-semibold tracking-[0.16em] text-amber-300 uppercase">
                 Time on BulanTanom
               </p>
               <Popover.Title className="font-heading truncate text-base font-semibold">
@@ -395,7 +395,7 @@ function UsagePopover({
                       <Icon className="size-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-muted-foreground text-[11px]">
+                      <p className="text-muted-foreground text-[0.6875rem]">
                         {label}
                       </p>
                       <p className="font-heading font-semibold tabular-nums">
@@ -403,7 +403,7 @@ function UsagePopover({
                       </p>
                     </div>
                     {days > 1 && minutes > 0 && (
-                      <span className="text-muted-foreground text-right text-[10px] leading-tight">
+                      <span className="text-muted-foreground text-right text-[0.625rem] leading-tight">
                         about
                         <br />
                         <span
@@ -417,7 +417,7 @@ function UsagePopover({
                     )}
                   </div>
                 ))}
-                <p className="text-muted-foreground px-1 pt-1 text-[11px] leading-snug">
+                <p className="text-muted-foreground px-1 pt-1 text-[0.6875rem] leading-snug">
                   Counted while BulanTanom is open on screen, since{" "}
                   {formatDisplayDate(usage.since)}.{" "}
                   {farmer.is_online

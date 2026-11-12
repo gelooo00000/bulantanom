@@ -25,7 +25,7 @@ export function LostPlantCard({ plant }: { plant: BackendPlant }) {
             className="grayscale"
           />
           <div className="min-w-0">
-            <p className="font-heading line-clamp-2 text-[17px] leading-snug break-words">
+            <p className="font-heading line-clamp-2 text-[1.0625rem] leading-snug break-words">
               {plant.display_name}
             </p>
             {report && (

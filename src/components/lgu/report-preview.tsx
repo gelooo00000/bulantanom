@@ -145,7 +145,7 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
               />
             </span>
             <div>
-              <p className="text-muted-foreground text-[11px] font-medium tracking-[0.18em] uppercase">
+              <p className="text-muted-foreground text-[0.6875rem] font-medium tracking-[0.18em] uppercase">
                 {t.brand}
               </p>
               <h2 className="font-heading text-primary text-xl leading-tight font-medium tracking-tight">
@@ -217,7 +217,7 @@ export function ReportPreview({ report }: { report: ReportDocument }) {
           </div>
         </section>
 
-        <footer className="border-border text-muted-foreground/80 flex items-start gap-1.5 border-t border-dashed pt-3 text-[11px]">
+        <footer className="border-border text-muted-foreground/80 flex items-start gap-1.5 border-t border-dashed pt-3 text-[0.6875rem]">
           <Sparkles className="mt-px size-3 shrink-0" />
           <span>
             {t.generated} {generated.toLocaleString()}. {t.footerNote}

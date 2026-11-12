@@ -178,7 +178,7 @@ export function AssessmentTrendChart({ trend }: AssessmentTrendChartProps) {
             ))}
           </div>
 
-          <div className="text-muted-foreground mt-1 flex justify-between text-[11px]">
+          <div className="text-muted-foreground mt-1 flex justify-between text-[0.6875rem]">
             <span>{formatShortDate(first.date, dateLocale)}</span>
             <span>{t("trend.peak", { n: trend.busiest_count })}</span>
             <span>{formatShortDate(last.date, dateLocale)}</span>

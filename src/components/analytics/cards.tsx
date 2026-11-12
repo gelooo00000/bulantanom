@@ -95,7 +95,7 @@ export function StatCard({
       {trend && !loading ? (
         <p
           className={cn(
-            "flex items-center gap-1 text-[11px]",
+            "flex items-center gap-1 text-[0.6875rem]",
             delta > 0 ? "text-risk-low" : delta < 0 ? "text-risk-high" : "text-muted-foreground",
           )}
           title={`${shortDate(trend.period.from)}–${shortDate(trend.period.to)}: ${trend.current}; ${shortDate(trend.previous_period.from)}–${shortDate(trend.previous_period.to)}: ${trend.previous}`}
@@ -107,7 +107,7 @@ export function StatCard({
           </span>
         </p>
       ) : (
-        <p className="text-muted-foreground truncate text-[11px]">{hint ?? " "}</p>
+        <p className="text-muted-foreground truncate text-[0.6875rem]">{hint ?? " "}</p>
       )}
     </div>
   );
@@ -153,7 +153,7 @@ export function ChartCard({
       </div>
       {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
       {ignored.length > 0 && (
-        <p className="text-muted-foreground mt-1.5 flex items-center gap-1 text-[11px]">
+        <p className="text-muted-foreground mt-1.5 flex items-center gap-1 text-[0.6875rem]">
           <Info className="size-3 shrink-0" aria-hidden="true" />
           The {joinNames(ignored)} filter{ignored.length > 1 ? "s do" : " does"} not apply to this card.
         </p>

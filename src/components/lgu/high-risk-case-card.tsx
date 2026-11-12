@@ -53,7 +53,7 @@ function Fact({
   children: React.ReactNode;
 }) {
   return (
-    <span className="bg-muted/70 text-muted-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
+    <span className="bg-muted/70 text-muted-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium">
       <Icon className="size-3" aria-hidden="true" />
       {children}
     </span>
@@ -162,7 +162,7 @@ export function HighRiskCaseCard({
           </Fact>
           {analyzed && reasonCount > 0 && (
             <span
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold"
               style={{ color, backgroundColor: tint(color, 14) }}
             >
               <ListChecks className="size-3" aria-hidden="true" />
@@ -242,7 +242,7 @@ export function HighRiskCaseCard({
             <span className="flex min-w-0 items-center gap-2">
               <span
                 aria-hidden="true"
-                className="font-heading flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                className="font-heading flex size-7 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold"
                 style={{ color: "var(--primary)", backgroundColor: tint("var(--primary)", 14) }}
               >
                 {initials(assessment.farmer.full_name)}
@@ -325,7 +325,7 @@ export function HighRiskCaseCard({
                   risk.reality_vs_expectation?.observed) && (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="border-border bg-muted/40 rounded-xl border p-3.5">
-                      <p className="text-risk-low text-[11px] font-semibold tracking-wide uppercase">
+                      <p className="text-risk-low text-[0.6875rem] font-semibold tracking-wide uppercase">
                         Expected for this age
                       </p>
                       <p className="mt-1 text-sm">
@@ -340,7 +340,7 @@ export function HighRiskCaseCard({
                       }}
                     >
                       <p
-                        className="text-[11px] font-semibold tracking-wide uppercase"
+                        className="text-[0.6875rem] font-semibold tracking-wide uppercase"
                         style={{ color }}
                       >
                         Reported by Farmer

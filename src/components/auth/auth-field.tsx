@@ -14,7 +14,7 @@ export const AUTH_INPUT_CLASSES =
   "h-11 rounded-xl border-input bg-card/70 text-base text-foreground md:text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-primary/30";
 
 /** The main button of an auth form: as tall as the fields, full width. */
-export const AUTH_BUTTON_CLASSES = "h-11 w-full rounded-xl text-[15px] font-semibold";
+export const AUTH_BUTTON_CLASSES = "h-11 w-full rounded-xl text-[0.9375rem] font-semibold";
 
 type AuthIconInputProps = ComponentProps<typeof Input> & { icon: ElementType };
 

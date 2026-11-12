@@ -514,7 +514,7 @@ function SectionNav({ sections }: { sections: SectionDef[] }) {
                 {count !== undefined && (
                   <span
                     className={cn(
-                      "rounded-full px-1.5 text-[11px] tabular-nums",
+                      "rounded-full px-1.5 text-[0.6875rem] tabular-nums",
                       active ? "bg-primary-foreground/20" : "bg-muted",
                     )}
                   >
@@ -764,7 +764,7 @@ function Chip({ value, children }: { value: string; children: ReactNode }) {
   return (
     <span
       className={cn(
-        "rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        "rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium",
         CHIP[value] ?? "bg-muted text-muted-foreground border-border",
       )}
     >
@@ -845,7 +845,7 @@ function ReportCard({ report }: { report: HarvestOutcomeReport }) {
             </p>
           </div>
         </div>
-        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[11px]">
+        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem]">
           {report.timing_label}
         </span>
       </div>
@@ -931,10 +931,10 @@ function LossCard({ loss }: { loss: LossOutcomeReport }) {
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        <span className="bg-risk-high/12 text-risk-high border-risk-high/25 rounded-full border px-2 py-0.5 text-[11px] font-medium">
+        <span className="bg-risk-high/12 text-risk-high border-risk-high/25 rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium">
           {loss.cause_label}
         </span>
-        <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px]">
+        <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[0.6875rem]">
           Noticed {loss.noticed_label.toLowerCase()}
         </span>
       </div>

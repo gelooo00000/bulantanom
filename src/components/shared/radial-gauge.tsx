@@ -61,7 +61,7 @@ export function RadialGauge({
       </svg>
       <div className="absolute flex flex-col items-center justify-center text-center">
         <span className="font-heading text-lg font-medium">{label ?? `${clamped}%`}</span>
-        {sublabel && <span className="text-muted-foreground text-[11px]">{sublabel}</span>}
+        {sublabel && <span className="text-muted-foreground text-[0.6875rem]">{sublabel}</span>}
       </div>
     </div>
   );

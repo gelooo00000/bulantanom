@@ -13,7 +13,7 @@ export function SamplePlantCard() {
 
   return (
     <div className="liquid-glass w-full max-w-sm rounded-2xl p-5 text-[var(--glass-fg)]">
-      <p className="text-[11px] tracking-[0.18em] text-[var(--glass-fg-subtle)] uppercase">
+      <p className="text-[0.6875rem] tracking-[0.18em] text-[var(--glass-fg-subtle)] uppercase">
         This week at Layuan Farm
       </p>
 
@@ -35,7 +35,7 @@ export function SamplePlantCard() {
       </div>
 
       <div className="mt-4">
-        <div className="flex justify-between text-[11px] text-[var(--glass-fg-muted)]">
+        <div className="flex justify-between text-[0.6875rem] text-[var(--glass-fg-muted)]">
           <span>Growing well</span>
           <span>{grown}%</span>
         </div>
@@ -63,7 +63,7 @@ export function SamplePlantCard() {
         </div>
       </div>
 
-      <p className="mt-4 text-[11px] text-[var(--glass-fg-faint)]">
+      <p className="mt-4 text-[0.6875rem] text-[var(--glass-fg-faint)]">
         Sample plant — yours appear once you add them.
       </p>
     </div>

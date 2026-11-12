@@ -305,6 +305,21 @@
     @apply font-sans;
     font-synthesis: none;
   }
+  /* Overall text size, stepped up with the screen. Everything is sized in
+     rem, so this one value scales the whole interface evenly. Phones keep the
+     browser default (16px) so nothing gets cramped; tablets and laptops get
+     17px, and wide desktop monitors 18px. Percentages respect a visitor's
+     own browser font setting. */
+  @media (min-width: 48rem) {
+    html {
+      font-size: 106.25%;
+    }
+  }
+  @media (min-width: 96rem) {
+    html {
+      font-size: 112.5%;
+    }
+  }
   /* Display text is Lilita One too. Defined as a variable so dialogs and
      menus — portalled to <body>, outside any shell — still get it. */
   :root {

@@ -120,7 +120,7 @@ export function HeroStat({
       <span className="flex min-w-0 flex-col">
         <span className="font-heading text-2xl leading-none font-semibold tabular-nums">{value}</span>
         <span className="mt-1 truncate text-xs text-white/80">{label}</span>
-        {hint && <span className="truncate text-[11px] text-white/60">{hint}</span>}
+        {hint && <span className="truncate text-[0.6875rem] text-white/60">{hint}</span>}
       </span>
     </>
   );

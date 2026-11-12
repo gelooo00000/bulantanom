@@ -28,7 +28,7 @@ export function AddPlantButton({ className }: { className?: string }) {
         // h-11 is 44px: this is the page's primary action and reaches
         // phones, where the app's default 32px button is under the minimum
         // comfortable touch target.
-        "h-11 px-4 text-[15px]",
+        "h-11 px-4 text-[0.9375rem]",
         className,
       )}
     >
