@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  averageReadings,
   parseSensorLine,
   readSoilSensor,
   readSoilSensorBluetooth,
@@ -36,18 +35,6 @@ describe("parseSensorLine", () => {
     expect(parseSensorLine("ets Jun  8 2016 00:22:57").kind).toBe("ignored");
     expect(parseSensorLine('{"moisture":65.2,').kind).toBe("ignored");
     expect(parseSensorLine('{"moisture":65.2}').kind).toBe("ignored");
-  });
-});
-
-describe("averageReadings", () => {
-  it("averages the polls and keeps each reading's resolution", () => {
-    const result = averageReadings([
-      READING,
-      { ...READING, soil_moisture: 65.3, nitrogen: 121 },
-      { ...READING, soil_moisture: 65.4, nitrogen: 121 },
-    ]);
-    expect(result.soil_moisture).toBe(65.3);
-    expect(result.nitrogen).toBe(121);
   });
 });
 
@@ -87,8 +74,8 @@ afterEach(() => {
 });
 
 describe("readSoilSensor", () => {
-  it("averages three readings and closes the port", async () => {
-    const port = fakePort(["boot message", LINE, LINE, LINE]);
+  it("returns the first reading as it was sent and closes the port", async () => {
+    const port = fakePort(["boot message", LINE, LINE.replace("6.5", "7.1")]);
     await expect(readSoilSensor()).resolves.toEqual(READING);
     expect(port.close).toHaveBeenCalled();
   });
@@ -191,14 +178,14 @@ describe("readSoilSensorBluetooth", () => {
     });
   });
 
-  it("joins 20-byte notifications into lines, averages three and disconnects", async () => {
-    const { device } = fakeBluetooth(["boot message", LINE, LINE, LINE]);
+  it("joins 20-byte notifications into a line, returns it as sent and disconnects", async () => {
+    const { device } = fakeBluetooth(["boot message", LINE, LINE.replace("6.5", "7.1")]);
     await expect(readSoilSensorBluetooth()).resolves.toEqual(READING);
     expect(device.gatt.disconnect).toHaveBeenCalled();
   });
 
   it("says when the connection drops mid-reading", async () => {
-    fakeBluetooth([LINE, LINE, LINE], { dropAfter: 5 });
+    fakeBluetooth([LINE], { dropAfter: 2 });
     await expect(readSoilSensorBluetooth()).rejects.toMatchObject({ code: "ble_disconnected" });
   });
 

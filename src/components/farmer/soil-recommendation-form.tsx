@@ -31,12 +31,18 @@ import {
   type SoilRecommendationInput,
   type SoilRecommendation,
 } from "@/lib/api/soil-api";
-import type { MeasuredField } from "@/lib/arduino/soil-sensor";
+import {
+  readSoilSensor,
+  readSoilSensorBluetooth,
+  SensorError,
+  toFormValues,
+  type MeasuredField,
+} from "@/lib/arduino/soil-sensor";
 import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { notesProblem, SOIL_NOTES_MAX } from "@/lib/text-validation";
-import { SENSOR_FIELDS, useSoilStrings, validateReading } from "@/lib/soil-options";
+import { SENSOR_FIELDS, sensorLabel, useSoilStrings, validateReading } from "@/lib/soil-options";
 
 type Status = "idle" | "analyzing" | "done";
 
@@ -80,6 +86,9 @@ export function SoilRecommendationForm() {
   const [sensorDevice, setSensorDevice] = useState<Device | null>(null);
   // Which device Back reopens the Arduino steps on.
   const [resumeDevice, setResumeDevice] = useState<Device | null>(null);
+  // "Read Again" asks the sensor for fresh values without leaving the form.
+  const [rereading, setRereading] = useState(false);
+  const [rereadError, setRereadError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function setReading(key: string, value: string) {
@@ -133,14 +142,50 @@ export function SoilRecommendationForm() {
   function handleSensorReadings(values: Record<MeasuredField, string>, device: Device) {
     setSensorDevice(device);
     setReadings((prev) => ({ ...prev, ...values }));
-    const errors: Record<string, string> = {};
-    for (const field of SENSOR_FIELDS) {
-      const message = validateReading(field, values[field.key] ?? "", translate);
-      if (message) errors[field.key] = message;
-    }
-    setFieldErrors(errors);
+    setFieldErrors(sensorProblems(values));
+    setRereadError(null);
     setUsingSensor(false);
     setSensorNotice(translate("arduino.filledNotice"));
+  }
+
+  /**
+   * What is wrong with each sensor reading. A 0 (or a blank / non-number) is
+   * invalid: no recommendation can be made from a field with no real value.
+   * A value outside the device's range is invalid too.
+   */
+  function sensorProblems(values: Record<string, string>) {
+    const problems: Record<string, string> = {};
+    for (const field of SENSOR_FIELDS) {
+      const raw = (values[field.key] ?? "").trim();
+      if (raw !== "" && Number(raw) === 0) {
+        problems[field.key] = translate("sensor.zeroInvalid");
+        continue;
+      }
+      const message = validateReading(field, raw, translate);
+      if (message) problems[field.key] = message;
+    }
+    return problems;
+  }
+
+  /** "Read Again": fresh values from the same sensor, checked again. */
+  async function readAgain() {
+    if (sensorDevice === null || rereading) return;
+    setRereading(true);
+    setRereadError(null);
+    try {
+      const fresh = await (sensorDevice === "phone" ? readSoilSensorBluetooth() : readSoilSensor());
+      handleSensorReadings(toFormValues(fresh), sensorDevice);
+    } catch (err) {
+      const code =
+        err instanceof SensorError
+          ? err.code
+          : sensorDevice === "phone"
+            ? "ble_disconnected"
+            : "disconnected";
+      setRereadError(translate(`arduino.error.${code}` as MessageKey));
+    } finally {
+      setRereading(false);
+    }
   }
 
   /** Back from the filled-in readings: the Connect page, to read again. */
@@ -148,6 +193,7 @@ export function SoilRecommendationForm() {
     setResumeDevice(sensorDevice);
     setSensorDevice(null);
     setSensorNotice(null);
+    setRereadError(null);
     setFieldErrors({});
     setReadings({});
     setUsingSensor(true);
@@ -159,10 +205,15 @@ export function SoilRecommendationForm() {
     // Check every reading before the request. Django validates these again -
     // this pass exists so an out-of-range number is caught beside the field
     // that caused it, rather than after a round trip.
+    // Sensor readings are held to more: a 0 is invalid there.
     const errors: Record<string, string> = {};
-    for (const field of SENSOR_FIELDS) {
-      const message = validateReading(field, values[field.key] ?? "", translate);
-      if (message) errors[field.key] = message;
+    if (sensorDevice !== null) {
+      Object.assign(errors, sensorProblems(values));
+    } else {
+      for (const field of SENSOR_FIELDS) {
+        const message = validateReading(field, values[field.key] ?? "", translate);
+        if (message) errors[field.key] = message;
+      }
     }
     const notesError = notesProblem(
       notes,
@@ -463,6 +514,12 @@ export function SoilRecommendationForm() {
     </div>
   );
 
+  // Sensor readings that are 0 or out of range: named in the warning, and
+  // they hold back the recommendation until a Read Again fixes them.
+  const sensorInvalid = sensorDevice !== null ? sensorProblems(readings) : {};
+  const invalidSensorFields = SENSOR_FIELDS.filter((field) => sensorInvalid[field.key]);
+  const sensorBlocked = invalidSensorFields.length > 0;
+
   return (
     <>
       {header}
@@ -499,7 +556,19 @@ export function SoilRecommendationForm() {
               </p>
             </div>
 
-            {sensorNotice ? (
+            {sensorNotice && invalidSensorFields.length > 0 ? (
+              <div
+                className="border-risk-high/40 bg-risk-high/5 flex items-start gap-2.5 rounded-lg border px-3 py-2.5"
+                role="alert"
+              >
+                <TriangleAlert className="text-risk-high mt-0.5 size-4 shrink-0" />
+                <p className="text-sm">
+                  {translate("arduino.invalidBanner", {
+                    fields: invalidSensorFields.map((field) => sensorLabel(field, translate)).join(", "),
+                  })}
+                </p>
+              </div>
+            ) : sensorNotice ? (
               <p className="text-risk-low flex items-center gap-1.5 text-sm" role="status">
                 <Check className="size-4 shrink-0" />
                 {sensorNotice}
@@ -527,15 +596,34 @@ export function SoilRecommendationForm() {
 
         {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 
+        {!usingSensor && sensorBlocked && (
+          <p className="text-risk-high text-sm">{translate("arduino.needsAllValid")}</p>
+        )}
+        {!usingSensor && rereadError && (
+          <p className="text-risk-high text-sm" role="alert">
+            {rereadError}
+          </p>
+        )}
+
         {!usingSensor && (
           <div className="flex flex-wrap items-center gap-2">
             {sensorDevice !== null && (
-              <Button type="button" size="lg" variant="ghost" onClick={backToSensor}>
-                <ArrowLeft className="size-4" />
-                {translate("arduino.back")}
-              </Button>
+              <>
+                <Button type="button" size="lg" variant="ghost" onClick={backToSensor} disabled={rereading}>
+                  <ArrowLeft className="size-4" />
+                  {translate("arduino.back")}
+                </Button>
+                <Button type="button" size="lg" variant="outline" onClick={readAgain} disabled={rereading}>
+                  {rereading ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <RotateCw className="size-4" />
+                  )}
+                  {translate("arduino.readAgain")}
+                </Button>
+              </>
             )}
-            <Button type="submit" size="lg">
+            <Button type="submit" size="lg" disabled={sensorBlocked || rereading}>
               {sensorDevice !== null ? translate("arduino.useReadings") : t.submit}
               <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
             </Button>

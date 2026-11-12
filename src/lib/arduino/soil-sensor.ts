@@ -38,7 +38,10 @@ const FIRMWARE_KEYS: Record<string, MeasuredField> = {
   k: "potassium",
 };
 
-/** Decimal places each reading keeps, matching the probe's own resolution. */
+/**
+ * Decimal places the firmware prints each reading with (%.1f or %u), so the
+ * form shows the exact text the Arduino sent.
+ */
 const DECIMALS: Record<MeasuredField, number> = {
   soil_moisture: 1,
   soil_temperature: 1,
@@ -51,8 +54,6 @@ const DECIMALS: Record<MeasuredField, number> = {
 
 export const MEASURED_FIELDS = Object.values(FIRMWARE_KEYS);
 
-/** Readings averaged into one result, so a single noisy poll cannot decide it. */
-export const SAMPLES_PER_READING = 3;
 const SERIAL_BAUD = 115200;
 const READ_TIMEOUT_MS = 20000;
 
@@ -117,17 +118,6 @@ export function parseSensorLine(line: string): ParsedLine {
   return { kind: "reading", readings };
 }
 
-/** The mean of several polls, rounded to each reading's resolution. */
-export function averageReadings(samples: SensorReadings[]): SensorReadings {
-  const result = {} as SensorReadings;
-  for (const field of MEASURED_FIELDS) {
-    const mean = samples.reduce((sum, sample) => sum + sample[field], 0) / samples.length;
-    const factor = 10 ** DECIMALS[field];
-    result[field] = Math.round(mean * factor) / factor;
-  }
-  return result;
-}
-
 /** The readings as the text the form's inputs hold. */
 export function toFormValues(readings: SensorReadings): Record<MeasuredField, string> {
   return Object.fromEntries(
@@ -154,8 +144,8 @@ export function isSerialSupported(): boolean {
 }
 
 /**
- * Gathers SAMPLES_PER_READING readings from a stream of bytes and averages
- * them. `next` returns the next chunk, or null once the stream has ended (the
+ * Waits for the first full reading in a stream of bytes and returns it
+ * exactly as the Arduino sent it: no averaging, no rounding. `next` returns the next chunk, or null once the stream has ended (the
  * read timed out, or the port closed). Bytes may split anywhere, mid-line
  * included: they are buffered and split on newlines.
  */
@@ -164,14 +154,14 @@ async function collectReadings(
   codes: { noData: SensorErrorCode; disconnected: SensorErrorCode },
 ): Promise<SensorReadings> {
   const decoder = new TextDecoder();
-  const samples: SensorReadings[] = [];
+  let reading: SensorReadings | null = null;
   let probeErrors = 0;
   // The last line that was not a reading: a sketch other than BulanTanom's,
   // or the ESP32's own boot messages, tell the farmer what is wrong.
   let lastIgnored = "";
   let buffer = "";
 
-  while (samples.length < SAMPLES_PER_READING) {
+  while (reading === null) {
     let chunk: Uint8Array | null;
     try {
       chunk = await next();
@@ -190,17 +180,17 @@ async function collectReadings(
     buffer = lines.pop() ?? "";
     for (const line of lines) {
       const parsed = parseSensorLine(line);
-      if (parsed.kind === "reading") samples.push(parsed.readings);
+      if (parsed.kind === "reading" && reading === null) reading = parsed.readings;
       if (parsed.kind === "probe_error") probeErrors += 1;
       if (parsed.kind === "ignored" && line.trim()) lastIgnored = line.trim();
     }
   }
-  return averageReadings(samples.slice(0, SAMPLES_PER_READING));
+  return reading;
 }
 
 /**
- * Asks the farmer to pick the ESP32's port, then returns the average of the
- * first SAMPLES_PER_READING readings. The port is closed again before this
+ * Asks the farmer to pick the ESP32's port, then returns the first reading
+ * exactly as it was sent. The port is closed again before this
  * returns, whatever happens.
  */
 export async function readSoilSensor(): Promise<SensorReadings> {
@@ -338,7 +328,7 @@ async function connectGatt(device: BleDeviceLike): Promise<BleServerLike> {
 
 /**
  * Asks the farmer to pick "BulanTanom-Soil" in the browser's Bluetooth
- * chooser, then returns the average of the first SAMPLES_PER_READING readings.
+ * chooser, then returns the first reading exactly as it was sent.
  * The device is disconnected again before this returns, whatever happens.
  */
 export async function readSoilSensorBluetooth(): Promise<SensorReadings> {

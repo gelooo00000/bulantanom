@@ -360,7 +360,7 @@ async function readWithSensor() {
   expect(await screen.findByText("How to use the sensor")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: /next/i }));
   await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
-  expect(await screen.findByText(/filled in from the sensor/i)).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: /read again/i })).toBeInTheDocument();
 }
 
 describe("SoilRecommendationForm with the Arduino sensor", () => {
@@ -397,14 +397,46 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(create.mock.calls[0][0]).not.toHaveProperty("soil_fertility");
   });
 
-  it("puts 0 readings in the fields without a warning", async () => {
+  it("marks 0 readings invalid, names them and holds back the recommendation", async () => {
     readSoilSensor.mockResolvedValue({ ...SENSOR_READING, soil_conductivity: 0, nitrogen: 0, phosphorus: 0, potassium: 0 });
     render(<SoilRecommendationForm />);
     await readWithSensor();
 
-    expect(screen.queryByText(/probe may not be in the soil/i)).not.toBeInTheDocument();
+    // The raw values stay in the fields.
     expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(0);
     expect(screen.getByLabelText("Soil Conductivity")).toHaveValue(0);
+    expect(screen.getByLabelText("Nitrogen (N)")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Soil pH")).not.toHaveAttribute("aria-invalid");
+    expect(screen.getAllByText("Invalid reading: the sensor returned 0.")).toHaveLength(4);
+
+    expect(screen.queryByText(/filled in from the sensor/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Some readings are invalid (Soil Conductivity, Nitrogen (N), Phosphorus (P), Potassium (K)). Please check the sensor connection and read again.",
+    );
+    expect(screen.getByText("A crop recommendation needs all seven valid readings.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("Read Again gets fresh values and turns the recommendation on once all seven are valid", async () => {
+    create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
+    readSoilSensor
+      .mockResolvedValueOnce({ ...SENSOR_READING, nitrogen: 0 })
+      .mockResolvedValueOnce(SENSOR_READING);
+    render(<SoilRecommendationForm />);
+    await readWithSensor();
+    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: /read again/i }));
+    expect(await screen.findByText(/filled in from the sensor/i)).toBeInTheDocument();
+    expect(readSoilSensor).toHaveBeenCalledTimes(2);
+    expect(screen.getByLabelText("Nitrogen (N)")).toHaveValue(120);
+    expect(screen.queryByText(/needs all seven valid readings/i)).not.toBeInTheDocument();
+
+    const submit = screen.getByRole("button", { name: /use these readings/i });
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+    await waitFor(() => expect(create).toHaveBeenCalled());
   });
 
   it("does not let the farmer type over the sensor's readings, even a 0", async () => {
@@ -430,11 +462,13 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
   });
 
   it("flags a reading outside the sensor's range beside its field", async () => {
-    readSoilSensor.mockResolvedValue({ ...SENSOR_READING, soil_ph: 0 });
+    readSoilSensor.mockResolvedValue({ ...SENSOR_READING, soil_ph: 2.5 });
     render(<SoilRecommendationForm />);
     await readWithSensor();
 
     expect(screen.getByText(/soil ph must be between 3 and 10/i)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/invalid \(soil ph\)/i);
+    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
     expect(create).not.toHaveBeenCalled();
   });
 

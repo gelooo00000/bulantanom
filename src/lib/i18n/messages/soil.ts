@@ -104,6 +104,17 @@ export const soil = defineMessages({
   "arduino.stepOf": { en: "Step {step} of 3", fil: "Hakbang {step} sa 3", bik: "Lakdang {step} sa 3" },
   "arduino.next": { en: "Next", fil: "Susunod", bik: "Sunod" },
   "arduino.back": { en: "Back", fil: "Bumalik", bik: "Balik" },
+  "arduino.readAgain": { en: "Read Again", fil: "Sukatin muli", bik: "Sukaton giraray" },
+  "arduino.invalidBanner": {
+    en: "Some readings are invalid ({fields}). Please check the sensor connection and read again.",
+    fil: "May mga sukat na hindi wasto ({fields}). Pakisuri ang koneksyon ng sensor at sukatin muli.",
+    bik: "May mga sukat na bakong tama ({fields}). Paki-check an koneksyon kan sensor asin sukaton giraray.",
+  },
+  "arduino.needsAllValid": {
+    en: "A crop recommendation needs all seven valid readings.",
+    fil: "Kailangan ng pitong wastong sukat para sa rekomendasyon ng pananim.",
+    bik: "Kaipuhan an pito na tamang sukat para sa rekomendasyon nin tanom.",
+  },
   "arduino.useReadings": {
     en: "Use these readings",
     fil: "Gamitin ang mga sukat na ito",
@@ -455,6 +466,11 @@ export const soil = defineMessages({
     en: "{label} must be a number.",
     fil: "Dapat numero ang {label}.",
     bik: "Dapat numero an {label}.",
+  },
+  "sensor.zeroInvalid": {
+    en: "Invalid reading: the sensor returned 0.",
+    fil: "Hindi wastong sukat: 0 ang ibinigay ng sensor.",
+    bik: "Bakong tamang sukat: 0 an itinao kan sensor.",
   },
   "sensor.outOfRange": {
     en: "{label} must be between {min} and {max} {unit}.",
