@@ -575,7 +575,7 @@ function PlantRiskCard({ entry, actions }: { entry: Entry; actions: CardActions 
               emoji={plant.crop.emoji}
               accent={accent}
               ring={!!hasPill}
-              dot={atRisk || failed}
+              dot={atRisk || group === "low" || failed}
               pulse={group === "high" || failed}
             />
             <div className="min-w-0">
