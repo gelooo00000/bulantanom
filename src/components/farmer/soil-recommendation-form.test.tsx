@@ -399,11 +399,10 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     await userEvent.click(await screen.findByRole("button", { name: /next/i }));
     await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
 
-    // The readings are shown, not editable, and the 0s hold back sending.
-    expect(await screen.findByText("Your sensor readings")).toBeInTheDocument();
+    // No readings list is shown; the 0s hold back sending.
+    const alert = await screen.findByRole("alert");
+    expect(screen.queryByText("Your sensor readings")).not.toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
-    expect(screen.getByText(/can't be typed over/i)).toBeInTheDocument();
-    const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(/soil conductivity, nitrogen \(n\), phosphorus \(p\), potassium \(k\)/i);
     expect(alert).toHaveTextContent(/press read again/i);
     expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();

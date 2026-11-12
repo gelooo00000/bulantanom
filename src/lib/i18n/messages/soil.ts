@@ -170,11 +170,6 @@ export const soil = defineMessages({
     fil: "Sinusukat ang iyong lupa… huwag galawin ang probe.",
     bik: "Sinusukat an imo daga… dili paghirohiro an probe.",
   },
-  "arduino.resultTitle": {
-    en: "Your sensor readings",
-    fil: "Mga sukat mula sa sensor",
-    bik: "Mga sukat hali sa sensor",
-  },
   "arduino.useReadings": {
     en: "Use these readings",
     fil: "Gamitin ang mga sukat na ito",
@@ -190,11 +185,6 @@ export const soil = defineMessages({
     en: "These readings are 0: {fields}. The probe may not be in the soil. Push it firmly into moist soil, then press Read again.",
     fil: "0 ang mga sukat na ito: {fields}. Maaaring wala sa lupa ang probe. Ibaon ito nang mabuti sa basang lupa, saka pindutin ang Sukatin muli.",
     bik: "0 an mga sukat na ini: {fields}. Tibaad wara sa daga an probe. Ibaon ini nin marhay sa basang daga, dangan pindota an Sukaton giraray.",
-  },
-  "arduino.readOnlyHint": {
-    en: "These readings come straight from the sensor and can't be typed over. For new ones, press Read again.",
-    fil: "Diretso mula sa sensor ang mga sukat na ito at hindi mapapalitan sa pag-type. Para sa bago, pindutin ang Sukatin muli.",
-    bik: "Diretso hali sa sensor an mga sukat na ini asin dai mariribayan sa pag-type. Para sa bago, pindota an Sukaton giraray.",
   },
   "arduino.unsupported": {
     en: "This browser cannot connect to the Arduino. Open BulanTanom in Chrome on an Android phone or in Chrome or Edge on a computer, or type the readings instead.",

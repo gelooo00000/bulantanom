@@ -33,7 +33,6 @@ import {
 } from "@/lib/arduino/soil-sensor";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { SENSOR_FIELDS, sensorLabel, validateReading } from "@/lib/soil-options";
-import { cn } from "@/lib/utils";
 
 /** Marks a reading that came back as 0: the probe is not in the soil. */
 const ZERO = "zero";
@@ -279,9 +278,9 @@ export function ArduinoSensorWizard({
   } else {
     page = (
       <div className="flex flex-col gap-3">
-        <h2 className="font-heading text-lg font-semibold">
-          {state.kind === "done" ? t("arduino.resultTitle") : t("arduino.goTitle")}
-        </h2>
+        {state.kind !== "done" && (
+          <h2 className="font-heading text-lg font-semibold">{t("arduino.goTitle")}</h2>
+        )}
 
         {!supported ? (
           <p className="text-risk-high text-sm" role="alert">
@@ -304,28 +303,6 @@ export function ArduinoSensorWizard({
                 </p>
               </div>
             )}
-            {/* Read-only: straight from the sensor. */}
-            <dl className="grid gap-2.5 sm:grid-cols-2">
-              {SENSOR_FIELDS.map((field) => {
-                const bad = Boolean(errors[field.key]);
-                return (
-                  <div
-                    key={field.key}
-                    className={cn(
-                      "flex items-baseline justify-between gap-3 rounded-lg border px-3 py-2.5",
-                      bad ? "border-risk-high/50 bg-risk-high/5" : "border-border bg-muted/30",
-                    )}
-                  >
-                    <dt className="text-muted-foreground text-sm">{sensorLabel(field, t)}</dt>
-                    <dd className={cn("font-heading text-base tabular-nums", bad && "text-risk-high")}>
-                      {values[field.key] ?? "-"}{" "}
-                      <span className="text-muted-foreground text-xs">{field.unit}</span>
-                    </dd>
-                  </div>
-                );
-              })}
-            </dl>
-            <p className="text-muted-foreground text-xs">{t("arduino.readOnlyHint")}</p>
             {readingOk && afterReadings}
           </>
         ) : state.kind === "reading" ? (
