@@ -136,7 +136,9 @@ describe("the harvest card", () => {
   it("tells the farmer to harvest now, and how to tell it is ripe", () => {
     render(<HarvestPlantCard plant={ready} />);
     expect(screen.getByText(/Harvest now, until/)).toBeInTheDocument();
-    expect(screen.getByText("Fully grown")).toBeInTheDocument();
+    // No "Fully grown" or "You can harvest for" lines on the card.
+    expect(screen.queryByText("Fully grown")).not.toBeInTheDocument();
+    expect(screen.queryByText(/You can harvest for/)).not.toBeInTheDocument();
     // The tip stays hidden behind the light bulb until pointed at.
     expect(screen.queryByText(/creamy yellow/)).not.toBeInTheDocument();
     // To this plant's card on My Plants.
@@ -164,7 +166,7 @@ describe("the harvest card", () => {
     render(<HarvestPlantCard plant={young} onStatusChange={vi.fn()} />);
     expect(phaseOf(young)).toBe("growing");
     expect(screen.queryByRole("button", { name: /Mark as harvested/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/0 days of about 4 years grown/)).toBeInTheDocument();
+    expect(screen.queryByText(/of about .* grown/)).not.toBeInTheDocument();
   });
 
   it("says what to do when the harvest time has passed, and offers no Restore once harvested", async () => {

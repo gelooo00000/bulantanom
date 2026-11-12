@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CalendarClock,
   CircleCheck,
-  Hourglass,
   Lightbulb,
   LoaderCircle,
   Sprout,
@@ -23,9 +22,6 @@ import type { BackendPlant, HarvestReport } from "@/lib/api/plants-api";
 import { humanDuration } from "@/lib/duration";
 import {
   daysUntil,
-  growingDays,
-  growthPercent,
-  harvestWindowDays,
   phaseOf,
   timeline,
   type HarvestPhase,
@@ -115,26 +111,9 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
   const date = (iso: string) => formatDisplayDate(iso, dateLocale);
   const { windowStart, windowWidth, todayAt } = timeline(plant);
   const style = PHASE_STYLE[phase];
-  const fullyGrown = phase === "open" || phase === "passed";
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="text-foreground/75 flex items-baseline justify-between gap-2 text-[0.8125rem]">
-        <span>
-          {fullyGrown
-            ? t("harvestCard.fullyGrown")
-            : t("harvestCard.grown", {
-                done: humanDuration(plant.age_days, t),
-                total: humanDuration(growingDays(plant), t),
-              })}
-        </span>
-        {!fullyGrown && (
-          <span className="font-heading text-foreground text-sm tabular-nums">
-            {growthPercent(plant)}%
-          </span>
-        )}
-      </div>
-
       {/* Growing part (the muted track) then the harvest window (green);
           the fill shows how far along today is. */}
       <TimelineBar todayAt={todayAt} fill={style.color}>
@@ -277,14 +256,6 @@ export function HarvestPlantCard({
             <Icon className="size-4 shrink-0" aria-hidden="true" />
             {headline(plant, phase, t, date)}
           </p>
-          {/* Not on a missed harvest: "you can harvest for" is over. */}
-          {phase !== "harvested" && phase !== "passed" && (
-            <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-              <Hourglass className="size-3 shrink-0" aria-hidden="true" />
-              {/* The dates are on the timeline below; this adds how long. */}
-              {t("harvestCard.lasts")} {humanDuration(harvestWindowDays(plant), t)}
-            </p>
-          )}
           {phase === "passed" && (
             <p className="text-risk-high mt-1 text-xs">{t("harvestCard.passedHelp")}</p>
           )}
