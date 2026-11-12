@@ -117,16 +117,20 @@ export function SoilRecommendationForm() {
   }
 
   /**
-   * The sensor's seven readings arrive - every field the form has - so the
-   * recommendation starts straight away.
+   * The sensor's seven readings arrive - every field the form has. They go
+   * into the text fields so the farmer sees them; Get Recommendation sends
+   * them. A reading outside the device's range is flagged beside its field.
    */
-  async function handleSensorReadings(values: Record<MeasuredField, string>) {
-    const merged: Record<string, string> = { ...readings, ...values };
-    setReadings(merged);
-    setFieldErrors({});
+  function handleSensorReadings(values: Record<MeasuredField, string>) {
+    setReadings((prev) => ({ ...prev, ...values }));
+    const errors: Record<string, string> = {};
+    for (const field of SENSOR_FIELDS) {
+      const message = validateReading(field, values[field.key] ?? "", translate);
+      if (message) errors[field.key] = message;
+    }
+    setFieldErrors(errors);
     setUsingSensor(false);
     setSensorNotice(translate("arduino.filledNotice"));
-    await analyze(merged);
   }
 
   async function analyze(values: Record<string, string>) {
@@ -445,7 +449,6 @@ export function SoilRecommendationForm() {
           <ArduinoSensorWizard
             onReadings={handleSensorReadings}
             onCancel={() => setUsingSensor(false)}
-            afterReadings={notesField}
           />
         ) : (
           <>
@@ -484,14 +487,12 @@ export function SoilRecommendationForm() {
           </>
         )}
 
-        {/* In the Arduino flow this box moves under the sensor readings. The
-            submit button below is hidden there: "Use these readings" starts
-            the recommendation itself. */}
+        {/* Hidden while the Arduino steps are open; the sensor fills the
+            fields and the farmer sends them from here. */}
         {!usingSensor && notesField}
 
         {error ? <p className="text-risk-high text-sm">{error}</p> : null}
 
-        {/* The Arduino flow starts the recommendation itself. */}
         {!usingSensor && (
           <Button type="submit" size="lg" className="self-start">
             {t.submit}
