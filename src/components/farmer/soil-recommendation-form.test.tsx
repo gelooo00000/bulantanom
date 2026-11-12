@@ -438,9 +438,7 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(screen.getAllByText("Invalid reading: the sensor returned 0.")).toHaveLength(4);
 
     expect(screen.queryByText(/filled in from the sensor/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Some readings are invalid (Soil Conductivity, Nitrogen (N), Phosphorus (P), Potassium (K)). Please check the sensor connection and read again.",
-    );
+    expect(screen.queryByText(/some readings are invalid/i)).not.toBeInTheDocument();
     expect(screen.getByText("A crop recommendation needs all seven valid readings.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /get crop recommendation/i })).toBeDisabled();
     expect(create).not.toHaveBeenCalled();
@@ -495,7 +493,6 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     await readWithSensor();
 
     expect(screen.getByText(/soil ph must be between 3 and 10/i)).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent(/invalid \(soil ph\)/i);
     expect(screen.getByRole("button", { name: /get crop recommendation/i })).toBeDisabled();
     expect(create).not.toHaveBeenCalled();
   });

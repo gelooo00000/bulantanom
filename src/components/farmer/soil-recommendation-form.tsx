@@ -42,7 +42,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { requestNotificationRefresh } from "@/lib/notification-refresh";
 import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { notesProblem, SOIL_NOTES_MAX } from "@/lib/text-validation";
-import { SENSOR_FIELDS, sensorLabel, useSoilStrings, validateReading } from "@/lib/soil-options";
+import { SENSOR_FIELDS, useSoilStrings, validateReading } from "@/lib/soil-options";
 
 type Status = "idle" | "analyzing" | "done";
 
@@ -507,11 +507,10 @@ export function SoilRecommendationForm() {
     </div>
   );
 
-  // Sensor readings that are 0 or out of range: named in the warning, and
-  // they hold back the recommendation until a Read Again fixes them.
-  const sensorInvalid = sensorDevice !== null ? readingProblems(readings, true) : {};
-  const invalidSensorFields = SENSOR_FIELDS.filter((field) => sensorInvalid[field.key]);
-  const sensorBlocked = invalidSensorFields.length > 0;
+  // A sensor reading that is 0 or out of range holds back the
+  // recommendation until a Read Again fixes it.
+  const sensorBlocked =
+    sensorDevice !== null && Object.keys(readingProblems(readings, true)).length > 0;
 
   return (
     <>
@@ -547,19 +546,9 @@ export function SoilRecommendationForm() {
               </p>
             </div>
 
-            {sensorNotice && invalidSensorFields.length > 0 ? (
-              <div
-                className="border-risk-high/40 bg-risk-high/5 flex items-start gap-2.5 rounded-lg border px-3 py-2.5"
-                role="alert"
-              >
-                <TriangleAlert className="text-risk-high mt-0.5 size-4 shrink-0" />
-                <p className="text-sm">
-                  {translate("arduino.invalidBanner", {
-                    fields: invalidSensorFields.map((field) => sensorLabel(field, translate)).join(", "),
-                  })}
-                </p>
-              </div>
-            ) : sensorNotice ? (
+            {/* Only when every reading is valid; the invalid ones say so
+                under their own fields. */}
+            {sensorNotice && !sensorBlocked ? (
               <p className="text-risk-low flex items-center gap-1.5 text-sm" role="status">
                 <Check className="size-4 shrink-0" />
                 {sensorNotice}

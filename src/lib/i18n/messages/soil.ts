@@ -105,11 +105,6 @@ export const soil = defineMessages({
   "arduino.next": { en: "Next", fil: "Susunod", bik: "Sunod" },
   "arduino.back": { en: "Back", fil: "Bumalik", bik: "Balik" },
   "arduino.readAgain": { en: "Read Again", fil: "Sukatin muli", bik: "Sukaton giraray" },
-  "arduino.invalidBanner": {
-    en: "Some readings are invalid ({fields}). Please check the sensor connection and read again.",
-    fil: "May mga sukat na hindi wasto ({fields}). Pakisuri ang koneksyon ng sensor at sukatin muli.",
-    bik: "May mga sukat na bakong tama ({fields}). Paki-check an koneksyon kan sensor asin sukaton giraray.",
-  },
   "arduino.needsAllValid": {
     en: "A crop recommendation needs all seven valid readings.",
     fil: "Kailangan ng pitong wastong sukat para sa rekomendasyon ng pananim.",
