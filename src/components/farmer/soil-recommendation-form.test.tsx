@@ -390,9 +390,8 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     expect(create.mock.calls[0][0]).not.toHaveProperty("soil_fertility");
   });
 
-  it("sends a 0 N, P or K reading as it is, with no boxes to type over", async () => {
-    readSoilSensor.mockResolvedValue({ ...SENSOR_READING, nitrogen: 0, phosphorus: 0, potassium: 0 });
-    create.mockResolvedValue({ ...analyzed, id: 9, created_at: "2026-11-04T01:00:00Z" });
+  it("holds back a reading with a 0 in it and asks to read again", async () => {
+    readSoilSensor.mockResolvedValue({ ...SENSOR_READING, soil_conductivity: 0, nitrogen: 0, phosphorus: 0, potassium: 0 });
     render(<SoilRecommendationForm />);
     await userEvent.click(screen.getByRole("button", { name: "Use the Arduino sensor" }));
     await userEvent.click(await screen.findByRole("button", { name: /laptop/i }));
@@ -400,16 +399,15 @@ describe("SoilRecommendationForm with the Arduino sensor", () => {
     await userEvent.click(await screen.findByRole("button", { name: /next/i }));
     await userEvent.click(await screen.findByRole("button", { name: /connect by usb/i }));
 
-    // The sensor's readings are shown, not editable, and a 0 is not an error.
+    // The readings are shown, not editable, and the 0s hold back sending.
     expect(await screen.findByText("Your sensor readings")).toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Nitrogen (N)")).not.toBeInTheDocument();
-    expect(screen.queryByText(/must be between/i)).not.toBeInTheDocument();
     expect(screen.getByText(/can't be typed over/i)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /use these readings/i }));
-    await waitFor(() => expect(create).toHaveBeenCalled());
-    expect(create.mock.calls[0][0]).toMatchObject({ nitrogen: 0, phosphorus: 0, potassium: 0 });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/soil conductivity, nitrogen \(n\), phosphorus \(p\), potassium \(k\)/i);
+    expect(alert).toHaveTextContent(/press read again/i);
+    expect(screen.getByRole("button", { name: /use these readings/i })).toBeDisabled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("holds back a reading the sensor got wrong and asks to read again", async () => {

@@ -35,6 +35,9 @@ import { useLanguage, type MessageKey } from "@/lib/i18n";
 import { SENSOR_FIELDS, sensorLabel, validateReading } from "@/lib/soil-options";
 import { cn } from "@/lib/utils";
 
+/** Marks a reading that came back as 0: the probe is not in the soil. */
+const ZERO = "zero";
+
 /** The sign above the form: the feature works with the Arduino sensor. */
 export function ArduinoSensorSign({ onStart }: { onStart: () => void }) {
   const { t } = useLanguage();
@@ -97,11 +100,13 @@ export function ArduinoSensorWizard({
   const [direction, setDirection] = useState(1);
   const [state, setState] = useState<ReadState>({ kind: "ready" });
   // What the sensor sent. Shown read-only: the readings come from the
-  // Arduino, so the farmer cannot type over them. A 0 N, P or K (the probe
-  // not in the soil) is a valid reading and is sent as it is.
+  // Arduino, so the farmer cannot type over them. A 0 in any reading means
+  // the probe is not in the soil, so it holds back "Use these readings".
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const readingOk = Object.keys(errors).length === 0;
+  // The readings that came back as 0, named in the warning.
+  const zeroFields = SENSOR_FIELDS.filter((field) => errors[field.key] === ZERO);
   const usbSupported = isSerialSupported();
   const bluetoothSupported = isBluetoothSupported();
   const onPhone = device === "phone";
@@ -152,8 +157,10 @@ export function ArduinoSensorWizard({
   function validateAll(next: Record<string, string>) {
     const found: Record<string, string> = {};
     for (const field of SENSOR_FIELDS) {
-      const message = validateReading(field, next[field.key] ?? "", t);
+      const raw = (next[field.key] ?? "").trim();
+      const message = validateReading(field, raw, t);
       if (message) found[field.key] = message;
+      else if (Number(raw) === 0) found[field.key] = ZERO;
     }
     return found;
   }
@@ -288,7 +295,13 @@ export function ArduinoSensorWizard({
                 role="alert"
               >
                 <TriangleAlert className="text-risk-high mt-0.5 size-4 shrink-0" />
-                <p className="text-sm">{t("arduino.badReading")}</p>
+                <p className="text-sm">
+                  {zeroFields.length > 0
+                    ? t("arduino.zeroReading", {
+                        fields: zeroFields.map((field) => sensorLabel(field, t)).join(", "),
+                      })
+                    : t("arduino.badReading")}
+                </p>
               </div>
             )}
             {/* Read-only: straight from the sensor. */}
