@@ -535,7 +535,11 @@ def validate_crop_evidence(
         logger.warning("Gemini client could not be created: %s", type(exc).__name__)
         return None
     response, _model = generate_with_fallback(
-        client, contents=parts, config=config, label="evidence validation"
+        client,
+        contents=parts,
+        config=config,
+        label="evidence validation",
+        slow_budget_seconds=settings.GEMINI_EVIDENCE_BUDGET_SECONDS,
     )
 
     if response is None:

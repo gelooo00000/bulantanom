@@ -488,6 +488,14 @@ GEMINI_RISK_TIMEOUT_SECONDS = int(os.environ.get("GEMINI_RISK_TIMEOUT_SECONDS", 
 GEMINI_EVIDENCE_TIMEOUT_SECONDS = int(
     os.environ.get("GEMINI_EVIDENCE_TIMEOUT_SECONDS", "35")
 )
+# Risk evaluation and evidence check: after a model times out (504
+# DEADLINE_EXCEEDED), the next model is still tried while less than this many
+# seconds have passed. Seen live: gemini-3.6-flash timed out twice on a
+# farmer's photo and the check said "could not be verified" while the
+# fallback models were answering in about a second. Sized to allow one more
+# model after one full timeout, not to wait through every model.
+GEMINI_EVIDENCE_BUDGET_SECONDS = int(os.environ.get("GEMINI_EVIDENCE_BUDGET_SECONDS", "40"))
+GEMINI_RISK_BUDGET_SECONDS = int(os.environ.get("GEMINI_RISK_BUDGET_SECONDS", "65"))
 # Soil recommendation sends the whole crop catalog and asks for six populated
 # sections at once. Measured round-trips vary widely — 17s, 32s, 34s and one
 # over 60s — so anything tighter fails intermittently with 504

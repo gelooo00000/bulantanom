@@ -568,7 +568,11 @@ def evaluate_assessment(assessment, language: str = "en") -> dict | None:
         logger.warning("Gemini client could not be created: %s", type(exc).__name__)
         return None
     response, model = generate_with_fallback(
-        client, contents=parts, config=config, label="risk evaluation"
+        client,
+        contents=parts,
+        config=config,
+        label="risk evaluation",
+        slow_budget_seconds=settings.GEMINI_RISK_BUDGET_SECONDS,
     )
 
     if response is None:

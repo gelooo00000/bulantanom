@@ -97,6 +97,13 @@ class RiskEvaluationFallbackTests(TestCase):
         self.assertEqual(models, ["primary-model"])
         self.assertEqual(result["model_name"], "primary-model")
 
+    def test_a_timed_out_primary_falls_back_to_the_next_model(self):
+        result, models = self.evaluate(
+            [_FakeGeminiError(504, "DEADLINE_EXCEEDED"), _FakeResponse(RISK_PAYLOAD)]
+        )
+        self.assertEqual(models, ["primary-model", "fallback-model"])
+        self.assertEqual(result["risk_level"], "LOW")
+
     def test_a_bad_request_does_not_try_another_model(self):
         result, models = self.evaluate([_FakeGeminiError(400, "INVALID_ARGUMENT")])
         self.assertEqual(models, ["primary-model"])
@@ -113,6 +120,17 @@ class EvidenceValidationFallbackTests(TestCase):
         crop = Crop.objects.get(pk="guava")
         result, models = run_with(
             [_FakeGeminiError(429, "RESOURCE_EXHAUSTED"), _FakeResponse(EVIDENCE_PAYLOAD)],
+            lambda: validate_crop_evidence(crop, b"fake-image", "image/jpeg"),
+        )
+        self.assertEqual(models, ["primary-model", "fallback-model"])
+        self.assertTrue(result["evidence_valid"])
+
+    def test_a_timed_out_primary_falls_back_to_the_next_model(self):
+        # Seen live: 504 DEADLINE_EXCEEDED on gemini-3.6-flash, twice, and the
+        # farmer read "could not be verified" while the fallback was healthy.
+        crop = Crop.objects.get(pk="guava")
+        result, models = run_with(
+            [_FakeGeminiError(504, "DEADLINE_EXCEEDED"), _FakeResponse(EVIDENCE_PAYLOAD)],
             lambda: validate_crop_evidence(crop, b"fake-image", "image/jpeg"),
         )
         self.assertEqual(models, ["primary-model", "fallback-model"])
