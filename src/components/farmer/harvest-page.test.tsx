@@ -133,14 +133,14 @@ describe("the harvest card", () => {
     age_days: 95,
   } as Partial<BackendPlant>);
 
-  it("tells the farmer to harvest now, and how to tell it is ripe", () => {
+  it("tells the farmer to harvest now", () => {
     render(<HarvestPlantCard plant={ready} />);
     expect(screen.getByText(/Harvest now, until/)).toBeInTheDocument();
     // No "Fully grown" or "You can harvest for" lines on the card.
     expect(screen.queryByText("Fully grown")).not.toBeInTheDocument();
     expect(screen.queryByText(/You can harvest for/)).not.toBeInTheDocument();
-    // The tip stays hidden behind the light bulb until pointed at.
-    expect(screen.queryByText(/creamy yellow/)).not.toBeInTheDocument();
+    // The time status sits behind the light bulb, not in a corner badge.
+    expect(screen.queryByText(/Ready now · /)).not.toBeInTheDocument();
     // To this plant's card on My Plants.
     expect(screen.getByRole("link", { name: /View plant/ })).toHaveAttribute(
       "href",
@@ -148,10 +148,19 @@ describe("the harvest card", () => {
     );
   });
 
-  it("shows the ripeness tip when the light bulb is pointed at", async () => {
+  it("shows the time status, not a ripeness tip, when the light bulb is pointed at", async () => {
     render(<HarvestPlantCard plant={ready} />);
-    await userEvent.hover(screen.getByRole("button", { name: "How to tell it is ready" }));
-    expect(await screen.findByText(/creamy yellow/)).toBeInTheDocument();
+    await userEvent.hover(screen.getByRole("button", { name: /Ready now · / }));
+    expect(await screen.findByText(/Ready now · /)).toBeInTheDocument();
+    expect(screen.queryByText("How to tell it is ready")).not.toBeInTheDocument();
+    expect(screen.queryByText(/creamy yellow/)).not.toBeInTheDocument();
+  });
+
+  it("puts \"to go\" behind the light bulb on a plant that is still growing", async () => {
+    const young = plant({ planting_date: isoIn(0), expected_harvest_start: isoIn(28), expected_harvest_end: isoIn(50) });
+    render(<HarvestPlantCard plant={young} />);
+    await userEvent.hover(screen.getByRole("button", { name: /about 4 weeks to go/ }));
+    expect(await screen.findByText("about 4 weeks to go")).toBeInTheDocument();
   });
 
   it("marks a ready plant as harvested", async () => {

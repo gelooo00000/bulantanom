@@ -15,7 +15,7 @@ import {
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { CARD_FOOTER, CardPill, CropTile, FarmCard, TimelineBar } from "@/components/farmer/farm-card";
+import { CARD_FOOTER, CropTile, FarmCard, TimelineBar } from "@/components/farmer/farm-card";
 import { CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/components/ui/date-picker";
 import type { BackendPlant, HarvestReport } from "@/lib/api/plants-api";
@@ -142,17 +142,17 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
 }
 
 /**
- * "How to tell it is ready", behind a light bulb so it takes no room on
- * the card: it pops up when pointed at, or when tapped on a phone.
+ * The card's time status ("about 4 weeks to go", "Ready now · 2 weeks left"),
+ * behind a light bulb so it takes no room on the card: it pops up when
+ * pointed at, or when tapped on a phone.
  */
-function ReadyTip({ tip }: { tip: string }) {
-  const { t } = useLanguage();
+function StatusTip({ label }: { label: string }) {
   return (
     <Popover.Root>
       <Popover.Trigger
         openOnHover
         delay={100}
-        aria-label={t("harvestCard.tipTitle")}
+        aria-label={label}
         className="text-risk-medium hover:bg-risk-medium/15 data-[popup-open]:bg-risk-medium/15 flex size-6 shrink-0 items-center justify-center rounded-full transition-colors"
       >
         <Lightbulb className="size-4" aria-hidden="true" />
@@ -162,9 +162,8 @@ function ReadyTip({ tip }: { tip: string }) {
           <Popover.Popup className="bg-popover text-popover-foreground border-border max-w-64 rounded-lg border px-3 py-2.5 text-[0.8125rem] shadow-lg">
             <p className="flex items-center gap-1.5 font-medium">
               <Lightbulb className="text-risk-medium size-3.5" aria-hidden="true" />
-              {t("harvestCard.tipTitle")}
+              {label}
             </p>
-            <p className="text-muted-foreground mt-1">{tip}</p>
           </Popover.Popup>
         </Popover.Positioner>
       </Popover.Portal>
@@ -188,9 +187,6 @@ export function HarvestPlantCard({
   const phase = phaseOf(plant);
   const style = PHASE_STYLE[phase];
   const Icon = style.icon;
-  const tipKey = `harvestTip.${plant.crop.id}` as MessageKey;
-  const tip = t(tipKey);
-  const hasTip = tip !== tipKey;
   const canMark = phase === "open" || phase === "passed";
 
   async function change(status: "GROWING" | "HARVESTED") {
@@ -242,10 +238,7 @@ export function HarvestPlantCard({
             </div>
           </div>
           <div className="flex max-w-[55%] shrink-0 items-start gap-1.5">
-            <CardPill icon={Icon} className={style.pill}>
-              {phaseLabel(plant, phase, t)}
-            </CardPill>
-            {hasTip && phase !== "harvested" && <ReadyTip tip={tip} />}
+            <StatusTip label={phaseLabel(plant, phase, t)} />
           </div>
         </div>
 
