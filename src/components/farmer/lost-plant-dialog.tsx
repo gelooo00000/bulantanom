@@ -90,9 +90,6 @@ export function LostPlantDialog({
                 <Sprout className="text-muted-foreground size-4.5 shrink-0" aria-hidden="true" />
                 {t("lost.title")}
               </Dialog.Title>
-              <Dialog.Description className="text-muted-foreground mt-0.5 text-sm">
-                {t("lost.intro", { name: plant.display_name })} {t("lost.total")}
-              </Dialog.Description>
             </div>
           </div>
 

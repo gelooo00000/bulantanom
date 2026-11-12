@@ -181,7 +181,9 @@ describe("a risky plant's card", () => {
     // Reading the hint does not choose the cause.
     expect(within(form).getByRole("button", { name: /^Calamity/ })).toHaveAttribute("aria-pressed", "false");
     await userEvent.keyboard("{Escape}");
-    expect(within(form).getByText(/Total Crop Loss/)).toBeInTheDocument();
+    // No "Sorry about…" or "Total Crop Loss" sentence under the title.
+    expect(within(form).queryByText(/Total Crop Loss/)).not.toBeInTheDocument();
+    expect(within(form).queryByText(/Sorry about/)).not.toBeInTheDocument();
     await userEvent.click(within(form).getByRole("button", { name: /^Calamity/ }));
     await userEvent.click(within(form).getByRole("button", { name: "Today" }));
     await userEvent.click(within(form).getByRole("button", { name: "Report lost plant" }));
