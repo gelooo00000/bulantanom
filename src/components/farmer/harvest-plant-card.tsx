@@ -23,8 +23,6 @@ import type { BackendPlant, HarvestReport } from "@/lib/api/plants-api";
 import { humanDuration } from "@/lib/duration";
 import {
   daysUntil,
-  growingDays,
-  growthPercent,
   harvestWindowDays,
   phaseOf,
   timeline,
@@ -147,14 +145,13 @@ function Timeline({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }
 
 /**
  * The card's time status ("about 4 weeks to go", "Ready now · 2 weeks left"),
- * with how far the plant has grown and how long it can be harvested for,
+ * with how long it can be harvested for,
  * behind a light bulb so it takes no room on the card: it pops up when
  * pointed at, or when tapped on a phone.
  */
 function StatusTip({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase }) {
   const { t } = useLanguage();
   const label = phaseLabel(plant, phase, t);
-  const fullyGrown = phase === "open" || phase === "passed" || phase === "harvested";
   return (
     <Popover.Root>
       <Popover.Trigger
@@ -171,15 +168,6 @@ function StatusTip({ plant, phase }: { plant: BackendPlant; phase: HarvestPhase 
             <p className="flex items-center gap-1.5 font-medium">
               <Lightbulb className="text-risk-medium size-3.5 shrink-0" aria-hidden="true" />
               {label}
-            </p>
-            <p className="text-muted-foreground flex items-center gap-1.5">
-              <Sprout className="size-3.5 shrink-0" aria-hidden="true" />
-              {fullyGrown
-                ? t("harvestCard.fullyGrown")
-                : `${t("harvestCard.grown", {
-                    done: humanDuration(plant.age_days, t),
-                    total: humanDuration(growingDays(plant), t),
-                  })} · ${growthPercent(plant)}%`}
             </p>
             {/* Not once the harvest time is over. */}
             {phase !== "harvested" && phase !== "passed" && (
