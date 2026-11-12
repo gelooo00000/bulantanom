@@ -21,7 +21,9 @@ import { plantTitle } from "@/lib/plant-summary";
  * reach it would squash the months that matter into nothing. Those are
  * counted once, underneath, rather than drawn.
  *
- * The panel opens on the current month's plants. Pointing at another month
+ * The panel opens on the first month that has plants to harvest (this
+ * month when something is ready), every time the page is opened, so there
+ * is always something to read without pointing. Pointing at another month
  * reveals its plants in the same fixed-height panel — the same
  * pattern, and the same fixed height, as the LGU charts, so revealing a
  * month cannot resize the page under the pointer.
@@ -50,11 +52,11 @@ export function HarvestCalendar({
 }) {
   const { t, dateLocale } = useLanguage();
   const [hovered, setHovered] = useState<number | null>(null);
-  // Opens on this month, so its plants show without pointing at anything.
-  const [pinned, setPinned] = useState<number | null>(0);
-  const shownIndex = hovered ?? pinned;
+  // A month the farmer tapped; until then (or after tapping it again) the
+  // panel shows the first month with plants in it.
+  const [chosen, setChosen] = useState<number | null>(null);
 
-  const { buckets, total, later, readyNow, peak } = useMemo(() => {
+  const { buckets, total, later, readyNow, peak, firstDue } = useMemo(() => {
     const first = startOfMonth(today);
     const buckets = Array.from({ length: MONTHS_AHEAD }, (_, i) => ({
       month: new Date(first.getFullYear(), first.getMonth() + i, 1),
@@ -84,10 +86,14 @@ export function HarvestCalendar({
       (best, b, i) => (b.plants.length > buckets[best].plants.length ? i : best),
       0,
     );
-    return { buckets, total, later, readyNow, peak };
+    const firstDue = buckets.findIndex((b) => b.plants.length > 0);
+    return { buckets, total, later, readyNow, peak, firstDue: firstDue === -1 ? 0 : firstDue };
     // `today` only varies in tests; the page passes the real date once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plants]);
+
+  const pinned = chosen ?? firstDue;
+  const shownIndex = hovered ?? pinned;
 
   const monthLabel = (month: Date, long: boolean) =>
     month.toLocaleDateString(dateLocale, {
@@ -137,7 +143,7 @@ export function HarvestCalendar({
         axisEvery={2}
         height={190}
         onHoverIndex={setHovered}
-        onSelectIndex={(i) => setPinned((current) => (current === i ? null : i))}
+        onSelectIndex={(i) => setChosen((current) => (current === i ? null : i))}
         selectedIndex={pinned}
       />
 

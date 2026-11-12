@@ -90,10 +90,25 @@ describe("the harvest calendar", () => {
     ).toBeInTheDocument();
   });
 
-  it("opens on the current month's plants", () => {
+  it("opens on the first month that has plants to harvest", () => {
     render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
-    expect(screen.getByText(/Ready in September 2026 · 0 plants/)).toBeInTheDocument();
+    expect(screen.getByText(/Ready in December 2026 · 1 plant/)).toBeInTheDocument();
+    expect(screen.getByText("Corn")).toBeInTheDocument();
     expect(screen.queryByText(/Point at a month/)).not.toBeInTheDocument();
+  });
+
+  it("goes back to that month after pointing at another one", async () => {
+    const user = userEvent.setup();
+    render(<HarvestCalendar plants={[plant({}), corn]} today={TODAY} />);
+    await user.hover(screen.getByRole("button", { name: /October 2026/ }));
+    expect(screen.getByText(/Ready in October 2026 · 0 plants/)).toBeInTheDocument();
+    await user.unhover(screen.getByRole("button", { name: /October 2026/ }));
+    expect(screen.getByText(/Ready in December 2026 · 1 plant/)).toBeInTheDocument();
+  });
+
+  it("opens on this month when nothing is due in the next 12 months", () => {
+    render(<HarvestCalendar plants={[plant({})]} today={TODAY} />);
+    expect(screen.getByText(/Ready in September 2026 · 0 plants/)).toBeInTheDocument();
   });
 
   it("names the plants ready in a month when that month is pointed at", async () => {
