@@ -55,8 +55,10 @@ const PAGE_SIZE: Record<HarvestPhase, number> = {
   approaching: 4,
   passed: 4,
   growing: 6,
-  harvested: 6,
+  harvested: 4,
 };
+/** Lost plants per page in the Archive. */
+const LOST_PAGE_SIZE = 6;
 /** Tasks in "What to do now" before "See more". */
 const TODO_LIMIT = 3;
 
@@ -498,13 +500,16 @@ export default function HarvestPage() {
                       ({lost.length})
                     </span>
                   </h2>
-                  <ul aria-label={t("lost.section")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {lost.map((plant) => (
-                      <li key={plant.id} className="min-w-0">
-                        <LostPlantCard plant={plant} />
-                      </li>
-                    ))}
-                  </ul>
+                  <SlidePager
+                    items={lost}
+                    pageSize={LOST_PAGE_SIZE}
+                    getKey={(plant) => plant.id}
+                    listLabel={t("lost.section")}
+                    listClassName="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                    itemClassName="min-w-0"
+                    frameClassName="-m-1 p-1"
+                    renderItem={(plant) => <LostPlantCard plant={plant} />}
+                  />
                 </section>
               )}
             </>
