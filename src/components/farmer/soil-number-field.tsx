@@ -63,13 +63,9 @@ export function SoilNumberField({
           {field.unit}
         </span>
       </div>
-      {error ? (
+      {error && (
         <p id={errorId} className="text-destructive text-xs">
           {error}
-        </p>
-      ) : (
-        <p className="text-muted-foreground text-xs">
-          {t("sensor.range", { min: field.min, max: field.max, unit: field.unit })}
         </p>
       )}
     </div>

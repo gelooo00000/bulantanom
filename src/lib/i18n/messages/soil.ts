@@ -447,11 +447,6 @@ export const soil = defineMessages({
   "sensor.nitrogen": { en: "Nitrogen (N)", fil: "Nitrogen (N)", bik: "Nitrogen (N)" },
   "sensor.phosphorus": { en: "Phosphorus (P)", fil: "Phosphorus (P)", bik: "Phosphorus (P)" },
   "sensor.potassium": { en: "Potassium (K)", fil: "Potassium (K)", bik: "Potassium (K)" },
-  "sensor.range": {
-    en: "{min} to {max} {unit}",
-    fil: "{min} hanggang {max} {unit}",
-    bik: "{min} sagkod {max} {unit}",
-  },
   "sensor.required": {
     en: "{label} is required.",
     fil: "Kailangan ang {label}.",
