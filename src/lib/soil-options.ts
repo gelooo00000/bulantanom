@@ -90,7 +90,6 @@ export type SensorField = {
   max: number;
   /** 1 for whole-number readings, finer where the sensor reports decimals. */
   step: number;
-  placeholder: string;
 };
 
 export const SENSOR_FIELDS: SensorField[] = [
@@ -101,7 +100,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     min: -40,
     max: 80,
     step: 0.1,
-    placeholder: "28.5",
   },
   {
     key: "soil_moisture",
@@ -110,7 +108,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     min: 0,
     max: 100,
     step: 0.1,
-    placeholder: "65",
   },
   {
     key: "soil_conductivity",
@@ -119,7 +116,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     min: 0,
     max: 20000,
     step: 1,
-    placeholder: "850",
   },
   {
     key: "soil_ph",
@@ -128,7 +124,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     min: 3,
     max: 10,
     step: 0.1,
-    placeholder: "6.5",
   },
   {
     key: "nitrogen",
@@ -137,7 +132,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     min: 0,
     max: 1999,
     step: 1,
-    placeholder: "120",
   },
   {
     key: "phosphorus",
@@ -146,7 +140,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     min: 0,
     max: 1999,
     step: 1,
-    placeholder: "80",
   },
   {
     key: "potassium",
@@ -155,7 +148,6 @@ export const SENSOR_FIELDS: SensorField[] = [
     min: 0,
     max: 1999,
     step: 1,
-    placeholder: "150",
   },
 ];
 

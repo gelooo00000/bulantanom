@@ -43,7 +43,6 @@ export function SoilNumberField({
           min={field.min}
           max={field.max}
           step={field.step}
-          placeholder={field.placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           readOnly={readOnly}
