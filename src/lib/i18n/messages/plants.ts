@@ -168,28 +168,4 @@ export const plants = defineMessages({
     fil: "Ipinapakita ng bawat card ang pananim, ang uri nito, kung lumalaki o nakaplano, at ang araw ng pagtatanim.",
     bik: "Ipinapahiling san kada card an tanom, an klase kaini, kun nagdadakula o nakaplano, asin an adlaw san pagtanom.",
   },
-  "plantsGuide.assessTitle": { en: "Check it every week", fil: "Suriin linggo-linggo", bik: "Susihon kada semana" },
-  "plantsGuide.assessBody": {
-    en: "Open the plant and tap “Start Weekly Assessment”. Answer the questions and take a clear photo of the plant. The first check opens 7 days after planting, then once every 7 days.",
-    fil: "Buksan ang tanim at i-tap ang “Simulan ang Lingguhang Pagsusuri”. Sagutin ang mga tanong at kumuha ng malinaw na litrato ng tanim. Bubukas ang unang suri 7 araw matapos itanim, at pagkatapos ay isang beses kada 7 araw.",
-    bik: "Buksan an tanom asin i-tap an “Poonan an Pagsusi kada Semana”. Simbagon an mga hapot asin magkua san malinaw na litrato san tanom. Mabukas an enot na susi 7 adlaw pakatanom, dangan sarong beses kada 7 adlaw.",
-  },
-  "plantsGuide.riskTitle": { en: "Act on the risk result", fil: "Kumilos ayon sa resulta", bik: "Maghiro segun sa resulta" },
-  "plantsGuide.riskBody": {
-    en: "After each check the AI rates the plant Low, Medium or High risk, or “Too early to tell”, and lists what to do next. Follow the advice, and ask your LGU agriculturist when the risk is High.",
-    fil: "Pagkatapos ng bawat suri, binibigyan ng AI ang tanim ng Mababa, Katamtaman o Mataas na panganib, o “Masyado pang maaga”, at inililista ang susunod na gagawin. Sundin ang payo, at magtanong sa iyong LGU agriculturist kapag Mataas ang panganib.",
-    bik: "Pakatapos san kada susi, tinatawan san AI an tanom san Hababa, Tunga-tunga o Hataas na peligro, o “Amay pa para masabi”, asin inlilista an sunod na gibohon. Sunudon an tambag, asin maghapot sa imo LGU agriculturist kun Hataas an peligro.",
-  },
-  "plantsGuide.harvestTitle": { en: "Harvest on time", fil: "Umani sa tamang oras", bik: "Mag-ani sa tamang oras" },
-  "plantsGuide.harvestBody": {
-    en: "Watch the harvest dates on the card and on the Harvest page. The card turns “Ready for harvest” when the harvest window opens.",
-    fil: "Bantayan ang mga petsa ng ani sa card at sa pahina ng Ani. Magiging “Handa nang anihin” ang card kapag nagbukas na ang panahon ng ani.",
-    bik: "Bantayan an mga petsa san ani sa card asin sa pahina san Ani. Magigin “Pwede na anihon” an card kun nagbukas na an panahon san ani.",
-  },
-  "plantsGuide.removeTitle": { en: "Remove old plants", fil: "Alisin ang lumang tanim", bik: "Paraon an daan na tanom" },
-  "plantsGuide.removeBody": {
-    en: "Tap “Select”, tick the plants you no longer grow, then tap “Delete”. You will be asked to confirm first.",
-    fil: "I-tap ang “Pumili”, piliin ang mga tanim na hindi mo na pinapalago, saka i-tap ang “Burahin”. Tatanungin ka muna bago ito burahin.",
-    bik: "I-tap an “Pili”, pilion an mga tanom na dili mo na pinapadakula, dangan i-tap an “Paraon”. Hahaputon ka muna bago ini paraon.",
-  },
 });

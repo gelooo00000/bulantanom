@@ -154,8 +154,8 @@ describe("My Plants guide", () => {
     const guide = await screen.findByRole("heading", { name: "How to use My Plants" });
     expect(guide).toBeInTheDocument();
     expect(screen.getByText("Add your plant")).toBeInTheDocument();
-    expect(screen.getByText("Check it every week")).toBeInTheDocument();
-    expect(screen.getByText(/tap “Start Weekly Assessment”/)).toBeInTheDocument();
+    expect(screen.getByText("Read the plant card")).toBeInTheDocument();
+    expect(screen.queryByText("Check it every week")).not.toBeInTheDocument();
   });
 
   it("hides on request, remembers it, and comes back from “How to use”", async () => {

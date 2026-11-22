@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Camera,
-  CircleCheck,
-  type LucideIcon,
-  Plus,
-  ShieldCheck,
-  Tag,
-  Wheat,
-  X,
-} from "lucide-react";
+import { type LucideIcon, Plus, Tag, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,9 +8,8 @@ import { type MessageKey, useLanguage } from "@/lib/i18n";
 import { CARD_OUTLINE } from "@/lib/crop-colors";
 
 /**
- * Step-by-step directions for the My Plants page, in the order a farmer
- * meets them: add a plant, read its card, assess it each week, act on the
- * risk reading, harvest, and tidy up.
+ * Step-by-step directions for the My Plants page: add a plant, then read
+ * its card.
  *
  * Every step names the button the farmer will actually see, in their own
  * language, so the guide reads as "tap this" rather than as a description
@@ -29,10 +19,6 @@ import { CARD_OUTLINE } from "@/lib/crop-colors";
 const STEPS: { icon: LucideIcon; title: MessageKey; body: MessageKey }[] = [
   { icon: Plus, title: "plantsGuide.addTitle", body: "plantsGuide.addBody" },
   { icon: Tag, title: "plantsGuide.cardTitle", body: "plantsGuide.cardBody" },
-  { icon: Camera, title: "plantsGuide.assessTitle", body: "plantsGuide.assessBody" },
-  { icon: ShieldCheck, title: "plantsGuide.riskTitle", body: "plantsGuide.riskBody" },
-  { icon: Wheat, title: "plantsGuide.harvestTitle", body: "plantsGuide.harvestBody" },
-  { icon: CircleCheck, title: "plantsGuide.removeTitle", body: "plantsGuide.removeBody" },
 ];
 
 export function MyPlantsGuide({ onClose }: { onClose: () => void }) {
