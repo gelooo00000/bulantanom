@@ -255,4 +255,53 @@ export const pages = defineMessages({
     fil: "Bumalik sa Antas ng Panganib",
     bik: "Balik sa Tanda san Peligro",
   },
+  // How to use the Risk Indicator page: risk readings, then a plant that died.
+  "riskGuide.title": {
+    en: "How to use the Risk Indicator",
+    fil: "Paano gamitin ang Antas ng Panganib",
+    bik: "Paano gamiton an Tanda san Peligro",
+  },
+  "riskGuide.intro": {
+    en: "Check your plants' risk every week, and report a plant that died.",
+    fil: "Suriin ang panganib ng iyong mga tanim linggo-linggo, at iulat ang tanim na namatay.",
+    bik: "Susihon an peligro san saimong mga tanom kada semana, asin i-report an tanom na nagadan.",
+  },
+  "riskGuide.riskSection": { en: "Risk indicator", fil: "Antas ng panganib", bik: "Tanda san peligro" },
+  "riskGuide.assessTitle": { en: "Check it every week", fil: "Suriin linggo-linggo", bik: "Susihon kada semana" },
+  "riskGuide.assessBody": {
+    en: "Tap “Assess now” on a plant's card, answer the questions and take a clear photo. The first check opens 7 days after planting, then once every 7 days.",
+    fil: "I-tap ang “Suriin ngayon” sa card ng tanim, sagutin ang mga tanong at kumuha ng malinaw na litrato. Bubukas ang unang suri 7 araw matapos itanim, at pagkatapos ay isang beses kada 7 araw.",
+    bik: "I-tap an “Susiha yana” sa card san tanom, simbagon an mga hapot asin magkua san malinaw na litrato. Mabukas an enot na susi 7 adlaw pakatanom, dangan sarong beses kada 7 adlaw.",
+  },
+  "riskGuide.levelTitle": { en: "Read the risk level", fil: "Basahin ang antas ng panganib", bik: "Basahon an tanda san peligro" },
+  "riskGuide.levelBody": {
+    en: "Each card shows Low, Medium or High Risk, or “Too early to tell”. Tap “Details” to see what to do next, and ask your LGU agriculturist when the risk is High.",
+    fil: "Ipinapakita ng bawat card ang Mababa, Katamtaman o Mataas na Panganib, o “Masyado pang maaga”. I-tap ang “Detalye” para makita ang susunod na gagawin, at magtanong sa iyong LGU agriculturist kapag Mataas ang panganib.",
+    bik: "Ipinapahiling san kada card an Hababa, Tunga-tunga o Hataas na Peligro, o “Amay pa para masabi”. I-tap an “Detalye” para mahiling an sunod na gibohon, asin maghapot sa imo LGU agriculturist kun Hataas an peligro.",
+  },
+  "riskGuide.todoTitle": { en: "See what to do now", fil: "Tingnan ang gagawin ngayon", bik: "Hilingon an gigibuhon ngunyan" },
+  "riskGuide.todoBody": {
+    en: "The list button beside the page title shows which plants need you first. The red number is how many.",
+    fil: "Ipinapakita ng button na listahan sa tabi ng pamagat kung aling mga tanim ang dapat unahin. Ang pulang numero ay kung ilan sila.",
+    bik: "Ipinapahiling san button na listahan sa gilid san titulo kun arin na mga tanom an dapat unahon. An pulang numero iyo kun pira sinda.",
+  },
+  "riskGuide.diedSection": { en: "If a plant dies", fil: "Kapag namatay ang tanim", bik: "Kun nagadan an tanom" },
+  "riskGuide.diedOpenTitle": { en: "Tap “Plant died?”", fil: "I-tap ang “Namatay ang tanim?”", bik: "I-tap an “Nagadan an tanom?”" },
+  "riskGuide.diedOpenBody": {
+    en: "Find the plant's card and tap the red “Plant died?” button. Do this instead of deleting the plant.",
+    fil: "Hanapin ang card ng tanim at i-tap ang pulang button na “Namatay ang tanim?”. Gawin ito sa halip na burahin ang tanim.",
+    bik: "Hanapon an card san tanom asin i-tap an pulang button na “Nagadan an tanom?”. Gibohon ini imbes na paraon an tanom.",
+  },
+  "riskGuide.diedFormTitle": { en: "Tell us what happened", fil: "Sabihin ang nangyari", bik: "Sabihon an nangyari" },
+  "riskGuide.diedFormBody": {
+    en: "Choose what happened and when you noticed. Add a photo or a note if you can, then tap “Report lost plant”.",
+    fil: "Piliin ang nangyari at kung kailan mo napansin. Magdagdag ng litrato o tala kung kaya, saka i-tap ang “Iulat ang namatay”.",
+    bik: "Pilion an nangyari asin kun nuarin mo nahiling. Magdugang san litrato o nota kun kaya, dangan i-tap an “I-report an nagadan”.",
+  },
+  "riskGuide.diedArchiveTitle": { en: "Find it in the Archive", fil: "Makikita ito sa Archive", bik: "Mahihiling ini sa Archive" },
+  "riskGuide.diedArchiveBody": {
+    en: "The plant moves to the Archive under Lost. Its checks are kept, so the LGU can learn from it.",
+    fil: "Malilipat ang tanim sa Archive sa ilalim ng Namatay. Itatago ang mga pagsusuri nito para may matutunan ang LGU.",
+    bik: "Maiiba an tanom sa Archive sa irarom san Nagadan. Itatago an mga pagsusi kaini tanganing may manudan an LGU.",
+  },
 });

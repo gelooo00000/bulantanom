@@ -23,8 +23,9 @@ import {
   TriangleAlert,
   Wheat,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LostPlantDialog } from "@/components/farmer/lost-plant-dialog";
+import { RiskIndicatorGuide } from "@/components/farmer/risk-indicator-guide";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { DonutChart } from "@/components/lgu/risk-pie";
 import type { BadgeLevel } from "@/components/risk/risk-badge";
@@ -96,6 +97,25 @@ function groupOf(latest: BackendAssessment | null): Group {
   return level === "inconclusive" ? "early" : "none";
 }
 
+const GUIDE_HIDDEN_KEY = "bulantanom_risk_guide_hidden";
+
+function guideHidden(): boolean {
+  try {
+    return window.localStorage.getItem(GUIDE_HIDDEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberGuideHidden(hidden: boolean) {
+  try {
+    if (hidden) window.localStorage.setItem(GUIDE_HIDDEN_KEY, "1");
+    else window.localStorage.removeItem(GUIDE_HIDDEN_KEY);
+  } catch {
+    // Storage blocked: the choice lasts until the page is left.
+  }
+}
+
 export default function RiskIndicatorPage() {
   const { data, loading, error, refetch } = useAuthedQuery(fetchFarmerRisk);
   const { t } = useLanguage();
@@ -103,6 +123,16 @@ export default function RiskIndicatorPage() {
   // The plant whose loss is being reported, and the line said afterwards.
   const [losing, setLosing] = useState<BackendPlant | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // null until the browser's storage is read, so nothing flashes.
+  const [showGuide, setShowGuide] = useState<boolean | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a one-time read of browser-only storage
+    setShowGuide(!guideHidden());
+  }, []);
+  function toggleGuide(show: boolean) {
+    setShowGuide(show);
+    rememberGuideHidden(!show);
+  }
 
   async function submitLoss(answers: LossAnswers) {
     if (!losing || !accessToken) throw new Error("Not signed in.");
@@ -137,7 +167,17 @@ export default function RiskIndicatorPage() {
         title={t("riskPage.title")}
         description={t("riskPage.description")}
         titleAside={entries.length > 0 ? <RiskTodoButton entries={entries} /> : undefined}
+        action={
+          showGuide === false ? (
+            <Button variant="ghost" className="h-11 px-3" onClick={() => toggleGuide(true)}>
+              <CircleHelp className="size-4" />
+              {t("plantsGuide.open")}
+            </Button>
+          ) : undefined
+        }
       />
+
+      {showGuide && <RiskIndicatorGuide onClose={() => toggleGuide(false)} />}
 
       {losing && (
         <LostPlantDialog plant={losing} onCancel={() => setLosing(null)} onSubmit={submitLoss} />
