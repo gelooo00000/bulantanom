@@ -57,7 +57,7 @@ Child templates fill:
           <div style="font-family:'Lilita One','Arial Rounded MT Bold','Nunito',Arial,sans-serif;font-size:18px;color:#ffffff;letter-spacing:0.01em;">BulanTanom</div>
           <div style="font-size:12px;color:#8be883;margin-top:2px;font-weight:700;">One farm. Smarter decisions.</div>
           <p style="margin:14px 0 0;font-size:12px;line-height:1.7;color:rgba(255,255,255,0.68);">
-            You received this because your BulanTanom account changed status.
+            {% block footer_reason %}You received this because your BulanTanom account changed status.{% endblock %}
             BulanTanom will never ask for your password by email.
             If you did not expect this message, contact your farm administrator.
           </p>

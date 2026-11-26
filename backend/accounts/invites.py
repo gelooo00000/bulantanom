@@ -78,6 +78,7 @@ def send_invite(user) -> None:
     days = max(1, settings.PASSWORD_RESET_TIMEOUT // (24 * 60 * 60))
     context = {
         "name": user.get_full_name() or user.email,
+        "first_name": user.first_name,
         "email": user.email,
         "set_password_url": invite_link(user),
         "days": days,
