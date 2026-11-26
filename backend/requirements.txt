@@ -44,7 +44,7 @@ sqlparse==0.6.0
 tenacity==9.1.4
 typing-inspection==0.4.4
 typing_extensions==4.16.0
-tzdata==2026.3
+tzdata==2026.6
 urllib3==2.8.0
 websockets==16.1.1
 whitenoise==6.12.0
