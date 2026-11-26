@@ -10,7 +10,11 @@ from . import lgu_views, views
 
 # Mounted at /api/auth/
 auth_urlpatterns = [
-    path("farmer/signup/", views.FarmerSignupView.as_view(), name="farmer-signup"),
+    path(
+        "farmer/set-password/",
+        views.FarmerSetPasswordView.as_view(),
+        name="farmer-set-password",
+    ),
     path("farmer/login/", views.FarmerLoginView.as_view(), name="farmer-login"),
     path("farmer/verify/", views.FarmerVerifyView.as_view(), name="farmer-verify"),
     path("farmer/resend-code/", views.FarmerResendCodeView.as_view(), name="farmer-resend-code"),
@@ -38,6 +42,12 @@ auth_urlpatterns = [
 # Mounted at /api/admin/ — every route below is IsAdmin-guarded.
 admin_urlpatterns = [
     path("users/", views.AdminUserListView.as_view(), name="admin-users"),
+    path("farmers/", views.AdminCreateFarmerView.as_view(), name="admin-create-farmer"),
+    path(
+        "farmers/<int:user_id>/resend-invite/",
+        views.resend_farmer_invite,
+        name="admin-resend-farmer-invite",
+    ),
     path("farmers/<int:user_id>/approve/", views.approve_farmer, name="admin-approve-farmer"),
     path("farmers/<int:user_id>/reject/", views.reject_farmer, name="admin-reject-farmer"),
     path("farmers/<int:user_id>/suspend/", views.suspend_farmer, name="admin-suspend-farmer"),

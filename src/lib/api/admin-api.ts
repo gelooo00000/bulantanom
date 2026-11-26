@@ -108,6 +108,27 @@ export function deleteAccount(
 }
 
 /**
+ * Creates a Farmer account from a name and email. The server emails the
+ * Farmer a link to choose their own password; no password is sent here.
+ */
+export function createFarmer(
+  accessToken: string,
+  payload: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    gender?: "MALE" | "FEMALE" | "UNDISCLOSED";
+  },
+): Promise<BackendUser> {
+  return apiFetch("/admin/farmers/", { method: "POST", body: payload, accessToken });
+}
+
+/** Emails a new set-password link to a Farmer who has not set one yet. */
+export function resendFarmerInvite(accessToken: string, userId: number): Promise<{ detail: string }> {
+  return apiFetch(`/admin/farmers/${userId}/resend-invite/`, { method: "POST", accessToken });
+}
+
+/**
  * Creates an LGU Officer. There is no public registration path for this
  * role — the endpoint is IsAdmin-guarded and sets role and account status
  * server-side, so nothing here is decided by the browser.

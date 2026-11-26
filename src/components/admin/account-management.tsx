@@ -3,6 +3,8 @@
 import {
   Ban,
   CalendarDays,
+  MailCheck,
+  Send,
   CircleCheck,
   ArrowDownUp,
   Clock,
@@ -26,6 +28,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { AdminHero, HeroStat } from "@/components/admin/admin-hero";
 import { INK, PALETTE, gradient, tint, type Swatch } from "@/components/admin/palette";
+import { CreateFarmerDialog } from "@/components/admin/create-farmer-dialog";
 import { CreateOfficerDialog } from "@/components/admin/create-officer-dialog";
 import { HorizontalBars, type BarRow } from "@/components/lgu/dashboard-charts";
 import { lastActiveLabel } from "@/components/lgu/farmer-directory";
@@ -40,6 +43,7 @@ import {
   deleteAccount,
   listUsers,
   reactivateOfficer,
+  resendFarmerInvite,
   setAccountGender,
   suspendFarmer,
   suspendOfficer,
@@ -50,7 +54,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
 
 /**
- * Farmers are approved the moment they register, so an approved account is
+ * Farmers are approved the moment an Admin creates them, so an approved account is
  * the norm and carries no badge. Only an account that has lost access is
  * marked. PENDING survives only on accounts made before auto-approval.
  */
@@ -138,6 +142,7 @@ export function AccountManagement() {
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [creatingOfficer, setCreatingOfficer] = useState(false);
+  const [creatingFarmer, setCreatingFarmer] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -222,12 +227,26 @@ export function AccountManagement() {
     }
   }
 
+  async function resendInvite(user: AdminUser) {
+    if (!accessToken) return;
+    try {
+      const response = await resendFarmerInvite(accessToken, user.id);
+      setToast(response.detail);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send the invite.");
+    }
+  }
+
   /** Only the moves that are legal for this account's role and current status. */
   function actionsFor(user: AdminUser): ActionItem[] {
     const items: ActionItem[] = [];
     const isSelf = String(user.id) === currentUser?.id;
 
     if (user.role === "ADMIN") return items;
+
+    if (user.invite_pending) {
+      items.push({ label: "Resend invite email", icon: Send, onSelect: () => void resendInvite(user) });
+    }
 
     // Gender only colours the card, so it is set straight away, no dialog.
     if (user.gender !== "MALE") {
@@ -318,7 +337,7 @@ export function AccountManagement() {
         title: farmers.length === 0 ? "No farmers yet" : "No farmers match this search",
         description:
           farmers.length === 0
-            ? "Farmer accounts appear here once people register."
+            ? "Create a farmer account; they get an email to set their password."
             : "Try a different name or clear the search.",
       },
     },
@@ -373,6 +392,15 @@ export function AccountManagement() {
         </div>
       ) : null}
 
+      <CreateFarmerDialog
+        open={creatingFarmer}
+        onOpenChange={setCreatingFarmer}
+        onCreated={async (name, email) => {
+          await load();
+          setToast(`Farmer account created for ${name}. We emailed ${email} a link to set the password.`);
+        }}
+      />
+
       <CreateOfficerDialog
         open={creatingOfficer}
         onOpenChange={setCreatingOfficer}
@@ -405,14 +433,24 @@ export function AccountManagement() {
         title="Account Management"
         description="Manage access and see who is using BulanTanom."
         action={
-          <Button
-            onClick={() => setCreatingOfficer(true)}
-            className="h-10 border-amber-200/60 px-4 text-amber-950 shadow-[0_10px_26px_-10px_#f59e0b] hover:brightness-105"
-            style={{ backgroundImage: gradient(PALETTE.gold) }}
-          >
-            <UserRoundPlus className="size-4" />
-            Create LGU Officer
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => setCreatingFarmer(true)}
+              className="h-10 border-emerald-200/60 px-4 text-white shadow-[0_10px_26px_-10px_#10b981] hover:brightness-105"
+              style={{ backgroundImage: gradient(PALETTE.forest) }}
+            >
+              <UserRoundPlus className="size-4" />
+              Create Farmer
+            </Button>
+            <Button
+              onClick={() => setCreatingOfficer(true)}
+              className="h-10 border-amber-200/60 px-4 text-amber-950 shadow-[0_10px_26px_-10px_#f59e0b] hover:brightness-105"
+              style={{ backgroundImage: gradient(PALETTE.gold) }}
+            >
+              <UserRoundPlus className="size-4" />
+              Create LGU Officer
+            </Button>
+          </div>
         }
       >
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -802,6 +840,12 @@ function AccountCard({ user, actions }: { user: AdminUser; actions: ActionItem[]
           <div className="absolute top-2.5 right-2.5 [&_button]:border-white/30 [&_button]:bg-white/20 [&_button]:text-white [&_button]:backdrop-blur-sm [&_button:hover]:bg-white/35 [&_button:hover]:text-white">
             <ActionsMenu items={actions} label={`Actions for ${user.full_name}`} />
           </div>
+        )}
+        {!badge && user.invite_pending && (
+          <span className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/25 px-2 py-0.5 text-[0.6875rem] font-semibold text-white backdrop-blur-sm">
+            <MailCheck className="size-3" />
+            Invite sent
+          </span>
         )}
         {badge && (
           <span className="absolute top-3 left-3 rounded-full bg-black/25 px-2 py-0.5 text-[0.6875rem] font-semibold text-white backdrop-blur-sm">

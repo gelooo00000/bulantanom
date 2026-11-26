@@ -13,7 +13,6 @@ import {
   resendFarmerCode,
   resendLoginCode as resendLoginCodeApi,
   verifyLoginCode,
-  signupFarmer,
   updateCurrentUser,
   verifyFarmerEmail,
   type BackendRole,
@@ -76,13 +75,6 @@ type AuthContextValue = {
   loading: boolean;
   accessToken: string | null;
   login: (email: string, password: string, role: Role) => Promise<AuthUser>;
-  /** Creates the account and emails a code; nobody is signed in yet. */
-  signup: (input: {
-    name: string;
-    email: string;
-    password: string;
-    gender?: Gender;
-  }) => Promise<PendingVerification>;
   /** Saves the signed-in user's gender. */
   setGender: (gender: Gender) => Promise<void>;
   /** Types the emailed code back, which signs the Farmer in. */
@@ -277,36 +269,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signup(input: {
-    name: string;
-    email: string;
-    password: string;
-    gender?: Gender;
-  }): Promise<PendingVerification> {
-    const [firstName, ...rest] = input.name.trim().split(/\s+/);
-    const lastName = rest.join(" ");
-    try {
-      // No session yet: the account works once the emailed code comes back
-      // through `verifyEmail`.
-      const pending = await signupFarmer({
-        first_name: firstName || input.name,
-        // A single name has no last name; it is sent empty, never repeated.
-        last_name: lastName,
-        email: input.email,
-        ...(input.gender ? { gender: input.gender } : {}),
-        password: input.password,
-        password_confirm: input.password,
-      });
-      return {
-        email: pending.email,
-        resendAfter: pending.resend_after,
-        message: pending.detail,
-      };
-    } catch (err) {
-      throw new Error(messageFrom(err));
-    }
-  }
-
   function logout(redirectTo?: string) {
     // Clear local state immediately so the UI reacts (RequireRole redirects
     // to `redirectTo`, or /login) without waiting on the network; the
@@ -329,7 +291,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // rotates, letting consumers re-fetch with the new credentials.
         accessToken: tokenVersion >= 0 ? getAccessToken() : null,
         login,
-        signup,
         setGender,
         verifyEmail,
         resendCode,

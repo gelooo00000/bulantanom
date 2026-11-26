@@ -39,8 +39,9 @@ from .sessions import (
 )
 from .models import AccountStatus, RegistrationNotification, User, UserRole
 from .permissions import IsAdmin, IsApproved
+from .invites import InviteSendFailed, awaiting_password, invited_farmer, send_invite
 from .serializers import (
-    FarmerSignupSerializer,
+    FarmerCreateSerializer,
     LguOfficerCreateSerializer,
     LoginCodeResendSerializer,
     LoginCodeSerializer,
@@ -48,10 +49,11 @@ from .serializers import (
     MeUpdateSerializer,
     ResendCodeSerializer,
     ResetPasswordSerializer,
+    SetPasswordSerializer,
     UserSerializer,
     VerifyCodeSerializer,
 )
-from .throttles import LOGIN_THROTTLES, RESEND_THROTTLES, SIGNUP_THROTTLES, VERIFY_THROTTLES
+from .throttles import LOGIN_THROTTLES, RESEND_THROTTLES, VERIFY_THROTTLES
 from .verification import (
     RESEND_COOLDOWN,
     CodeSendFailed,
@@ -175,42 +177,6 @@ def _authenticate_for_role(email, password, expected_role):
     return user
 
 
-class FarmerSignupView(generics.CreateAPIView):
-    """
-    POST /api/auth/farmer/signup/
-
-    Creates an approved but unverified FARMER account and emails it a
-    one-time code (accounts.verification). No tokens yet: the farmer is
-    signed in by FarmerVerifyView once the code comes back, which proves the
-    address is real. If the code cannot be sent, nothing is kept.
-
-    An Admin can still suspend or reject the account afterwards, and the
-    status check in `_authenticate_for_role` will refuse the next sign-in.
-    """
-
-    queryset = User.objects.all()
-    serializer_class = FarmerSignupSerializer
-    permission_classes = [permissions.AllowAny]
-    throttle_classes = SIGNUP_THROTTLES
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            with transaction.atomic():
-                user = serializer.save()
-                send_code(user, enforce_cooldown=False)
-        except CodeSendFailed:
-            return Response(
-                {"detail": CODE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        return _verification_pending(
-            user,
-            status_code=status.HTTP_201_CREATED,
-            detail=f"We sent a 6-digit code to {user.email}.",
-        )
-
-
 def _unverified_farmer(email):
     return User.objects.filter(
         email__iexact=(email or "").strip().lower(),
@@ -262,6 +228,70 @@ class FarmerVerifyView(APIView):
         # The code just proved this browser reads the inbox, so the next
         # sign-in here does not ask for another one.
         response = _tokens_response(user)
+        trust_device(request, response, user)
+        return response
+
+
+INVITE_SEND_FAILED = (
+    "We couldn't send the invite email right now. "
+    "Please check the address and try again in a few minutes."
+)
+INVITE_INVALID = (
+    "This link has expired or was already used. "
+    "Ask your administrator to send you a new one."
+)
+
+
+class FarmerSetPasswordView(APIView):
+    """
+    GET  /api/auth/farmer/set-password/?uid=&token=
+         Whether the invite link still works, and whose account it is for.
+    POST /api/auth/farmer/set-password/ {uid, token, password, password_confirm}
+         Saves the Farmer's chosen password. The link then stops working
+         (its token is built from the old, unusable password) and the
+         Farmer signs in with email and password as usual.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = VERIFY_THROTTLES
+
+    def get(self, request):
+        user = invited_farmer(request.query_params.get("uid"), request.query_params.get("token"))
+        if user is None:
+            return Response({"detail": INVITE_INVALID}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"email": user.email, "first_name": user.first_name})
+
+    def post(self, request):
+        serializer = SetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        user = invited_farmer(data["uid"], data["token"])
+        if user is None:
+            return Response({"detail": INVITE_INVALID}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.can_sign_in:
+            raise AuthenticationFailed(
+                STATUS_MESSAGES.get(user.account_status, "Your account cannot sign in right now.")
+            )
+        try:
+            validate_password(data["password"], user)
+        except DjangoValidationError as exc:
+            return Response({"password": list(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            user.set_password(data["password"])
+            # Only the owner of the inbox could open the link.
+            user.email_verified = True
+            user.save(update_fields=["password", "email_verified", "updated_at"])
+            if not RegistrationNotification.objects.filter(user=user).exists():
+                RegistrationNotification.objects.create(user=user)
+                # Welcome notice + an LGU heads-up that a new Farmer has joined.
+                notify_farmer_registered(user)
+                email_farmer_welcome(user)
+        response = Response(
+            {"detail": "Your password is set. Sign in with your email and new password."}
+        )
+        # This browser just proved it reads the inbox, so the first sign-in
+        # here is not asked for a new-device code as well.
         trust_device(request, response, user)
         return response
 
@@ -885,6 +915,60 @@ class AdminCreateLguOfficerView(generics.CreateAPIView):
         # that an account exists. Admins get an audit copy.
         announce_officer_created(user, actor=request.user)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class AdminCreateFarmerView(generics.CreateAPIView):
+    """
+    POST /api/admin/farmers/ {first_name, last_name?, email, gender?}
+
+    The only way a Farmer account comes to exist. It is created with no
+    usable password and the Farmer is emailed a link to choose one
+    (accounts.invites). If the email cannot be sent, nothing is kept, so the
+    Admin can fix the address and try again.
+    """
+
+    serializer_class = FarmerCreateSerializer
+    permission_classes = [IsAdmin]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic():
+                user = serializer.save()
+                send_invite(user)
+        except InviteSendFailed:
+            return Response(
+                {"detail": INVITE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@permission_classes([IsAdmin])
+def resend_farmer_invite(request, user_id):
+    """
+    POST /api/admin/farmers/{id}/resend-invite/
+
+    A new set-password link for a Farmer who has not chosen a password yet.
+    Earlier links stop working, so only the newest email can be used.
+    """
+    user = User.objects.filter(pk=user_id, role=UserRole.FARMER).first()
+    if user is None:
+        return Response({"detail": "Farmer account not found."}, status=status.HTTP_404_NOT_FOUND)
+    if not awaiting_password(user):
+        return Response(
+            {"detail": "This farmer has already set a password."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        with transaction.atomic():
+            user.set_unusable_password()
+            user.save(update_fields=["password", "updated_at"])
+            send_invite(user)
+    except InviteSendFailed:
+        return Response({"detail": INVITE_SEND_FAILED}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response({"detail": f"A new invite was sent to {user.email}."})
 
 
 @api_view(["GET"])

@@ -15,6 +15,8 @@ export type BackendUser = {
   gender?: Gender;
   role: BackendRole;
   account_status: BackendAccountStatus;
+  /** True for a Farmer the Admin created who has not set a password yet. */
+  invite_pending?: boolean;
   date_joined: string;
 };
 
@@ -83,20 +85,20 @@ export function resendLoginCode(
   return apiFetch("/auth/login/resend-code/", { method: "POST", body: { email, challenge } });
 }
 
-/**
- * Creates the Farmer account and emails it a one-time code. Nobody is
- * signed in yet: that happens in `verifyFarmerEmail` once the code is typed
- * back, which proves the email address is real.
- */
-export function signupFarmer(payload: {
-  first_name: string;
-  last_name: string;
-  email: string;
-  gender?: Gender;
+/** Whose account a "Set your password" invite link is for; fails if it is used up. */
+export function checkFarmerInvite(uid: string, token: string): Promise<{ email: string; first_name: string }> {
+  const query = new URLSearchParams({ uid, token }).toString();
+  return apiFetch(`/auth/farmer/set-password/?${query}`);
+}
+
+/** Saves the password a Farmer chose from their invite. Nobody is signed in by this. */
+export function setFarmerPassword(payload: {
+  uid: string;
+  token: string;
   password: string;
   password_confirm: string;
-}): Promise<VerificationPending> {
-  return apiFetch("/auth/farmer/signup/", { method: "POST", body: payload });
+}): Promise<{ detail: string }> {
+  return apiFetch("/auth/farmer/set-password/", { method: "POST", body: payload });
 }
 
 /** Checks the emailed code; signs the Farmer in exactly as a login does. */

@@ -19,7 +19,6 @@ NEW_PW = "BrandNewPassword456!"
 FORGOT_URL = "/api/auth/farmer/forgot-password/"
 RESET_URL = "/api/auth/farmer/reset-password/"
 LOGIN_URL = "/api/auth/farmer/login/"
-SIGNUP_URL = "/api/auth/farmer/signup/"
 
 REAL_THROTTLE_CACHE = {
     "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
@@ -143,15 +142,6 @@ class PasswordResetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
 
-SIGNUP = {
-    "first_name": "Maria",
-    "last_name": "Santos",
-    "email": "maria@example.com",
-    "password": PW,
-    "password_confirm": PW,
-}
-
-
 @override_settings(CACHES=REAL_THROTTLE_CACHE)
 class CodeLimitTests(APITestCase):
     def setUp(self):
@@ -159,20 +149,16 @@ class CodeLimitTests(APITestCase):
 
     @override_settings(EMAIL_CODES_PER_DAY=1)
     def test_the_daily_budget_stops_further_codes(self):
-        first = self.client.post(SIGNUP_URL, SIGNUP, format="json")
-        second = self.client.post(
-            SIGNUP_URL, {**SIGNUP, "email": "pedro@example.com"}, format="json"
-        )
-        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        for email in ("maria@example.com", "pedro@example.com"):
+            User.objects.create_user(
+                email=email, password=PW, first_name="Test",
+                role=UserRole.FARMER, account_status=AccountStatus.APPROVED,
+            )
+        first = self.client.post(FORGOT_URL, {"email": "maria@example.com"}, format="json")
+        second = self.client.post(FORGOT_URL, {"email": "pedro@example.com"}, format="json")
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
         self.assertEqual(second.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertFalse(User.objects.filter(email="pedro@example.com").exists())
-
-    def test_one_address_cannot_be_flooded_with_sign_ups(self):
-        for _ in range(5):
-            self.client.post(SIGNUP_URL, SIGNUP, format="json")
-        response = self.client.post(SIGNUP_URL, SIGNUP, format="json")
-        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
 
 class ClientAddressTests(APITestCase):

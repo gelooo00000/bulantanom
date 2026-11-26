@@ -12,7 +12,6 @@ const ROLES = [
       "Add your plants, do the weekly check with a photo, and get risk readings, crop advice for your soil and your harvest dates.",
     cta: "Continue as Farmer",
     href: "/login?role=farmer",
-    extra: { label: "New here? Create a free account", href: "/signup" },
   },
   {
     emoji: "🏛️",
@@ -21,7 +20,6 @@ const ROLES = [
       "See every farmer's plants, risk trends and harvest windows across Layuan Farm, and download reports.",
     cta: "Continue as Officer",
     href: "/login?role=lgu",
-    extra: null,
   },
 ];
 
@@ -42,7 +40,7 @@ export function RoleAccessSection() {
         </Reveal>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          {ROLES.map(({ emoji, title, description, cta, href, extra }, index) => (
+          {ROLES.map(({ emoji, title, description, cta, href }, index) => (
             <Reveal key={title} delay={index * 150} className="h-full">
               <div
                 className="flex h-full flex-col items-start gap-4 rounded-2xl border p-8 transition-shadow duration-300 hover:shadow-lg md:p-10"
@@ -65,15 +63,6 @@ export function RoleAccessSection() {
                     {cta}
                     <ArrowRight className="size-4 transition-transform duration-[250ms] group-hover/button:translate-x-1" />
                   </Button>
-                  {extra && (
-                    <Link
-                      href={extra.href}
-                      className="text-sm font-medium underline-offset-4 hover:underline"
-                      style={{ color: "var(--landing-accent)" }}
-                    >
-                      {extra.label}
-                    </Link>
-                  )}
                 </div>
               </div>
             </Reveal>

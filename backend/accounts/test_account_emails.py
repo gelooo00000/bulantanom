@@ -26,7 +26,6 @@ from notifications.models import EmailLog, EmailStatus, Notification
 from .models import AccountStatus, User, UserRole
 from .testing import signup_and_verify
 
-SIGNUP_URL = "/api/auth/farmer/signup/"
 CREATE_OFFICER_URL = "/api/admin/lgu-officers/"
 FARMER_LOGIN_URL = "/api/auth/farmer/login/"
 LGU_LOGIN_URL = "/api/auth/lgu/login/"
@@ -72,8 +71,8 @@ class AccountEmailTests(APITransactionTestCase):
 
     def test_registration_sends_the_farmer_one_welcome_email(self):
         """
-        Signup approves the account at once, so no approval email will ever
-        follow; the welcome email is the Farmer's only confirmation by mail.
+        The account is approved when the Admin creates it, so no approval email ever
+        follows; once the Farmer sets a password, the welcome email confirms it.
         """
         response = signup_and_verify(self.client, {
                 "first_name": "New", "last_name": "Farmer",
@@ -85,7 +84,7 @@ class AccountEmailTests(APITransactionTestCase):
 
         sent = [
             m for m in mail.outbox
-            if "new@example.com" in m.to and "verification code" not in m.subject
+            if "new@example.com" in m.to and "Set your BulanTanom password" not in m.subject
         ]
         self.assertEqual(len(sent), 1)
         self.assertIn("Welcome", sent[0].subject)

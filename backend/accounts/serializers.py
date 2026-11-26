@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .email_check import email_problem
+from .invites import awaiting_password
 from .text_validation import clean, name_problem
 from .models import AccountStatus, User, UserRole
 
@@ -11,6 +12,9 @@ class UserSerializer(serializers.ModelSerializer):
     """Safe representation of a user. Never exposes password/hash."""
 
     full_name = serializers.CharField(source="get_full_name", read_only=True)
+    # True only for a Farmer an Admin created who has not opened the invite
+    # and chosen a password yet.
+    invite_pending = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -24,30 +28,32 @@ class UserSerializer(serializers.ModelSerializer):
             "role",
             "account_status",
             "email_verified",
+            "invite_pending",
             "date_joined",
         ]
         read_only_fields = fields
 
+    def get_invite_pending(self, user):
+        return awaiting_password(user)
 
-class FarmerSignupSerializer(serializers.ModelSerializer):
-    """
-    Registration is scoped to exactly these fields. Neither `role` nor
-    `account_status` is a declared field, so a client sending
-    `"role": "ADMIN"` or `"account_status": "APPROVED"` has those keys
-    silently dropped by DRF — `create()` below is the only thing that sets
-    them. The backend is the sole authority on role and status.
-    """
 
-    password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True, min_length=8)
+class FarmerCreateSerializer(serializers.ModelSerializer):
+    """
+    Admin-only creation of a Farmer account: name and email only. The Farmer
+    chooses their own password from the invite email (accounts.invites), so
+    no password is taken here. Neither `role` nor `account_status` is a
+    declared field, so a client cannot set them; `create()` does.
+    """
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "gender", "password", "password_confirm"]
-        # Disable DRF's auto-generated UniqueValidator (from the model's
-        # `unique=True`) so duplicate-email always goes through our own
-        # validate_email() below, with our own message.
-        extra_kwargs = {"email": {"validators": []}, "gender": {"required": False}}
+        fields = ["first_name", "last_name", "email", "gender"]
+        # Our own duplicate-email check and message, not DRF's.
+        extra_kwargs = {
+            "email": {"validators": []},
+            "gender": {"required": False},
+            "last_name": {"required": False},
+        }
 
     def validate_first_name(self, value):
         problem = name_problem(value, "First name")
@@ -63,8 +69,7 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         normalized = value.strip().lower()
-        # An unfinished sign-up (code never entered) does not hold the
-        # address: whoever can actually read that inbox may claim it.
+        # An old sign-up nobody finished does not hold the address.
         if User.objects.filter(email__iexact=normalized, pending_signup=False).exists():
             raise serializers.ValidationError("An account with this email already exists.")
         problem = email_problem(normalized)
@@ -72,35 +77,33 @@ class FarmerSignupSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(problem)
         return normalized
 
-    def validate(self, attrs):
-        if attrs["password"] != attrs["password_confirm"]:
-            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
-        try:
-            validate_password(attrs["password"])
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
-        return attrs
-
     def create(self, validated_data):
-        validated_data.pop("password_confirm")
-        password = validated_data.pop("password")
         User.objects.filter(
             email__iexact=validated_data["email"], pending_signup=True, role=UserRole.FARMER
         ).delete()
-        # Farmers are approved on sign-up and go straight to their dashboard.
-        # The status field is still a real gate, not a formality: an Admin can
-        # suspend or reject an account afterwards and `_authenticate_for_role`
-        # will refuse the next sign-in. What changed is only the starting
-        # value, so nobody waits to be let in to their own farm records.
+        # No usable password until the Farmer sets one from the invite, so
+        # nobody can sign in to the account before then. Opening the link
+        # proves the inbox, which is when the email counts as verified.
         return User.objects.create_user(
-            password=password,
+            password=None,
             role=UserRole.FARMER,
             account_status=AccountStatus.APPROVED,
-            # Usable only once the emailed code is typed back.
             email_verified=False,
-            pending_signup=True,
+            pending_signup=False,
             **validated_data,
         )
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=128)
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    password_confirm = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+        return attrs
 
 
 class MeUpdateSerializer(serializers.ModelSerializer):

@@ -17,9 +17,6 @@ export function SiteFooter() {
           <Link href="/login" className="hover:text-foreground">
             Sign in
           </Link>
-          <Link href="/signup" className="hover:text-foreground">
-            Sign up
-          </Link>
         </nav>
       </div>
       <p className="text-muted-foreground/70 mx-auto mt-4 max-w-6xl text-center text-xs sm:text-left">

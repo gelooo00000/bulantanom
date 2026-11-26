@@ -1,0 +1,14 @@
+Hello {{ name }},
+
+An administrator has created your BulanTanom Farmer account for {{ email }}.
+
+Open this link and choose your password:
+
+    {{ set_password_url|safe }}
+
+After that, sign in with this email and the password you chose.
+
+This link works once and expires in {{ days }} days. If it has expired, ask your administrator to send a new one. Never share this link with anyone.
+
+--
+BulanTanom will never ask you for your password by email.

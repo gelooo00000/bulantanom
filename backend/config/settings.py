@@ -552,6 +552,10 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 # same code has to produce a correct link in production.
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
+# How long the "Set your password" link in a new Farmer's invite works
+# (accounts.invites). An Admin can send a new link after it expires.
+PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60
+
 
 REFRESH_COOKIE_NAME = "bulantanom_refresh_token"
 REFRESH_COOKIE_PATH = "/api/auth/"

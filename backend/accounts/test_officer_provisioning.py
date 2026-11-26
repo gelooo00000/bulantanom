@@ -250,11 +250,11 @@ class OfficerCreationTests(OfficerSetupMixin, APITestCase):
 
 class NoPublicOfficerRegistrationTests(APITestCase):
     """
-    There must be no unauthenticated route that can mint an Officer. Farmer
-    signup is the only public account-creating endpoint in the project.
+    There must be no unauthenticated route that can mint an account. Farmers
+    and Officers alike are created by an Admin.
     """
 
-    def test_farmer_signup_cannot_produce_an_officer(self):
+    def test_the_old_farmer_signup_cannot_produce_any_account(self):
         response = self.client.post(
             "/api/auth/farmer/signup/",
             {
@@ -262,19 +262,13 @@ class NoPublicOfficerRegistrationTests(APITestCase):
                 "email": "sneaky@example.com", "password": PW,
                 "password_confirm": PW,
                 "role": "LGU_OFFICER",
-                # A status the server would never choose on its own, so the
-                # assertion below proves the client's value was dropped
-                # rather than coinciding with the default.
-                "account_status": "REJECTED",
             },
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        created = User.objects.get(email="sneaky@example.com")
-        self.assertEqual(created.role, UserRole.FARMER)
-        self.assertEqual(created.account_status, AccountStatus.APPROVED)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(User.objects.filter(email="sneaky@example.com").exists())
 
-    def test_the_only_public_signup_route_is_farmer(self):
+    def test_there_is_no_public_signup_route(self):
         """Guards against a public officer-registration route being added."""
         signup_routes = []
 
@@ -287,7 +281,7 @@ class NoPublicOfficerRegistrationTests(APITestCase):
                     signup_routes.append(path)
 
         walk(get_resolver())
-        self.assertEqual(signup_routes, ["api/auth/farmer/signup/"])
+        self.assertEqual(signup_routes, [])
 
 
 class OfficerCreationNotificationTests(OfficerSetupMixin, APITransactionTestCase):

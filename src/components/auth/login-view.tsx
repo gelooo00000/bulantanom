@@ -106,6 +106,7 @@ export function LoginView() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const justReset = searchParams.get("reset") === "1";
+  const justSetPassword = searchParams.get("password_set") === "1";
   // Set on arrival when this device was signed out by a sign-in elsewhere.
   const [signedOutElsewhere, setSignedOutElsewhere] = useState(false);
   useEffect(() => {
@@ -285,6 +286,12 @@ export function LoginView() {
             </div>
           )}
 
+          {justSetPassword && (
+            <p className="text-risk-low bg-risk-low/10 rounded-xl px-3 py-2 text-sm" role="status">
+              Your password is set. Sign in with your email and new password.
+            </p>
+          )}
+
           {justReset && (
             <p className="text-risk-low bg-risk-low/10 rounded-xl px-3 py-2 text-sm" role="status">
               Your password has been changed. Please sign in.
@@ -371,10 +378,8 @@ export function LoginView() {
 
           {selectedRole === "farmer" ? (
             <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="font-medium" style={{ color: "var(--landing-accent)" }}>
-                Create one
-              </Link>
+              No account yet? Your administrator creates it and emails you a link to set your
+              password.
             </p>
           ) : (
             /* Each non-Farmer role gets its own note — the Admin screen used

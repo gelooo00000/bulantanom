@@ -30,9 +30,9 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { NAME_MAX, cleanText, nameProblem } from "@/lib/text-validation";
 import { cn } from "@/lib/utils";
 
-type OfficerGender = "MALE" | "FEMALE" | "UNDISCLOSED";
+export type OfficerGender = "MALE" | "FEMALE" | "UNDISCLOSED";
 
-const GENDERS: { value: OfficerGender; label: string; icon?: LucideIcon; ink: string }[] = [
+export const GENDERS: { value: OfficerGender; label: string; icon?: LucideIcon; ink: string }[] = [
   { value: "MALE", label: "Male", icon: Mars, ink: INK.sky },
   { value: "FEMALE", label: "Female", icon: Venus, ink: INK.pink },
   { value: "UNDISCLOSED", label: "Prefer not to say", ink: INK.forest },
@@ -60,7 +60,7 @@ function passwordStrength(password: string) {
 }
 
 /** An input with an icon inside it, in the dialog's rounded style. */
-function IconField({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
+export function IconField({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
     <div className="relative [&_input]:h-10 [&_input]:rounded-xl [&_input]:pl-9">
       <Icon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
@@ -69,7 +69,7 @@ function IconField({ icon: Icon, children }: { icon: LucideIcon; children: React
   );
 }
 
-function Section({ icon: Icon, title, ink, children }: { icon: LucideIcon; title: string; ink: string; children: ReactNode }) {
+export function Section({ icon: Icon, title, ink, children }: { icon: LucideIcon; title: string; ink: string; children: ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="font-heading mb-3 flex items-center gap-2 text-sm font-semibold">
